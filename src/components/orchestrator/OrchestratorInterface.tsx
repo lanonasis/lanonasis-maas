@@ -1,3 +1,4 @@
+/// <reference lib="dom" />
 /**
  * Orchestrator Interface Component
  * Provides a chat-like interface for natural language command execution
@@ -57,7 +58,7 @@ export const OrchestratorInterface: React.FC<OrchestratorInterfaceProps> = ({
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   // Temporarily disabled orchestrator
-  const orchestrator = useRef(null);
+  // const orchestrator = useRef(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
