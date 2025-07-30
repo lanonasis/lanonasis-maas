@@ -163,7 +163,7 @@ async function authenticateApiKey(apiKey: string): Promise<AlignedUser | null> {
 
     // Extract plan value to avoid TypeScript errors
     let plan = 'free';
-    if (keyRecord && keyRecord.maas_service_config && Array.isArray(keyRecord.maas_service_config) && keyRecord.maas_service_config.length > 0) {
+    if (keyRecord && keyRecord.maas_service_config && Array.isArray(keyRecord.maas_service_config) && keyRecord.maas_service_config.length > 0 && keyRecord.maas_service_config[0]) {
       plan = keyRecord.maas_service_config[0].plan;
     }
 
