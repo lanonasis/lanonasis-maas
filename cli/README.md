@@ -181,11 +181,43 @@ node dist/index-simple.js help
 - **Configuration** - Flexible service setup
 - **Help System** - Comprehensive documentation
 
+## 📦 SDK & Related Packages
+
+### Memory Client SDK
+Install the TypeScript/JavaScript SDK for application integration:
+
+```bash
+# Install SDK for your applications
+npm install @lanonasis/memory-client
+
+# Use in your code
+import { createMemoryClient } from '@lanonasis/memory-client';
+
+const client = createMemoryClient({
+  baseURL: 'https://api.lanonasis.com',
+  apiKey: 'your-api-key-here'
+});
+```
+
+### Complete Installation for Developers
+```bash
+# Install CLI globally for command-line usage
+npm install -g @lanonasis/cli
+
+# Install SDK locally for application development
+npm install @lanonasis/memory-client
+
+# Now you have both CLI and SDK available!
+lanonasis --help                    # CLI commands
+# SDK available for import in your code
+```
+
 ## 🔗 Related Projects
 
-- **Memory Service Backend** - Full MaaS API server
-- **Memory SDK** - JavaScript/TypeScript SDK for developers
-- **Memory Visualizer** - Interactive memory exploration
+- **Memory Service Backend** - Full MaaS API server ([GitHub](https://github.com/thefixer3x/vibe-memory))
+- **Memory Client SDK** - JavaScript/TypeScript SDK (`@lanonasis/memory-client`)
+- **Memory Visualizer** - Interactive memory exploration (included in backend)
+- **VSCode Extension** - IDE integration (coming soon)
 
 ## 📄 License
 
