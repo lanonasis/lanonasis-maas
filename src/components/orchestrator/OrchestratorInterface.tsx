@@ -6,7 +6,9 @@
 import React, { useState, useRef, useEffect } from 'react';
 
 // Declare window for browser environment
-declare const window: any;
+declare const window: {
+  open: (url: string, target?: string) => void;
+};
 
 // Note: Orchestrator temporarily disabled due to missing dependencies
 // import { orchestrate, parseOnly, ContextualOrchestrator, OrchestratorResult, ParsedCommand } from '../../../seyederick-monorepo-starter/packages/orchestrator';
@@ -14,7 +16,7 @@ declare const window: any;
 // Temporary interfaces for compilation
 interface OrchestratorResult {
   success: boolean;
-  data?: any;
+  data?: Record<string, unknown>;
   error?: string;
   executionTime: number;
   command: ParsedCommand;
@@ -23,7 +25,7 @@ interface OrchestratorResult {
 interface ParsedCommand {
   action: string;
   target: string;
-  parameters: Record<string, any>;
+  parameters: Record<string, unknown>;
   confidence?: number;
   tool?: string;
 }
@@ -40,7 +42,7 @@ interface Message {
 interface OrchestratorInterfaceProps {
   className?: string;
   onCommandExecuted?: (result: OrchestratorResult) => void;
-  onUIAction?: (action: string, args: any) => void;
+  onUIAction?: (action: string, args: Record<string, unknown>) => void;
   placeholder?: string;
   disabled?: boolean;
 }
@@ -58,13 +60,14 @@ export const OrchestratorInterface: React.FC<OrchestratorInterfaceProps> = ({
   const [showPreview, setShowPreview] = useState(false);
   const [commandPreview, setCommandPreview] = useState<ParsedCommand | null>(null);
   
-  const messagesEndRef = useRef<any>(null);
-  const inputRef = useRef<any>(null);
+  const messagesEndRef = useRef<unknown>(null);
+  const inputRef = useRef<unknown>(null);
   // Temporarily disabled orchestrator
   // const orchestrator = useRef(null);
 
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    const element = messagesEndRef.current as { scrollIntoView?: (options: { behavior: string }) => void } | null;
+    element?.scrollIntoView?.({ behavior: 'smooth' });
   };
 
   useEffect(() => {
@@ -93,7 +96,7 @@ Type your command below and press Enter!`,
   const addMessage = (message: Omit<Message, 'id' | 'timestamp'>) => {
     const newMessage: Message = {
       ...message,
-      id: Math.random().toString(36).substr(2, 9),
+      id: Math.random().toString(36).substring(2, 11),
       timestamp: new Date(),
     };
     setMessages(prev => [...prev, newMessage]);
@@ -164,7 +167,9 @@ Type your command below and press Enter!`,
             onUIAction(result.command.action, result.data);
           } else {
             // Fallback: open in new window
-            window.open(result.data.url, '_blank');
+            if (result.data && 'url' in result.data && typeof result.data.url === 'string') {
+              window.open(result.data.url, '_blank');
+            }
           }
         }
 
@@ -188,7 +193,8 @@ Type your command below and press Enter!`,
       });
     } finally {
       setIsProcessing(false);
-      inputRef.current?.focus();
+      const input = inputRef.current as { focus?: () => void } | null;
+      input?.focus?.();
     }
   };
 
@@ -200,13 +206,13 @@ Type your command below and press Enter!`,
     // Format based on command type
     switch (command.tool) {
       case 'memory':
-        content += formatMemoryResult(command.action, data);
+        content += data ? formatMemoryResult(command.action, data) : '';
         break;
       case 'ui':
-        content += formatUIResult(command.action, data);
+        content += data ? formatUIResult(command.action, data) : '';
         break;
       case 'stripe':
-        content += formatStripeResult(command.action, data);
+        content += data ? formatStripeResult(command.action, data) : '';
         break;
       default:
         if (data) {
@@ -217,12 +223,12 @@ Type your command below and press Enter!`,
     return content;
   };
 
-  const formatMemoryResult = (action: string, data: any): string => {
+  const formatMemoryResult = (action: string, data: Record<string, unknown>): string => {
     switch (action) {
       case 'search':
-        if (data.memories?.length > 0) {
-          return `\n\nFound **${data.memories.length}** memories:\n${data.memories.map((m: any) => 
-            `• **${m.title}** (${m.memory_type}) - ${m.content.substring(0, 100)}...`
+        if (Array.isArray(data.memories) && data.memories.length > 0) {
+          return `\n\nFound **${data.memories.length}** memories:\n${data.memories.map((m: Record<string, unknown>) => 
+            `• **${m.title}** (${m.memory_type}) - ${String(m.content).substring(0, 100)}...`
           ).join('\n')}`;
         }
         return '\n\nNo memories found matching your query.';
@@ -231,8 +237,8 @@ Type your command below and press Enter!`,
         return `\n\n**Created**: "${data.title}" (ID: ${data.id})`;
         
       case 'list':
-        if (data.memories?.length > 0) {
-          return `\n\n**${data.memories.length} memories**:\n${data.memories.map((m: any) => 
+        if (Array.isArray(data.memories) && data.memories.length > 0) {
+          return `\n\n**${data.memories.length} memories**:\n${data.memories.map((m: Record<string, unknown>) => 
             `• ${m.title} (${m.memory_type})`
           ).join('\n')}`;
         }
@@ -246,7 +252,7 @@ Type your command below and press Enter!`,
     }
   };
 
-  const formatUIResult = (action: string, data: any): string => {
+  const formatUIResult = (action: string, data: Record<string, unknown>): string => {
     switch (action) {
       case 'open-dashboard':
       case 'open-visualizer':
@@ -257,8 +263,8 @@ Type your command below and press Enter!`,
     }
   };
 
-  const formatStripeResult = (action: string, data: any): string => {
-    if (action === 'list-transactions' && data.transactions) {
+  const formatStripeResult = (action: string, data: Record<string, unknown>): string => {
+    if (action === 'list-transactions' && data.transactions && Array.isArray(data.transactions)) {
       return `\n\nFound **${data.transactions.length}** transactions`;
     }
     return data ? `\n\n${JSON.stringify(data, null, 2)}` : '';
@@ -273,7 +279,8 @@ Type your command below and press Enter!`,
 
   const handleExampleClick = (example: string) => {
     setInput(example);
-    inputRef.current?.focus();
+    const input = inputRef.current as { focus?: () => void } | null;
+    input?.focus?.();
   };
 
   const examples = [
@@ -327,7 +334,7 @@ Type your command below and press Enter!`,
             </div>
           </div>
         ))}
-        <div ref={messagesEndRef} />
+        <div ref={messagesEndRef as React.RefObject<HTMLDivElement>} />
       </div>
 
       {/* Command Preview */}
@@ -346,7 +353,7 @@ Type your command below and press Enter!`,
       <div className="p-4 border-t">
         <div className="flex gap-2">
           <input
-            ref={inputRef}
+            ref={inputRef as React.RefObject<HTMLInputElement>}
             type="text"
             value={input}
             onChange={(e) => handleInputChange(e.target.value)}
