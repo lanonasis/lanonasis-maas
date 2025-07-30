@@ -68,7 +68,7 @@ export class MaaSClient {
       const response = await fetch(url, {
         headers: { ...this.baseHeaders, ...options.headers },
         ...options,
-        signal: AbortSignal.timeout(this.config.timeout!)
+        signal: AbortSignal.timeout(this.config.timeout || 30000)
       });
 
       const data = await response.json();

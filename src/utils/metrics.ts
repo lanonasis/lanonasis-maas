@@ -1,9 +1,15 @@
 import { Request, Response, NextFunction } from 'express';
 import { logger } from '@/utils/logger';
 
+interface MetricValue {
+  type: 'gauge';
+  value: number;
+  timestamp: number;
+}
+
 // In-memory metrics storage (in production, use Redis or proper metrics system)
 class MetricsCollector {
-  private metrics: Map<string, any> = new Map();
+  private metrics: Map<string, MetricValue> = new Map();
   private counters: Map<string, number> = new Map();
   private histograms: Map<string, number[]> = new Map();
 
@@ -55,8 +61,8 @@ class MetricsCollector {
     for (const [metricName, entries] of histogramGroups) {
       output += `# TYPE ${metricName}_duration_seconds histogram\n`;
       for (const [labelStr, values] of entries) {
-        const avg = values.reduce((a: number, b: number) => a + b, 0) / values.length;
-        const count = values.length;
+        const avg = (values as number[]).reduce((a: number, b: number) => a + b, 0) / (values as number[]).length;
+        const count = (values as number[]).length;
         output += `${metricName}_duration_seconds_sum${labelStr} ${(avg * count) / 1000}\n`;
         output += `${metricName}_duration_seconds_count${labelStr} ${count}\n`;
       }
@@ -75,8 +81,12 @@ class MetricsCollector {
   }
 
   // Get metrics as JSON
-  getJsonMetrics(): any {
-    const result: any = {
+  getJsonMetrics(): Record<string, unknown> {
+    const result: {
+      counters: Record<string, Array<{ labels: Record<string, string>; value: number }>>;
+      histograms: Record<string, Array<{ labels: Record<string, string>; count: number; avg_ms: number; min_ms: number; max_ms: number }>>;
+      gauges: Record<string, Array<{ labels: Record<string, string>; value: number; timestamp: number }>>;
+    } = {
       counters: {},
       histograms: {},
       gauges: {}
@@ -154,15 +164,18 @@ class MetricsCollector {
     return { metricName, labelStr, labels };
   }
 
-  private groupByMetricName(map: Map<string, any>): Map<string, [string, any][]> {
-    const groups = new Map<string, [string, any][]>();
+  private groupByMetricName(map: Map<string, unknown>): Map<string, [string, unknown][]> {
+    const groups = new Map<string, [string, unknown][]>();
     
     for (const [key, value] of map) {
       const { metricName, labelStr } = this.parseKey(key);
       if (!groups.has(metricName)) {
         groups.set(metricName, []);
       }
-      groups.get(metricName)!.push([labelStr, value]);
+      const group = groups.get(metricName);
+      if (group) {
+        group.push([labelStr, value]);
+      }
     }
     
     return groups;
@@ -230,7 +243,7 @@ export const metricsMiddleware = (req: Request, res: Response, next: NextFunctio
       });
     }
 
-    return originalEnd.apply(this, arguments as any);
+    return originalEnd.apply(this, arguments as never);
   };
 
   next();

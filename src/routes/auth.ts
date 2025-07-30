@@ -13,7 +13,8 @@ import {
   AuthResponse, 
   User,
   LoginRequest,
-  RegisterRequest 
+  RegisterRequest,
+  JWTPayload 
 } from '@/types/auth';
 
 const router = Router();
@@ -204,6 +205,21 @@ router.post('/login', asyncHandler(async (req: Request, res: Response) => {
     .eq('email', email)
     .single();
 
+  // Define types for user with nested organization (Supabase returns array for joins)
+  type UserWithOrganization = {
+    id: string;
+    email: string;
+    password_hash: string;
+    organization_id: string;
+    role: string;
+    plan: string;
+    created_at: string;
+    updated_at: string;
+    organizations: {
+      plan: string;
+    }[];
+  };
+
   if (error || !user) {
     logger.warn('Login attempt with invalid email', { email });
     res.status(401).json({
@@ -225,11 +241,13 @@ router.post('/login', asyncHandler(async (req: Request, res: Response) => {
   }
 
   // Generate JWT token
+  const userWithOrg = user as UserWithOrganization;
+  const orgPlan = userWithOrg.organizations?.[0]?.plan || userWithOrg.plan;
   const tokenPayload = {
-    userId: user.id,
-    organizationId: user.organization_id,
-    role: user.role,
-    plan: (user.organizations as any).plan
+    userId: userWithOrg.id,
+    organizationId: userWithOrg.organization_id,
+    role: userWithOrg.role,
+    plan: orgPlan
   };
 
   const token = jwt.sign(
@@ -242,13 +260,13 @@ router.post('/login', asyncHandler(async (req: Request, res: Response) => {
   expiresAt.setTime(expiresAt.getTime() + (24 * 60 * 60 * 1000)); // 24 hours
 
   const responseUser: User = {
-    id: user.id,
-    email: user.email,
-    organization_id: user.organization_id,
-    role: user.role,
-    plan: (user.organizations as any).plan,
-    created_at: user.created_at,
-    updated_at: user.updated_at
+    id: userWithOrg.id,
+    email: userWithOrg.email,
+    organization_id: userWithOrg.organization_id,
+    role: userWithOrg.role as 'admin' | 'user' | 'viewer',
+    plan: orgPlan as 'free' | 'pro' | 'enterprise',
+    created_at: userWithOrg.created_at,
+    updated_at: userWithOrg.updated_at
   };
 
   const response: AuthResponse = {
@@ -314,6 +332,17 @@ router.post('/refresh', asyncHandler(async (req: Request, res: Response) => {
       .eq('id', decoded.userId)
       .single();
 
+    // Define type for user with organization (Supabase returns array for joins)
+    type RefreshUserWithOrganization = {
+      id: string;
+      organization_id: string;
+      role: string;
+      plan: string;
+      organizations: {
+        plan: string;
+      }[];
+    };
+
     if (error || !user) {
       res.status(401).json({
         error: 'Invalid token',
@@ -323,11 +352,13 @@ router.post('/refresh', asyncHandler(async (req: Request, res: Response) => {
     }
 
     // Generate new token
+    const refreshUser = user as RefreshUserWithOrganization;
+    const refreshOrgPlan = refreshUser.organizations?.[0]?.plan || refreshUser.plan;
     const newTokenPayload = {
-      userId: user.id,
-      organizationId: user.organization_id,
-      role: user.role,
-      plan: (user.organizations as any).plan
+      userId: refreshUser.id,
+      organizationId: refreshUser.organization_id,
+      role: refreshUser.role,
+      plan: refreshOrgPlan
     };
 
     const newToken = jwt.sign(

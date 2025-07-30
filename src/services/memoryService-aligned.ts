@@ -23,7 +23,7 @@ export interface MemoryEntry {
   topic_id?: string;
   project_ref?: string;
   tags: string[];
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
   created_at: string;
   updated_at: string;
 }
@@ -41,7 +41,7 @@ export interface MemoryTopic {
   user_id: string;
   parent_topic_id?: string;
   is_system: boolean;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
   created_at: string;
   updated_at: string;
 }
@@ -54,7 +54,7 @@ export interface CreateMemoryRequest {
   topic_id?: string;
   project_ref?: string;
   tags?: string[];
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 export interface UpdateMemoryRequest {
@@ -66,7 +66,7 @@ export interface UpdateMemoryRequest {
   topic_id?: string;
   project_ref?: string;
   tags?: string[];
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 export interface SearchFilters {
@@ -83,7 +83,7 @@ export interface UserMemoryStats {
   total_memories: number;
   memories_by_type: Record<MemoryType, number>;
   total_topics: number;
-  most_accessed_memory?: string;
+  most_accessed_memory?: string | undefined;
   recent_memories: string[];
 }
 
@@ -141,8 +141,8 @@ export class AlignedMemoryService {
         topic_id: data.topic_id || null,
         project_ref: data.project_ref || null,
         tags: data.tags || [],
-        metadata: data.metadata || {},
-        embedding: JSON.stringify(embedding), // Supabase expects string format for vector
+        metadata: data.metadata || {} as Record<string, unknown>,
+        embedding: JSON.stringify(embedding) as unknown as number[], // Supabase expects string format for vector
         access_count: 0
       };
 
@@ -245,7 +245,7 @@ export class AlignedMemoryService {
     const startTime = Date.now();
 
     try {
-      const updateData: any = {
+      const updateData: Partial<MemoryEntry> & { updated_at: string; embedding?: string } = {
         updated_at: new Date().toISOString()
       };
 
@@ -395,11 +395,11 @@ export class AlignedMemoryService {
     }
 
     return {
-      total_memories: (stats as any)?.total_memories || 0,
-      memories_by_type: (stats as any)?.memories_by_type || {},
-      total_topics: (stats as any)?.total_topics || 0,
-      most_accessed_memory: (stats as any)?.most_accessed_memory,
-      recent_memories: (stats as any)?.recent_memories || []
+      total_memories: (stats as UserMemoryStats)?.total_memories || 0,
+      memories_by_type: (stats as UserMemoryStats)?.memories_by_type || {} as Record<MemoryType, number>,
+      total_topics: (stats as UserMemoryStats)?.total_topics || 0,
+      most_accessed_memory: (stats as UserMemoryStats)?.most_accessed_memory,
+      recent_memories: (stats as UserMemoryStats)?.recent_memories || []
     };
   }
 

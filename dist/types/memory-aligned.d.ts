@@ -73,7 +73,7 @@ export interface MemoryEntry {
     topic_id?: string;
     project_ref?: string;
     tags: string[];
-    metadata?: Record<string, any>;
+    metadata?: Record<string, unknown>;
     created_at: string;
     updated_at: string;
 }
@@ -124,7 +124,7 @@ export interface MemoryTopic {
     user_id: string;
     parent_topic_id?: string;
     is_system: boolean;
-    metadata?: Record<string, any>;
+    metadata?: Record<string, unknown>;
     created_at: string;
     updated_at: string;
 }
@@ -177,14 +177,14 @@ export declare const createMemorySchema: z.ZodObject<{
     topic_id: z.ZodOptional<z.ZodString>;
     project_ref: z.ZodOptional<z.ZodString>;
     tags: z.ZodDefault<z.ZodArray<z.ZodString, "many">>;
-    metadata: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodAny>>;
+    metadata: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
 }, "strip", z.ZodTypeAny, {
     title: string;
     content: string;
     memory_type: "context" | "project" | "knowledge" | "reference" | "conversation";
     tags: string[];
     topic_id?: string | undefined;
-    metadata?: Record<string, any> | undefined;
+    metadata?: Record<string, unknown> | undefined;
     summary?: string | undefined;
     project_ref?: string | undefined;
 }, {
@@ -193,7 +193,7 @@ export declare const createMemorySchema: z.ZodObject<{
     memory_type?: "context" | "project" | "knowledge" | "reference" | "conversation" | undefined;
     tags?: string[] | undefined;
     topic_id?: string | undefined;
-    metadata?: Record<string, any> | undefined;
+    metadata?: Record<string, unknown> | undefined;
     summary?: string | undefined;
     project_ref?: string | undefined;
 }>;
@@ -248,7 +248,7 @@ export declare const updateMemorySchema: z.ZodObject<{
     topic_id: z.ZodOptional<z.ZodNullable<z.ZodString>>;
     project_ref: z.ZodOptional<z.ZodNullable<z.ZodString>>;
     tags: z.ZodOptional<z.ZodArray<z.ZodString, "many">>;
-    metadata: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodAny>>;
+    metadata: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
 }, "strip", z.ZodTypeAny, {
     status?: "active" | "archived" | "draft" | "deleted" | undefined;
     title?: string | undefined;
@@ -256,7 +256,7 @@ export declare const updateMemorySchema: z.ZodObject<{
     memory_type?: "context" | "project" | "knowledge" | "reference" | "conversation" | undefined;
     tags?: string[] | undefined;
     topic_id?: string | null | undefined;
-    metadata?: Record<string, any> | undefined;
+    metadata?: Record<string, unknown> | undefined;
     summary?: string | undefined;
     project_ref?: string | null | undefined;
 }, {
@@ -266,7 +266,7 @@ export declare const updateMemorySchema: z.ZodObject<{
     memory_type?: "context" | "project" | "knowledge" | "reference" | "conversation" | undefined;
     tags?: string[] | undefined;
     topic_id?: string | null | undefined;
-    metadata?: Record<string, any> | undefined;
+    metadata?: Record<string, unknown> | undefined;
     summary?: string | undefined;
     project_ref?: string | null | undefined;
 }>;
@@ -420,7 +420,7 @@ export interface SimpleMemory {
     session_id: string;
     content_type: string;
     content: string;
-    metadata: Record<string, any>;
+    metadata: Record<string, unknown>;
     embedding_hash: string;
     relevance_score: number;
     client_type: string;
@@ -431,10 +431,15 @@ export interface SimpleMemory {
 export interface ChatSession {
     id: string;
     user_id: string;
-    messages: any[];
+    messages: Array<{
+        role: 'user' | 'assistant' | 'system';
+        content: string;
+        timestamp?: string;
+        metadata?: Record<string, unknown>;
+    }>;
     last_message_at?: string;
     model_used: string;
-    conversation_metadata?: Record<string, any>;
+    conversation_metadata?: Record<string, unknown>;
     created_at: string;
     updated_at: string;
 }
