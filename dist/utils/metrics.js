@@ -1,4 +1,4 @@
-import { logger } from '@/utils/logger';
+import { logger } from './logger';
 // In-memory metrics storage (in production, use Redis or proper metrics system)
 class MetricsCollector {
     metrics = new Map();
@@ -118,7 +118,7 @@ class MetricsCollector {
     }
     parseKey(key) {
         const parts = key.split('{');
-        const metricName = parts[0];
+        const metricName = parts[0] || 'unknown';
         const labelStr = parts[1] ? `{${parts[1]}` : '';
         const labels = {};
         if (parts[1]) {
@@ -165,7 +165,7 @@ export const metricsMiddleware = (req, res, next) => {
     });
     // Override res.end to capture response metrics
     const originalEnd = res.end;
-    res.end = function (...args) {
+    res.end = function (_chunk, _encoding, _callback) {
         const duration = Date.now() - startTime;
         // Record request duration
         metrics.recordDuration('http_request_duration', duration, {
@@ -194,7 +194,7 @@ export const metricsMiddleware = (req, res, next) => {
                 status: res.statusCode.toString()
             });
         }
-        originalEnd.apply(this, args);
+        return originalEnd.apply(this, arguments);
     };
     next();
 };

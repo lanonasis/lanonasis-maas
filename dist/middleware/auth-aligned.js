@@ -1,6 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
-import { config } from '@/config/environment';
-import { logger } from '@/utils/logger';
+import { config } from '../config/environment';
+import { logger } from '../utils/logger';
 const supabase = createClient(config.SUPABASE_URL=https://<project-ref>.supabase.co
 /**
  * Authentication middleware aligned with Supabase auth system
@@ -61,19 +61,24 @@ export const alignedAuthMiddleware = async (req, res, next) => {
                     .select('plan')
                     .eq('user_id', user.id)
                     .single();
-                req.user = {
+                const alignedUser = {
+                    // JWTPayload properties (from Supabase user)
                     userId: user.id,
                     organizationId: user.id, // For Supabase, use user ID as org ID
                     role: user.app_metadata?.role || 'user',
-                    plan: serviceConfig?.plan || 'free',
+                    plan: (serviceConfig && Array.isArray(serviceConfig) && serviceConfig.length > 0)
+                        ? serviceConfig[0].plan
+                        : 'free',
+                    // Additional UnifiedUser properties
                     id: user.id,
-                    email: user.email,
-                    user_metadata: user.user_metadata,
-                    app_metadata: user.app_metadata
+                    email: user.email || '',
+                    user_metadata: user.user_metadata || {},
+                    app_metadata: user.app_metadata || {}
                 };
+                req.user = alignedUser;
             }
             logger.debug('User authenticated', {
-                userId: req.user?.id,
+                userId: req.user?.userId || req.user?.id,
                 email: req.user?.email,
                 plan: req.user?.plan,
                 authMethod: isApiKey ? 'api_key' : 'jwt'
@@ -129,13 +134,24 @@ async function authenticateApiKey(apiKey) {
             .from('maas_api_keys')
             .update({ last_used: new Date().toISOString() })
             .eq('key_hash', apiKey);
-        return {
+        // Extract plan value to avoid TypeScript errors
+        let plan = 'free';
+        if (keyRecord && keyRecord.maas_service_config && Array.isArray(keyRecord.maas_service_config) && keyRecord.maas_service_config.length > 0 && keyRecord.maas_service_config[0]) {
+            plan = keyRecord.maas_service_config[0].plan;
+        }
+        const unifiedUser = {
+            // JWTPayload properties
             userId: keyRecord.user_id,
             organizationId: keyRecord.user_id, // For API keys, use user ID as org ID
             role: 'user', // Default role for API key users
-            plan: keyRecord.maas_service_config?.plan || 'free',
-            id: keyRecord.user_id
+            plan: plan,
+            // Additional UnifiedUser properties
+            id: keyRecord.user_id,
+            email: '',
+            user_metadata: {},
+            app_metadata: {}
         };
+        return unifiedUser;
     }
     catch (error) {
         logger.error('API key authentication error', { error });
@@ -179,8 +195,9 @@ export const requireAdmin = (req, res, next) => {
         return;
     }
     // Check if user has admin role in app_metadata
-    const isAdmin = req.user?.app_metadata?.role === 'admin' ||
-        req.user?.app_metadata?.roles?.includes('admin');
+    const appMetadata = req.user?.app_metadata;
+    const isAdmin = appMetadata?.role === 'admin' ||
+        (Array.isArray(appMetadata?.roles) && appMetadata?.roles?.includes('admin'));
     if (!isAdmin) {
         res.status(403).json({
             error: 'Admin access required',
@@ -209,11 +226,13 @@ export const planBasedRateLimit = () => {
         // Here you would implement the actual rate limiting logic
         // This is a simplified version - in production, use Redis or similar
         // For now, just add the limit info to headers
-        res.set({
-            'X-RateLimit-Limit': limit.requests.toString(),
-            'X-RateLimit-Window': limit.window.toString(),
-            'X-RateLimit-Plan': userPlan
-        });
+        if (limit) {
+            res.set({
+                'X-RateLimit-Limit': limit.requests.toString(),
+                'X-RateLimit-Window': limit.window.toString(),
+                'X-RateLimit-Plan': userPlan
+            });
+        }
         next();
     };
 };

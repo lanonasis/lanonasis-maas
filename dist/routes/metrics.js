@@ -1,8 +1,8 @@
 import { Router } from 'express';
-import { metrics } from '@/utils/metrics';
-import { asyncHandler } from '@/middleware/errorHandler';
-import { requireRole } from '@/middleware/auth';
-import { config } from '@/config/environment';
+import { metrics } from '../utils/metrics';
+import { asyncHandler } from '../middleware/errorHandler';
+import { requireRole } from '../middleware/auth';
+import { config } from '../config/environment';
 const router = Router();
 /**
  * @swagger
@@ -21,10 +21,11 @@ const router = Router();
  */
 router.get('/', (req, res) => {
     if (!config.ENABLE_METRICS) {
-        return res.status(404).json({
+        res.status(404).json({
             error: 'Metrics disabled',
             message: 'Metrics collection is disabled in configuration'
         });
+        return;
     }
     res.set('Content-Type', 'text/plain; version=0.0.4; charset=utf-8');
     res.send(metrics.getPrometheusMetrics());
@@ -55,10 +56,11 @@ router.get('/', (req, res) => {
  */
 router.get('/json', requireRole(['admin']), asyncHandler(async (req, res) => {
     if (!config.ENABLE_METRICS) {
-        return res.status(404).json({
+        res.status(404).json({
             error: 'Metrics disabled',
             message: 'Metrics collection is disabled in configuration'
         });
+        return;
     }
     res.json(metrics.getJsonMetrics());
 }));
