@@ -15,7 +15,8 @@ export const OrchestratorInterface = ({ className = '', onCommandExecuted, onUIA
     // Temporarily disabled orchestrator
     // const orchestrator = useRef(null);
     const scrollToBottom = () => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+        const element = messagesEndRef.current;
+        element?.scrollIntoView?.({ behavior: 'smooth' });
     };
     useEffect(() => {
         scrollToBottom();
@@ -41,7 +42,7 @@ Type your command below and press Enter!`,
     const addMessage = (message) => {
         const newMessage = {
             ...message,
-            id: Math.random().toString(36).substr(2, 9),
+            id: Math.random().toString(36).substring(2, 11),
             timestamp: new Date(),
         };
         setMessages(prev => [...prev, newMessage]);
@@ -108,7 +109,9 @@ Type your command below and press Enter!`,
                     }
                     else {
                         // Fallback: open in new window
-                        window.open(result.data.url, '_blank');
+                        if (result.data && 'url' in result.data && typeof result.data.url === 'string') {
+                            window.open(result.data.url, '_blank');
+                        }
                     }
                 }
                 // Callback for parent component
@@ -134,7 +137,8 @@ Type your command below and press Enter!`,
         }
         finally {
             setIsProcessing(false);
-            inputRef.current?.focus();
+            const input = inputRef.current;
+            input?.focus?.();
         }
     };
     const formatSuccessResult = (result) => {
@@ -143,13 +147,13 @@ Type your command below and press Enter!`,
         // Format based on command type
         switch (command.tool) {
             case 'memory':
-                content += formatMemoryResult(command.action, data);
+                content += data ? formatMemoryResult(command.action, data) : '';
                 break;
             case 'ui':
-                content += formatUIResult(command.action, data);
+                content += data ? formatUIResult(command.action, data) : '';
                 break;
             case 'stripe':
-                content += formatStripeResult(command.action, data);
+                content += data ? formatStripeResult(command.action, data) : '';
                 break;
             default:
                 if (data) {
@@ -161,14 +165,14 @@ Type your command below and press Enter!`,
     const formatMemoryResult = (action, data) => {
         switch (action) {
             case 'search':
-                if (data.memories?.length > 0) {
-                    return `\n\nFound **${data.memories.length}** memories:\n${data.memories.map((m) => `• **${m.title}** (${m.memory_type}) - ${m.content.substring(0, 100)}...`).join('\n')}`;
+                if (Array.isArray(data.memories) && data.memories.length > 0) {
+                    return `\n\nFound **${data.memories.length}** memories:\n${data.memories.map((m) => `• **${m.title}** (${m.memory_type}) - ${String(m.content).substring(0, 100)}...`).join('\n')}`;
                 }
                 return '\n\nNo memories found matching your query.';
             case 'create':
                 return `\n\n**Created**: "${data.title}" (ID: ${data.id})`;
             case 'list':
-                if (data.memories?.length > 0) {
+                if (Array.isArray(data.memories) && data.memories.length > 0) {
                     return `\n\n**${data.memories.length} memories**:\n${data.memories.map((m) => `• ${m.title} (${m.memory_type})`).join('\n')}`;
                 }
                 return '\n\nNo memories found.';
@@ -189,7 +193,7 @@ Type your command below and press Enter!`,
         }
     };
     const formatStripeResult = (action, data) => {
-        if (action === 'list-transactions' && data.transactions) {
+        if (action === 'list-transactions' && data.transactions && Array.isArray(data.transactions)) {
             return `\n\nFound **${data.transactions.length}** transactions`;
         }
         return data ? `\n\n${JSON.stringify(data, null, 2)}` : '';
@@ -202,7 +206,8 @@ Type your command below and press Enter!`,
     };
     const handleExampleClick = (example) => {
         setInput(example);
-        inputRef.current?.focus();
+        const input = inputRef.current;
+        input?.focus?.();
     };
     const examples = [
         'search for API documentation',

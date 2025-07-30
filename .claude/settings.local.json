@@ -7,7 +7,10 @@
       "Bash(npm install:*)",
       "Bash(grep:*)",
       "Bash(npm run build:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "WebFetch(domain:www.npmjs.com)",
+      "Bash(npm run test:coverage:*)",
+      "Bash(mkdir:*)"
     ],
     "deny": []
   }
