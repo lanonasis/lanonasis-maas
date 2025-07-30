@@ -139,7 +139,10 @@ class MetricsCollector {
             if (!groups.has(metricName)) {
                 groups.set(metricName, []);
             }
-            groups.get(metricName).push([labelStr, value]);
+            const group = groups.get(metricName);
+            if (group) {
+                group.push([labelStr, value]);
+            }
         }
         return groups;
     }

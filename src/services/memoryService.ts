@@ -16,7 +16,7 @@ import { InternalServerError } from '@/middleware/errorHandler';
 interface SearchFilters {
   memory_types?: MemoryType[];
   tags?: string[];
-  topic_id?: string;
+  topic_id?: string | null;
   user_id?: string;
   limit?: number;
   threshold?: number;
@@ -27,6 +27,14 @@ interface ListOptions {
   limit: number;
   sort: string;
   order: string;
+}
+
+export interface ListMemoryFilters extends Record<string, unknown> {
+  organization_id?: string;
+  user_id?: string;
+  memory_type?: MemoryType;
+  tags?: string[];
+  topic_id?: string | null;
 }
 
 export class MemoryService {
@@ -81,8 +89,8 @@ export class MemoryService {
         topic_id: data.topic_id || null,
         user_id: data.user_id,
         organization_id: data.organization_id,
-        embedding: JSON.stringify(embedding), // Supabase expects string format
-        metadata: data.metadata || {},
+        embedding: JSON.stringify(embedding) as unknown as number[], // Supabase expects string format
+        metadata: data.metadata || {} as Record<string, unknown>,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
         access_count: 0
@@ -147,7 +155,7 @@ export class MemoryService {
     const startTime = Date.now();
 
     try {
-      const updateData: any = {
+      const updateData: Partial<MemoryEntry> & { updated_at: string; embedding?: string } = {
         updated_at: new Date().toISOString()
       };
 
@@ -253,7 +261,7 @@ export class MemoryService {
   /**
    * List memories with pagination and filtering
    */
-  async listMemories(filters: any, options: ListOptions): Promise<{
+  async listMemories(filters: ListMemoryFilters, options: ListOptions): Promise<{
     memories: MemoryEntry[];
     pagination: {
       page: number;
@@ -493,7 +501,7 @@ export class MemoryService {
     action: string,
     resourceType: string,
     resourceId: string,
-    metadata: Record<string, any> = {}
+    metadata: Record<string, unknown> = {}
   ): Promise<void> {
     try {
       await this.supabase

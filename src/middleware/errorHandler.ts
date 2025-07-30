@@ -85,7 +85,7 @@ export const errorHandler = (
 ): void => {
   let statusCode = error.statusCode || 500;
   let message = error.message || 'Internal server error';
-  let details: any = undefined;
+  let details: unknown = undefined;
 
   // Handle Zod validation errors
   if (error instanceof ZodError) {
@@ -130,7 +130,7 @@ export const errorHandler = (
   });
 
   // Send error response
-  const response: any = {
+  const response: Record<string, unknown> = {
     error: message,
     statusCode,
     timestamp: new Date().toISOString(),

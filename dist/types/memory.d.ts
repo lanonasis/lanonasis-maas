@@ -51,10 +51,10 @@ export interface MemoryEntry {
     content: string;
     memory_type: MemoryType;
     tags: string[];
-    topic_id?: string;
+    topic_id?: string | null;
     user_id: string;
     organization_id: string;
-    metadata?: Record<string, any>;
+    metadata?: Record<string, unknown>;
     created_at: string;
     updated_at: string;
     last_accessed?: string;
@@ -101,21 +101,21 @@ export declare const createMemorySchema: z.ZodObject<{
     memory_type: z.ZodDefault<z.ZodEnum<["context", "project", "knowledge", "reference", "personal", "workflow"]>>;
     tags: z.ZodDefault<z.ZodArray<z.ZodString, "many">>;
     topic_id: z.ZodOptional<z.ZodString>;
-    metadata: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodAny>>;
+    metadata: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
 }, "strip", z.ZodTypeAny, {
     title: string;
     content: string;
     memory_type: "context" | "project" | "knowledge" | "reference" | "personal" | "workflow";
     tags: string[];
     topic_id?: string | undefined;
-    metadata?: Record<string, any> | undefined;
+    metadata?: Record<string, unknown> | undefined;
 }, {
     title: string;
     content: string;
     memory_type?: "context" | "project" | "knowledge" | "reference" | "personal" | "workflow" | undefined;
     tags?: string[] | undefined;
     topic_id?: string | undefined;
-    metadata?: Record<string, any> | undefined;
+    metadata?: Record<string, unknown> | undefined;
 }>;
 /**
  * @swagger
@@ -155,21 +155,21 @@ export declare const updateMemorySchema: z.ZodObject<{
     memory_type: z.ZodOptional<z.ZodEnum<["context", "project", "knowledge", "reference", "personal", "workflow"]>>;
     tags: z.ZodOptional<z.ZodArray<z.ZodString, "many">>;
     topic_id: z.ZodOptional<z.ZodNullable<z.ZodString>>;
-    metadata: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodAny>>;
+    metadata: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
 }, "strip", z.ZodTypeAny, {
     title?: string | undefined;
     content?: string | undefined;
     memory_type?: "context" | "project" | "knowledge" | "reference" | "personal" | "workflow" | undefined;
     tags?: string[] | undefined;
     topic_id?: string | null | undefined;
-    metadata?: Record<string, any> | undefined;
+    metadata?: Record<string, unknown> | undefined;
 }, {
     title?: string | undefined;
     content?: string | undefined;
     memory_type?: "context" | "project" | "knowledge" | "reference" | "personal" | "workflow" | undefined;
     tags?: string[] | undefined;
     topic_id?: string | null | undefined;
-    metadata?: Record<string, any> | undefined;
+    metadata?: Record<string, unknown> | undefined;
 }>;
 /**
  * @swagger
