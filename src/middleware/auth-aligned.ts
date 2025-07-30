@@ -5,15 +5,11 @@ import { logger } from '@/utils/logger';
 
 const supabase = createClient(config.SUPABASE_URL=https://<project-ref>.supabase.co
 
-import { JWTPayload } from '@/types/auth';
+import { UnifiedUser } from './auth';
 
 // Aligned user type for Supabase auth that extends JWTPayload
-export interface AlignedUser extends JWTPayload {
-  id: string;
-  email?: string;
-  user_metadata?: Record<string, any>;
-  app_metadata?: Record<string, any>;
-}
+// Type alias for backward compatibility
+export type AlignedUser = UnifiedUser;
 
 /**
  * Authentication middleware aligned with Supabase auth system
@@ -85,20 +81,24 @@ export const alignedAuthMiddleware = async (
           .eq('user_id', user.id)
           .single();
 
-        req.user = {
+        const alignedUser: UnifiedUser = {
+          // JWTPayload properties
           userId: user.id,
           organizationId: user.id, // For Supabase, use user ID as org ID
           role: user.app_metadata?.role || 'user',
-          plan: serviceConfig?.plan || 'free',
+          plan: (serviceConfig as { plan: string })?.plan || 'free',
+          // Additional UnifiedUser properties
           id: user.id,
-          email: user.email,
+          email: user.email || '',
           user_metadata: user.user_metadata,
           app_metadata: user.app_metadata
         };
+
+        req.user = alignedUser;
       }
 
       logger.debug('User authenticated', {
-        userId: req.user?.id,
+        userId: req.user?.userId || req.user?.id,
         email: req.user?.email,
         plan: req.user?.plan,
         authMethod: isApiKey ? 'api_key' : 'jwt'
@@ -160,11 +160,14 @@ async function authenticateApiKey(apiKey: string): Promise<AlignedUser | null> {
       .eq('key_hash', apiKey);
 
     return {
+      id: keyRecord.user_id,
       userId: keyRecord.user_id,
       organizationId: keyRecord.user_id, // For API keys, use user ID as org ID
       role: 'user', // Default role for API key users
-      plan: (keyRecord.maas_service_config as any)?.plan || 'free',
-      id: keyRecord.user_id
+      plan: (keyRecord.maas_service_config as { plan: string })?.plan || 'free',
+      email: '',
+      user_metadata: {},
+      app_metadata: {}
     };
   } catch (error) {
     logger.error('API key authentication error', { error });
@@ -213,8 +216,8 @@ export const requireAdmin = (req: Request, res: Response, next: NextFunction): v
   }
 
   // Check if user has admin role in app_metadata
-  const isAdmin = req.user?.app_metadata?.role === 'admin' || 
-                  req.user?.app_metadata?.roles?.includes('admin');
+  const isAdmin = (req.user.app_metadata as Record<string, unknown>)?.role === 'admin' ||
+                  (req.user.app_metadata as Record<string, unknown>)?.roles?.includes('admin');
 
   if (!isAdmin) {
     res.status(403).json({
