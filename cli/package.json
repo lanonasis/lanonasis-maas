@@ -1,0 +1,51 @@
+{
+  "name": "@seyederick/memory-cli",
+  "version": "1.0.0",
+  "description": "Lanonasis Enterprise CLI - Memory as a Service and Infrastructure Management",
+  "main": "dist/index-simple.js",
+  "bin": {
+    "lanonasis": "dist/index-simple.js",
+    "memory": "dist/index-simple.js",
+    "maas": "dist/index-simple.js"
+  },
+  "type": "module",
+  "scripts": {
+    "dev": "tsx src/index.ts",
+    "build": "tsc && chmod +x dist/index-simple.js",
+    "start": "node dist/index.js",
+    "test": "jest",
+    "lint": "eslint src/**/*.ts",
+    "type-check": "tsc --noEmit"
+  },
+  "keywords": [
+    "lanonasis",
+    "cli",
+    "memory",
+    "ai",
+    "maas",
+    "enterprise",
+    "infrastructure",
+    "orchestrator"
+  ],
+  "author": "Lanonasis (Seye Derick)",
+  "license": "MIT",
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "dependencies": {
+    "commander": "^12.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "@types/inquirer": "^9.0.7",
+    "@typescript-eslint/eslint-plugin": "^8.18.1",
+    "@typescript-eslint/parser": "^8.18.1",
+    "eslint": "^9.17.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
