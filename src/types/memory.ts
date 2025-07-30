@@ -52,10 +52,10 @@ export interface MemoryEntry {
   content: string;
   memory_type: MemoryType;
   tags: string[];
-  topic_id?: string;
+  topic_id?: string | null;
   user_id: string;
   organization_id: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
   created_at: string;
   updated_at: string;
   last_accessed?: string;
@@ -103,7 +103,7 @@ export const createMemorySchema = z.object({
   memory_type: z.enum(['context', 'project', 'knowledge', 'reference', 'personal', 'workflow']).default('context'),
   tags: z.array(z.string().min(1).max(50)).max(10).default([]),
   topic_id: z.string().uuid().optional(),
-  metadata: z.record(z.any()).optional()
+  metadata: z.record(z.unknown()).optional()
 });
 
 /**
@@ -144,7 +144,7 @@ export const updateMemorySchema = z.object({
   memory_type: z.enum(['context', 'project', 'knowledge', 'reference', 'personal', 'workflow']).optional(),
   tags: z.array(z.string().min(1).max(50)).max(10).optional(),
   topic_id: z.string().uuid().nullable().optional(),
-  metadata: z.record(z.any()).optional()
+  metadata: z.record(z.unknown()).optional()
 });
 
 /**

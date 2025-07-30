@@ -7,7 +7,7 @@ declare class MetricsCollector {
     recordDuration(name: string, duration: number, labels?: Record<string, string>): void;
     setGauge(name: string, value: number, labels?: Record<string, string>): void;
     getPrometheusMetrics(): string;
-    getJsonMetrics(): any;
+    getJsonMetrics(): Record<string, unknown>;
     private createKey;
     private parseKey;
     private groupByMetricName;

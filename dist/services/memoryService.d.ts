@@ -2,7 +2,7 @@ import { MemoryEntry, MemorySearchResult, CreateMemoryRequest, UpdateMemoryReque
 interface SearchFilters {
     memory_types?: MemoryType[];
     tags?: string[];
-    topic_id?: string;
+    topic_id?: string | null;
     user_id?: string;
     limit?: number;
     threshold?: number;
@@ -12,6 +12,13 @@ interface ListOptions {
     limit: number;
     sort: string;
     order: string;
+}
+export interface ListMemoryFilters extends Record<string, unknown> {
+    organization_id?: string;
+    user_id?: string;
+    memory_type?: MemoryType;
+    tags?: string[];
+    topic_id?: string | null;
 }
 export declare class MemoryService {
     private supabase;
@@ -47,7 +54,7 @@ export declare class MemoryService {
     /**
      * List memories with pagination and filtering
      */
-    listMemories(filters: any, options: ListOptions): Promise<{
+    listMemories(filters: ListMemoryFilters, options: ListOptions): Promise<{
         memories: MemoryEntry[];
         pagination: {
             page: number;

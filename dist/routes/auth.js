@@ -190,23 +190,25 @@ router.post('/login', asyncHandler(async (req, res) => {
         return;
     }
     // Generate JWT token
+    const userWithOrg = user;
+    const orgPlan = userWithOrg.organizations?.[0]?.plan || userWithOrg.plan;
     const tokenPayload = {
-        userId: user.id,
-        organizationId: user.organization_id,
-        role: user.role,
-        plan: user.organizations.plan
+        userId: userWithOrg.id,
+        organizationId: userWithOrg.organization_id,
+        role: userWithOrg.role,
+        plan: orgPlan
     };
     const token = jwt.sign(tokenPayload, config.JWT_SECRET, { expiresIn: config.JWT_EXPIRES_IN });
     const expiresAt = new Date();
     expiresAt.setTime(expiresAt.getTime() + (24 * 60 * 60 * 1000)); // 24 hours
     const responseUser = {
-        id: user.id,
-        email: user.email,
-        organization_id: user.organization_id,
-        role: user.role,
-        plan: user.organizations.plan,
-        created_at: user.created_at,
-        updated_at: user.updated_at
+        id: userWithOrg.id,
+        email: userWithOrg.email,
+        organization_id: userWithOrg.organization_id,
+        role: userWithOrg.role,
+        plan: orgPlan,
+        created_at: userWithOrg.created_at,
+        updated_at: userWithOrg.updated_at
     };
     const response = {
         user: responseUser,
@@ -272,11 +274,13 @@ router.post('/refresh', asyncHandler(async (req, res) => {
             return;
         }
         // Generate new token
+        const refreshUser = user;
+        const refreshOrgPlan = refreshUser.organizations?.[0]?.plan || refreshUser.plan;
         const newTokenPayload = {
-            userId: user.id,
-            organizationId: user.organization_id,
-            role: user.role,
-            plan: user.organizations.plan
+            userId: refreshUser.id,
+            organizationId: refreshUser.organization_id,
+            role: refreshUser.role,
+            plan: refreshOrgPlan
         };
         const newToken = jwt.sign(newTokenPayload, config.JWT_SECRET, { expiresIn: config.JWT_EXPIRES_IN });
         const expiresAt = new Date();

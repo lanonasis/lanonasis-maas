@@ -36,7 +36,15 @@ const memoryService = new MemoryService();
  */
 router.post('/', asyncHandler(async (req, res) => {
     const validatedData = createMemorySchema.parse(req.body);
-    const { userId, organizationId, plan } = req.user;
+    const user = req.user;
+    if (!user || !user.userId || !user.organizationId || !user.plan) {
+        res.status(401).json({
+            error: 'Unauthorized',
+            message: 'Valid authentication required'
+        });
+        return;
+    }
+    const { userId, organizationId, plan } = user;
     // Check plan limits
     const memoryCount = await memoryService.getMemoryCount(organizationId);
     const planLimits = {
@@ -141,7 +149,15 @@ router.post('/', asyncHandler(async (req, res) => {
  *                       type: integer
  */
 router.get('/', asyncHandler(async (req, res) => {
-    const { organizationId, role } = req.user;
+    const user = req.user;
+    if (!user || !user.organizationId) {
+        res.status(401).json({
+            error: 'Unauthorized',
+            message: 'Valid authentication required'
+        });
+        return;
+    }
+    const { organizationId, role } = user;
     const page = parseInt(req.query.page) || 1;
     const limit = Math.min(parseInt(req.query.limit) || 20, 100);
     const memory_type = req.query.memory_type;
@@ -153,13 +169,14 @@ router.get('/', asyncHandler(async (req, res) => {
     const filters = {
         organization_id: organizationId
     };
-    if (memory_type)
+    if (memory_type && ['context', 'project', 'knowledge', 'reference', 'personal', 'workflow'].includes(memory_type)) {
         filters.memory_type = memory_type;
+    }
     if (tags)
         filters.tags = tags;
     // Role-based filtering
     if (role !== 'admin' && user_id) {
-        filters.user_id = req.user.userId; // Force to own memories
+        filters.user_id = user.userId; // Force to own memories
     }
     else if (user_id) {
         filters.user_id = user_id;
@@ -208,7 +225,15 @@ router.get('/', asyncHandler(async (req, res) => {
  */
 router.post('/search', asyncHandler(async (req, res) => {
     const validatedData = searchMemorySchema.parse(req.body);
-    const { userId, organizationId, role } = req.user;
+    const user = req.user;
+    if (!user || !user.userId || !user.organizationId) {
+        res.status(401).json({
+            error: 'Unauthorized',
+            message: 'Valid authentication required'
+        });
+        return;
+    }
+    const { userId, organizationId, role } = user;
     const startTime = Date.now();
     // Build filters object without undefined values
     const filters = {
@@ -276,14 +301,15 @@ router.get('/:id', asyncHandler(async (req, res) => {
         });
         return;
     }
-    const { userId, organizationId, role } = req.user;
-    if (!organizationId) {
+    const user = req.user;
+    if (!user || !user.userId || !user.organizationId) {
         res.status(401).json({
             error: 'Unauthorized',
-            message: 'Organization ID is required'
+            message: 'Valid authentication required'
         });
         return;
     }
+    const { userId, organizationId, role } = user;
     const memory = await memoryService.getMemoryById(id, organizationId);
     if (!memory) {
         res.status(404).json({
@@ -352,14 +378,15 @@ router.put('/:id', asyncHandler(async (req, res) => {
         return;
     }
     const validatedData = updateMemorySchema.parse(req.body);
-    const { userId, organizationId, role } = req.user;
-    if (!organizationId) {
+    const user = req.user;
+    if (!user || !user.userId || !user.organizationId) {
         res.status(401).json({
             error: 'Unauthorized',
-            message: 'Organization ID is required'
+            message: 'Valid authentication required'
         });
         return;
     }
+    const { userId, organizationId, role } = user;
     const existingMemory = await memoryService.getMemoryById(id, organizationId);
     if (!existingMemory) {
         res.status(404).json({
@@ -416,14 +443,15 @@ router.delete('/:id', asyncHandler(async (req, res) => {
         });
         return;
     }
-    const { userId, organizationId, role } = req.user;
-    if (!organizationId) {
+    const user = req.user;
+    if (!user || !user.userId || !user.organizationId) {
         res.status(401).json({
             error: 'Unauthorized',
-            message: 'Organization ID is required'
+            message: 'Valid authentication required'
         });
         return;
     }
+    const { userId, organizationId, role } = user;
     const existingMemory = await memoryService.getMemoryById(id, organizationId);
     if (!existingMemory) {
         res.status(404).json({
@@ -465,7 +493,15 @@ router.delete('/:id', asyncHandler(async (req, res) => {
  *               $ref: '#/components/schemas/MemoryStats'
  */
 router.get('/admin/stats', requireRole(['admin']), asyncHandler(async (req, res) => {
-    const { organizationId } = req.user;
+    const user = req.user;
+    if (!user || !user.organizationId) {
+        res.status(401).json({
+            error: 'Unauthorized',
+            message: 'Valid authentication required'
+        });
+        return;
+    }
+    const { organizationId } = user;
     const stats = await memoryService.getMemoryStats(organizationId);
     res.json(stats);
 }));
@@ -510,18 +546,28 @@ router.get('/admin/stats', requireRole(['admin']), asyncHandler(async (req, res)
  */
 router.post('/bulk/delete', requireRole(['admin']), requirePlan(['pro', 'enterprise']), asyncHandler(async (req, res) => {
     const { memory_ids } = req.body;
-    const { userId, organizationId } = req.user;
+    const user = req.user;
+    if (!user || !user.userId || !user.organizationId) {
+        res.status(401).json({
+            error: 'Unauthorized',
+            message: 'Valid authentication required'
+        });
+        return;
+    }
+    const { userId, organizationId } = user;
     if (!Array.isArray(memory_ids) || memory_ids.length === 0) {
         res.status(400).json({
             error: 'Invalid request',
             message: 'memory_ids must be a non-empty array'
         });
+        return;
     }
     if (memory_ids.length > 100) {
         res.status(400).json({
             error: 'Too many items',
             message: 'Cannot delete more than 100 memories at once'
         });
+        return;
     }
     const result = await memoryService.bulkDeleteMemories(memory_ids, organizationId);
     logMemoryOperation('bulk_delete', userId, organizationId, {

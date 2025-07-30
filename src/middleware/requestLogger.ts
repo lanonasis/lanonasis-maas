@@ -15,7 +15,7 @@ export const requestLogger = (req: Request, res: Response, next: NextFunction): 
     logRequest(req, res, duration);
     
     // Call the original end function
-    return originalEnd.apply(this, arguments as any);
+    return originalEnd.apply(this, arguments as never);
   };
 
   next();
