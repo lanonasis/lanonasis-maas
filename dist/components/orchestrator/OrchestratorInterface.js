@@ -1,5 +1,4 @@
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
-/// <reference lib="dom" />
 /**
  * Orchestrator Interface Component
  * Provides a chat-like interface for natural language command execution
