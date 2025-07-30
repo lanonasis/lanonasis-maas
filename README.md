@@ -217,50 +217,45 @@ RATE_LIMIT_MAX_REQUESTS=100
 ### **Installation & Setup**
 
 ```bash
-# Install globally
-npm install -g @lanonasis/memory-cli
+# Install globally (Published on npm)
+npm install -g @lanonasis/cli
+
+# Or use with npx (no installation needed)
+npx -y @lanonasis/cli init
 
 # Initialize configuration
-memory init
+lanonasis init
 # Follow prompts to configure API endpoint and authentication
 
 # Login with API key
-memory login --api-key your-api-key-from-dashboard
+lanonasis auth login
 ```
 
 ### **Core Commands**
 
 ```bash
 # Authentication & Configuration
-memory auth status              # Check authentication status
-memory config show             # Display current configuration
-memory config set <key> <val>  # Update configuration
+lanonasis auth status           # Check authentication status
+lanonasis config list          # Display current configuration
+lanonasis config set <key> <val>  # Update configuration
 
 # Memory Operations
-memory create \
+lanonasis create \
   --title "Meeting Notes" \
   --content "Discussed Q4 roadmap and priorities" \
-  --type project \
-  --tags "meeting,roadmap,q4"
+  --type project
 
-memory list                     # List all memories
-memory list --type knowledge    # Filter by type
-memory list --tags "api,docs"   # Filter by tags
-memory list --limit 20          # Limit results
+lanonasis list                  # List all memories
+lanonasis list --type knowledge # Filter by type
+lanonasis list --limit 20       # Limit results
 
-memory search "API documentation" --threshold 0.8
-memory get <memory-id>          # Get specific memory
-memory update <memory-id> --title "Updated Title"
-memory delete <memory-id>       # Delete memory
+lanonasis search "API documentation"
+lanonasis help                  # Show detailed help
 
-# Bulk Operations
-memory import memories.json     # Import from JSON
-memory export --format json    # Export to JSON
-memory export --format csv     # Export to CSV
-
-# Analytics
-memory stats                    # Usage statistics
-memory stats --detailed        # Detailed analytics
+# NPX Usage (no installation)
+npx -y @lanonasis/cli create -t "Quick Note" -c "Content here"
+npx -y @lanonasis/cli search "my query"
+npx -y @lanonasis/cli list --type project
 ```
 
 ### **Memory Types**
@@ -299,9 +294,18 @@ memory topic assign <memory-id> <topic-id>
 
 ### **TypeScript/JavaScript SDK**
 
+The SDK is available as a separate npm package for application integration:
+
 ```bash
+# Install SDK for your applications  
 npm install @lanonasis/memory-client
+
+# Combined installation for full development setup
+npm install -g @lanonasis/cli           # CLI for terminal usage
+npm install @lanonasis/memory-client    # SDK for app development
 ```
+
+**Note**: The SDK source code is located in this repository at `src/sdk/memory-client-sdk.ts`
 
 #### **Basic Usage**
 
