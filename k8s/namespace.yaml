@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: memory-service
+  labels:
+    name: memory-service
+    app: maas
