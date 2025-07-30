@@ -24,6 +24,12 @@ export default [
         setInterval: 'readonly',
         clearInterval: 'readonly',
         Blob: 'readonly',
+        HTMLElement: 'readonly',
+        HTMLInputElement: 'readonly',
+        HTMLDivElement: 'readonly',
+        Element: 'readonly',
+        Document: 'readonly',
+        Window: 'readonly',
       },
     },
     plugins: {
