@@ -1,4 +1,5 @@
 import winston from 'winston';
+import { Request, Response } from 'express';
 import { config } from '@/config/environment';
 
 // Custom log format
@@ -49,7 +50,7 @@ if (config.NODE_ENV === 'production') {
 }
 
 // Helper functions for structured logging
-export const logRequest = (req: any, res: any, duration: number) => {
+export const logRequest = (req: Request, res: Response, duration: number) => {
   logger.info('HTTP Request', {
     method: req.method,
     url: req.url,
@@ -61,7 +62,7 @@ export const logRequest = (req: any, res: any, duration: number) => {
   });
 };
 
-export const logError = (error: Error, context?: Record<string, any>) => {
+export const logError = (error: Error, context?: Record<string, unknown>) => {
   logger.error('Application Error', {
     message: error.message,
     stack: error.stack,
@@ -74,7 +75,7 @@ export const logMemoryOperation = (
   operation: string,
   userId: string,
   organizationId: string,
-  metadata?: Record<string, any>
+  metadata?: Record<string, unknown>
 ) => {
   logger.info('Memory Operation', {
     operation,
@@ -87,7 +88,7 @@ export const logMemoryOperation = (
 export const logPerformance = (
   operation: string,
   duration: number,
-  metadata?: Record<string, any>
+  metadata?: Record<string, unknown>
 ) => {
   logger.info('Performance Metric', {
     operation,

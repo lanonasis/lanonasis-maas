@@ -14,7 +14,7 @@ export interface MemoryEntry {
     topic_id?: string;
     project_ref?: string;
     tags: string[];
-    metadata?: Record<string, any>;
+    metadata?: Record<string, unknown>;
     created_at: string;
     updated_at: string;
 }
@@ -30,7 +30,7 @@ export interface MemoryTopic {
     user_id: string;
     parent_topic_id?: string;
     is_system: boolean;
-    metadata?: Record<string, any>;
+    metadata?: Record<string, unknown>;
     created_at: string;
     updated_at: string;
 }
@@ -42,7 +42,7 @@ export interface CreateMemoryRequest {
     topic_id?: string;
     project_ref?: string;
     tags?: string[];
-    metadata?: Record<string, any>;
+    metadata?: Record<string, unknown>;
 }
 export interface UpdateMemoryRequest {
     title?: string;
@@ -53,7 +53,7 @@ export interface UpdateMemoryRequest {
     topic_id?: string;
     project_ref?: string;
     tags?: string[];
-    metadata?: Record<string, any>;
+    metadata?: Record<string, unknown>;
 }
 export interface SearchFilters {
     memory_types?: MemoryType[];
@@ -68,7 +68,7 @@ export interface UserMemoryStats {
     total_memories: number;
     memories_by_type: Record<MemoryType, number>;
     total_topics: number;
-    most_accessed_memory?: string;
+    most_accessed_memory?: string | undefined;
     recent_memories: string[];
 }
 export declare class AlignedMemoryService {

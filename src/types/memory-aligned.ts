@@ -77,7 +77,7 @@ export interface MemoryEntry {
   topic_id?: string;
   project_ref?: string;
   tags: string[];
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
   created_at: string;
   updated_at: string;
 }
@@ -129,7 +129,7 @@ export interface MemoryTopic {
   user_id: string;
   parent_topic_id?: string;
   is_system: boolean;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
   created_at: string;
   updated_at: string;
 }
@@ -183,7 +183,7 @@ export const createMemorySchema = z.object({
   topic_id: z.string().uuid().optional(),
   project_ref: z.string().max(100).optional(),
   tags: z.array(z.string().min(1).max(50)).max(20).default([]),
-  metadata: z.record(z.any()).optional()
+  metadata: z.record(z.unknown()).optional()
 });
 
 /**
@@ -237,7 +237,7 @@ export const updateMemorySchema = z.object({
   topic_id: z.string().uuid().nullable().optional(),
   project_ref: z.string().max(100).nullable().optional(),
   tags: z.array(z.string().min(1).max(50)).max(20).optional(),
-  metadata: z.record(z.any()).optional()
+  metadata: z.record(z.unknown()).optional()
 });
 
 /**
@@ -367,7 +367,7 @@ export interface SimpleMemory {
   session_id: string;
   content_type: string;
   content: string;
-  metadata: Record<string, any>;
+  metadata: Record<string, unknown>;
   embedding_hash: string;
   relevance_score: number;
   client_type: string;
@@ -380,10 +380,15 @@ export interface SimpleMemory {
 export interface ChatSession {
   id: string;
   user_id: string;
-  messages: any[];
+  messages: Array<{
+    role: 'user' | 'assistant' | 'system';
+    content: string;
+    timestamp?: string;
+    metadata?: Record<string, unknown>;
+  }>;
   last_message_at?: string;
   model_used: string;
-  conversation_metadata?: Record<string, any>;
+  conversation_metadata?: Record<string, unknown>;
   created_at: string;
   updated_at: string;
 }
