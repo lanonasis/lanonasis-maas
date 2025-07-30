@@ -82,16 +82,18 @@ export const alignedAuthMiddleware = async (
           .single();
 
         const alignedUser: UnifiedUser = {
-          // JWTPayload properties
+          // JWTPayload properties (from Supabase user)
           userId: user.id,
           organizationId: user.id, // For Supabase, use user ID as org ID
           role: user.app_metadata?.role || 'user',
-          plan: (serviceConfig as { plan: string })?.plan || 'free',
+          plan: (serviceConfig && Array.isArray(serviceConfig) && serviceConfig.length > 0) 
+            ? serviceConfig[0].plan 
+            : 'free',
           // Additional UnifiedUser properties
           id: user.id,
           email: user.email || '',
-          user_metadata: user.user_metadata,
-          app_metadata: user.app_metadata
+          user_metadata: user.user_metadata || {},
+          app_metadata: user.app_metadata || {}
         };
 
         req.user = alignedUser;
@@ -159,16 +161,26 @@ async function authenticateApiKey(apiKey: string): Promise<AlignedUser | null> {
       .update({ last_used: new Date().toISOString() })
       .eq('key_hash', apiKey);
 
-    return {
-      id: keyRecord.user_id,
+    // Extract plan value to avoid TypeScript errors
+    let plan = 'free';
+    if (keyRecord && keyRecord.maas_service_config && Array.isArray(keyRecord.maas_service_config) && keyRecord.maas_service_config.length > 0) {
+      plan = keyRecord.maas_service_config[0].plan;
+    }
+
+    const unifiedUser: UnifiedUser = {
+      // JWTPayload properties
       userId: keyRecord.user_id,
       organizationId: keyRecord.user_id, // For API keys, use user ID as org ID
       role: 'user', // Default role for API key users
-      plan: (keyRecord.maas_service_config as { plan: string })?.plan || 'free',
+      plan: plan,
+      // Additional UnifiedUser properties
+      id: keyRecord.user_id,
       email: '',
       user_metadata: {},
       app_metadata: {}
     };
+    
+    return unifiedUser;
   } catch (error) {
     logger.error('API key authentication error', { error });
     return null;
@@ -216,8 +228,9 @@ export const requireAdmin = (req: Request, res: Response, next: NextFunction): v
   }
 
   // Check if user has admin role in app_metadata
-  const isAdmin = (req.user.app_metadata as Record<string, unknown>)?.role === 'admin' ||
-                  (req.user.app_metadata as Record<string, unknown>)?.roles?.includes('admin');
+  const appMetadata = req.user?.app_metadata as Record<string, unknown> | undefined;
+  const isAdmin = appMetadata?.role === 'admin' ||
+                  (Array.isArray(appMetadata?.roles) && appMetadata?.roles?.includes('admin'));
 
   if (!isAdmin) {
     res.status(403).json({
@@ -253,11 +266,13 @@ export const planBasedRateLimit = () => {
     // This is a simplified version - in production, use Redis or similar
     
     // For now, just add the limit info to headers
-    res.set({
-      'X-RateLimit-Limit': limit.requests.toString(),
-      'X-RateLimit-Window': limit.window.toString(),
-      'X-RateLimit-Plan': userPlan
-    });
+    if (limit) {
+      res.set({
+        'X-RateLimit-Limit': limit.requests.toString(),
+        'X-RateLimit-Window': limit.window.toString(),
+        'X-RateLimit-Plan': userPlan
+      });
+    }
 
     next();
   };
