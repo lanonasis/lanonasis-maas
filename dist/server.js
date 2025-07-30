@@ -5,17 +5,17 @@ import compression from 'compression';
 import rateLimit from 'express-rate-limit';
 import swaggerUi from 'swagger-ui-express';
 import swaggerJsdoc from 'swagger-jsdoc';
-import { config } from '@/config/environment';
-import { logger } from '@/utils/logger';
-import { errorHandler } from '@/middleware/errorHandler';
-import { requestLogger } from '@/middleware/requestLogger';
-import { authMiddleware } from '@/middleware/auth';
-import { metricsMiddleware, startMetricsCollection } from '@/utils/metrics';
+import { config } from './config/environment';
+import { logger } from './utils/logger';
+import { errorHandler } from './middleware/errorHandler';
+import { requestLogger } from './middleware/requestLogger';
+import { authMiddleware } from './middleware/auth';
+import { metricsMiddleware, startMetricsCollection } from './utils/metrics';
 // Route imports
-import healthRoutes from '@/routes/health';
-import memoryRoutes from '@/routes/memory';
-import authRoutes from '@/routes/auth';
-import metricsRoutes from '@/routes/metrics';
+import healthRoutes from './routes/health';
+import memoryRoutes from './routes/memory';
+import authRoutes from './routes/auth';
+import metricsRoutes from './routes/metrics';
 const app = express();
 // Swagger configuration
 const swaggerOptions = {

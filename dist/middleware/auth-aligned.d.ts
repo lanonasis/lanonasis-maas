@@ -1,18 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
-import { JWTPayload } from '@/types/auth';
-export interface AlignedUser extends JWTPayload {
-    id: string;
-    email?: string;
-    user_metadata?: Record<string, any>;
-    app_metadata?: Record<string, any>;
-}
-declare global {
-    namespace Express {
-        interface Request {
-            user?: AlignedUser;
-        }
-    }
-}
+import { UnifiedUser } from './auth';
+export type AlignedUser = UnifiedUser;
 /**
  * Authentication middleware aligned with Supabase auth system
  * Supports both JWT tokens and API keys

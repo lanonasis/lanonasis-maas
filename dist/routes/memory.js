@@ -1,10 +1,10 @@
 import { Router } from 'express';
 import { v4 as uuidv4 } from 'uuid';
-import { asyncHandler } from '@/middleware/errorHandler';
-import { requireRole, requirePlan } from '@/middleware/auth';
-import { MemoryService } from '@/services/memoryService';
-import { createMemorySchema, updateMemorySchema, searchMemorySchema } from '@/types/memory';
-import { logMemoryOperation } from '@/utils/logger';
+import { asyncHandler } from '../middleware/errorHandler';
+import { requireRole, requirePlan } from '../middleware/auth';
+import { MemoryService } from '../services/memoryService';
+import { createMemorySchema, updateMemorySchema, searchMemorySchema } from '../types/memory';
+import { logMemoryOperation } from '../utils/logger';
 const router = Router();
 const memoryService = new MemoryService();
 /**
@@ -210,14 +210,24 @@ router.post('/search', asyncHandler(async (req, res) => {
     const validatedData = searchMemorySchema.parse(req.body);
     const { userId, organizationId, role } = req.user;
     const startTime = Date.now();
-    const results = await memoryService.searchMemories(validatedData.query, organizationId, {
-        memory_types: validatedData.memory_types?.length ? validatedData.memory_types : undefined,
-        tags: validatedData.tags?.length ? validatedData.tags : undefined,
-        topic_id: validatedData.topic_id,
-        user_id: role !== 'admin' ? userId : undefined, // Admin can search all
+    // Build filters object without undefined values
+    const filters = {
         limit: validatedData.limit,
         threshold: validatedData.threshold
-    });
+    };
+    if (validatedData.memory_types?.length) {
+        filters.memory_types = validatedData.memory_types;
+    }
+    if (validatedData.tags?.length) {
+        filters.tags = validatedData.tags;
+    }
+    if (validatedData.topic_id) {
+        filters.topic_id = validatedData.topic_id;
+    }
+    if (role !== 'admin') {
+        filters.user_id = userId;
+    }
+    const results = await memoryService.searchMemories(validatedData.query, organizationId, filters);
     const searchTime = Date.now() - startTime;
     logMemoryOperation('search', userId, organizationId, {
         query: validatedData.query,
