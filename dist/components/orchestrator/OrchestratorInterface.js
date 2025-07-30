@@ -1,4 +1,5 @@
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
+/// <reference lib="dom" />
 /**
  * Orchestrator Interface Component
  * Provides a chat-like interface for natural language command execution
@@ -13,7 +14,7 @@ export const OrchestratorInterface = ({ className = '', onCommandExecuted, onUIA
     const messagesEndRef = useRef(null);
     const inputRef = useRef(null);
     // Temporarily disabled orchestrator
-    const orchestrator = useRef(null);
+    // const orchestrator = useRef(null);
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     };
