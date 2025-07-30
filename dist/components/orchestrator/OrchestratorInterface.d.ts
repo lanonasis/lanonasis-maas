@@ -5,7 +5,7 @@
 import React from 'react';
 interface OrchestratorResult {
     success: boolean;
-    data?: any;
+    data?: Record<string, unknown>;
     error?: string;
     executionTime: number;
     command: ParsedCommand;
@@ -13,14 +13,14 @@ interface OrchestratorResult {
 interface ParsedCommand {
     action: string;
     target: string;
-    parameters: Record<string, any>;
+    parameters: Record<string, unknown>;
     confidence?: number;
     tool?: string;
 }
 interface OrchestratorInterfaceProps {
     className?: string;
     onCommandExecuted?: (result: OrchestratorResult) => void;
-    onUIAction?: (action: string, args: any) => void;
+    onUIAction?: (action: string, args: Record<string, unknown>) => void;
     placeholder?: string;
     disabled?: boolean;
 }
