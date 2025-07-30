@@ -1,10 +1,13 @@
-/// <reference lib="dom" />
 /**
  * Orchestrator Interface Component
  * Provides a chat-like interface for natural language command execution
  */
 
 import React, { useState, useRef, useEffect } from 'react';
+
+// Declare window for browser environment
+declare const window: any;
+
 // Note: Orchestrator temporarily disabled due to missing dependencies
 // import { orchestrate, parseOnly, ContextualOrchestrator, OrchestratorResult, ParsedCommand } from '../../../seyederick-monorepo-starter/packages/orchestrator';
 
@@ -55,8 +58,8 @@ export const OrchestratorInterface: React.FC<OrchestratorInterfaceProps> = ({
   const [showPreview, setShowPreview] = useState(false);
   const [commandPreview, setCommandPreview] = useState<ParsedCommand | null>(null);
   
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const messagesEndRef = useRef<any>(null);
+  const inputRef = useRef<any>(null);
   // Temporarily disabled orchestrator
   // const orchestrator = useRef(null);
 
