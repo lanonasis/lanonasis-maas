@@ -1,5 +1,5 @@
 {
-  "name": "@seyederick/memory-cli",
+  "name": "@lanonasis/cli",
   "version": "1.0.0",
   "description": "Lanonasis Enterprise CLI - Memory as a Service and Infrastructure Management",
   "main": "dist/index-simple.js",
