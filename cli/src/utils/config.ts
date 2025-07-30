@@ -31,7 +31,7 @@ export class CLIConfig {
     try {
       await fs.mkdir(this.configDir, { recursive: true });
       await this.load();
-    } catch (error) {
+    } catch {
       // Config doesn't exist yet, that's ok
     }
   }
@@ -40,7 +40,7 @@ export class CLIConfig {
     try {
       const data = await fs.readFile(this.configPath, 'utf-8');
       this.config = JSON.parse(data);
-    } catch (error) {
+    } catch {
       this.config = {};
     }
   }
@@ -67,16 +67,16 @@ export class CLIConfig {
     
     // Decode token to get user info
     try {
-      const decoded = jwtDecode(token) as any;
+      const decoded = jwtDecode(token) as Record<string, unknown>;
       // We'll need to fetch full user details from the API
       // For now, store what we can decode
       this.config.user = {
-        email: decoded.email || '',
-        organization_id: decoded.organizationId || '',
-        role: decoded.role || '',
-        plan: decoded.plan || ''
+        email: String(decoded.email || ''),
+        organization_id: String(decoded.organizationId || ''),
+        role: String(decoded.role || ''),
+        plan: String(decoded.plan || '')
       };
-    } catch (error) {
+    } catch {
       // Invalid token, don't store user info
     }
     
@@ -96,10 +96,10 @@ export class CLIConfig {
     if (!token) return false;
 
     try {
-      const decoded = jwtDecode(token) as any;
+      const decoded = jwtDecode(token) as Record<string, unknown>;
       const now = Date.now() / 1000;
-      return decoded.exp > now;
-    } catch (error) {
+      return typeof decoded.exp === 'number' && decoded.exp > now;
+    } catch {
       return false;
     }
   }
