@@ -4,6 +4,25 @@ import inquirer from 'inquirer';
 import { CLIConfig } from '../utils/config.js';
 import { apiClient } from '../utils/api.js';
 
+// Type definitions for command options and answers
+interface UrlPromptAnswer {
+  url: string;
+}
+
+interface ResetConfirmAnswer {
+  confirm: boolean;
+}
+
+interface ResetOptions {
+  force?: boolean;
+}
+
+interface DependencyInfo {
+  status: string;
+  response_time?: number;
+  latency_ms?: number;
+}
+
 export function configCommands(program: Command): void {
   // Show current configuration
   program
@@ -37,18 +56,18 @@ export function configCommands(program: Command): void {
     .command('set-url')
     .description('Set API URL')
     .argument('[url]', 'API URL')
-    .action(async (url) => {
+    .action(async (url: string | undefined) => {
       const config = new CLIConfig();
       await config.init();
 
       if (!url) {
-        const answer = await inquirer.prompt([
+        const answer = await inquirer.prompt<UrlPromptAnswer>([
           {
             type: 'input',
             name: 'url',
             message: 'API URL:',
             default: config.getApiUrl(),
-            validate: (input) => {
+            validate: (input: string) => {
               try {
                 new URL(input);
                 return true;
@@ -88,20 +107,23 @@ export function configCommands(program: Command): void {
         if (health.dependencies) {
           console.log();
           console.log(chalk.yellow('Dependencies:'));
-          Object.entries(health.dependencies).forEach(([name, info]: [string, any]) => {
+          Object.entries(health.dependencies).forEach(([name, info]: [string, DependencyInfo]) => {
             const status = info.status === 'healthy' ? chalk.green('✓') : chalk.red('✖');
-            console.log(`  ${status} ${name}: ${info.status} (${info.response_time}ms)`);
+            const responseTime = info.response_time || info.latency_ms || 0;
+            console.log(`  ${status} ${name}: ${info.status} (${responseTime}ms)`);
           });
         }
         
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.log(chalk.red('✖ Connection failed'));
+        const errorCode = error && typeof error === 'object' && 'code' in error ? (error as Record<string, unknown>).code : null;
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
         
-        if (error.code === 'ECONNREFUSED') {
+        if (errorCode === 'ECONNREFUSED') {
           console.error(chalk.red('Cannot connect to API server'));
           console.log(chalk.yellow('Make sure the API server is running'));
         } else {
-          console.error(chalk.red('Error:'), error.message);
+          console.error(chalk.red('Error:'), errorMessage);
         }
         
         process.exit(1);
@@ -113,9 +135,9 @@ export function configCommands(program: Command): void {
     .command('reset')
     .description('Reset all configuration')
     .option('-f, --force', 'skip confirmation')
-    .action(async (options) => {
+    .action(async (options: ResetOptions) => {
       if (!options.force) {
-        const answer = await inquirer.prompt([
+        const answer = await inquirer.prompt<ResetConfirmAnswer>([
           {
             type: 'confirm',
             name: 'confirm',
