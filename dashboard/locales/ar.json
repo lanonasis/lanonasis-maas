@@ -1,0 +1,44 @@
+{
+  "app": {
+    "name": "Lanonasis Memory Service",
+    "tagline": "حلول مالية للمؤسسات"
+  },
+  "dashboard": {
+    "title": "لوحة تحكم الأعمال",
+    "overview": "نظرة عامة على الأعمال",
+    "revenue": "الإيرادات",
+    "expenses": "نفقات الأعمال",
+    "profit_margin": "هامش الربح",
+    "team_spending": "إنفاق الفريق"
+  },
+  "api": {
+    "title": "إدارة واجهة برمجة التطبيقات",
+    "api_keys": "مفاتيح واجهة برمجة التطبيقات",
+    "usage": "استخدام واجهة برمجة التطبيقات",
+    "documentation": "توثيق واجهة برمجة التطبيقات",
+    "rate_limits": "حدود المعدل",
+    "webhooks": "الويب هوكس"
+  },
+  "analytics": {
+    "title": "التحليلات",
+    "performance": "مقاييس الأداء",
+    "user_activity": "نشاط المستخدم",
+    "revenue_analytics": "تحليلات الإيرادات",
+    "custom_reports": "تقارير مخصصة"
+  },
+  "billing": {
+    "title": "الفواتير والاشتراكات",
+    "current_plan": "الخطة الحالية",
+    "usage_this_month": "الاستخدام هذا الشهر",
+    "billing_history": "سجل الفواتير",
+    "upgrade_plan": "ترقية الخطة",
+    "payment_methods": "طرق الدفع"
+  },
+  "team": {
+    "title": "إدارة الفريق",
+    "members": "أعضاء الفريق",
+    "roles": "الأدوار والصلاحيات",
+    "invite_member": "دعوة عضو",
+    "activity_log": "سجل النشاطات"
+  }
+}
