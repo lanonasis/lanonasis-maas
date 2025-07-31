@@ -8,7 +8,9 @@ import { memoryCommands } from './commands/memory.js';
 import { topicCommands } from './commands/topics.js';
 import { configCommands } from './commands/config.js';
 import { orgCommands } from './commands/organization.js';
+import { mcpCommands } from './commands/mcp.js';
 import { CLIConfig } from './utils/config.js';
+import { getMCPClient } from './utils/mcp-client.js';
 // Load environment variables
 config();
 const program = new Command();
@@ -17,12 +19,13 @@ const cliConfig = new CLIConfig();
 program
     .name('memory')
     .alias('maas')
-    .description('Enterprise Memory as a Service (MaaS) CLI')
+    .description('Enterprise Memory as a Service (MaaS) CLI with MCP Integration')
     .version('1.0.0')
     .option('-v, --verbose', 'enable verbose logging')
     .option('--api-url <url>', 'override API URL')
     .option('--output <format>', 'output format (json, table, yaml)', 'table')
-    .hook('preAction', (thisCommand, actionCommand) => {
+    .option('--no-mcp', 'disable MCP and use direct API')
+    .hook('preAction', async (thisCommand, actionCommand) => {
     const opts = thisCommand.opts();
     if (opts.verbose) {
         process.env.CLI_VERBOSE = 'true';
@@ -31,6 +34,24 @@ program
         process.env.MEMORY_API_URL = opts.apiUrl;
     }
     process.env.CLI_OUTPUT_FORMAT = opts.output;
+    // Auto-initialize MCP unless disabled
+    if (opts.mcp !== false && !['init', 'auth', 'login', 'mcp'].includes(actionCommand.name())) {
+        try {
+            const client = getMCPClient();
+            if (!client.isConnectedToServer()) {
+                const useRemote = await cliConfig.isAuthenticated();
+                await client.connect({ useRemote });
+                if (process.env.CLI_VERBOSE === 'true') {
+                    console.log(chalk.gray(`MCP connected (${useRemote ? 'remote' : 'local'})`));
+                }
+            }
+        }
+        catch {
+            if (process.env.CLI_VERBOSE === 'true') {
+                console.log(chalk.yellow('MCP auto-connect failed, using direct API'));
+            }
+        }
+    }
 });
 // Global error handler
 process.on('uncaughtException', (error) => {
@@ -110,13 +131,16 @@ authCmd
         console.log(chalk.yellow('Run:'), chalk.white('memory login'));
     }
 });
-// Memory commands (require auth)
+// MCP Commands (primary interface)
+mcpCommands(program);
+// Memory commands (require auth) - now MCP-powered by default
 const memoryCmd = program
     .command('memory')
     .alias('mem')
     .description('Memory management commands');
 requireAuth(memoryCmd);
 memoryCommands(memoryCmd);
+// Note: Memory commands are now MCP-powered when available
 // Topic commands (require auth)
 const topicCmd = program
     .command('topic')
@@ -174,8 +198,7 @@ program
 // Help customization
 program.configureHelp({
     formatHelp: (cmd, helper) => {
-        const term = helper.termWidth || 80;
-        const helpWidth = Math.min(term - 2, 80);
+        // Get terminal width for formatting (currently using default helper formatting)
         let help = chalk.blue.bold('🧠 Memory as a Service CLI\n\n');
         help += helper.commandUsage(cmd) + '\n\n';
         if (cmd.description()) {

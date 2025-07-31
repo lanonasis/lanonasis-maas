@@ -6,8 +6,74 @@ import { table } from 'table';
 import wrap from 'word-wrap';
 import { format } from 'date-fns';
 
-import { apiClient } from '../utils/api.js';
-import { formatOutput, formatBytes, truncateText } from '../utils/formatting.js';
+import { apiClient, MemoryType, MemoryEntry, CreateMemoryRequest, UpdateMemoryRequest, GetMemoriesParams } from '../utils/api.js';
+import { formatBytes, truncateText } from '../utils/formatting.js';
+
+// Type definitions for command options
+interface CreateMemoryOptions {
+  title?: string;
+  content?: string;
+  type?: MemoryType;
+  tags?: string;
+  topicId?: string;
+  interactive?: boolean;
+}
+
+interface CreateMemoryAnswers {
+  title: string;
+  content: string;
+  type: MemoryType;
+  tags: string;
+}
+
+interface ListMemoryOptions {
+  page?: string;
+  limit?: string;
+  type?: MemoryType;
+  tags?: string;
+  userId?: string;
+  sort?: string;
+  order?: string;
+}
+
+interface SearchMemoryOptions {
+  limit?: string;
+  threshold?: string;
+  type?: string;
+  tags?: string;
+}
+
+interface UpdateMemoryOptions {
+  title?: string;
+  content?: string;
+  type?: MemoryType;
+  tags?: string;
+  interactive?: boolean;
+}
+
+interface UpdateMemoryAnswers {
+  title: string;
+  content: string;
+  type: MemoryType;
+  tags: string;
+}
+
+interface DeleteMemoryOptions {
+  force?: boolean;
+}
+
+interface DeleteConfirmAnswer {
+  confirm: boolean;
+}
+
+interface SearchParams {
+  limit: number;
+  threshold: number;
+  memory_types?: MemoryType[];
+  tags?: string[];
+}
+
+// Using GetMemoriesParams from api.ts
 
 export function memoryCommands(program: Command): void {
   // Create memory
@@ -21,25 +87,25 @@ export function memoryCommands(program: Command): void {
     .option('--tags <tags>', 'comma-separated tags')
     .option('--topic-id <id>', 'topic ID')
     .option('-i, --interactive', 'interactive mode')
-    .action(async (options) => {
+    .action(async (options: CreateMemoryOptions) => {
       try {
         let { title, content, type, tags, topicId, interactive } = options;
 
         if (interactive || (!title || !content)) {
-          const answers = await inquirer.prompt([
+          const answers = await inquirer.prompt<CreateMemoryAnswers>([
             {
               type: 'input',
               name: 'title',
               message: 'Memory title:',
               default: title,
-              validate: (input) => input.length > 0 || 'Title is required'
+              validate: (input: string) => input.length > 0 || 'Title is required'
             },
             {
               type: 'editor',
               name: 'content',
               message: 'Memory content:',
               default: content,
-              validate: (input) => input.length > 0 || 'Content is required'
+              validate: (input: string) => input.length > 0 || 'Content is required'
             },
             {
               type: 'list',
@@ -64,10 +130,10 @@ export function memoryCommands(program: Command): void {
 
         const spinner = ora('Creating memory...').start();
 
-        const memoryData: any = {
+        const memoryData: CreateMemoryRequest = {
           title,
           content,
-          memory_type: type
+          memory_type: type as MemoryType
         };
 
         if (tags) {
@@ -89,8 +155,9 @@ export function memoryCommands(program: Command): void {
         if (memory.tags && memory.tags.length > 0) {
           console.log(`  Tags: ${memory.tags.join(', ')}`);
         }
-      } catch (error: any) {
-        console.error(chalk.red('✖ Failed to create memory:'), error.message);
+      } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        console.error(chalk.red('✖ Failed to create memory:'), errorMessage);
         process.exit(1);
       }
     });
@@ -107,31 +174,33 @@ export function memoryCommands(program: Command): void {
     .option('--user-id <id>', 'filter by user ID (admin only)')
     .option('--sort <field>', 'sort by field (created_at, updated_at, title, last_accessed)', 'created_at')
     .option('--order <order>', 'sort order (asc, desc)', 'desc')
-    .action(async (options) => {
+    .action(async (options: ListMemoryOptions) => {
       try {
         const spinner = ora('Fetching memories...').start();
 
-        const params: any = {
-          page: parseInt(options.page),
-          limit: parseInt(options.limit),
-          sort: options.sort,
-          order: options.order
+        const params: GetMemoriesParams = {
+          offset: (parseInt(options.page || '1') - 1) * parseInt(options.limit || '20'),
+          limit: parseInt(options.limit || '20'),
+          sort_by: (options.sort || 'created_at') as 'created_at' | 'updated_at' | 'last_accessed' | 'access_count',
+          sort_order: (options.order || 'desc') as 'asc' | 'desc'
         };
 
         if (options.type) params.memory_type = options.type;
-        if (options.tags) params.tags = options.tags;
-        if (options.userId) params.user_id = options.userId;
+        if (options.tags) params.tags = options.tags.split(',').map(t => t.trim());
+        // Note: user_id filtering removed as it's handled by authentication
 
         const result = await apiClient.getMemories(params);
         spinner.stop();
 
-        if (result.memories.length === 0) {
+        if (result.data.length === 0) {
           console.log(chalk.yellow('No memories found'));
           return;
         }
 
         console.log(chalk.blue.bold(`\n📚 Memories (${result.pagination.total} total)`));
-        console.log(chalk.gray(`Page ${result.pagination.page} of ${result.pagination.pages}`));
+        const currentPage = Math.floor(result.pagination.offset / result.pagination.limit) + 1;
+        const totalPages = Math.ceil(result.pagination.total / result.pagination.limit);
+        console.log(chalk.gray(`Page ${currentPage} of ${totalPages}`));
         console.log();
 
         const outputFormat = process.env.CLI_OUTPUT_FORMAT || 'table';
@@ -140,7 +209,7 @@ export function memoryCommands(program: Command): void {
           console.log(JSON.stringify(result, null, 2));
         } else {
           // Table format
-          const tableData = result.memories.map((memory: any) => [
+          const tableData = result.data.map((memory: MemoryEntry) => [
             truncateText(memory.title, 30),
             memory.memory_type,
             memory.tags.slice(0, 3).join(', '),
@@ -149,7 +218,6 @@ export function memoryCommands(program: Command): void {
           ]);
 
           const tableConfig = {
-            header: ['Title', 'Type', 'Tags', 'Created', 'Access'],
             columnDefault: {
               width: 20,
               wrapWord: true
@@ -163,15 +231,18 @@ export function memoryCommands(program: Command): void {
             ]
           };
 
-          console.log(table([tableConfig.header, ...tableData], tableConfig));
+          const tableHeaders = ['Title', 'Type', 'Tags', 'Created', 'Access'];
+          console.log(table([tableHeaders, ...tableData], tableConfig));
 
           // Pagination info
-          if (result.pagination.pages > 1) {
-            console.log(chalk.gray(`\nUse --page ${result.pagination.page + 1} for next page`));
+          if (result.pagination.has_more) {
+            const nextPage = currentPage + 1;
+            console.log(chalk.gray(`\nUse --page ${nextPage} for next page`));
           }
         }
-      } catch (error: any) {
-        console.error(chalk.red('✖ Failed to list memories:'), error.message);
+      } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        console.error(chalk.red('✖ Failed to list memories:'), errorMessage);
         process.exit(1);
       }
     });
@@ -185,17 +256,17 @@ export function memoryCommands(program: Command): void {
     .option('--threshold <threshold>', 'similarity threshold (0-1)', '0.7')
     .option('--type <types>', 'filter by memory types (comma-separated)')
     .option('--tags <tags>', 'filter by tags (comma-separated)')
-    .action(async (query, options) => {
+    .action(async (query: string, options: SearchMemoryOptions) => {
       try {
         const spinner = ora(`Searching for "${query}"...`).start();
 
-        const searchOptions: any = {
-          limit: parseInt(options.limit),
-          threshold: parseFloat(options.threshold)
+        const searchOptions: SearchParams = {
+          limit: parseInt(options.limit || '20'),
+          threshold: parseFloat(options.threshold || '0.7')
         };
 
         if (options.type) {
-          searchOptions.memory_types = options.type.split(',').map((t: string) => t.trim());
+          searchOptions.memory_types = options.type.split(',').map((t: string) => t.trim()) as MemoryType[];
         }
 
         if (options.tags) {
@@ -205,16 +276,16 @@ export function memoryCommands(program: Command): void {
         const result = await apiClient.searchMemories(query, searchOptions);
         spinner.stop();
 
-        if (result.results.length === 0) {
+        if (result.data.length === 0) {
           console.log(chalk.yellow('No memories found matching your search'));
           return;
         }
 
-        console.log(chalk.blue.bold(`\n🔍 Search Results (${result.total_results} found)`));
-        console.log(chalk.gray(`Query: "${query}" | Search time: ${result.search_time_ms}ms`));
+        console.log(chalk.blue.bold(`\n🔍 Search Results (${result.pagination.total} found)`));
+        console.log(chalk.gray(`Query: "${query}"`));
         console.log();
 
-        result.results.forEach((memory: any, index: number) => {
+        result.data.forEach((memory: MemoryEntry & { relevance_score: number }, index: number) => {
           const score = (memory.relevance_score * 100).toFixed(1);
           console.log(chalk.green(`${index + 1}. ${memory.title}`) + chalk.gray(` (${score}% match)`));
           console.log(chalk.white(`   ${truncateText(memory.content, 100)}`));
@@ -224,8 +295,9 @@ export function memoryCommands(program: Command): void {
           }
           console.log();
         });
-      } catch (error: any) {
-        console.error(chalk.red('✖ Search failed:'), error.message);
+      } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        console.error(chalk.red('✖ Search failed:'), errorMessage);
         process.exit(1);
       }
     });
@@ -236,7 +308,7 @@ export function memoryCommands(program: Command): void {
     .alias('show')
     .description('Get detailed information about a memory')
     .argument('<id>', 'memory ID')
-    .action(async (id) => {
+    .action(async (id: string) => {
       try {
         const spinner = ora('Fetching memory...').start();
         const memory = await apiClient.getMemory(id);
@@ -273,8 +345,9 @@ export function memoryCommands(program: Command): void {
           console.log(chalk.green('Metadata:'));
           console.log(JSON.stringify(memory.metadata, null, 2));
         }
-      } catch (error: any) {
-        console.error(chalk.red('✖ Failed to get memory:'), error.message);
+      } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        console.error(chalk.red('✖ Failed to get memory:'), errorMessage);
         process.exit(1);
       }
     });
@@ -289,9 +362,9 @@ export function memoryCommands(program: Command): void {
     .option('--type <type>', 'new memory type')
     .option('--tags <tags>', 'new tags (comma-separated)')
     .option('-i, --interactive', 'interactive mode')
-    .action(async (id, options) => {
+    .action(async (id: string, options: UpdateMemoryOptions) => {
       try {
-        let updateData: any = {};
+        let updateData: UpdateMemoryRequest = {};
 
         if (options.interactive) {
           // First, get current memory data
@@ -299,7 +372,7 @@ export function memoryCommands(program: Command): void {
           const currentMemory = await apiClient.getMemory(id);
           spinner.stop();
 
-          const answers = await inquirer.prompt([
+          const answers = await inquirer.prompt<UpdateMemoryAnswers>([
             {
               type: 'input',
               name: 'title',
@@ -355,8 +428,9 @@ export function memoryCommands(program: Command): void {
         console.log(chalk.green('✓ Memory updated:'));
         console.log(`  ID: ${chalk.cyan(memory.id)}`);
         console.log(`  Title: ${memory.title}`);
-      } catch (error: any) {
-        console.error(chalk.red('✖ Failed to update memory:'), error.message);
+      } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        console.error(chalk.red('✖ Failed to update memory:'), errorMessage);
         process.exit(1);
       }
     });
@@ -368,11 +442,11 @@ export function memoryCommands(program: Command): void {
     .description('Delete a memory entry')
     .argument('<id>', 'memory ID')
     .option('-f, --force', 'skip confirmation')
-    .action(async (id, options) => {
+    .action(async (id: string, options: DeleteMemoryOptions) => {
       try {
         if (!options.force) {
           const memory = await apiClient.getMemory(id);
-          const answer = await inquirer.prompt([
+          const answer = await inquirer.prompt<DeleteConfirmAnswer>([
             {
               type: 'confirm',
               name: 'confirm',
@@ -390,8 +464,9 @@ export function memoryCommands(program: Command): void {
         const spinner = ora('Deleting memory...').start();
         await apiClient.deleteMemory(id);
         spinner.succeed('Memory deleted successfully');
-      } catch (error: any) {
-        console.error(chalk.red('✖ Failed to delete memory:'), error.message);
+      } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        console.error(chalk.red('✖ Failed to delete memory:'), errorMessage);
         process.exit(1);
       }
     });
@@ -414,7 +489,7 @@ export function memoryCommands(program: Command): void {
         
         console.log();
         console.log(chalk.yellow('Memories by Type:'));
-        Object.entries(stats.memories_by_type).forEach(([type, count]) => {
+        Object.entries(stats.memories_by_type).forEach(([type, count]: [string, number]) => {
           console.log(`  ${type}: ${count}`);
         });
 
@@ -427,12 +502,13 @@ export function memoryCommands(program: Command): void {
         if (stats.recent_memories.length > 0) {
           console.log();
           console.log(chalk.yellow('Recent Memories:'));
-          stats.recent_memories.forEach((memory: any, index: number) => {
+          stats.recent_memories.forEach((memory: MemoryEntry, index: number) => {
             console.log(`  ${index + 1}. ${truncateText(memory.title, 50)}`);
           });
         }
-      } catch (error: any) {
-        console.error(chalk.red('✖ Failed to get statistics:'), error.message);
+      } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        console.error(chalk.red('✖ Failed to get statistics:'), errorMessage);
         process.exit(1);
       }
     });
