@@ -6,6 +6,7 @@ import wrap from 'word-wrap';
 import { format } from 'date-fns';
 import { apiClient } from '../utils/api.js';
 import { formatBytes, truncateText } from '../utils/formatting.js';
+// Using GetMemoriesParams from api.ts
 export function memoryCommands(program) {
     // Create memory
     program
@@ -80,7 +81,8 @@ export function memoryCommands(program) {
             }
         }
         catch (error) {
-            console.error(chalk.red('✖ Failed to create memory:'), error.message);
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+            console.error(chalk.red('✖ Failed to create memory:'), errorMessage);
             process.exit(1);
         }
     });
@@ -100,25 +102,26 @@ export function memoryCommands(program) {
         try {
             const spinner = ora('Fetching memories...').start();
             const params = {
-                page: parseInt(options.page),
-                limit: parseInt(options.limit),
-                sort: options.sort,
-                order: options.order
+                offset: (parseInt(options.page || '1') - 1) * parseInt(options.limit || '20'),
+                limit: parseInt(options.limit || '20'),
+                sort_by: (options.sort || 'created_at'),
+                sort_order: (options.order || 'desc')
             };
             if (options.type)
                 params.memory_type = options.type;
             if (options.tags)
-                params.tags = options.tags;
-            if (options.userId)
-                params.user_id = options.userId;
+                params.tags = options.tags.split(',').map(t => t.trim());
+            // Note: user_id filtering removed as it's handled by authentication
             const result = await apiClient.getMemories(params);
             spinner.stop();
-            if (result.memories.length === 0) {
+            if (result.data.length === 0) {
                 console.log(chalk.yellow('No memories found'));
                 return;
             }
             console.log(chalk.blue.bold(`\n📚 Memories (${result.pagination.total} total)`));
-            console.log(chalk.gray(`Page ${result.pagination.page} of ${result.pagination.pages}`));
+            const currentPage = Math.floor(result.pagination.offset / result.pagination.limit) + 1;
+            const totalPages = Math.ceil(result.pagination.total / result.pagination.limit);
+            console.log(chalk.gray(`Page ${currentPage} of ${totalPages}`));
             console.log();
             const outputFormat = process.env.CLI_OUTPUT_FORMAT || 'table';
             if (outputFormat === 'json') {
@@ -126,7 +129,7 @@ export function memoryCommands(program) {
             }
             else {
                 // Table format
-                const tableData = result.memories.map((memory) => [
+                const tableData = result.data.map((memory) => [
                     truncateText(memory.title, 30),
                     memory.memory_type,
                     memory.tags.slice(0, 3).join(', '),
@@ -134,7 +137,6 @@ export function memoryCommands(program) {
                     memory.access_count
                 ]);
                 const tableConfig = {
-                    header: ['Title', 'Type', 'Tags', 'Created', 'Access'],
                     columnDefault: {
                         width: 20,
                         wrapWord: true
@@ -147,15 +149,18 @@ export function memoryCommands(program) {
                         { width: 8 }
                     ]
                 };
-                console.log(table([tableConfig.header, ...tableData], tableConfig));
+                const tableHeaders = ['Title', 'Type', 'Tags', 'Created', 'Access'];
+                console.log(table([tableHeaders, ...tableData], tableConfig));
                 // Pagination info
-                if (result.pagination.pages > 1) {
-                    console.log(chalk.gray(`\nUse --page ${result.pagination.page + 1} for next page`));
+                if (result.pagination.has_more) {
+                    const nextPage = currentPage + 1;
+                    console.log(chalk.gray(`\nUse --page ${nextPage} for next page`));
                 }
             }
         }
         catch (error) {
-            console.error(chalk.red('✖ Failed to list memories:'), error.message);
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+            console.error(chalk.red('✖ Failed to list memories:'), errorMessage);
             process.exit(1);
         }
     });
@@ -172,8 +177,8 @@ export function memoryCommands(program) {
         try {
             const spinner = ora(`Searching for "${query}"...`).start();
             const searchOptions = {
-                limit: parseInt(options.limit),
-                threshold: parseFloat(options.threshold)
+                limit: parseInt(options.limit || '20'),
+                threshold: parseFloat(options.threshold || '0.7')
             };
             if (options.type) {
                 searchOptions.memory_types = options.type.split(',').map((t) => t.trim());
@@ -183,14 +188,14 @@ export function memoryCommands(program) {
             }
             const result = await apiClient.searchMemories(query, searchOptions);
             spinner.stop();
-            if (result.results.length === 0) {
+            if (result.data.length === 0) {
                 console.log(chalk.yellow('No memories found matching your search'));
                 return;
             }
-            console.log(chalk.blue.bold(`\n🔍 Search Results (${result.total_results} found)`));
-            console.log(chalk.gray(`Query: "${query}" | Search time: ${result.search_time_ms}ms`));
+            console.log(chalk.blue.bold(`\n🔍 Search Results (${result.pagination.total} found)`));
+            console.log(chalk.gray(`Query: "${query}"`));
             console.log();
-            result.results.forEach((memory, index) => {
+            result.data.forEach((memory, index) => {
                 const score = (memory.relevance_score * 100).toFixed(1);
                 console.log(chalk.green(`${index + 1}. ${memory.title}`) + chalk.gray(` (${score}% match)`));
                 console.log(chalk.white(`   ${truncateText(memory.content, 100)}`));
@@ -202,7 +207,8 @@ export function memoryCommands(program) {
             });
         }
         catch (error) {
-            console.error(chalk.red('✖ Search failed:'), error.message);
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+            console.error(chalk.red('✖ Search failed:'), errorMessage);
             process.exit(1);
         }
     });
@@ -244,7 +250,8 @@ export function memoryCommands(program) {
             }
         }
         catch (error) {
-            console.error(chalk.red('✖ Failed to get memory:'), error.message);
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+            console.error(chalk.red('✖ Failed to get memory:'), errorMessage);
             process.exit(1);
         }
     });
@@ -324,7 +331,8 @@ export function memoryCommands(program) {
             console.log(`  Title: ${memory.title}`);
         }
         catch (error) {
-            console.error(chalk.red('✖ Failed to update memory:'), error.message);
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+            console.error(chalk.red('✖ Failed to update memory:'), errorMessage);
             process.exit(1);
         }
     });
@@ -357,7 +365,8 @@ export function memoryCommands(program) {
             spinner.succeed('Memory deleted successfully');
         }
         catch (error) {
-            console.error(chalk.red('✖ Failed to delete memory:'), error.message);
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+            console.error(chalk.red('✖ Failed to delete memory:'), errorMessage);
             process.exit(1);
         }
     });
@@ -394,7 +403,8 @@ export function memoryCommands(program) {
             }
         }
         catch (error) {
-            console.error(chalk.red('✖ Failed to get statistics:'), error.message);
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+            console.error(chalk.red('✖ Failed to get statistics:'), errorMessage);
             process.exit(1);
         }
     });

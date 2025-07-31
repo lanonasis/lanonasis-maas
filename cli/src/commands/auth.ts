@@ -4,7 +4,29 @@ import ora from 'ora';
 import { apiClient } from '../utils/api.js';
 import { CLIConfig } from '../utils/config.js';
 
-export async function loginCommand(options: any): Promise<void> {
+// Type definitions for command options
+interface LoginOptions {
+  email?: string;
+  password?: string;
+}
+
+interface RegistrationAnswers {
+  email: string;
+  password: string;
+  confirmPassword: string;
+  organizationName: string;
+}
+
+interface LoginAnswers {
+  email: string;
+  password: string;
+}
+
+interface RegisterPromptAnswer {
+  register: boolean;
+}
+
+export async function loginCommand(options: LoginOptions): Promise<void> {
   const config = new CLIConfig();
   await config.init();
 
@@ -15,13 +37,13 @@ export async function loginCommand(options: any): Promise<void> {
 
   // Get credentials if not provided
   if (!email || !password) {
-    const answers = await inquirer.prompt([
+    const answers = await inquirer.prompt<LoginAnswers>([
       {
         type: 'input',
         name: 'email',
         message: 'Email:',
         default: email,
-        validate: (input) => {
+        validate: (input: string) => {
           const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
           return emailRegex.test(input) || 'Please enter a valid email address';
         }
@@ -31,7 +53,7 @@ export async function loginCommand(options: any): Promise<void> {
         name: 'password',
         message: 'Password:',
         mask: '*',
-        validate: (input) => input.length > 0 || 'Password is required'
+        validate: (input: string) => input.length > 0 || 'Password is required'
       }
     ]);
 
@@ -57,14 +79,16 @@ export async function loginCommand(options: any): Promise<void> {
     }
     console.log(`Plan: ${response.user.plan || 'free'}`);
     
-  } catch (error: any) {
+  } catch (error: unknown) {
     spinner.fail('Login failed');
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const errorResponse = error && typeof error === 'object' && 'response' in error ? (error as Record<string, unknown>).response : null;
     
-    if (error.response?.status === 401) {
+    if (errorResponse && typeof errorResponse === 'object' && 'status' in errorResponse && errorResponse.status === 401) {
       console.error(chalk.red('✖ Invalid email or password'));
       
       // Ask if they want to register
-      const answer = await inquirer.prompt([
+      const answer = await inquirer.prompt<RegisterPromptAnswer>([
         {
           type: 'confirm',
           name: 'register',
@@ -77,7 +101,7 @@ export async function loginCommand(options: any): Promise<void> {
         await registerFlow(email);
       }
     } else {
-      console.error(chalk.red('✖ Login failed:'), error.message);
+      console.error(chalk.red('✖ Login failed:'), errorMessage);
     }
     
     process.exit(1);
@@ -89,13 +113,13 @@ async function registerFlow(defaultEmail?: string): Promise<void> {
   console.log(chalk.blue.bold('📝 Create New Account'));
   console.log();
 
-  const answers = await inquirer.prompt([
+  const answers = await inquirer.prompt<RegistrationAnswers>([
     {
       type: 'input',
       name: 'email',
       message: 'Email:',
       default: defaultEmail,
-      validate: (input) => {
+      validate: (input: string) => {
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         return emailRegex.test(input) || 'Please enter a valid email address';
       }
@@ -105,15 +129,15 @@ async function registerFlow(defaultEmail?: string): Promise<void> {
       name: 'password',
       message: 'Password (min 8 characters):',
       mask: '*',
-      validate: (input) => input.length >= 8 || 'Password must be at least 8 characters'
+      validate: (input: string) => input.length >= 8 || 'Password must be at least 8 characters'
     },
     {
       type: 'password',
       name: 'confirmPassword',
       message: 'Confirm password:',
       mask: '*',
-      validate: (input, answers) => {
-        return input === answers!.password || 'Passwords do not match';
+      validate: (input: string, answers?: RegistrationAnswers) => {
+        return input === answers?.password || 'Passwords do not match';
       }
     },
     {
@@ -146,9 +170,10 @@ async function registerFlow(defaultEmail?: string): Promise<void> {
     }
     console.log(`Plan: ${response.user.plan || 'free'}`);
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     spinner.fail('Registration failed');
-    console.error(chalk.red('✖ Registration failed:'), error.message);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error(chalk.red('✖ Registration failed:'), errorMessage);
     process.exit(1);
   }
 }
