@@ -1,4 +1,4 @@
-export function formatOutput(data: any, format: string = 'table'): void {
+export function formatOutput(data: unknown, format: string = 'table'): void {
   switch (format) {
     case 'json':
       console.log(JSON.stringify(data, null, 2));

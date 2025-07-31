@@ -2,7 +2,20 @@ import chalk from 'chalk';
 import inquirer from 'inquirer';
 import { CLIConfig } from '../utils/config.js';
 
-export async function initCommand(options: any): Promise<void> {
+// Type definitions for command options
+interface InitOptions {
+  force?: boolean;
+}
+
+interface OverwriteAnswer {
+  overwrite: boolean;
+}
+
+interface InitAnswers {
+  apiUrl: string;
+}
+
+export async function initCommand(options: InitOptions): Promise<void> {
   const config = new CLIConfig();
   
   console.log(chalk.blue.bold('🚀 Initializing MaaS CLI'));
@@ -11,7 +24,7 @@ export async function initCommand(options: any): Promise<void> {
   // Check if config already exists
   const configExists = await config.exists();
   if (configExists && !options.force) {
-    const answer = await inquirer.prompt([
+    const answer = await inquirer.prompt<OverwriteAnswer>([
       {
         type: 'confirm',
         name: 'overwrite',
@@ -27,13 +40,13 @@ export async function initCommand(options: any): Promise<void> {
   }
 
   // Get configuration
-  const answers = await inquirer.prompt([
+  const answers = await inquirer.prompt<InitAnswers>([
     {
       type: 'input',
       name: 'apiUrl',
       message: 'API URL:',
       default: 'http://localhost:3000/api/v1',
-      validate: (input) => {
+      validate: (input: string) => {
         try {
           new URL(input);
           return true;

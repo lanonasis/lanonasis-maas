@@ -5,8 +5,48 @@ import ora from 'ora';
 import { table } from 'table';
 import { format } from 'date-fns';
 
-import { apiClient } from '../utils/api.js';
+import { apiClient, MemoryTopic, CreateTopicRequest, UpdateTopicRequest } from '../utils/api.js';
 import { truncateText } from '../utils/formatting.js';
+
+// Type definitions for command options
+interface CreateTopicOptions {
+  name?: string;
+  description?: string;
+  color?: string;
+  icon?: string;
+  parent?: string;
+  interactive?: boolean;
+}
+
+interface CreateTopicAnswers {
+  name: string;
+  description: string;
+  color: string;
+  icon: string;
+}
+
+interface UpdateTopicOptions {
+  name?: string;
+  description?: string;
+  color?: string;
+  icon?: string;
+  interactive?: boolean;
+}
+
+interface UpdateTopicAnswers {
+  name: string;
+  description: string;
+  color: string;
+  icon: string;
+}
+
+interface DeleteTopicOptions {
+  force?: boolean;
+}
+
+interface DeleteConfirmAnswer {
+  confirm: boolean;
+}
 
 export function topicCommands(program: Command): void {
   // Create topic
@@ -20,18 +60,18 @@ export function topicCommands(program: Command): void {
     .option('--icon <icon>', 'topic icon')
     .option('--parent <parentId>', 'parent topic ID')
     .option('-i, --interactive', 'interactive mode')
-    .action(async (options) => {
+    .action(async (options: CreateTopicOptions) => {
       try {
         let { name, description, color, icon, parent, interactive } = options;
 
         if (interactive || !name) {
-          const answers = await inquirer.prompt([
+          const answers = await inquirer.prompt<CreateTopicAnswers>([
             {
               type: 'input',
               name: 'name',
               message: 'Topic name:',
               default: name,
-              validate: (input) => input.length > 0 || 'Name is required'
+              validate: (input: string) => input.length > 0 || 'Name is required'
             },
             {
               type: 'input',
@@ -44,7 +84,7 @@ export function topicCommands(program: Command): void {
               name: 'color',
               message: 'Color (hex format, e.g., #3B82F6):',
               default: color || '#3B82F6',
-              validate: (input) => {
+              validate: (input: string) => {
                 if (!input) return true;
                 return /^#[0-9A-Fa-f]{6}$/.test(input) || 'Please enter a valid hex color (e.g., #3B82F6)';
               }
@@ -65,7 +105,7 @@ export function topicCommands(program: Command): void {
 
         const spinner = ora('Creating topic...').start();
 
-        const topicData: any = { name };
+        const topicData: CreateTopicRequest = { name };
         if (description) topicData.description = description;
         if (color) topicData.color = color;
         if (icon) topicData.icon = icon;
@@ -84,8 +124,9 @@ export function topicCommands(program: Command): void {
         if (topic.color) {
           console.log(`  Color: ${topic.color}`);
         }
-      } catch (error: any) {
-        console.error(chalk.red('✖ Failed to create topic:'), error.message);
+      } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        console.error(chalk.red('✖ Failed to create topic:'), errorMessage);
         process.exit(1);
       }
     });
@@ -115,7 +156,7 @@ export function topicCommands(program: Command): void {
           console.log(JSON.stringify(topics, null, 2));
         } else {
           // Table format
-          const tableData = topics.map((topic: any) => [
+          const tableData = topics.map((topic: MemoryTopic) => [
             truncateText(topic.name, 25),
             truncateText(topic.description || '', 40),
             topic.color || '',
@@ -124,7 +165,6 @@ export function topicCommands(program: Command): void {
           ]);
 
           const tableConfig = {
-            header: ['Name', 'Description', 'Color', 'Created', 'Child'],
             columnDefault: {
               width: 20,
               wrapWord: true
@@ -138,10 +178,12 @@ export function topicCommands(program: Command): void {
             ]
           };
 
-          console.log(table([tableConfig.header, ...tableData], tableConfig));
+          const tableHeaders = ['Name', 'Description', 'System', 'Created'];
+          console.log(table([tableHeaders, ...tableData], tableConfig));
         }
-      } catch (error: any) {
-        console.error(chalk.red('✖ Failed to list topics:'), error.message);
+      } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        console.error(chalk.red('✖ Failed to list topics:'), errorMessage);
         process.exit(1);
       }
     });
@@ -152,7 +194,7 @@ export function topicCommands(program: Command): void {
     .alias('show')
     .description('Get detailed information about a topic')
     .argument('<id>', 'topic ID')
-    .action(async (id) => {
+    .action(async (id: string) => {
       try {
         const spinner = ora('Fetching topic...').start();
         const topic = await apiClient.getTopic(id);
@@ -188,8 +230,9 @@ export function topicCommands(program: Command): void {
           console.log(chalk.green('Metadata:'));
           console.log(JSON.stringify(topic.metadata, null, 2));
         }
-      } catch (error: any) {
-        console.error(chalk.red('✖ Failed to get topic:'), error.message);
+      } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        console.error(chalk.red('✖ Failed to get topic:'), errorMessage);
         process.exit(1);
       }
     });
@@ -204,9 +247,9 @@ export function topicCommands(program: Command): void {
     .option('-c, --color <color>', 'new color (hex format)')
     .option('--icon <icon>', 'new icon')
     .option('-i, --interactive', 'interactive mode')
-    .action(async (id, options) => {
+    .action(async (id: string, options: UpdateTopicOptions) => {
       try {
-        let updateData: any = {};
+        let updateData: UpdateTopicRequest = {};
 
         if (options.interactive) {
           // First, get current topic data
@@ -214,7 +257,7 @@ export function topicCommands(program: Command): void {
           const currentTopic = await apiClient.getTopic(id);
           spinner.stop();
 
-          const answers = await inquirer.prompt([
+          const answers = await inquirer.prompt<UpdateTopicAnswers>([
             {
               type: 'input',
               name: 'name',
@@ -232,7 +275,7 @@ export function topicCommands(program: Command): void {
               name: 'color',
               message: 'Color (hex format):',
               default: currentTopic.color || '',
-              validate: (input) => {
+              validate: (input: string) => {
                 if (!input) return true;
                 return /^#[0-9A-Fa-f]{6}$/.test(input) || 'Please enter a valid hex color';
               }
@@ -271,8 +314,9 @@ export function topicCommands(program: Command): void {
         console.log(chalk.green('✓ Topic updated:'));
         console.log(`  ID: ${chalk.cyan(topic.id)}`);
         console.log(`  Name: ${topic.name}`);
-      } catch (error: any) {
-        console.error(chalk.red('✖ Failed to update topic:'), error.message);
+      } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        console.error(chalk.red('✖ Failed to update topic:'), errorMessage);
         process.exit(1);
       }
     });
@@ -284,11 +328,11 @@ export function topicCommands(program: Command): void {
     .description('Delete a topic')
     .argument('<id>', 'topic ID')
     .option('-f, --force', 'skip confirmation')
-    .action(async (id, options) => {
+    .action(async (id: string, options: DeleteTopicOptions) => {
       try {
         if (!options.force) {
           const topic = await apiClient.getTopic(id);
-          const answer = await inquirer.prompt([
+          const answer = await inquirer.prompt<DeleteConfirmAnswer>([
             {
               type: 'confirm',
               name: 'confirm',
@@ -306,8 +350,9 @@ export function topicCommands(program: Command): void {
         const spinner = ora('Deleting topic...').start();
         await apiClient.deleteTopic(id);
         spinner.succeed('Topic deleted successfully');
-      } catch (error: any) {
-        console.error(chalk.red('✖ Failed to delete topic:'), error.message);
+      } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        console.error(chalk.red('✖ Failed to delete topic:'), errorMessage);
         process.exit(1);
       }
     });
