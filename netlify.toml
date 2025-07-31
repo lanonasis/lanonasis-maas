@@ -1,6 +1,6 @@
 [build]
   # Build command for the dashboard
-  command = "cd dashboard && npm install && npx vite build"
+  command = "cd dashboard && npm install && npm run build"
   # Directory to publish
   publish = "dashboard/dist"
 
