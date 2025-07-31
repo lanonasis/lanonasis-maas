@@ -21,23 +21,59 @@ import metricsRoutes from '@/routes/metrics';
 
 const app = express();
 
-// Swagger configuration
+// Enhanced Swagger configuration
 const swaggerOptions = {
   definition: {
     openapi: '3.0.0',
     info: {
       title: 'Memory as a Service (MaaS) API',
       version: '1.0.0',
-      description: 'Enterprise-grade memory management microservice with vector search capabilities',
+      description: `
+        ## Enterprise-grade Memory Management Microservice
+        
+        The Memory as a Service (MaaS) API provides intelligent memory management with semantic search capabilities. 
+        Built for enterprise use with multi-tenant support, role-based access control, and vector-based similarity search.
+        
+        ### Key Features
+        - 🧠 **Semantic Search**: Vector-based similarity search using OpenAI embeddings
+        - 🏷️ **Smart Categorization**: Memory types, tags, and topics for organization
+        - 👥 **Multi-tenant**: Organization-based isolation with role-based access
+        - 📊 **Analytics**: Usage statistics and access tracking
+        - 🔐 **Security**: JWT authentication with plan-based limitations
+        - ⚡ **Performance**: Optimized queries with pagination and caching
+        
+        ### Memory Types
+        - **context**: General contextual information
+        - **project**: Project-specific knowledge and documentation
+        - **knowledge**: Educational content and reference materials
+        - **reference**: Quick reference information and code snippets
+        - **personal**: User-specific private memories
+        - **workflow**: Process and procedure documentation
+        
+        ### Plans & Limits
+        - **Free**: Up to 100 memories per organization
+        - **Pro**: Up to 10,000 memories per organization + bulk operations
+        - **Enterprise**: Unlimited memories + advanced features
+      `,
+      termsOfService: 'https://api.lanonasis.com/terms',
       contact: {
-        name: 'Seye Derick',
-        email: 'contact@seyederick.com'
+        name: 'Lanonasis Support',
+        email: 'support@lanonasis.com',
+        url: 'https://docs.lanonasis.com'
+      },
+      license: {
+        name: 'MIT',
+        url: 'https://opensource.org/licenses/MIT'
       }
     },
     servers: [
       {
         url: `http://${config.HOST}:${config.PORT}${config.API_PREFIX}/${config.API_VERSION}`,
         description: 'Development server'
+      },
+      {
+        url: `https://api.lanonasis.com${config.API_PREFIX}/${config.API_VERSION}`,
+        description: 'Production server'
       }
     ],
     components: {
@@ -45,14 +81,38 @@ const swaggerOptions = {
         bearerAuth: {
           type: 'http',
           scheme: 'bearer',
-          bearerFormat: 'JWT'
+          bearerFormat: 'JWT',
+          description: 'JWT token obtained from /auth/login or /auth/register'
         },
         apiKey: {
           type: 'apiKey',
           in: 'header',
-          name: 'X-API-Key'
+          name: 'X-API-Key',
+          description: 'API key for service-to-service authentication'
         }
       }
+    },
+    tags: [
+      {
+        name: 'Authentication',
+        description: 'User authentication and token management'
+      },
+      {
+        name: 'Memory',
+        description: 'Memory CRUD operations and semantic search'
+      },
+      {
+        name: 'Health',
+        description: 'System health and monitoring endpoints'
+      },
+      {
+        name: 'Metrics',
+        description: 'Performance metrics and monitoring data'
+      }
+    ],
+    externalDocs: {
+      description: 'Full API Documentation',
+      url: 'https://docs.lanonasis.com/api'
     }
   },
   apis: ['./src/routes/*.ts', './src/types/*.ts']
@@ -66,8 +126,11 @@ app.use(helmet({
     directives: {
       defaultSrc: ["'self'"],
       styleSrc: ["'self'", "'unsafe-inline'"],
-      scriptSrc: ["'self'"],
-      imgSrc: ["'self'", "data:", "https:"]
+      scriptSrc: ["'self'", "'unsafe-eval'", "'unsafe-inline'"],
+      imgSrc: ["'self'", "data:", "https:"],
+      fontSrc: ["'self'", "https:", "data:"],
+      connectSrc: ["'self'", "https:"],
+      workerSrc: ["'self'", "blob:"]
     }
   }
 }));
@@ -105,8 +168,21 @@ app.use(limiter);
 app.use(requestLogger);
 app.use(metricsMiddleware);
 
-// API Documentation
-app.use('/docs', swaggerUi.serve, swaggerUi.setup(specs));
+// API Documentation with improved configuration
+const swaggerUiOptions = {
+  customCss: '.swagger-ui .topbar { display: none }',
+  customSiteTitle: 'Memory as a Service API Docs',
+  swaggerOptions: {
+    persistAuthorization: true,
+    displayRequestDuration: true,
+    filter: true,
+    tryItOutEnabled: true,
+    supportedSubmitMethods: ['get', 'post', 'put', 'delete', 'patch']
+  }
+};
+
+// Serve Swagger UI documentation
+app.use('/docs', swaggerUi.serve, swaggerUi.setup(specs, swaggerUiOptions));
 
 // Health check (no auth required)
 app.use(`${config.API_PREFIX}/${config.API_VERSION}/health`, healthRoutes);

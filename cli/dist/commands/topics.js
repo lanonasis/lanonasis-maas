@@ -82,7 +82,8 @@ export function topicCommands(program) {
             }
         }
         catch (error) {
-            console.error(chalk.red('✖ Failed to create topic:'), error.message);
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+            console.error(chalk.red('✖ Failed to create topic:'), errorMessage);
             process.exit(1);
         }
     });
@@ -133,7 +134,8 @@ export function topicCommands(program) {
             }
         }
         catch (error) {
-            console.error(chalk.red('✖ Failed to list topics:'), error.message);
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+            console.error(chalk.red('✖ Failed to list topics:'), errorMessage);
             process.exit(1);
         }
     });
@@ -174,7 +176,8 @@ export function topicCommands(program) {
             }
         }
         catch (error) {
-            console.error(chalk.red('✖ Failed to get topic:'), error.message);
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+            console.error(chalk.red('✖ Failed to get topic:'), errorMessage);
             process.exit(1);
         }
     });
@@ -257,7 +260,8 @@ export function topicCommands(program) {
             console.log(`  Name: ${topic.name}`);
         }
         catch (error) {
-            console.error(chalk.red('✖ Failed to update topic:'), error.message);
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+            console.error(chalk.red('✖ Failed to update topic:'), errorMessage);
             process.exit(1);
         }
     });
@@ -290,7 +294,8 @@ export function topicCommands(program) {
             spinner.succeed('Topic deleted successfully');
         }
         catch (error) {
-            console.error(chalk.red('✖ Failed to delete topic:'), error.message);
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+            console.error(chalk.red('✖ Failed to delete topic:'), errorMessage);
             process.exit(1);
         }
     });

@@ -1,0 +1,40 @@
+# Development files
+src/
+*.log
+*.tmp
+.DS_Store
+Thumbs.db
+
+# Build configuration
+tsconfig.json
+rollup.config.js
+.eslintrc.*
+jest.config.*
+
+# Development dependencies
+node_modules/
+coverage/
+.nyc_output/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Git
+.git/
+.gitignore
+
+# Testing
+__tests__/
+*.test.ts
+*.spec.ts
+
+# Documentation source
+docs/
+
+# Examples and development files
+examples/
+example.js
+.github/
