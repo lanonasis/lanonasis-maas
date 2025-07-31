@@ -4,8 +4,11 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![Node.js](https://img.shields.io/badge/Node.js-43853D?logo=node.js&logoColor=white)](https://nodejs.org/)
+[![MCP Integration](https://img.shields.io/badge/MCP-Model%20Context%20Protocol-purple)](https://modelcontextprotocol.com)
+[![npm version](https://img.shields.io/npm/v/@lanonasis/memory-client)](https://www.npmjs.com/package/@lanonasis/memory-client)
+[![CLI Tool](https://img.shields.io/npm/v/@lanonasis/cli)](https://www.npmjs.com/package/@lanonasis/cli)
 
-**Enterprise-Grade Memory as a Service** - Complete B2B2C Memory platform with vector search, semantic memory management, and comprehensive developer ecosystem. Transform your memory infrastructure into a distributable, monetizable service.
+**Enterprise-Grade Memory as a Service** - Complete B2B2C Memory platform with vector search, semantic memory management, Model Context Protocol (MCP) integration, and comprehensive developer ecosystem. Transform your memory infrastructure into a distributable, monetizable service with AI agent capabilities.
 
 ## 🚀 **Live Platform**
 
@@ -42,11 +45,13 @@ Transform your existing memory infrastructure into a revenue-generating service:
 
 ### **🛠 Developer Ecosystem**
 - **TypeScript SDK** - Complete client library with React hooks (`@lanonasis/memory-client`)
-- **CLI Tool** - Feature-rich command-line interface (`@lanonasis/memory-cli`)
+- **CLI Tool** - Feature-rich command-line interface with MCP support (`@lanonasis/cli` v1.1.0+)
 - **Visual Components** - Memory visualizer, bulk uploader, and interactive dashboard
 - **REST API** - OpenAPI 3.0 documented endpoints with Swagger UI
 - **Memory Visualizer** - Interactive network graphs with D3.js
 - **AI Agent Integration** - Tool calling capabilities for autonomous memory operations
+- **Model Context Protocol (MCP)** - Native integration for AI assistants (Claude, Cursor, Windsurf)
+- **IDE Extensions** - VSCode, Cursor, and Windsurf extensions for in-editor memory management
 
 ## 🏗️ **Architecture Overview**
 
@@ -212,6 +217,99 @@ RATE_LIMIT_WINDOW_MS=60000
 RATE_LIMIT_MAX_REQUESTS=100
 ```
 
+## 🤖 **Model Context Protocol (MCP) Integration**
+
+### **Native AI Assistant Support**
+
+The Memory Service now includes first-class support for the Model Context Protocol (MCP), enabling seamless integration with AI assistants like Claude, Cursor, and Windsurf.
+
+#### **MCP Server Setup**
+
+```bash
+# Install the MCP server globally
+npm install -g @lanonasis/cli
+
+# Configure and start MCP server
+lanonasis mcp start --mode server
+# Server starts on ws://localhost:3002/mcp
+
+# Or run directly with npx
+npx -y @lanonasis/cli mcp start
+```
+
+#### **MCP Features**
+
+- **🔌 WebSocket Server** - Real-time bidirectional communication
+- **🛠️ Full Tool Suite** - All memory operations exposed as MCP tools
+- **🔄 Hybrid Mode** - Automatic fallback between local MCP and remote API
+- **🔐 Authentication** - Seamless auth with API keys or JWT tokens
+- **📊 Real-time Updates** - SSE for live memory notifications
+
+#### **Configure AI Assistants**
+
+**Claude Desktop (`claude_desktop_config.json`):**
+```json
+{
+  "mcpServers": {
+    "memory-service": {
+      "command": "npx",
+      "args": ["-y", "@lanonasis/cli", "mcp", "start"],
+      "env": {
+        "LANONASIS_API_KEY": "your-api-key-here"
+      }
+    }
+  }
+}
+```
+
+**Cursor/Windsurf Settings:**
+```json
+{
+  "mcp.servers": {
+    "memory-service": {
+      "command": "lanonasis",
+      "args": ["mcp", "start"],
+      "env": {
+        "LANONASIS_API_KEY": "your-api-key-here"
+      }
+    }
+  }
+}
+```
+
+#### **Available MCP Tools**
+
+- `memory_create_memory` - Create new memories with vector embeddings
+- `memory_search_memories` - Semantic search across all memories
+- `memory_list_memories` - List and filter memories
+- `memory_get_memory` - Retrieve specific memory by ID
+- `memory_update_memory` - Update existing memories
+- `memory_delete_memory` - Delete memories
+- `memory_bulk_operations` - Batch create/update/delete
+- `memory_get_stats` - Memory usage statistics
+- `memory_export_data` - Export memories in various formats
+
+#### **Using MCP in Applications**
+
+```typescript
+import { MCPClient } from '@lanonasis/memory-client/mcp';
+
+// Initialize MCP client
+const mcpClient = new MCPClient({
+  mode: 'auto', // 'local', 'remote', or 'auto'
+  localServerUrl: 'ws://localhost:3002/mcp',
+  apiKey: process.env.LANONASIS_API_KEY
+});
+
+// Connect and use
+await mcpClient.connect();
+
+// The client automatically handles:
+// - Local MCP server connection when available
+// - Fallback to REST API when MCP is unavailable
+// - Seamless authentication and error handling
+```
+
 ## 📱 **CLI Tool - Professional Memory Management**
 
 ### **Installation & Setup**
@@ -252,10 +350,17 @@ lanonasis list --limit 20       # Limit results
 lanonasis search "API documentation"
 lanonasis help                  # Show detailed help
 
+# MCP Server Mode (NEW in v1.1.0)
+lanonasis mcp start            # Start MCP server for AI assistants
+lanonasis mcp start --port 3002 # Custom port
+lanonasis mcp tools            # List available MCP tools
+lanonasis mcp test             # Test MCP connectivity
+
 # NPX Usage (no installation)
 npx -y @lanonasis/cli create -t "Quick Note" -c "Content here"
 npx -y @lanonasis/cli search "my query"
 npx -y @lanonasis/cli list --type project
+npx -y @lanonasis/cli mcp start # Run MCP server without installation
 ```
 
 ### **Memory Types**
@@ -566,6 +671,52 @@ Visit [api.lanonasis.com/docs](https://api.lanonasis.com/docs) for:
 - **Response Examples** - Real response samples
 - **Error Code Reference** - Complete error handling guide
 
+## 🔌 **IDE Extensions**
+
+### **VSCode/Cursor/Windsurf Memory Extension**
+
+Manage your memories directly from your favorite IDE with our official extensions.
+
+#### **Features**
+- **🌳 Memory Explorer** - Tree view of all memories in sidebar
+- **🔍 Quick Search** - Command palette integration for memory search
+- **✏️ Create from Selection** - Turn selected code/text into memories
+- **📝 Inline Editing** - Edit memories without leaving the editor
+- **🔐 Secure Authentication** - OAuth2 flow with auto-redirect
+- **🎨 Syntax Highlighting** - Memory preview with markdown support
+- **⚡ Real-time Sync** - Live updates via SSE
+
+#### **Installation**
+
+**VSCode Marketplace:**
+```bash
+# Search for "Lanonasis Memory" in VSCode extensions
+# Or install via command line:
+code --install-extension lanonasis.memory-vscode
+```
+
+**Cursor:**
+```bash
+# Download from releases
+curl -L https://github.com/thefixer3x/vibe-memory/releases/latest/download/memory-cursor.vsix -o memory-cursor.vsix
+cursor --install-extension memory-cursor.vsix
+```
+
+**Windsurf:**
+```bash
+# Download from releases
+curl -L https://github.com/thefixer3x/vibe-memory/releases/latest/download/memory-windsurf.vsix -o memory-windsurf.vsix
+windsurf --install-extension memory-windsurf.vsix
+```
+
+#### **Commands**
+- `Memory: Search` - Search memories with semantic search
+- `Memory: Create from Selection` - Create memory from selected text
+- `Memory: View All` - Open memory explorer
+- `Memory: Authenticate` - Sign in to your account
+- `Memory: Refresh` - Reload memory list
+- `Memory: Configure` - Open extension settings
+
 ## 🧪 **Testing**
 
 ### **Run Tests**
@@ -741,6 +892,10 @@ railway deploy
 - ✅ Memory visualizer components
 - ✅ Comprehensive API documentation
 - ✅ Docker and Kubernetes deployment
+- ✅ Model Context Protocol (MCP) integration
+- ✅ IDE extensions for VSCode, Cursor, and Windsurf
+- ✅ Real-time SSE notifications
+- ✅ Onasis Gateway integration
 
 ### **🔄 Phase 2: Business Features** (In Progress)
 - 🔄 Usage-based billing system
@@ -768,29 +923,74 @@ railway deploy
 
 ## 🔒 **Security & Compliance**
 
-### **Data Security**
-- **Encryption at rest** - All data encrypted in Supabase
-- **Encryption in transit** - TLS 1.3 for all communications
-- **API key security** - Secure generation and storage
-- **Row-level security** - Multi-tenant data isolation
-- **Input validation** - Comprehensive request validation
-- **Rate limiting** - DDoS protection and abuse prevention
+### **Enterprise Data Security**
+- **🔐 Encryption At Rest** - AES-256 encryption via Supabase PostgreSQL with automated key rotation
+- **🛡️ Encryption In Transit** - TLS 1.3 for all API communications with perfect forward secrecy
+- **🔑 API Key Security** - Cryptographically secure key generation (64-bit entropy) with rate limiting
+- **🏢 Multi-Tenant Isolation** - PostgreSQL Row-Level Security (RLS) policies enforce data separation
+- **✅ Input Validation** - Zod schema validation with SQL injection and XSS protection
+- **🚦 Rate Limiting** - Redis-backed request throttling: 1000/hour free, 10K/hour pro, unlimited enterprise
+- **🔍 Security Scanning** - Automated vulnerability detection with Snyk integration
+- **💾 Backup Strategy** - Point-in-time recovery with 7-day retention (30-day for enterprise)
 
-### **Privacy & Compliance**
-- **GDPR compliance** - Right to deletion and data portability
-- **Data residency** - Control over data location
-- **Audit trails** - Complete operation logging
-- **Privacy by design** - Minimal data collection
-- **Terms of service** - Clear usage guidelines
-- **Privacy policy** - Transparent data handling
+### **GDPR & Data Residency Compliance**
+- **🌍 GDPR Compliance** - Full General Data Protection Regulation compliance framework
+  - **Right to Access** - Complete data export via `/api/v1/user/data-export` endpoint
+  - **Right to Rectification** - Memory update/correction APIs with audit trail
+  - **Right to Erasure** - Secure data deletion with cryptographic proof of removal
+  - **Right to Portability** - JSON/CSV export formats with metadata preservation
+  - **Data Processing Basis** - Legitimate interest with explicit consent tracking
+  - **Privacy by Design** - Minimal data collection, automatic PII detection and masking
 
-### **Best Practices**
-- **Environment variables** - No secrets in code
-- **Regular updates** - Automated dependency updates
-- **Security scanning** - Automated vulnerability detection
-- **Access logging** - Complete audit trail
-- **Backup strategy** - Regular automated backups
-- **Incident response** - Clear security incident procedures
+- **🏛️ Data Residency Controls** - Geographic data placement options
+  - **EU Region** - Frankfurt/Ireland data centers for EU customers
+  - **US Region** - Virginia/Oregon for North American customers  
+  - **APAC Region** - Singapore/Tokyo for Asia-Pacific customers
+  - **Dedicated Tenancy** - Single-tenant deployments for financial/healthcare
+  - **Data Sovereignty** - Local jurisdiction compliance (GDPR, CCPA, PIPEDA)
+
+### **Enterprise Logging & Auditing**
+- **📋 Comprehensive Audit Trails** - All operations logged with immutable timestamps
+  - **User Actions** - Login, memory CRUD, search queries, bulk operations
+  - **System Events** - Database changes, API calls, authentication events
+  - **Security Events** - Failed logins, rate limit violations, suspicious patterns
+  - **Data Access** - Complete record of who accessed what data when
+  - **Retention Policies** - 1 year standard, 7 years for financial/healthcare compliance
+
+- **🔍 Structured Logging** - JSON-formatted logs with Winston/Pino for log aggregation
+  - **Log Levels** - ERROR, WARN, INFO, DEBUG with configurable thresholds
+  - **Correlation IDs** - Request tracing across microservices
+  - **Performance Metrics** - Response times, query performance, resource usage
+  - **Error Tracking** - Stack traces, error rates, automated alerting
+  - **SIEM Integration** - Compatible with Splunk, ELK Stack, DataDog
+
+### **Industry Compliance Standards**
+- **🏦 Financial Services** 
+  - SOC 2 Type II audit readiness
+  - PCI DSS Level 1 for payment data (when applicable)
+  - ISO 27001 security management framework
+  - FFIEC guidelines for US banking compliance
+
+- **🏥 Healthcare** 
+  - HIPAA compliance framework for PHI handling
+  - HITECH Act security requirements
+  - Medical device integration standards (HL7 FHIR)
+
+- **🏢 Enterprise Standards**
+  - ISO 27001/27002 information security management
+  - SOC 2 Type II annual audits
+  - NIST Cybersecurity Framework alignment
+  - OWASP Top 10 vulnerability protection
+
+### **Security Best Practices**
+- **🔒 Secrets Management** - HashiCorp Vault integration for production secrets
+- **🔄 Automated Updates** - Dependabot security patches with CI/CD integration  
+- **🛡️ Penetration Testing** - Quarterly third-party security assessments
+- **📊 Security Monitoring** - 24/7 SOC with automated incident response
+- **🚨 Incident Response** - Documented procedures with 4-hour response SLA
+- **📚 Security Training** - Regular team training on secure coding practices
+- **🔐 Zero Trust Architecture** - Network segmentation with service mesh (Istio)
+- **📈 Continuous Compliance** - Automated compliance checks in CI/CD pipeline
 
 ## 🤝 **Contributing**
 
@@ -857,6 +1057,36 @@ For enterprise customers:
 - **Security consultation**
 
 Contact: enterprise@lanonasis.com
+
+---
+
+## 🔗 **Platform Integrations**
+
+### **Onasis Gateway Integration**
+The Memory Service is fully integrated with the Onasis Gateway platform, providing:
+- **🔌 Unified API Gateway** - Single endpoint for all services
+- **🔐 Centralized Authentication** - SSO across all Onasis services
+- **📊 Consolidated Analytics** - Unified dashboard at api.lanonasis.com
+- **🚀 Auto-scaling** - Managed by gateway infrastructure
+- **🛡️ DDoS Protection** - Enterprise-grade security
+
+### **Vibe Frontend Integration**
+The Memory Service powers the Vibe platform frontend with:
+- **🎨 Memory Dashboard** - Full-featured UI at `/dashboard/memory`
+- **📈 Memory Visualizer** - Interactive D3.js network graphs
+- **📤 Bulk Upload Center** - Multi-format import capabilities
+- **🤖 AI Orchestrator** - Natural language memory commands
+- **⚡ Real-time Updates** - SSE-powered live notifications
+- **🔄 MCP Support** - Hybrid local/remote memory operations
+
+### **AI Platform Integrations**
+Native support for popular AI development platforms:
+- **Claude Desktop** - MCP server for Claude conversations
+- **Cursor IDE** - In-editor memory management
+- **Windsurf IDE** - Seamless memory operations
+- **OpenAI Assistants** - Function calling integration
+- **LangChain** - Memory retrieval tools
+- **AutoGPT** - Long-term memory storage
 
 ---
 

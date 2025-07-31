@@ -15,7 +15,7 @@
     "types": ["node"]
   },
   "include": [
-    "src/index-simple.ts"
+    "src/**/*.ts"
   ],
   "exclude": [
     "node_modules",

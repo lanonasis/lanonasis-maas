@@ -1,0 +1,233 @@
+{
+  "name": "lanonasis-memory-cursor",
+  "displayName": "Lanonasis Memory Assistant for Cursor",
+  "description": "Memory as a Service integration for Cursor - Search, create, and manage memories with auto-redirect authentication",
+  "version": "1.0.0",
+  "publisher": "lanonasis",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lanonasis/lanonasis-maas.git"
+  },
+  "engines": {
+    "vscode": "^1.102.0"
+  },
+  "categories": [
+    "Other",
+    "Snippets",
+    "Machine Learning",
+    "Data Science"
+  ],
+  "keywords": [
+    "memory",
+    "ai",
+    "knowledge",
+    "search",
+    "notes",
+    "documentation",
+    "cursor",
+    "oauth",
+    "authentication"
+  ],
+  "activationEvents": [],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "lanonasis.searchMemory",
+        "title": "Search Memories",
+        "category": "Lanonasis",
+        "icon": "$(search)"
+      },
+      {
+        "command": "lanonasis.createMemory",
+        "title": "Create Memory from Selection",
+        "category": "Lanonasis",
+        "icon": "$(add)"
+      },
+      {
+        "command": "lanonasis.createMemoryFromFile",
+        "title": "Create Memory from Current File",
+        "category": "Lanonasis",
+        "icon": "$(file-add)"
+      },
+      {
+        "command": "lanonasis.authenticate",
+        "title": "Authenticate with Lanonasis",
+        "category": "Lanonasis",
+        "icon": "$(key)"
+      },
+      {
+        "command": "lanonasis.logout",
+        "title": "Logout from Lanonasis",
+        "category": "Lanonasis",
+        "icon": "$(sign-out)"
+      },
+      {
+        "command": "lanonasis.refreshMemories",
+        "title": "Refresh Memories",
+        "category": "Lanonasis",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "lanonasis.openMemory",
+        "title": "Open Memory",
+        "category": "Lanonasis"
+      },
+      {
+        "command": "lanonasis.switchMode",
+        "title": "Switch Gateway/Direct API Mode",
+        "category": "Lanonasis",
+        "icon": "$(settings-gear)"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "lanonasis.searchMemory",
+        "key": "ctrl+shift+m",
+        "mac": "cmd+shift+m",
+        "when": "editorTextFocus"
+      },
+      {
+        "command": "lanonasis.createMemory",
+        "key": "ctrl+shift+alt+m",
+        "mac": "cmd+shift+alt+m",
+        "when": "editorHasSelection"
+      }
+    ],
+    "menus": {
+      "editor/context": [
+        {
+          "command": "lanonasis.createMemory",
+          "when": "editorHasSelection",
+          "group": "lanonasis"
+        }
+      ],
+      "view/title": [
+        {
+          "command": "lanonasis.refreshMemories",
+          "when": "view == lanonasisMemories",
+          "group": "navigation"
+        },
+        {
+          "command": "lanonasis.authenticate",
+          "when": "view == lanonasisMemories && !lanonasis.authenticated",
+          "group": "navigation"
+        },
+        {
+          "command": "lanonasis.logout",
+          "when": "view == lanonasisMemories && lanonasis.authenticated",
+          "group": "navigation"
+        }
+      ]
+    },
+    "views": {
+      "explorer": [
+        {
+          "id": "lanonasisMemories",
+          "name": "Memories",
+          "when": "lanonasis.enabled"
+        }
+      ]
+    },
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "lanonasis",
+          "title": "Lanonasis Memory",
+          "icon": "$(database)"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Lanonasis Memory",
+      "properties": {
+        "lanonasis.apiUrl": {
+          "type": "string",
+          "default": "https://api.lanonasis.com",
+          "description": "Lanonasis Memory Service API URL"
+        },
+        "lanonasis.gatewayUrl": {
+          "type": "string",
+          "default": "https://api.lanonasis.com",
+          "description": "Onasis Gateway URL (if using gateway mode)"
+        },
+        "lanonasis.authUrl": {
+          "type": "string",
+          "default": "https://auth.lanonasis.com",
+          "description": "Lanonasis Authentication Service URL"
+        },
+        "lanonasis.useGateway": {
+          "type": "boolean",
+          "default": true,
+          "description": "Use Onasis Gateway for API requests (recommended)"
+        },
+        "lanonasis.useAutoAuth": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable automatic OAuth2 authentication with browser redirect"
+        },
+        "lanonasis.defaultMemoryType": {
+          "type": "string",
+          "enum": [
+            "context",
+            "project",
+            "knowledge",
+            "reference",
+            "personal",
+            "workflow"
+          ],
+          "default": "context",
+          "description": "Default memory type for new memories"
+        },
+        "lanonasis.searchLimit": {
+          "type": "number",
+          "default": 10,
+          "minimum": 1,
+          "maximum": 50,
+          "description": "Maximum number of search results to show"
+        },
+        "lanonasis.enableAutoCompletion": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable memory-based code completion suggestions"
+        },
+        "lanonasis.autoRefreshInterval": {
+          "type": "number",
+          "default": 300000,
+          "description": "Auto-refresh memories interval in milliseconds (default: 5 minutes)"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile && npm run lint",
+    "lint": "eslint src --ext ts",
+    "test": "node ./out/test/runTest.js",
+    "package": "vsce package",
+    "publish": "vsce publish"
+  },
+  "devDependencies": {
+    "@types/node": "^24.1.0",
+    "@types/vscode": "^1.102.0",
+    "@typescript-eslint/eslint-plugin": "^8.38.0",
+    "@typescript-eslint/parser": "^8.38.0",
+    "@vscode/test-electron": "^2.5.2",
+    "eslint": "^9.32.0",
+    "ts-loader": "^9.5.2",
+    "typescript": "^5.8.3",
+    "vsce": "^2.15.0",
+    "webpack": "^5.101.0",
+    "webpack-cli": "^6.0.1"
+  },
+  "dependencies": {},
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/lanonasis/lanonasis-maas/issues"
+  },
+  "homepage": "https://github.com/lanonasis/lanonasis-maas#readme"
+}

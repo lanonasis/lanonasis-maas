@@ -80,7 +80,8 @@ export function memoryCommands(program) {
             }
         }
         catch (error) {
-            console.error(chalk.red('✖ Failed to create memory:'), error.message);
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+            console.error(chalk.red('✖ Failed to create memory:'), errorMessage);
             process.exit(1);
         }
     });
@@ -100,10 +101,10 @@ export function memoryCommands(program) {
         try {
             const spinner = ora('Fetching memories...').start();
             const params = {
-                page: parseInt(options.page),
-                limit: parseInt(options.limit),
-                sort: options.sort,
-                order: options.order
+                page: parseInt(options.page || '1'),
+                limit: parseInt(options.limit || '20'),
+                sort: options.sort || 'created_at',
+                order: options.order || 'desc'
             };
             if (options.type)
                 params.memory_type = options.type;
@@ -155,7 +156,8 @@ export function memoryCommands(program) {
             }
         }
         catch (error) {
-            console.error(chalk.red('✖ Failed to list memories:'), error.message);
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+            console.error(chalk.red('✖ Failed to list memories:'), errorMessage);
             process.exit(1);
         }
     });
@@ -172,8 +174,8 @@ export function memoryCommands(program) {
         try {
             const spinner = ora(`Searching for "${query}"...`).start();
             const searchOptions = {
-                limit: parseInt(options.limit),
-                threshold: parseFloat(options.threshold)
+                limit: parseInt(options.limit || '20'),
+                threshold: parseFloat(options.threshold || '0.7')
             };
             if (options.type) {
                 searchOptions.memory_types = options.type.split(',').map((t) => t.trim());
@@ -202,7 +204,8 @@ export function memoryCommands(program) {
             });
         }
         catch (error) {
-            console.error(chalk.red('✖ Search failed:'), error.message);
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+            console.error(chalk.red('✖ Search failed:'), errorMessage);
             process.exit(1);
         }
     });
@@ -244,7 +247,8 @@ export function memoryCommands(program) {
             }
         }
         catch (error) {
-            console.error(chalk.red('✖ Failed to get memory:'), error.message);
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+            console.error(chalk.red('✖ Failed to get memory:'), errorMessage);
             process.exit(1);
         }
     });
@@ -324,7 +328,8 @@ export function memoryCommands(program) {
             console.log(`  Title: ${memory.title}`);
         }
         catch (error) {
-            console.error(chalk.red('✖ Failed to update memory:'), error.message);
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+            console.error(chalk.red('✖ Failed to update memory:'), errorMessage);
             process.exit(1);
         }
     });
@@ -357,7 +362,8 @@ export function memoryCommands(program) {
             spinner.succeed('Memory deleted successfully');
         }
         catch (error) {
-            console.error(chalk.red('✖ Failed to delete memory:'), error.message);
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+            console.error(chalk.red('✖ Failed to delete memory:'), errorMessage);
             process.exit(1);
         }
     });
@@ -394,7 +400,8 @@ export function memoryCommands(program) {
             }
         }
         catch (error) {
-            console.error(chalk.red('✖ Failed to get statistics:'), error.message);
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+            console.error(chalk.red('✖ Failed to get statistics:'), errorMessage);
             process.exit(1);
         }
     });
