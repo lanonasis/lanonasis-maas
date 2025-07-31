@@ -1,0 +1,33 @@
+version: 1
+checksums:
+  55dc377b5e931bfc64e4add83e35d9ea:
+    app/name: 38dcb022adb11ce743a7ccdf3cbb8ddb
+    app/tagline: f75e624b2a8e23dc7d730ff864585ba1
+    dashboard/title: 655f74f626977e68f91ac621c426be1a
+    dashboard/overview: 2687869f370e433a15a73b6b63ae9489
+    dashboard/revenue: ff03ab827646d3027cc63ed72943c03d
+    dashboard/expenses: c8083007493401ec7d7ee5c8e2797793
+    dashboard/profit_margin: e6754771da7f5e63e64ecf6d0e9351f8
+    dashboard/team_spending: dc0321115a5f586d4ddeee385d871719
+    api/title: b3d76fe5a47de22d9a422c902b3ae82d
+    api/api_keys: f961b547cd312cc8b9b79f0c9e0b2cc3
+    api/usage: fe68cff35fc1887614d34601bcd8281a
+    api/documentation: db334795446f17fc54eb91d91064a7ec
+    api/rate_limits: a2ec21fa095cb897ce9d5bd526c95b72
+    api/webhooks: 0329bc102d3ab3c73410d126e119de12
+    analytics/title: ec67586974cc78f25959d47bb36683a7
+    analytics/performance: cfb4b356395162140347101f7e48e0ef
+    analytics/user_activity: 4aa1d3649f1aaf05ddde7471bfe1342a
+    analytics/revenue_analytics: 95e107fdfa7ef2ec40c7d12351c7749d
+    analytics/custom_reports: 808b34abe37049a98bd5fc4e5b12b414
+    billing/title: d71bbbadb1e55e3f68f998b85cd5c8c5
+    billing/current_plan: 7497746eb3b4897ff953b1aa8c7c9f63
+    billing/usage_this_month: 1865ae569a3c4bf9b737db3dc7397058
+    billing/billing_history: 2c2802bfaca8774325efb30773ab89a1
+    billing/upgrade_plan: bee64a612e779a8ae5df49da9555ef31
+    billing/payment_methods: 1f20db3180fd9cfc984e707987c7c01b
+    team/title: e801be1c8cb547c1d15f9a0d436355bc
+    team/members: 61333c4a765e10b2ad46774951725233
+    team/roles: 766190959c36bdfa5506b087f190707d
+    team/invite_member: f5e857a1a55466588ed76433de430248
+    team/activity_log: dfb613b68e97be8c594869c159ff137d

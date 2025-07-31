@@ -1,0 +1,44 @@
+{
+  "app": {
+    "name": "Lanonasis Memory Service",
+    "tagline": "기업 금융 솔루션"
+  },
+  "dashboard": {
+    "title": "비즈니스 대시보드",
+    "overview": "비즈니스 개요",
+    "revenue": "수익",
+    "expenses": "비즈니스 지출",
+    "profit_margin": "이익률",
+    "team_spending": "팀 지출"
+  },
+  "api": {
+    "title": "API 관리",
+    "api_keys": "API 키",
+    "usage": "API 사용량",
+    "documentation": "API 문서",
+    "rate_limits": "요청 제한",
+    "webhooks": "웹훅"
+  },
+  "analytics": {
+    "title": "분석",
+    "performance": "성과 지표",
+    "user_activity": "사용자 활동",
+    "revenue_analytics": "수익 분석",
+    "custom_reports": "맞춤 보고서"
+  },
+  "billing": {
+    "title": "결제 및 구독",
+    "current_plan": "현재 플랜",
+    "usage_this_month": "이번 달 사용량",
+    "billing_history": "결제 내역",
+    "upgrade_plan": "플랜 업그레이드",
+    "payment_methods": "결제 수단"
+  },
+  "team": {
+    "title": "팀 관리",
+    "members": "팀 멤버",
+    "roles": "역할 및 권한",
+    "invite_member": "멤버 초대",
+    "activity_log": "활동 로그"
+  }
+}
