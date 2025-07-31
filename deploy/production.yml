@@ -1,0 +1,106 @@
+# Lanonasis Memory Service - Production Deployment Configuration
+# Deploy to api.lanonasis.com with complete end-to-end setup
+
+services:
+  # Main Memory Service API + Dashboard
+  lanonasis-api:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - HOST=0.0.0.0
+      - API_PREFIX=/api
+      - API_VERSION=v1
+      # Supabase Configuration (set in production)
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_KEY=${SUPABASE_KEY}
+      - SUPABASE_SERVICE_KEY=${SUPABASE_SERVICE_KEY}
+      # Authentication
+      - JWT_SECRET=${JWT_SECRET}
+      # OpenAI Integration
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      # Performance
+      - REDIS_URL=redis://redis:6379
+      # Monitoring
+      - ENABLE_METRICS=true
+      - METRICS_PORT=9090
+      # Security
+      - CORS_ORIGIN=https://api.lanonasis.com,https://docs.lanonasis.com
+      - RATE_LIMIT_WINDOW_MS=900000
+      - RATE_LIMIT_MAX_REQUESTS=100
+    volumes:
+      - ./logs:/app/logs
+    depends_on:
+      - redis
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.api.rule=Host(`api.lanonasis.com`)"
+      - "traefik.http.routers.api.tls=true"
+      - "traefik.http.routers.api.tls.certresolver=letsencrypt"
+      - "traefik.http.services.api.loadbalancer.server.port=3000"
+      # MCP subdomain routing
+      - "traefik.http.routers.mcp.rule=Host(`mcp.lanonasis.com`)"
+      - "traefik.http.routers.mcp.tls=true"
+      - "traefik.http.routers.mcp.tls.certresolver=letsencrypt"
+      - "traefik.http.services.mcp.loadbalancer.server.port=3000"
+
+  # Documentation Site (docs.lanonasis.com)
+  docs-site:
+    build:
+      context: ../docs
+      dockerfile: Dockerfile
+    ports:
+      - "3001:80"
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.docs.rule=Host(`docs.lanonasis.com`)"
+      - "traefik.http.routers.docs.tls=true"
+      - "traefik.http.routers.docs.tls.certresolver=letsencrypt"
+      - "traefik.http.services.docs.loadbalancer.server.port=80"
+
+  # Redis for caching and session management
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+
+  # Reverse Proxy with SSL
+  traefik:
+    image: traefik:v3.0
+    command:
+      - "--api.dashboard=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+      - "--certificatesresolvers.letsencrypt.acme.tlschallenge=true"
+      - "--certificatesresolvers.letsencrypt.acme.email=admin@lanonasis.com"
+      - "--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json"
+      - "--global.checknewversion=false"
+      - "--global.sendanonymoususage=false"
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8080:8080"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - letsencrypt:/letsencrypt
+    restart: unless-stopped
+
+volumes:
+  redis_data:
+  letsencrypt:
+
+networks:
+  default:
+    name: lanonasis-network

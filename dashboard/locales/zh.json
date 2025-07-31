@@ -1,0 +1,44 @@
+{
+  "app": {
+    "name": "Lanonasis Memory Service",
+    "tagline": "企业财务解决方案"
+  },
+  "dashboard": {
+    "title": "业务仪表板",
+    "overview": "业务概览",
+    "revenue": "收入",
+    "expenses": "业务支出",
+    "profit_margin": "利润率",
+    "team_spending": "团队支出"
+  },
+  "api": {
+    "title": "API 管理",
+    "api_keys": "API 密钥",
+    "usage": "API 使用情况",
+    "documentation": "API 文档",
+    "rate_limits": "速率限制",
+    "webhooks": "Webhooks"
+  },
+  "analytics": {
+    "title": "分析",
+    "performance": "性能指标",
+    "user_activity": "用户活动",
+    "revenue_analytics": "收入分析",
+    "custom_reports": "自定义报告"
+  },
+  "billing": {
+    "title": "账单与订阅",
+    "current_plan": "当前计划",
+    "usage_this_month": "本月使用情况",
+    "billing_history": "账单历史",
+    "upgrade_plan": "升级计划",
+    "payment_methods": "支付方式"
+  },
+  "team": {
+    "title": "团队管理",
+    "members": "团队成员",
+    "roles": "角色与权限",
+    "invite_member": "邀请成员",
+    "activity_log": "活动日志"
+  }
+}

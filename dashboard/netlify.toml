@@ -1,0 +1,15 @@
+[build]
+  command = "bun run build"
+  publish = "dist"
+
+[dev]
+  command = "bun run dev"
+  port = 3000
+  targetPort = 3000
+
+env = { }
+
+# Edge Functions (if any) can be mapped here
+# [[edge_functions]]
+# path = "/functions/*"
+# function = "<function-name>"
