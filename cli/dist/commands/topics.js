@@ -117,7 +117,6 @@ export function topicCommands(program) {
                     topic.parent_topic_id ? '✓' : ''
                 ]);
                 const tableConfig = {
-                    header: ['Name', 'Description', 'Color', 'Created', 'Child'],
                     columnDefault: {
                         width: 20,
                         wrapWord: true
@@ -130,7 +129,8 @@ export function topicCommands(program) {
                         { width: 8 }
                     ]
                 };
-                console.log(table([tableConfig.header, ...tableData], tableConfig));
+                const tableHeaders = ['Name', 'Description', 'System', 'Created'];
+                console.log(table([tableHeaders, ...tableData], tableConfig));
             }
         }
         catch (error) {
