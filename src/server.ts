@@ -5,6 +5,8 @@ import compression from 'compression';
 import rateLimit from 'express-rate-limit';
 import swaggerUi from 'swagger-ui-express';
 import swaggerJsdoc from 'swagger-jsdoc';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
 import { config } from '@/config/environment';
 import { logger } from '@/utils/logger';
@@ -18,8 +20,15 @@ import healthRoutes from '@/routes/health';
 import memoryRoutes from '@/routes/memory';
 import authRoutes from '@/routes/auth';
 import metricsRoutes from '@/routes/metrics';
+import sseRoutes from '@/routes/sse';
+import mcpSseRoutes from '@/routes/mcp-sse';
 
 const app = express();
+
+// Get directory paths for dashboard serving
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const dashboardPath = path.join(__dirname, '../dashboard/dist');
 
 // Swagger configuration
 const swaggerOptions = {
@@ -108,6 +117,10 @@ app.use(metricsMiddleware);
 // API Documentation
 app.use('/docs', swaggerUi.serve, swaggerUi.setup(specs));
 
+// Dashboard static files
+app.use('/dashboard', express.static(dashboardPath));
+app.use('/assets', express.static(path.join(dashboardPath, 'assets')));
+
 // Health check (no auth required)
 app.use(`${config.API_PREFIX}/${config.API_VERSION}/health`, healthRoutes);
 
@@ -117,8 +130,19 @@ app.use(`${config.API_PREFIX}/${config.API_VERSION}/auth`, authRoutes);
 // Protected routes
 app.use(`${config.API_PREFIX}/${config.API_VERSION}/memory`, authMiddleware, memoryRoutes);
 
+// SSE endpoint (requires authentication)
+app.use('/sse', sseRoutes);
+
+// MCP SSE endpoint for remote clients (API key authentication)
+app.use('/mcp/sse', mcpSseRoutes);
+
 // Metrics endpoint (no auth required for Prometheus scraping)
 app.use('/metrics', metricsRoutes);
+
+// Dashboard SPA routing - serve index.html for all dashboard routes
+app.get('/dashboard/*', (req, res) => {
+  res.sendFile(path.join(dashboardPath, 'index.html'));
+});
 
 // Root endpoint
 app.get('/', (req, res) => {
@@ -127,6 +151,7 @@ app.get('/', (req, res) => {
     version: '1.0.0',
     status: 'operational',
     documentation: '/docs',
+    dashboard: '/dashboard',
     health: `${config.API_PREFIX}/${config.API_VERSION}/health`
   });
 });
