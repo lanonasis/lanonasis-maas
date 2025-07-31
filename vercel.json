@@ -1,0 +1,52 @@
+{
+  "version": 2,
+  "buildCommand": "cd dashboard && npm install && npm run build",
+  "outputDirectory": "dashboard/dist",
+  "installCommand": "npm install",
+  "framework": null,
+  "functions": {},
+  "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": "https://api.lanonasis.com/api/$1"
+    },
+    {
+      "source": "/sse",
+      "destination": "https://api.lanonasis.com/sse"
+    },
+    {
+      "source": "/mcp/sse",
+      "destination": "https://api.lanonasis.com/mcp/sse"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "X-Frame-Options",
+          "value": "SAMEORIGIN"
+        },
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "X-XSS-Protection",
+          "value": "1; mode=block"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "strict-origin-when-cross-origin"
+        }
+      ]
+    }
+  ],
+  "env": {
+    "NODE_VERSION": "18"
+  }
+}
