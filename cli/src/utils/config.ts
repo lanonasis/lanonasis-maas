@@ -1,7 +1,11 @@
-import fs from 'fs/promises';
-import path from 'path';
-import os from 'os';
+import * as fs from 'fs/promises';
+import * as path from 'path';
+import * as os from 'os';
 import { jwtDecode } from 'jwt-decode';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 interface UserProfile {
   email: string;
@@ -15,6 +19,12 @@ interface CLIConfigData {
   token?: string;
   user?: UserProfile;
   lastUpdated?: string;
+  // MCP configuration
+  mcpServerPath?: string;
+  mcpServerUrl?: string;
+  mcpUseRemote?: boolean;
+  mcpPreference?: 'local' | 'remote' | 'auto';
+  [key: string]: any; // Allow dynamic properties
 }
 
 export class CLIConfig {
@@ -125,6 +135,44 @@ export class CLIConfig {
       return true;
     } catch {
       return false;
+    }
+  }
+
+  // Generic get/set methods for MCP and other dynamic config
+  get(key: string): any {
+    return this.config[key];
+  }
+
+  set(key: string, value: any): void {
+    this.config[key] = value;
+  }
+
+  async setAndSave(key: string, value: any): Promise<void> {
+    this.set(key, value);
+    await this.save();
+  }
+
+  // MCP-specific helpers
+  getMCPServerPath(): string {
+    return this.config.mcpServerPath || path.join(__dirname, '../../../../onasis-gateway/mcp-server/server.js');
+  }
+
+  getMCPServerUrl(): string {
+    return this.config.mcpServerUrl || 'https://api.lanonasis.com';
+  }
+
+  shouldUseRemoteMCP(): boolean {
+    const preference = this.config.mcpPreference || 'auto';
+    
+    switch (preference) {
+      case 'remote':
+        return true;
+      case 'local':
+        return false;
+      case 'auto':
+      default:
+        // Use remote if authenticated, otherwise local
+        return !!this.config.token;
     }
   }
 }

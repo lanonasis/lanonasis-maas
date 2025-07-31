@@ -49,7 +49,9 @@ export async function loginCommand(options) {
     }
     catch (error) {
         spinner.fail('Login failed');
-        if (error.response?.status === 401) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        const errorResponse = error && typeof error === 'object' && 'response' in error ? error.response : null;
+        if (errorResponse && typeof errorResponse === 'object' && 'status' in errorResponse && errorResponse.status === 401) {
             console.error(chalk.red('✖ Invalid email or password'));
             // Ask if they want to register
             const answer = await inquirer.prompt([
@@ -65,7 +67,7 @@ export async function loginCommand(options) {
             }
         }
         else {
-            console.error(chalk.red('✖ Login failed:'), error.message);
+            console.error(chalk.red('✖ Login failed:'), errorMessage);
         }
         process.exit(1);
     }
@@ -98,7 +100,7 @@ async function registerFlow(defaultEmail) {
             message: 'Confirm password:',
             mask: '*',
             validate: (input, answers) => {
-                return input === answers.password || 'Passwords do not match';
+                return input === answers?.password || 'Passwords do not match';
             }
         },
         {
@@ -124,7 +126,8 @@ async function registerFlow(defaultEmail) {
     }
     catch (error) {
         spinner.fail('Registration failed');
-        console.error(chalk.red('✖ Registration failed:'), error.message);
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        console.error(chalk.red('✖ Registration failed:'), errorMessage);
         process.exit(1);
     }
 }

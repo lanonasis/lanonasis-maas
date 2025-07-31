@@ -24,6 +24,72 @@ interface DependencyInfo {
 }
 
 export function configCommands(program: Command): void {
+  // Generic config set command
+  program
+    .command('set <key> <value>')
+    .description('Set configuration value')
+    .action(async (key: string, value: string) => {
+      const config = new CLIConfig();
+      await config.init();
+
+      // Handle special cases
+      switch (key) {
+        case 'api-url':
+          await config.setApiUrl(value);
+          console.log(chalk.green('✓ API URL updated:'), value);
+          break;
+        
+        case 'ai-integration':
+          if (value === 'claude-mcp') {
+            config.set('mcpEnabled', true);
+            config.set('aiIntegration', 'claude-mcp');
+            console.log(chalk.green('✓ AI integration set to Claude MCP'));
+            console.log(chalk.cyan('  MCP will be automatically initialized for memory operations'));
+            console.log(chalk.cyan('  Run "lanonasis mcp-server init" to test the connection'));
+          } else {
+            console.log(chalk.yellow('⚠️  Unknown AI integration:'), value);
+            console.log(chalk.gray('  Currently supported: claude-mcp'));
+          }
+          break;
+        
+        case 'mcp-use-remote':
+          config.set('mcpUseRemote', value === 'true');
+          console.log(chalk.green('✓ MCP remote mode:'), value === 'true' ? 'enabled' : 'disabled');
+          break;
+        
+        case 'mcp-server-path':
+          config.set('mcpServerPath', value);
+          console.log(chalk.green('✓ MCP server path updated:'), value);
+          break;
+        
+        case 'mcp-server-url':
+          config.set('mcpServerUrl', value);
+          console.log(chalk.green('✓ MCP server URL updated:'), value);
+          break;
+        
+        default:
+          // Generic config set
+          config.set(key, value);
+          console.log(chalk.green(`✓ ${key} set to:`), value);
+      }
+    });
+
+  // Generic config get command
+  program
+    .command('get <key>')
+    .description('Get configuration value')
+    .action(async (key: string) => {
+      const config = new CLIConfig();
+      await config.init();
+      
+      const value = config.get(key);
+      if (value !== undefined) {
+        console.log(chalk.green(`${key}:`), value);
+      } else {
+        console.log(chalk.yellow(`⚠️  ${key} is not set`));
+      }
+    });
+
   // Show current configuration
   program
     .command('show')
@@ -49,6 +115,34 @@ export function configCommands(program: Command): void {
           console.log(chalk.green('Plan:'), user.plan);
         }
       }
+    });
+
+  // List all configuration options
+  program
+    .command('list')
+    .description('List all configuration options')
+    .action(async () => {
+      const config = new CLIConfig();
+      await config.init();
+
+      console.log(chalk.blue.bold('📋 Configuration Options'));
+      console.log();
+      
+      const configOptions = [
+        { key: 'api-url', description: 'API endpoint URL', current: config.getApiUrl() },
+        { key: 'ai-integration', description: 'AI integration mode', current: config.get('aiIntegration') || 'none' },
+        { key: 'mcp-use-remote', description: 'Use remote MCP server', current: config.get('mcpUseRemote') || false },
+        { key: 'mcp-server-path', description: 'Local MCP server path', current: config.get('mcpServerPath') || 'default' },
+        { key: 'mcp-server-url', description: 'Remote MCP server URL', current: config.get('mcpServerUrl') || 'https://api.lanonasis.com' },
+        { key: 'mcpEnabled', description: 'MCP integration enabled', current: config.get('mcpEnabled') || false }
+      ];
+
+      configOptions.forEach(opt => {
+        console.log(chalk.green(opt.key.padEnd(20)), chalk.gray(opt.description.padEnd(30)), chalk.yellow(String(opt.current)));
+      });
+
+      console.log();
+      console.log(chalk.gray('Use "lanonasis config set <key> <value>" to update any option'));
     });
 
   // Set API URL
@@ -102,7 +196,6 @@ export function configCommands(program: Command): void {
         console.log(chalk.green('✓ Connection successful'));
         console.log(`Status: ${health.status}`);
         console.log(`Version: ${health.version}`);
-        console.log(`Uptime: ${Math.round(health.uptime)}s`);
         
         if (health.dependencies) {
           console.log();

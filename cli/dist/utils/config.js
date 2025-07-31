@@ -1,7 +1,10 @@
-import fs from 'fs/promises';
-import path from 'path';
-import os from 'os';
+import * as fs from 'fs/promises';
+import * as path from 'path';
+import * as os from 'os';
 import { jwtDecode } from 'jwt-decode';
+import { fileURLToPath } from 'url';
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 export class CLIConfig {
     configDir;
     configPath;
@@ -15,7 +18,7 @@ export class CLIConfig {
             await fs.mkdir(this.configDir, { recursive: true });
             await this.load();
         }
-        catch (error) {
+        catch {
             // Config doesn't exist yet, that's ok
         }
     }
@@ -24,7 +27,7 @@ export class CLIConfig {
             const data = await fs.readFile(this.configPath, 'utf-8');
             this.config = JSON.parse(data);
         }
-        catch (error) {
+        catch {
             this.config = {};
         }
     }
@@ -50,13 +53,13 @@ export class CLIConfig {
             // We'll need to fetch full user details from the API
             // For now, store what we can decode
             this.config.user = {
-                email: decoded.email || '',
-                organization_id: decoded.organizationId || '',
-                role: decoded.role || '',
-                plan: decoded.plan || ''
+                email: String(decoded.email || ''),
+                organization_id: String(decoded.organizationId || ''),
+                role: String(decoded.role || ''),
+                plan: String(decoded.plan || '')
             };
         }
-        catch (error) {
+        catch {
             // Invalid token, don't store user info
         }
         await this.save();
@@ -74,9 +77,9 @@ export class CLIConfig {
         try {
             const decoded = jwtDecode(token);
             const now = Date.now() / 1000;
-            return decoded.exp > now;
+            return typeof decoded.exp === 'number' && decoded.exp > now;
         }
-        catch (error) {
+        catch {
             return false;
         }
     }
@@ -99,6 +102,37 @@ export class CLIConfig {
         }
         catch {
             return false;
+        }
+    }
+    // Generic get/set methods for MCP and other dynamic config
+    get(key) {
+        return this.config[key];
+    }
+    set(key, value) {
+        this.config[key] = value;
+    }
+    async setAndSave(key, value) {
+        this.set(key, value);
+        await this.save();
+    }
+    // MCP-specific helpers
+    getMCPServerPath() {
+        return this.config.mcpServerPath || path.join(__dirname, '../../../../onasis-gateway/mcp-server/server.js');
+    }
+    getMCPServerUrl() {
+        return this.config.mcpServerUrl || 'https://api.lanonasis.com';
+    }
+    shouldUseRemoteMCP() {
+        const preference = this.config.mcpPreference || 'auto';
+        switch (preference) {
+            case 'remote':
+                return true;
+            case 'local':
+                return false;
+            case 'auto':
+            default:
+                // Use remote if authenticated, otherwise local
+                return !!this.config.token;
         }
     }
 }

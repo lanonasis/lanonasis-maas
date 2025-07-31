@@ -16,7 +16,7 @@ const program = new Command();
 
 program
   .name('lanonasis')
-  .description('Lanonasis Enterprise CLI - Memory as a Service and Infrastructure Management')
+  .description('Lanonasis Enterprise CLI - Memory as a Service with MCP Integration')
   .version(packageJson.version);
 
 program
