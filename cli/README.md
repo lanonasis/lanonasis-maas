@@ -1,8 +1,20 @@
 # Lanonasis CLI - Enterprise Infrastructure Management
 
-🚀 **Professional CLI for Lanonasis Platform Services**
+[![npm version](https://img.shields.io/npm/v/@lanonasis/cli)](https://www.npmjs.com/package/@lanonasis/cli)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![MCP Integration](https://img.shields.io/badge/MCP-Model%20Context%20Protocol-purple)](https://modelcontextprotocol.com)
 
-The Lanonasis CLI provides a powerful command-line interface for interacting with the entire Lanonasis ecosystem, including Memory as a Service (MaaS), infrastructure management, and multi-service orchestration. Manage your memories, search through knowledge bases, organize your thoughts, and control your infrastructure - all from the terminal.
+🚀 **Professional CLI for Lanonasis Platform Services with MCP Integration**
+
+The Lanonasis CLI provides a powerful command-line interface for interacting with the entire Lanonasis ecosystem, including Memory as a Service (MaaS), infrastructure management, and multi-service orchestration. Now with **Model Context Protocol (MCP)** integration for unified AI-agent communication. Manage your memories, search through knowledge bases, organize your thoughts, and control your infrastructure - all from the terminal.
+
+## 🆕 New in v1.1.0
+- **MCP Server Mode**: Run as MCP server for AI assistants (Claude, Cursor, Windsurf)
+- **Hybrid Architecture**: Seamless switching between local MCP and remote API
+- **Real-time Updates**: SSE streaming for live memory synchronization
+- **Tool Discovery**: Dynamic MCP tool listing for AI agents
+- **Unified Interface**: Same commands work with local or cloud backends
+- **Auto-detection**: Intelligently chooses best connection mode
 
 ## ⚡ Quick Start
 
@@ -135,6 +147,95 @@ memory search "my query"  # Direct memory command
 maas list --type knowledge  # MaaS command
 ```
 
+## 🤖 MCP Integration (Model Context Protocol)
+
+The CLI now includes full MCP support for AI agent integration:
+
+### Start MCP Server Mode
+
+```bash
+# Start as MCP server for AI assistants
+lanonasis mcp start                 # Default port 3002
+lanonasis mcp start --port 8080     # Custom port
+lanonasis mcp start --mode server   # Explicit server mode
+
+# Or use npx without installation
+npx -y @lanonasis/cli mcp start
+```
+
+### Configure AI Assistants
+
+**Claude Desktop** (`~/Library/Application Support/Claude/claude_desktop_config.json`):
+```json
+{
+  "mcpServers": {
+    "memory-service": {
+      "command": "npx",
+      "args": ["-y", "@lanonasis/cli", "mcp", "start"],
+      "env": {
+        "LANONASIS_API_KEY": "your-api-key-here"
+      }
+    }
+  }
+}
+```
+
+**Cursor/Windsurf** (Settings):
+```json
+{
+  "mcp.servers": {
+    "memory-service": {
+      "command": "lanonasis",
+      "args": ["mcp", "start"],
+      "env": {
+        "LANONASIS_API_KEY": "your-api-key-here"
+      }
+    }
+  }
+}
+```
+
+### MCP Commands
+
+```bash
+# Server operations
+lanonasis mcp start            # Start MCP server
+lanonasis mcp stop             # Stop MCP server
+lanonasis mcp status           # Check server status
+lanonasis mcp logs             # View server logs
+
+# Tool discovery
+lanonasis mcp tools            # List all available MCP tools
+lanonasis mcp tools --json     # Output as JSON
+
+# Test connectivity
+lanonasis mcp test             # Test MCP connection
+lanonasis mcp test --tool <name> # Test specific tool
+```
+
+### Available MCP Tools
+
+- `memory_create_memory` - Create new memories with embeddings
+- `memory_search_memories` - Semantic search across memories
+- `memory_list_memories` - List and filter memories
+- `memory_get_memory` - Retrieve specific memory
+- `memory_update_memory` - Update existing memories
+- `memory_delete_memory` - Delete memories
+- `memory_bulk_create` - Batch create multiple memories
+- `memory_bulk_delete` - Batch delete memories
+- `memory_get_stats` - Get memory statistics
+- `memory_export_data` - Export memories (JSON/CSV/YAML)
+- `memory_import_data` - Import memories from files
+
+### MCP Features:
+- **🔌 WebSocket Server**: Real-time bidirectional communication
+- **🔄 Hybrid Mode**: Automatic fallback between local/remote
+- **🔐 Secure Auth**: API key and JWT token support
+- **📊 Real-time SSE**: Live updates in remote mode
+- **🛠️ Tool Discovery**: Dynamic tool listing for AI agents
+- **🎯 Auto-detection**: Intelligently chooses best mode
+- **📝 Full Memory API**: All operations exposed as MCP tools
+
 ## 🌐 MaaS Service Integration
 
 This CLI is designed to work with Memory as a Service platforms that provide:
@@ -244,6 +345,33 @@ MIT License - see LICENSE file for details
 - **Research Organization** - Academic and research note-taking
 - **API Integration** - Programmatic memory management
 
+## 🏆 Production Ready Features
+
+### Enterprise Capabilities
+- **🔐 Secure Authentication** - API key and JWT token support
+- **🌐 Multi-tenant Support** - Isolated memory spaces per user/org
+- **📊 Rate Limiting** - Built-in request throttling
+- **🔄 Retry Logic** - Automatic retry with exponential backoff
+- **📝 Comprehensive Logging** - Debug and audit trails
+- **🚀 Performance Optimized** - Minimal overhead, fast responses
+
+### Commercial Use Cases
+- **💼 Enterprise Knowledge Management** - Company-wide memory system
+- **🤝 Team Collaboration** - Shared project memories
+- **🎓 Educational Platforms** - Student/teacher memory sharing
+- **🏥 Healthcare Systems** - Patient context management
+- **💰 Financial Services** - Transaction memory and audit trails
+- **🛒 E-commerce** - Customer interaction history
+
+### Integration Ready
+- **REST API** - Standard HTTP/JSON interface
+- **MCP Protocol** - AI assistant integration
+- **WebSocket** - Real-time updates
+- **SSE Streaming** - Live data synchronization
+- **SDK Available** - TypeScript/JavaScript client library
+
 ---
 
 **Built with ❤️ for the Memory as a Service ecosystem**
+
+🚀 **Ready for Production** | 📚 [Documentation](https://docs.lanonasis.com) | 🌐 [Platform](https://api.lanonasis.com)
