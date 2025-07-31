@@ -165,7 +165,6 @@ export function topicCommands(program: Command): void {
           ]);
 
           const tableConfig = {
-            header: ['Name', 'Description', 'Color', 'Created', 'Child'],
             columnDefault: {
               width: 20,
               wrapWord: true
@@ -179,7 +178,8 @@ export function topicCommands(program: Command): void {
             ]
           };
 
-          console.log(table([tableConfig.header, ...tableData], tableConfig));
+          const tableHeaders = ['Name', 'Description', 'System', 'Created'];
+          console.log(table([tableHeaders, ...tableData], tableConfig));
         }
       } catch (error: unknown) {
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';

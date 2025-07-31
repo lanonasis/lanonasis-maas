@@ -1,0 +1,44 @@
+{
+  "app": {
+    "name": "Lanonasis Memory Service",
+    "tagline": "Решения для управления финансами на уровне предприятия"
+  },
+  "dashboard": {
+    "title": "Бизнес-панель",
+    "overview": "Обзор бизнеса",
+    "revenue": "Доход",
+    "expenses": "Расходы бизнеса",
+    "profit_margin": "Рентабельность",
+    "team_spending": "Расходы команды"
+  },
+  "api": {
+    "title": "Управление API",
+    "api_keys": "Ключи API",
+    "usage": "Использование API",
+    "documentation": "Документация API",
+    "rate_limits": "Ограничения скорости",
+    "webhooks": "Вебхуки"
+  },
+  "analytics": {
+    "title": "Аналитика",
+    "performance": "Показатели производительности",
+    "user_activity": "Активность пользователей",
+    "revenue_analytics": "Анализ доходов",
+    "custom_reports": "Пользовательские отчёты"
+  },
+  "billing": {
+    "title": "Выставление счетов и подписки",
+    "current_plan": "Текущий план",
+    "usage_this_month": "Использование в этом месяце",
+    "billing_history": "История выставления счетов",
+    "upgrade_plan": "Обновить план",
+    "payment_methods": "Способы оплаты"
+  },
+  "team": {
+    "title": "Управление командой",
+    "members": "Члены команды",
+    "roles": "Роли и разрешения",
+    "invite_member": "Пригласить участника",
+    "activity_log": "Журнал активности"
+  }
+}

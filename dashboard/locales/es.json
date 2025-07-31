@@ -1,0 +1,44 @@
+{
+  "app": {
+    "name": "Lanonasis Memory Service",
+    "tagline": "Soluciones financieras empresariales"
+  },
+  "dashboard": {
+    "title": "Panel de control empresarial",
+    "overview": "Resumen empresarial",
+    "revenue": "Ingresos",
+    "expenses": "Gastos empresariales",
+    "profit_margin": "Margen de beneficio",
+    "team_spending": "Gastos del equipo"
+  },
+  "api": {
+    "title": "Gestión de API",
+    "api_keys": "Claves API",
+    "usage": "Uso de API",
+    "documentation": "Documentación de API",
+    "rate_limits": "Límites de tasa",
+    "webhooks": "Webhooks"
+  },
+  "analytics": {
+    "title": "Analítica",
+    "performance": "Métricas de rendimiento",
+    "user_activity": "Actividad del usuario",
+    "revenue_analytics": "Analítica de ingresos",
+    "custom_reports": "Informes personalizados"
+  },
+  "billing": {
+    "title": "Facturación y suscripciones",
+    "current_plan": "Plan actual",
+    "usage_this_month": "Uso este mes",
+    "billing_history": "Historial de facturación",
+    "upgrade_plan": "Mejorar plan",
+    "payment_methods": "Métodos de pago"
+  },
+  "team": {
+    "title": "Gestión de equipo",
+    "members": "Miembros del equipo",
+    "roles": "Roles y permisos",
+    "invite_member": "Invitar miembro",
+    "activity_log": "Registro de actividad"
+  }
+}
