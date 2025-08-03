@@ -1,0 +1,29 @@
+[build]
+  # Directory to publish (already built locally)
+  publish = "dashboard/dist"
+
+[build.environment]
+  # Node.js version
+  NODE_VERSION = "18"
+  # Build environment
+  NODE_ENV = "production"
+
+# SPA routing configuration for dashboard
+[[redirects]]
+  from = "/dashboard/*"
+  to = "/dashboard/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+# Headers for security and CORS
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "SAMEORIGIN"
+    X-Content-Type-Options = "nosniff"
+    X-XSS-Protection = "1; mode=block"
+    Referrer-Policy = "strict-origin-when-cross-origin"
