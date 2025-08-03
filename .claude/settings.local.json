@@ -10,7 +10,13 @@
       "Bash(git add:*)",
       "WebFetch(domain:www.npmjs.com)",
       "Bash(npm run test:coverage:*)",
-      "Bash(mkdir:*)"
+      "Bash(mkdir:*)",
+      "mcp__Context7__resolve-library-id",
+      "mcp__hostinger-api__VPS_getVirtualMachineListV1",
+      "mcp__hostinger-api__VPS_getVirtualMachineV1",
+      "mcp__hostinger-api__VPS_getMetricsV1",
+      "Bash(node:*)",
+      "Bash(bun run:*)"
     ],
     "deny": []
   }
