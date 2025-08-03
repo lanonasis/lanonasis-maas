@@ -8,13 +8,15 @@
 
 The Lanonasis CLI provides a powerful command-line interface for interacting with the entire Lanonasis ecosystem, including Memory as a Service (MaaS), infrastructure management, and multi-service orchestration. Now with **Model Context Protocol (MCP)** integration for unified AI-agent communication. Manage your memories, search through knowledge bases, organize your thoughts, and control your infrastructure - all from the terminal.
 
-## 🆕 New in v1.1.0
+## 🆕 New in v1.2.0 - API Key Management Integration
+- **API Key Management**: Complete CLI commands for secure API key lifecycle management
+- **MCP Tool Registration**: Register and manage MCP tools with scoped API access
+- **Analytics & Security**: Track usage patterns and monitor security events
+- **Project-based Organization**: Group API keys by projects for better organization
+- **Zero-trust Security**: Encrypted key storage with proxy token generation
 - **MCP Server Mode**: Run as MCP server for AI assistants (Claude, Cursor, Windsurf)
 - **Hybrid Architecture**: Seamless switching between local MCP and remote API
 - **Real-time Updates**: SSE streaming for live memory synchronization
-- **Tool Discovery**: Dynamic MCP tool listing for AI agents
-- **Unified Interface**: Same commands work with local or cloud backends
-- **Auto-detection**: Intelligently chooses best connection mode
 
 ## ⚡ Quick Start
 
@@ -82,6 +84,20 @@ npx lanonasis --help
 - `lanonasis search <query> [-l <limit>]` - Search memories
 - `lanonasis list [-l <limit>] [--type <type>]` - List memories
 - `lanonasis help` - Show detailed help
+
+### 🔑 API Key Management (NEW in v1.2.0)
+- `lanonasis api-keys create` - Create a new API key with secure encryption
+- `lanonasis api-keys list` - List all API keys with usage statistics
+- `lanonasis api-keys get <keyId>` - Get details of a specific API key
+- `lanonasis api-keys update <keyId>` - Update API key name, tags, or rotation policy
+- `lanonasis api-keys delete <keyId>` - Securely delete an API key
+- `lanonasis api-keys projects create` - Create a project for organizing keys
+- `lanonasis api-keys projects list` - List all API key projects
+- `lanonasis api-keys mcp register-tool` - Register MCP tools for API access
+- `lanonasis api-keys mcp list-tools` - List registered MCP tools
+- `lanonasis api-keys mcp request-access` - Request access to API keys via MCP
+- `lanonasis api-keys analytics usage` - View API key usage analytics
+- `lanonasis api-keys analytics security-events` - Monitor security events
 
 #### Alternative Commands (Backwards Compatibility)
 - `memory <command>` - Direct memory operations

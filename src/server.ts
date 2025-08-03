@@ -18,6 +18,8 @@ import healthRoutes from '@/routes/health';
 import memoryRoutes from '@/routes/memory';
 import authRoutes from '@/routes/auth';
 import metricsRoutes from '@/routes/metrics';
+import apiKeyRoutes from '@/routes/api-keys';
+import mcpApiKeyRoutes from '@/routes/mcp-api-keys';
 
 const app = express();
 
@@ -41,6 +43,8 @@ const swaggerOptions = {
         - 📊 **Analytics**: Usage statistics and access tracking
         - 🔐 **Security**: JWT authentication with plan-based limitations
         - ⚡ **Performance**: Optimized queries with pagination and caching
+        - 🔑 **API Key Management**: Secure storage and rotation of API keys with MCP integration
+        - 🤖 **MCP Support**: Model Context Protocol for secure AI agent access to secrets
         
         ### Memory Types
         - **context**: General contextual information
@@ -108,6 +112,18 @@ const swaggerOptions = {
       {
         name: 'Metrics',
         description: 'Performance metrics and monitoring data'
+      },
+      {
+        name: 'API Key Management',
+        description: 'Secure API key storage, rotation, and management'
+      },
+      {
+        name: 'MCP Integration',
+        description: 'Model Context Protocol for secure AI agent access to secrets'
+      },
+      {
+        name: 'Analytics',
+        description: 'Usage analytics and security event monitoring'
       }
     ],
     externalDocs: {
@@ -192,6 +208,10 @@ app.use(`${config.API_PREFIX}/${config.API_VERSION}/auth`, authRoutes);
 
 // Protected routes
 app.use(`${config.API_PREFIX}/${config.API_VERSION}/memory`, authMiddleware, memoryRoutes);
+app.use(`${config.API_PREFIX}/${config.API_VERSION}/api-keys`, apiKeyRoutes);
+
+// MCP routes (for AI agents - different auth mechanism)
+app.use(`${config.API_PREFIX}/${config.API_VERSION}/mcp/api-keys`, mcpApiKeyRoutes);
 
 // Metrics endpoint (no auth required for Prometheus scraping)
 app.use('/metrics', metricsRoutes);

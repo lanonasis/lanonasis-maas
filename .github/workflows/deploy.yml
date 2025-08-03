@@ -1,0 +1,397 @@
+name: Deploy LanOnasis MaaS
+
+on:
+  push:
+    branches: [ main, develop ]
+    tags: [ 'v*' ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  NODE_VERSION: '18'
+  REGISTRY_URL: 'registry.npmjs.org'
+
+jobs:
+  test:
+    name: Test and Lint
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          POSTGRES_DB: maas_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+      
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: |
+        npm ci
+        npm ci --prefix cli
+        npm ci --prefix packages/lanonasis-sdk
+
+    - name: Run linting
+      run: |
+        npm run lint
+        npm run lint --prefix cli
+        npm run lint --prefix packages/lanonasis-sdk
+
+    - name: Run type checking
+      run: |
+        npm run type-check
+        npm run type-check --prefix cli
+        npm run type-check --prefix packages/lanonasis-sdk
+
+    - name: Run tests
+      env:
+        DATABASE_URL: postgresql://postgres:postgres@localhost:5432/maas_test
+        REDIS_URL: redis://localhost:6379
+        JWT_SECRET: test-secret-key-for-ci
+        OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      run: |
+        npm run test -- --coverage
+        npm run test --prefix packages/lanonasis-sdk -- --coverage
+
+    - name: Upload coverage reports
+      uses: codecov/codecov-action@v3
+      with:
+        files: ./coverage/lcov.info,./packages/lanonasis-sdk/coverage/lcov.info
+        fail_ci_if_error: true
+
+  build:
+    name: Build Applications
+    runs-on: ubuntu-latest
+    needs: test
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: |
+        npm ci
+        npm ci --prefix cli
+        npm ci --prefix packages/lanonasis-sdk
+
+    - name: Build applications
+      run: |
+        npm run build
+        npm run build --prefix cli
+        npm run build --prefix packages/lanonasis-sdk
+
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: build-artifacts
+        path: |
+          dist/
+          cli/dist/
+          packages/lanonasis-sdk/dist/
+        retention-days: 7
+
+  publish-sdk:
+    name: Publish SDK to NPM
+    runs-on: ubuntu-latest
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/sdk-v') || (github.ref == 'refs/heads/main' && contains(github.event.head_commit.message, '[publish-sdk]'))
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        registry-url: https://${{ env.REGISTRY_URL }}
+
+    - name: Download build artifacts
+      uses: actions/download-artifact@v4
+      with:
+        name: build-artifacts
+
+    - name: Install dependencies
+      run: npm ci --prefix packages/lanonasis-sdk
+
+    - name: Update version from tag
+      if: startsWith(github.ref, 'refs/tags/sdk-v')
+      run: |
+        VERSION=${GITHUB_REF#refs/tags/sdk-v}
+        cd packages/lanonasis-sdk
+        npm version $VERSION --no-git-tag-version
+
+    - name: Publish to NPM
+      env:
+        NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      run: |
+        cd packages/lanonasis-sdk
+        npm publish --access public
+
+    - name: Create GitHub release
+      if: startsWith(github.ref, 'refs/tags/sdk-v')
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ github.ref }}
+        release_name: LanOnasis SDK ${{ github.ref }}
+        body: |
+          ## LanOnasis SDK Release
+          
+          ### Features
+          - Memory as a Service client
+          - API Key Management client
+          - Model Context Protocol integration
+          - TypeScript support with full type definitions
+          
+          ### Installation
+          ```bash
+          npm install @lanonasis/sdk
+          ```
+          
+          ### Documentation
+          See the [API documentation](https://docs.lanonasis.com/sdk) for usage examples.
+        draft: false
+        prerelease: false
+
+  publish-cli:
+    name: Publish CLI to NPM
+    runs-on: ubuntu-latest
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/cli-v') || (github.ref == 'refs/heads/main' && contains(github.event.head_commit.message, '[publish-cli]'))
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        registry-url: https://${{ env.REGISTRY_URL }}
+
+    - name: Download build artifacts
+      uses: actions/download-artifact@v4
+      with:
+        name: build-artifacts
+
+    - name: Install dependencies
+      run: npm ci --prefix cli
+
+    - name: Update version from tag
+      if: startsWith(github.ref, 'refs/tags/cli-v')
+      run: |
+        VERSION=${GITHUB_REF#refs/tags/cli-v}
+        cd cli
+        npm version $VERSION --no-git-tag-version
+
+    - name: Test CLI installation
+      run: |
+        cd cli
+        npm link
+        lanonasis --help
+        memory --help
+
+    - name: Publish to NPM
+      env:
+        NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      run: |
+        cd cli
+        npm publish --access public
+
+    - name: Create GitHub release
+      if: startsWith(github.ref, 'refs/tags/cli-v')
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ github.ref }}
+        release_name: LanOnasis CLI ${{ github.ref }}
+        body: |
+          ## LanOnasis CLI Release
+          
+          ### Features
+          - Memory as a Service management
+          - API Key storage and rotation
+          - MCP tool registration and access
+          - Interactive and batch operations
+          - Multiple output formats (JSON, table, YAML)
+          
+          ### Installation
+          ```bash
+          npm install -g @lanonasis/cli
+          ```
+          
+          ### Usage
+          ```bash
+          # Initialize CLI
+          lanonasis init
+          
+          # Memory operations
+          memory create --title "Note" --content "Important information"
+          memory search "AI development"
+          
+          # API Key operations
+          lanonasis api-keys create --name "stripe_key" --type "api_key"
+          lanonasis api-keys mcp register-tool --tool-id "payment-processor"
+          ```
+          
+          ### Documentation
+          See the [CLI documentation](https://docs.lanonasis.com/cli) for complete usage guide.
+        draft: false
+        prerelease: false
+
+  deploy-service:
+    name: Deploy MaaS Service
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/service-v')
+    
+    environment:
+      name: production
+      url: https://api.lanonasis.com
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Download build artifacts
+      uses: actions/download-artifact@v4
+      with:
+        name: build-artifacts
+
+    - name: Deploy to production
+      env:
+        DEPLOY_KEY: ${{ secrets.DEPLOY_KEY }}
+        PRODUCTION_HOST: ${{ secrets.PRODUCTION_HOST }}
+        DOCKER_REGISTRY: ${{ secrets.DOCKER_REGISTRY }}
+        DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+        DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+      run: |
+        # Build and push Docker image
+        echo $DOCKER_PASSWORD | docker login $DOCKER_REGISTRY -u $DOCKER_USERNAME --password-stdin
+        docker build -t $DOCKER_REGISTRY/lanonasis/maas:$GITHUB_SHA .
+        docker push $DOCKER_REGISTRY/lanonasis/maas:$GITHUB_SHA
+        
+        # Deploy via SSH (example - adjust for your deployment method)
+        echo "$DEPLOY_KEY" > deploy_key
+        chmod 600 deploy_key
+        ssh -i deploy_key -o StrictHostKeyChecking=no ubuntu@$PRODUCTION_HOST << 'EOF'
+          cd /opt/lanonasis-maas
+          docker pull $DOCKER_REGISTRY/lanonasis/maas:$GITHUB_SHA
+          docker-compose down
+          docker-compose up -d
+          docker system prune -f
+        EOF
+
+    - name: Run health check
+      run: |
+        sleep 30  # Wait for service to start
+        curl -f https://api.lanonasis.com/api/v1/health || exit 1
+
+    - name: Notify deployment
+      if: always()
+      uses: 8398a7/action-slack@v3
+      with:
+        status: ${{ job.status }}
+        channel: '#deployments'
+        webhook_url: ${{ secrets.SLACK_WEBHOOK }}
+        message: |
+          LanOnasis MaaS deployment ${{ job.status }}
+          Commit: ${{ github.sha }}
+          Author: ${{ github.actor }}
+
+  security-scan:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    needs: build
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Run Trivy vulnerability scanner
+      uses: aquasecurity/trivy-action@master
+      with:
+        scan-type: 'fs'
+        scan-ref: '.'
+        format: 'sarif'
+        output: 'trivy-results.sarif'
+
+    - name: Upload Trivy scan results to GitHub Security tab
+      uses: github/codeql-action/upload-sarif@v2
+      with:
+        sarif_file: 'trivy-results.sarif'
+
+    - name: Run npm audit
+      run: |
+        npm audit --audit-level moderate
+        npm audit --prefix cli --audit-level moderate
+        npm audit --prefix packages/lanonasis-sdk --audit-level moderate
+
+  performance-test:
+    name: Performance Tests
+    runs-on: ubuntu-latest
+    needs: deploy-service
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+
+    - name: Install k6
+      run: |
+        sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys C5AD17C747E3415A3642D57D77C6C491D6AC1D69
+        echo "deb https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6.list
+        sudo apt-get update
+        sudo apt-get install k6
+
+    - name: Run performance tests
+      env:
+        API_URL: https://api.lanonasis.com
+        API_KEY: ${{ secrets.PERF_TEST_API_KEY }}
+      run: |
+        k6 run --out json=performance-results.json tests/performance/load-test.js
+
+    - name: Upload performance results
+      uses: actions/upload-artifact@v4
+      with:
+        name: performance-results
+        path: performance-results.json
