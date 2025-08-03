@@ -69,6 +69,24 @@
         "title": "Switch Gateway/Direct API Mode",
         "category": "Lanonasis",
         "icon": "$(settings-gear)"
+      },
+      {
+        "command": "lanonasis.manageApiKeys",
+        "title": "Manage API Keys",
+        "category": "Lanonasis",
+        "icon": "$(key)"
+      },
+      {
+        "command": "lanonasis.createProject",
+        "title": "Create API Key Project",
+        "category": "Lanonasis",
+        "icon": "$(folder-library)"
+      },
+      {
+        "command": "lanonasis.viewProjects",
+        "title": "View API Key Projects",
+        "category": "Lanonasis",
+        "icon": "$(folder-opened)"
       }
     ],
     "keybindings": [
@@ -83,6 +101,12 @@
         "key": "ctrl+shift+alt+m",
         "mac": "cmd+shift+alt+m",
         "when": "editorHasSelection"
+      },
+      {
+        "command": "lanonasis.manageApiKeys",
+        "key": "ctrl+shift+k",
+        "mac": "cmd+shift+k",
+        "when": "editorTextFocus"
       }
     ],
     "menus": {
@@ -112,6 +136,11 @@
           "id": "lanonasisMemories",
           "name": "Memories",
           "when": "lanonasis.enabled"
+        },
+        {
+          "id": "lanonasisApiKeys",
+          "name": "API Keys",
+          "when": "lanonasis.enabled && lanonasis.enableApiKeyManagement"
         }
       ]
     },
@@ -170,6 +199,25 @@
           "type": "boolean",
           "default": true,
           "description": "Enable memory-based code completion suggestions"
+        },
+        "lanonasis.enableApiKeyManagement": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable API key management features"
+        },
+        "lanonasis.defaultEnvironment": {
+          "type": "string",
+          "enum": [
+            "development",
+            "staging",
+            "production"
+          ],
+          "default": "development",
+          "description": "Default environment for API key management"
+        },
+        "lanonasis.organizationId": {
+          "type": "string",
+          "description": "Your organization ID for API key management"
         }
       }
     }
