@@ -2,7 +2,7 @@
   "name": "lanonasis-memory-windsurf",
   "displayName": "Lanonasis Memory Assistant for Windsurf",
   "description": "Memory as a Service integration for Windsurf - AI-powered memory management with auto-redirect authentication",
-  "version": "1.0.0",
+  "version": "1.2.0",
   "publisher": "lanonasis",
   "repository": {
     "type": "git",
