@@ -449,7 +449,7 @@ async function createApiKey(apiKeyService: ApiKeyService) {
             );
             
             if (createProject === 'Create Project') {
-                await createProject(apiKeyService, undefined);
+                await createProjectHandler(apiKeyService, undefined);
             }
             return;
         }
