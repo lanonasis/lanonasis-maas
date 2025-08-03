@@ -1,9 +1,10 @@
 {
   "name": "@lanonasis/memory-service",
-  "version": "1.2.0",
-  "description": "Enterprise Memory as a Service (MaaS) with API Key Management and MCP Integration",
+  "version": "1.2.0-dev",
+  "description": "[DEVELOPMENT] Enterprise Memory as a Service (MaaS) with API Key Management and MCP Integration",
   "main": "dist/server.js",
   "type": "module",
+  "private": true,
   "scripts": {
     "dev": "tsx watch src/server.ts",
     "build": "tsc && tsc-alias",
