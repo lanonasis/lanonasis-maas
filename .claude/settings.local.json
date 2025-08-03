@@ -16,7 +16,8 @@
       "mcp__hostinger-api__VPS_getVirtualMachineV1",
       "mcp__hostinger-api__VPS_getMetricsV1",
       "Bash(node:*)",
-      "Bash(bun run:*)"
+      "Bash(bun run:*)",
+      "Bash(git commit:*)"
     ],
     "deny": []
   }
