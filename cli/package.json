@@ -1,6 +1,6 @@
 {
   "name": "@lanonasis/cli",
-  "version": "1.2.0-dev",
+  "version": "1.2.0",
   "description": "LanOnasis Enterprise CLI - Memory as a Service, API Key Management, and Infrastructure Orchestration",
   "main": "dist/index-simple.js",
   "bin": {
@@ -9,9 +9,7 @@
     "maas": "dist/index-simple.js"
   },
   "type": "module",
-  "private": true,
   "scripts": {
-    "prepublishOnly": "echo 'ERROR: Cannot publish from development workspace' && exit 1",
     "dev": "tsx src/index.ts",
     "build": "tsc && chmod +x dist/index-simple.js",
     "start": "node dist/index.js",
