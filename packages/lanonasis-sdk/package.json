@@ -1,10 +1,11 @@
 {
   "name": "@lanonasis/sdk",
-  "version": "1.2.0",
+  "version": "1.2.0-dev",
   "description": "LanOnasis Enterprise SDK - Memory as a Service and API Key Management",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "type": "module",
+  "private": true,
   "scripts": {
     "build": "tsc && tsc-alias",
     "dev": "tsc --watch",
