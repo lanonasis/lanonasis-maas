@@ -7,13 +7,14 @@ import { logger } from '../utils/logger.js';
 const router = express.Router();
 
 // Validation middleware
-const validateRequest = (req: express.Request, res: express.Response, next: express.NextFunction) => {
+const validateRequest = (req: express.Request, res: express.Response, next: express.NextFunction): void => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
-    return res.status(400).json({
+    res.status(400).json({
       error: 'Validation failed',
       details: errors.array()
     });
+    return;
   }
   next();
 };
@@ -217,11 +218,15 @@ router.post('/projects', [
   body('settings').optional().isObject()
 ], validateRequest, async (req: express.Request, res: express.Response) => {
   try {
-    const project = await apiKeyService.createProject(req.body, req.user!.id);
+    if (!req.user?.id) {
+      return res.status(401).json({ error: 'User authentication required' });
+    }
+
+    const project = await apiKeyService.createProject(req.body, req.user.id);
     
     logger.info('API key project created', {
       projectId: project.id,
-      userId: req.user!.id,
+      userId: req.user.id,
       organizationId: project.organizationId
     });
 
@@ -350,12 +355,16 @@ router.post('/', [
   body('metadata').optional().isObject()
 ], validateRequest, async (req: express.Request, res: express.Response) => {
   try {
-    const apiKey = await apiKeyService.createApiKey(req.body, req.user!.id);
+    if (!req.user?.id) {
+      return res.status(401).json({ error: 'User authentication required' });
+    }
+
+    const apiKey = await apiKeyService.createApiKey(req.body, req.user.id);
     
     logger.info('API key created', {
       keyId: apiKey.id,
       keyName: apiKey.name,
-      userId: req.user!.id,
+      userId: req.user.id,
       organizationId: apiKey.organizationId
     });
 
