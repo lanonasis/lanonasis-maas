@@ -1,7 +1,7 @@
 {
   "name": "@lanonasis/cli",
-  "version": "1.1.0",
-  "description": "Lanonasis Enterprise CLI - Memory as a Service and Infrastructure Management",
+  "version": "1.2.0",
+  "description": "LanOnasis Enterprise CLI - Memory as a Service, API Key Management, and Infrastructure Orchestration",
   "main": "dist/index-simple.js",
   "bin": {
     "lanonasis": "dist/index-simple.js",
@@ -25,7 +25,11 @@
     "maas",
     "enterprise",
     "infrastructure",
-    "orchestrator"
+    "orchestrator",
+    "api-keys",
+    "secrets",
+    "mcp",
+    "security"
   ],
   "author": "Lanonasis (Seye Derick)",
   "license": "MIT",

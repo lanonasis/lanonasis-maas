@@ -13,8 +13,8 @@ export const Footer = () => {
           {/* Brand Section */}
           <div className="md:col-span-1">
             <Link to="/" className="flex items-center gap-2 text-xl font-semibold tracking-tight mb-4">
-              <span className="text-primary">Vortex</span>
-              <span className="text-foreground">Core</span>
+              <span className="text-primary">Lanonasis</span>
+              <span className="text-foreground">Platform</span>
             </Link>
             <p className="text-sm text-muted-foreground mb-6 max-w-xs">
               A next-generation SaaS platform for modern businesses, powered by cutting-edge technology.

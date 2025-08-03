@@ -25,11 +25,11 @@ const Index = () => {
             </div>
             
             <h1 className="animate-fade-in font-bold tracking-tight text-4xl md:text-5xl lg:text-6xl mb-6 max-w-4xl bg-clip-text">
-              Next-Generation SaaS <br /> Powered by Supabase
+              Memory-as-a-Service Platform <br /> for AI Developers
             </h1>
             
             <p className="animate-slide-up text-muted-foreground text-lg md:text-xl max-w-2xl mx-auto mb-8">
-              A comprehensive platform with powerful API management, real-time dashboards, and enterprise-grade security for modern businesses.
+              Vector-enabled memory storage, secure API key management, and MCP integration for building intelligent AI applications.
             </p>
             
             <div className="animate-slide-up flex flex-col sm:flex-row gap-4 mb-12">
@@ -54,12 +54,12 @@ const Index = () => {
                   <div className="h-3 w-3 rounded-full bg-primary/80"></div>
                 </div>
                 <div className="mx-auto flex items-center h-6 w-64 rounded-full bg-background/70 text-xs px-3">
-                  api.lanonasis.com/dashboard
+                  dashboard.lanonasis.com
                 </div>
               </div>
               <div className="p-4 bg-gradient-to-b from-transparent to-background/5">
                 <img
-                  src="https://placehold.co/1200x800/f5f5f5/cccccc?text=VortexCore+Dashboard"
+                  src="https://placehold.co/1200x800/f5f5f5/cccccc?text=Lanonasis+Dashboard"
                   alt="Dashboard Preview"
                   className="w-full h-auto rounded-md shadow-subtle"
                 />
@@ -74,10 +74,10 @@ const Index = () => {
         <div className="container px-4 md:px-6">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold tracking-tight mb-4">
-              Powerful Features
+              Platform Services
             </h2>
             <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-              Everything you need to build, manage, and scale your next-generation SaaS application.
+              Complete toolkit for building intelligent applications with memory, security, and seamless integrations.
             </p>
           </div>
           
@@ -87,12 +87,12 @@ const Index = () => {
               <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center mb-5">
                 <Zap className="h-6 w-6 text-primary" />
               </div>
-              <h3 className="text-xl font-semibold mb-3">API Management</h3>
+              <h3 className="text-xl font-semibold mb-3">Memory-as-a-Service</h3>
               <p className="text-muted-foreground mb-4">
-                Modular microservices architecture with RESTful endpoints, rate limiting, and comprehensive documentation.
+                Vector-enabled memory storage for AI agents with semantic search, bulk operations, and hierarchical organization.
               </p>
               <ul className="space-y-2">
-                {["OpenAPI/Swagger docs", "Rate limiting", "Request throttling", "Comprehensive logging"].map((item) => (
+                {["Vector storage (OpenAI 1536D)", "Semantic search", "Memory types & topics", "Bulk import/export"].map((item) => (
                   <li key={item} className="flex items-start">
                     <CheckCircle className="h-5 w-5 text-accent mr-2 flex-shrink-0" />
                     <span className="text-sm">{item}</span>
@@ -106,12 +106,12 @@ const Index = () => {
               <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center mb-5">
                 <Shield className="h-6 w-6 text-primary" />
               </div>
-              <h3 className="text-xl font-semibold mb-3">Security</h3>
+              <h3 className="text-xl font-semibold mb-3">API Key Management</h3>
               <p className="text-muted-foreground mb-4">
-                Enterprise-grade security with authentication, authorization, and real-time fraud detection capabilities.
+                Secure API key storage and management with MCP integration for agentic workflows without exposing secrets.
               </p>
               <ul className="space-y-2">
-                {["Supabase Auth", "Multi-factor authentication", "Fraud detection", "Audit logging"].map((item) => (
+                {["Zero-trust key storage", "MCP protocol support", "Scoped key access", "Proxy token generation"].map((item) => (
                   <li key={item} className="flex items-start">
                     <CheckCircle className="h-5 w-5 text-accent mr-2 flex-shrink-0" />
                     <span className="text-sm">{item}</span>
@@ -125,12 +125,12 @@ const Index = () => {
               <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center mb-5">
                 <Clock className="h-6 w-6 text-primary" />
               </div>
-              <h3 className="text-xl font-semibold mb-3">Real-time Dashboard</h3>
+              <h3 className="text-xl font-semibold mb-3">Developer Dashboard</h3>
               <p className="text-muted-foreground mb-4">
-                Interactive dashboards with real-time data updates using Supabase subscriptions and visualizations.
+                Interactive dashboard for managing memories, API keys, and monitoring usage with real-time analytics.
               </p>
               <ul className="space-y-2">
-                {["Real-time updates", "Interactive charts", "Responsive design", "Component-based architecture"].map((item) => (
+                {["Memory visualization", "Usage analytics", "Key management UI", "MCP integration status"].map((item) => (
                   <li key={item} className="flex items-start">
                     <CheckCircle className="h-5 w-5 text-accent mr-2 flex-shrink-0" />
                     <span className="text-sm">{item}</span>
@@ -144,12 +144,12 @@ const Index = () => {
               <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center mb-5">
                 <CreditCard className="h-6 w-6 text-primary" />
               </div>
-              <h3 className="text-xl font-semibold mb-3">Payment Services</h3>
+              <h3 className="text-xl font-semibold mb-3">CLI & SDK Tools</h3>
               <p className="text-muted-foreground mb-4">
-                Comprehensive payment gateway integration with secure token handling and PCI compliance.
+                Complete developer toolkit with TypeScript SDK, CLI commands, and npm packages for seamless integration.
               </p>
               <ul className="space-y-2">
-                {["Multiple payment methods", "Secure transactions", "Transaction logging", "Reconciliation tools"].map((item) => (
+                {["@lanonasis/cli (npx ready)", "@lanonasis/sdk package", "TypeScript definitions", "React hooks included"].map((item) => (
                   <li key={item} className="flex items-start">
                     <CheckCircle className="h-5 w-5 text-accent mr-2 flex-shrink-0" />
                     <span className="text-sm">{item}</span>
@@ -163,12 +163,12 @@ const Index = () => {
               <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center mb-5">
                 <UserCheck className="h-6 w-6 text-primary" />
               </div>
-              <h3 className="text-xl font-semibold mb-3">Identity Services</h3>
+              <h3 className="text-xl font-semibold mb-3">MCP Integration</h3>
               <p className="text-muted-foreground mb-4">
-                Robust identity verification with KYC/document verification and biometric verification support.
+                Model Context Protocol support for AI agents with secure key access and proxy token generation.
               </p>
               <ul className="space-y-2">
-                {["Document verification", "Multi-factor auth", "Biometric verification", "Identity management"].map((item) => (
+                {["MCP server integration", "Proxy token system", "Zero-secret workflows", "Agent context sharing"].map((item) => (
                   <li key={item} className="flex items-start">
                     <CheckCircle className="h-5 w-5 text-accent mr-2 flex-shrink-0" />
                     <span className="text-sm">{item}</span>
@@ -182,12 +182,12 @@ const Index = () => {
               <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center mb-5">
                 <FileText className="h-6 w-6 text-primary" />
               </div>
-              <h3 className="text-xl font-semibold mb-3">Bank Statement API</h3>
+              <h3 className="text-xl font-semibold mb-3">Enterprise Features</h3>
               <p className="text-muted-foreground mb-4">
-                Comprehensive bank statement analysis and verification with AI-powered insights.
+                Multi-tenant isolation, organization management, and enterprise-grade security for production use.
               </p>
               <ul className="space-y-2">
-                {["Financial analysis", "Spending patterns", "Income verification", "Risk assessment"].map((item) => (
+                {["Multi-tenant architecture", "Organization isolation", "Enterprise security", "SLA guarantees"].map((item) => (
                   <li key={item} className="flex items-start">
                     <CheckCircle className="h-5 w-5 text-accent mr-2 flex-shrink-0" />
                     <span className="text-sm">{item}</span>
@@ -204,10 +204,10 @@ const Index = () => {
         <div className="container px-4 md:px-6">
           <div className="text-center mb-12">
             <h2 className="text-3xl md:text-4xl font-bold tracking-tight mb-4">
-              Seamless API Integration
+              Developer Experience
             </h2>
             <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-              Our developer-friendly APIs with comprehensive documentation make integration quick and easy.
+              Multiple deployment options including npm packages, CLI tools, and MCP integration for maximum flexibility.
             </p>
           </div>
           
@@ -216,73 +216,78 @@ const Index = () => {
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
                   <Code className="h-5 w-5 text-primary" />
-                  <h3 className="text-xl font-semibold">Client Libraries</h3>
+                  <h3 className="text-xl font-semibold">NPM Packages</h3>
                 </div>
                 <p className="text-muted-foreground">
-                  Official SDKs for popular languages including JavaScript, Python, Java, PHP, and more.
+                  Ready-to-use packages: @lanonasis/cli (global install), @lanonasis/sdk (TypeScript support), and npx commands.
                 </p>
               </div>
               
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
                   <FileText className="h-5 w-5 text-primary" />
-                  <h3 className="text-xl font-semibold">Comprehensive Documentation</h3>
+                  <h3 className="text-xl font-semibold">Multi-Access Integration</h3>
                 </div>
                 <p className="text-muted-foreground">
-                  Detailed guides, API references, and code examples to get you started quickly.
+                  Access via remote SDK, MCP protocol, GitHub repositories, or VPS server deployment for enterprises.
                 </p>
               </div>
               
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
                   <Zap className="h-5 w-5 text-primary" />
-                  <h3 className="text-xl font-semibold">Webhook Integrations</h3>
+                  <h3 className="text-xl font-semibold">MCP Protocol Support</h3>
                 </div>
                 <p className="text-muted-foreground">
-                  Real-time event notifications to keep your systems in sync with Lanonasis.
+                  Model Context Protocol integration for AI agents with secure memory and key management capabilities.
                 </p>
               </div>
               
-              <Link to="/api-docs">
-                <Button variant="outline" size="lg" className="mt-4">
-                  Explore API Documentation
+              <div className="flex gap-4 mt-4">
+                <Link to="/api-docs">
+                  <Button variant="outline" size="lg">
+                    API Documentation
+                  </Button>
+                </Link>
+                <Button variant="outline" size="lg" onClick={() => window.open('https://docs.lanonasis.com', '_blank')}>
+                  Platform Docs
                 </Button>
-              </Link>
+              </div>
             </div>
             
             <div className="bg-secondary p-6 rounded-lg border border-border">
               <div className="text-sm font-mono overflow-x-auto">
                 <pre className="text-muted-foreground">
                   <code>
-{`// Example: Fetch bank statement data
-const lanonasis = require('@lanonasis/memory-sdk');
+{`// Example: Memory-as-a-Service with API key management
+const lanonasis = require('@lanonasis/sdk');
 
 // Initialize with your API key
 const client = new lanonasis.Client({
   apiKey: 'your_api_key_here'
 });
 
-// Fetch a bank statement
-async function getBankStatement() {
+// Store and retrieve memories
+async function useMemoryService() {
   try {
-    const statement = await client.bankStatements.retrieve({
-      account_id: 'acc_12345',
-      from_date: '2023-01-01',
-      to_date: '2023-03-31'
+    // Store a memory with vector embedding
+    const memory = await client.memory.store({
+      content: 'User prefers dark theme and condensed layout',
+      type: 'preference',
+      topic: 'ui_settings',
+      metadata: { userId: 'user_123' }
     });
     
-    console.log(statement.transactions);
+    console.log('Memory stored:', memory.id);
     
-    // Analyze the statement
-    const analysis = await client.bankStatements.analyze({
-      statement_id: statement.id,
-      analysis_type: [
-        'spending_patterns',
-        'income_stability'
-      ]
+    // Search similar memories
+    const similar = await client.memory.search({
+      query: 'user interface preferences',
+      type: 'preference',
+      limit: 5
     });
     
-    console.log(analysis.insights);
+    console.log('Similar memories:', similar.results);
   } catch (error) {
     console.error('Error:', error.message);
   }
@@ -306,7 +311,7 @@ async function getBankStatement() {
               <div className="text-center md:text-left">
                 <h2 className="text-2xl md:text-3xl font-bold text-white mb-3">Ready to get started?</h2>
                 <p className="text-white/80 max-w-md">
-                  Join thousands of businesses using Lanonasis Memory as a Service to build, scale, and secure their applications.
+                  Join thousands of developers using Lanonasis Memory-as-a-Service and API Key Management to build intelligent applications.
                 </p>
               </div>
               
