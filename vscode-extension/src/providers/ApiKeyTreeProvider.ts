@@ -2,12 +2,15 @@ import * as vscode from 'vscode';
 import { ApiKeyService, ApiKey, Project } from '../services/ApiKeyService';
 
 export class ApiKeyTreeItem extends vscode.TreeItem {
+    public readonly apiKey: ApiKey;
+
     constructor(
-        public readonly apiKey: ApiKey,
-        public readonly collapsibleState: vscode.TreeItemCollapsibleState
+        apiKey: ApiKey,
+        collapsibleState: vscode.TreeItemCollapsibleState
     ) {
         super(apiKey.name, collapsibleState);
         
+        this.apiKey = apiKey;
         this.tooltip = `${apiKey.name}\nType: ${apiKey.keyType}\nEnvironment: ${apiKey.environment}\nAccess Level: ${apiKey.accessLevel}`;
         this.description = `${apiKey.environment} • ${apiKey.keyType}`;
         this.contextValue = 'apiKey';
@@ -43,12 +46,15 @@ export class ApiKeyTreeItem extends vscode.TreeItem {
 }
 
 export class ProjectTreeItem extends vscode.TreeItem {
+    public readonly project: Project;
+
     constructor(
-        public readonly project: Project,
-        public readonly collapsibleState: vscode.TreeItemCollapsibleState
+        project: Project,
+        collapsibleState: vscode.TreeItemCollapsibleState
     ) {
         super(project.name, collapsibleState);
         
+        this.project = project;
         this.tooltip = `${project.name}\n${project.description || 'No description'}\nOrganization: ${project.organizationId}`;
         this.description = project.description ? project.description.substring(0, 50) + '...' : 'No description';
         this.contextValue = 'project';
