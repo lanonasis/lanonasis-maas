@@ -2,7 +2,7 @@
   "name": "lanonasis-memory",
   "displayName": "Lanonasis Memory Assistant",
   "description": "Memory as a Service integration for VSCode - Search, create, and manage memories directly in your editor",
-  "version": "1.0.0",
+  "version": "1.2.0",
   "publisher": "lanonasis",
   "repository": {
     "type": "git",
