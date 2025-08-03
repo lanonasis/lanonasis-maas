@@ -1,6 +1,6 @@
 {
   "name": "@lanonasis/memory-client",
-  "version": "1.0.0",
+  "version": "1.2.0",
   "description": "Memory as a Service (MaaS) Client SDK for Lanonasis - Intelligent memory management with semantic search",
   "type": "module",
   "main": "dist/index.js",
