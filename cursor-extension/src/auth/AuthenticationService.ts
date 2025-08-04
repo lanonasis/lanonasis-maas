@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import * as crypto from 'crypto';
 import * as http from 'http';
 import { URL } from 'url';
+import { setTimeout } from 'timers';
 
 export interface AuthToken {
     access_token: string;
