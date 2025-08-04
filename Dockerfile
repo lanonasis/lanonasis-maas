@@ -1,5 +1,5 @@
 # Multi-stage build for production optimization
-FROM node:18-alpine AS base
+FROM oven/bun:1-alpine AS base
 
 # Install system dependencies
 RUN apk add --no-cache \
@@ -11,27 +11,27 @@ RUN apk add --no-cache \
 WORKDIR /app
 
 # Copy package files
-COPY package*.json ./
+COPY package.json bun.lockb ./
 COPY tsconfig.json ./
 
 # Install dependencies
-RUN npm ci --only=production && npm cache clean --force
+RUN bun install --frozen-lockfile --production
 
 # Development stage
 FROM base AS development
-RUN npm ci
+RUN bun install --frozen-lockfile
 COPY . .
 EXPOSE 3000
-CMD ["npm", "run", "dev"]
+CMD ["bun", "run", "dev"]
 
 # Build stage
 FROM base AS build
-RUN npm ci
+RUN bun install --frozen-lockfile
 COPY . .
-RUN npm run build
+RUN bun run build
 
 # Production stage
-FROM node:18-alpine AS production
+FROM oven/bun:1-alpine AS production
 
 # Create non-root user
 RUN addgroup -g 1001 -S nodejs && \
@@ -39,8 +39,8 @@ RUN addgroup -g 1001 -S nodejs && \
 
 # Install production dependencies only
 WORKDIR /app
-COPY package*.json ./
-RUN npm ci --only=production && npm cache clean --force
+COPY package.json bun.lockb ./
+RUN bun install --frozen-lockfile --production
 
 # Copy built application
 COPY --from=build --chown=memory:nodejs /app/dist ./dist
@@ -57,4 +57,4 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
 
 EXPOSE 3000
 
-CMD ["node", "dist/server.js"]
+CMD ["bun", "run", "dist/server.js"]
