@@ -33,3 +33,16 @@ export function formatDuration(ms: number): string {
   if (ms < 60000) return `${(ms / 1000).toFixed(1)}s`;
   return `${(ms / 60000).toFixed(1)}m`;
 }
+
+export function formatDate(date: string | Date): string {
+  const d = new Date(date);
+  return d.toLocaleString();
+}
+
+export function formatTableData(data: unknown[]): string[][] {
+  return data.map(item => {
+    if (Array.isArray(item)) return item.map(String);
+    if (typeof item === 'object' && item !== null) return Object.values(item).map(String);
+    return [String(item)];
+  });
+}

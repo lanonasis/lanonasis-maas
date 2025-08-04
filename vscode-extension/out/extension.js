@@ -409,9 +409,9 @@ async function createApiKey(apiKeyService) {
         // Get projects first
         const projects = await apiKeyService.getProjects();
         if (projects.length === 0) {
-            const createProject = await vscode.window.showInformationMessage('No projects found. You need to create a project first.', 'Create Project', 'Cancel');
-            if (createProject === 'Create Project') {
-                await createProjectHandler(apiKeyService, undefined);
+            const createProjectResponse = await vscode.window.showInformationMessage('No projects found. You need to create a project first.', 'Create Project', 'Cancel');
+            if (createProjectResponse === 'Create Project') {
+                await createProject(apiKeyService, undefined);
             }
             return;
         }
@@ -543,8 +543,8 @@ async function viewProjects(apiKeyService) {
         }, async () => {
             const projects = await apiKeyService.getProjects();
             if (projects.length === 0) {
-                const createProject = await vscode.window.showInformationMessage('No projects found. Create your first project to get started.', 'Create Project', 'Cancel');
-                if (createProject === 'Create Project') {
+                const createProjectResponse = await vscode.window.showInformationMessage('No projects found. Create your first project to get started.', 'Create Project', 'Cancel');
+                if (createProjectResponse === 'Create Project') {
                     await createProject(apiKeyService, undefined);
                 }
                 return;
