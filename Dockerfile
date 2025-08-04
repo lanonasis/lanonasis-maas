@@ -11,7 +11,7 @@ RUN apk add --no-cache \
 WORKDIR /app
 
 # Copy package files
-COPY package.json bun.lockb ./
+COPY package.json bun.lock ./
 COPY tsconfig.json ./
 
 # Install dependencies
@@ -39,7 +39,7 @@ RUN addgroup -g 1001 -S nodejs && \
 
 # Install production dependencies only
 WORKDIR /app
-COPY package.json bun.lockb ./
+COPY package.json bun.lock ./
 RUN bun install --frozen-lockfile --production
 
 # Copy built application
