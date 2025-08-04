@@ -6,13 +6,14 @@ import { logger } from '../utils/logger.js';
 const router = express.Router();
 
 // Validation middleware
-const validateRequest = (req: express.Request, res: express.Response, next: express.NextFunction) => {
+const validateRequest = (req: express.Request, res: express.Response, next: express.NextFunction): void => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
-    return res.status(400).json({
+    res.status(400).json({
       error: 'Validation failed',
       details: errors.array()
     });
+    return;
   }
   next();
 };
@@ -127,12 +128,12 @@ router.post('/request-access', [
     }
 
     res.status(201).json(response);
-  } catch (error) {
+  } catch (error: unknown) {
     logger.error('Failed to create MCP access request', error);
     
-    if (error.message.includes('not found')) {
+    if (error instanceof Error && error.message.includes('not found')) {
       res.status(404).json({ error: 'MCP tool not found' });
-    } else if (error.message.includes('permission') || error.message.includes('access')) {
+    } else if (error instanceof Error && (error.message.includes('permission') || error.message.includes('access'))) {
       res.status(403).json({ error: 'Access denied' });
     } else {
       res.status(500).json({ error: 'Failed to create access request' });
@@ -199,7 +200,13 @@ router.post('/sessions/:sessionId/keys/:keyName/proxy-token', [
   param('keyName').isLength({ min: 1 }).withMessage('Key name is required')
 ], validateRequest, async (req: express.Request, res: express.Response) => {
   try {
-    const { sessionId, keyName } = req.params;
+    const sessionId = req.params.sessionId;
+    const keyName = req.params.keyName;
+    
+    if (!sessionId || !keyName) {
+      res.status(400).json({ error: 'Session ID and key name are required' });
+      return;
+    }
     
     const { proxyToken, expiresAt } = await apiKeyService.getProxyTokenForKey(sessionId, keyName);
     
@@ -217,12 +224,12 @@ router.post('/sessions/:sessionId/keys/:keyName/proxy-token', [
         example: `Authorization: Bearer ${proxyToken}`
       }
     });
-  } catch (error) {
+  } catch (error: unknown) {
     logger.error('Failed to generate MCP proxy token', error);
     
-    if (error.message.includes('Invalid') || error.message.includes('expired')) {
+    if (error instanceof Error && (error.message.includes('Invalid') || error.message.includes('expired'))) {
       res.status(403).json({ error: error.message });
-    } else if (error.message.includes('not found')) {
+    } else if (error instanceof Error && error.message.includes('not found')) {
       res.status(404).json({ error: 'Session or key not found' });
     } else {
       res.status(500).json({ error: 'Failed to generate proxy token' });
@@ -272,7 +279,12 @@ router.post('/proxy-tokens/:proxyToken/resolve', [
   param('proxyToken').isLength({ min: 1 }).withMessage('Proxy token is required')
 ], validateRequest, async (req: express.Request, res: express.Response) => {
   try {
-    const { proxyToken } = req.params;
+    const proxyToken = req.params.proxyToken;
+    
+    if (!proxyToken) {
+      res.status(400).json({ error: 'Proxy token is required' });
+      return;
+    }
     
     const keyValue = await apiKeyService.resolveProxyToken(proxyToken);
     
@@ -287,14 +299,14 @@ router.post('/proxy-tokens/:proxyToken/resolve', [
         tokenType: 'proxy'
       }
     });
-  } catch (error) {
+  } catch (error: unknown) {
     logger.error('Failed to resolve MCP proxy token', error);
     
-    if (error.message.includes('Invalid')) {
+    if (error instanceof Error && error.message.includes('Invalid')) {
       res.status(400).json({ error: 'Invalid proxy token format' });
-    } else if (error.message.includes('expired') || error.message.includes('revoked')) {
+    } else if (error instanceof Error && (error.message.includes('expired') || error.message.includes('revoked'))) {
       res.status(403).json({ error: error.message });
-    } else if (error.message.includes('not found')) {
+    } else if (error instanceof Error && error.message.includes('not found')) {
       res.status(404).json({ error: 'Proxy token not found' });
     } else {
       res.status(500).json({ error: 'Failed to resolve proxy token' });
@@ -357,7 +369,12 @@ router.get('/sessions/:sessionId/status', [
   param('sessionId').isLength({ min: 1 }).withMessage('Session ID is required')
 ], validateRequest, async (req: express.Request, res: express.Response) => {
   try {
-    const { sessionId } = req.params;
+    const sessionId = req.params.sessionId;
+    
+    if (!sessionId) {
+      res.status(400).json({ error: 'Session ID is required' });
+      return;
+    }
     
     // This would require implementing a new service method
     // For now, we'll return a basic status check
@@ -366,7 +383,7 @@ router.get('/sessions/:sessionId/status', [
       status: 'active', // This should be determined by checking the database
       message: 'Session status check not fully implemented yet'
     });
-  } catch (error) {
+  } catch (error: unknown) {
     logger.error('Failed to get MCP session status', error);
     res.status(500).json({ error: 'Failed to get session status' });
   }
@@ -415,7 +432,12 @@ router.post('/sessions/:sessionId/end', [
   param('sessionId').isLength({ min: 1 }).withMessage('Session ID is required')
 ], validateRequest, async (req: express.Request, res: express.Response) => {
   try {
-    const { sessionId } = req.params;
+    const sessionId = req.params.sessionId;
+    
+    if (!sessionId) {
+      res.status(400).json({ error: 'Session ID is required' });
+      return;
+    }
     
     logger.info('MCP session end requested', { sessionId });
     
@@ -427,7 +449,7 @@ router.post('/sessions/:sessionId/end', [
       revokedTokens: 0, // This should be the actual count
       message: 'Session ended successfully (implementation pending)'
     });
-  } catch (error) {
+  } catch (error: unknown) {
     logger.error('Failed to end MCP session', error);
     res.status(500).json({ error: 'Failed to end session' });
   }

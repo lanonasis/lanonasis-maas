@@ -1,4 +1,4 @@
-import { Router, Request, Response } from 'express';
+import { Router, Request, Response, NextFunction } from 'express';
 import { createClient } from '@supabase/supabase-js';
 import { config } from '@/config/environment';
 import { logger } from '@/utils/logger';
@@ -13,7 +13,7 @@ const mcpConnections = new Map<string, Response>();
 /**
  * Middleware to authenticate API key for MCP connections
  */
-const authenticateApiKey = async (req: Request, res: Response, next: any) => {
+const authenticateApiKey = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   const apiKey = req.headers['x-api-key'] || req.query.api_key;
   
   if (!apiKey) {
@@ -70,7 +70,8 @@ const authenticateApiKey = async (req: Request, res: Response, next: any) => {
     (req as any).apiKey = keyData;
     next();
   } catch (error) {
-    logger.error('API key validation error', { error: error.message });
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    logger.error('API key validation error', { error: errorMessage });
     return res.status(500).json({ 
       error: 'Authentication error',
       message: 'Failed to validate API key'
@@ -116,7 +117,7 @@ const authenticateApiKey = async (req: Request, res: Response, next: any) => {
  *       429:
  *         description: Rate limit exceeded
  */
-router.get('/', authenticateApiKey, asyncHandler(async (req: Request, res: Response) => {
+router.get('/', authenticateApiKey, asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const apiKeyData = (req as any).apiKey;
   const clientId = req.query.client_id as string || `client_${Date.now()}`;
   const connectionId = `${apiKeyData.user_id}_${clientId}`;
