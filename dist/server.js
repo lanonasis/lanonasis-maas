@@ -7,20 +7,20 @@ import swaggerUi from 'swagger-ui-express';
 import swaggerJsdoc from 'swagger-jsdoc';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { config } from '@/config/environment';
-import { logger } from '@/utils/logger';
-import { errorHandler } from '@/middleware/errorHandler';
-import { requestLogger } from '@/middleware/requestLogger';
-import { authMiddleware } from '@/middleware/auth';
-import { metricsMiddleware, startMetricsCollection } from '@/utils/metrics';
+import { config } from './config/environment';
+import { logger } from './utils/logger';
+import { errorHandler } from './middleware/errorHandler';
+import { requestLogger } from './middleware/requestLogger';
+import { authMiddleware } from './middleware/auth';
+import { metricsMiddleware, startMetricsCollection } from './utils/metrics';
 // Route imports
-import healthRoutes from '@/routes/health';
-import memoryRoutes from '@/routes/memory';
-import authRoutes from '@/routes/auth';
-import metricsRoutes from '@/routes/metrics';
-import apiKeyRoutes from '@/routes/api-keys';
-import mcpApiKeyRoutes from '@/routes/mcp-api-keys';
-import mcpSseRoutes from '@/routes/mcp-sse';
+import healthRoutes from './routes/health';
+import memoryRoutes from './routes/memory';
+import authRoutes from './routes/auth';
+import metricsRoutes from './routes/metrics';
+import apiKeyRoutes from './routes/api-keys';
+import mcpApiKeyRoutes from './routes/mcp-api-keys';
+import mcpSseRoutes from './routes/mcp-sse';
 const app = express();
 // Enhanced Swagger configuration
 const swaggerOptions = {
@@ -187,9 +187,9 @@ app.get('/dashboard/*', (req, res) => {
 app.get('/mcp', (req, res) => {
     res.sendFile(path.join(__dirname, 'static/mcp-connection.html'));
 });
-// Serve documentation
-app.use('/docs-static', express.static(path.join(__dirname, '../docs/dist')));
-app.get('/docs-static/*', (req, res) => {
+// Serve documentation portal
+app.use('/docs-portal', express.static(path.join(__dirname, '../docs/dist')));
+app.get('/docs-portal/*', (req, res) => {
     res.sendFile(path.join(__dirname, '../docs/dist/index.html'));
 });
 // API Documentation with improved configuration
