@@ -1,8 +1,8 @@
 import { createClient } from '@supabase/supabase-js';
 import OpenAI from 'openai';
-import { config } from '../config/environment';
-import { logger, logPerformance } from '../utils/logger';
-import { InternalServerError } from '../middleware/errorHandler';
+import { config } from '@/config/environment';
+import { logger, logPerformance } from '@/utils/logger';
+import { InternalServerError } from '@/middleware/errorHandler';
 export class MemoryService {
     supabase;
     openai;
@@ -303,7 +303,7 @@ export class MemoryService {
                 personal: 0,
                 workflow: 0
             };
-            typeBreakdown?.forEach(item => {
+            typeBreakdown?.forEach((item) => {
                 memoriesByType[item.memory_type]++;
             });
             // Get size and access stats

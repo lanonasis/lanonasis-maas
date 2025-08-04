@@ -387,7 +387,7 @@ export class MemoryService {
         workflow: 0
       };
 
-      typeBreakdown?.forEach(item => {
+      typeBreakdown?.forEach((item: { memory_type: string }) => {
         memoriesByType[item.memory_type as MemoryType]++;
       });
 
@@ -401,11 +401,11 @@ export class MemoryService {
         throw new InternalServerError('Failed to get memory size stats');
       }
 
-      const totalSizeBytes = sizeStats?.reduce((total, item) => 
+      const totalSizeBytes = sizeStats?.reduce((total: number, item: { content: string }) => 
         total + new Blob([item.content]).size, 0) || 0;
       
       const avgAccessCount = sizeStats?.length 
-        ? sizeStats.reduce((total, item) => total + item.access_count, 0) / sizeStats.length
+        ? sizeStats.reduce((total: number, item: { access_count: number }) => total + item.access_count, 0) / sizeStats.length
         : 0;
 
       // Get most accessed memory

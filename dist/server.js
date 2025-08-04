@@ -5,19 +5,22 @@ import compression from 'compression';
 import rateLimit from 'express-rate-limit';
 import swaggerUi from 'swagger-ui-express';
 import swaggerJsdoc from 'swagger-jsdoc';
-import { config } from './config/environment';
-import { logger } from './utils/logger';
-import { errorHandler } from './middleware/errorHandler';
-import { requestLogger } from './middleware/requestLogger';
-import { authMiddleware } from './middleware/auth';
-import { metricsMiddleware, startMetricsCollection } from './utils/metrics';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import { config } from '@/config/environment';
+import { logger } from '@/utils/logger';
+import { errorHandler } from '@/middleware/errorHandler';
+import { requestLogger } from '@/middleware/requestLogger';
+import { authMiddleware } from '@/middleware/auth';
+import { metricsMiddleware, startMetricsCollection } from '@/utils/metrics';
 // Route imports
-import healthRoutes from './routes/health';
-import memoryRoutes from './routes/memory';
-import authRoutes from './routes/auth';
-import metricsRoutes from './routes/metrics';
-import apiKeyRoutes from './routes/api-keys';
-import mcpApiKeyRoutes from './routes/mcp-api-keys';
+import healthRoutes from '@/routes/health';
+import memoryRoutes from '@/routes/memory';
+import authRoutes from '@/routes/auth';
+import metricsRoutes from '@/routes/metrics';
+import apiKeyRoutes from '@/routes/api-keys';
+import mcpApiKeyRoutes from '@/routes/mcp-api-keys';
+import mcpSseRoutes from '@/routes/mcp-sse';
 const app = express();
 // Enhanced Swagger configuration
 const swaggerOptions = {
@@ -172,6 +175,23 @@ app.use(limiter);
 // Request logging and metrics
 app.use(requestLogger);
 app.use(metricsMiddleware);
+// Static file serving
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+// Serve dashboard
+app.use('/dashboard', express.static(path.join(__dirname, '../dashboard/dist')));
+app.get('/dashboard/*', (req, res) => {
+    res.sendFile(path.join(__dirname, '../dashboard/dist/index.html'));
+});
+// Serve MCP connection interface
+app.get('/mcp', (req, res) => {
+    res.sendFile(path.join(__dirname, 'static/mcp-connection.html'));
+});
+// Serve documentation
+app.use('/docs-static', express.static(path.join(__dirname, '../docs/dist')));
+app.get('/docs-static/*', (req, res) => {
+    res.sendFile(path.join(__dirname, '../docs/dist/index.html'));
+});
 // API Documentation with improved configuration
 const swaggerUiOptions = {
     customCss: '.swagger-ui .topbar { display: none }',
@@ -195,6 +215,7 @@ app.use(`${config.API_PREFIX}/${config.API_VERSION}/memory`, authMiddleware, mem
 app.use(`${config.API_PREFIX}/${config.API_VERSION}/api-keys`, apiKeyRoutes);
 // MCP routes (for AI agents - different auth mechanism)
 app.use(`${config.API_PREFIX}/${config.API_VERSION}/mcp/api-keys`, mcpApiKeyRoutes);
+app.use('/mcp', mcpSseRoutes);
 // Metrics endpoint (no auth required for Prometheus scraping)
 app.use('/metrics', metricsRoutes);
 // Root endpoint

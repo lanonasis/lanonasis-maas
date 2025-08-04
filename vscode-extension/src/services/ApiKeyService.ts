@@ -46,7 +46,7 @@ export interface CreateProjectRequest {
 
 export class ApiKeyService {
     private config: vscode.WorkspaceConfiguration;
-    private baseUrl: string;
+    private baseUrl: string = 'https://api.lanonasis.com';
 
     constructor() {
         this.config = vscode.workspace.getConfiguration('lanonasis');

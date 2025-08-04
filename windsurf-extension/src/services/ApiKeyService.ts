@@ -46,7 +46,7 @@ export interface CreateProjectRequest {
 
 export class ApiKeyService {
     private config: vscode.WorkspaceConfiguration;
-    private baseUrl: string;
+    private baseUrl: string = 'https://api.lanonasis.com';
 
     constructor() {
         this.config = vscode.workspace.getConfiguration('lanonasis');
@@ -89,7 +89,7 @@ export class ApiKeyService {
             throw new Error(`API request failed: ${response.status} ${response.statusText} - ${errorText}`);
         }
 
-        return response.json();
+        return response.json() as Promise<T>;
     }
 
     // ============================================================================
