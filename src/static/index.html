@@ -1,90 +1,4 @@
-const express = require('express');
-const serverless = require('serverless-http');
-const cors = require('cors');
-
-const app = express();
-
-// CORS configuration
-app.use(cors({
-  origin: '*',
-  credentials: false,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-API-Key']
-}));
-
-app.use(express.json());
-
-// Root endpoint - Enterprise Services Landing Page
-app.get('/', (req, res) => {
-  // Check if request prefers JSON (API clients) or HTML (browsers)
-  const acceptsJson = req.headers.accept && req.headers.accept.includes('application/json');
-  const isApiRequest = req.get('User-Agent')?.includes('curl') || 
-                      req.get('User-Agent')?.includes('Postman') ||
-                      req.get('User-Agent')?.includes('HTTPie') ||
-                      acceptsJson;
-
-  if (isApiRequest || req.query.format === 'json') {
-    // Return JSON for API clients
-    res.json({
-      platform: 'LanOnasis Enterprise Services',
-      tagline: 'Unified API Gateway for Enterprise Solutions',
-      version: '1.0.0',
-      status: 'operational',
-      baseUrl: 'https://api.lanonasis.com',
-      services: {
-        memory: {
-          name: 'Memory as a Service (MaaS)',
-          description: 'AI-powered memory management with semantic search',
-          endpoints: {
-            base: '/api/v1/memory',
-            docs: '/docs#memory'
-          },
-          features: ['Vector Search', 'Multi-tenant', 'Role-based Access', 'Analytics']
-        },
-        apiKeys: {
-          name: 'API Key Management',
-          description: 'Secure storage and rotation of API keys',
-          endpoints: {
-            base: '/api/v1/api-keys',
-            docs: '/docs#api-keys'
-          },
-          features: ['Secure Storage', 'Automatic Rotation', 'Access Control', 'Audit Logging']
-        },
-        mcp: {
-          name: 'Model Context Protocol',
-          description: 'Secure AI agent access to enterprise secrets',
-          endpoints: {
-            base: '/api/v1/mcp',
-            docs: '/docs#mcp'
-          },
-          features: ['AI Agent Integration', 'Secure Context', 'Zero-trust Access', 'Real-time Updates']
-        }
-      },
-      endpoints: {
-        documentation: '/docs',
-        dashboard: '/dashboard',
-        health: '/api/v1/health',
-        authentication: '/api/v1/auth',
-        mcp: '/mcp',
-        metrics: '/metrics'
-      },
-      integrations: {
-        database: 'Supabase PostgreSQL with Vector Extensions',
-        authentication: 'JWT with Role-based Access Control',
-        ai: 'OpenAI Embeddings for Semantic Search',
-        monitoring: 'Prometheus Metrics & Winston Logging'
-      },
-      support: {
-        documentation: 'https://docs.lanonasis.com',
-        contact: 'support@lanonasis.com',
-        github: 'https://github.com/lanonasis'
-      },
-      timestamp: new Date().toISOString()
-    });
-  } else {
-    // Serve HTML landing page for browsers
-    res.setHeader('Content-Type', 'text/html');
-    res.send(`<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -413,146 +327,33 @@ app.get('/', (req, res) => {
             <p>© 2024 LanOnasis. Enterprise Services Platform v1.0.0</p>
         </div>
     </div>
+
+    <script>
+        // Add some interactive functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            // Animate service cards on scroll
+            const cards = document.querySelectorAll('.service-card');
+            
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach((entry) => {
+                    if (entry.isIntersecting) {
+                        entry.target.style.animationDelay = Math.random() * 0.3 + 's';
+                        entry.target.style.animation = 'fadeInUp 0.6s ease-out forwards';
+                    }
+                });
+            });
+
+            cards.forEach((card) => {
+                observer.observe(card);
+            });
+
+            // Add click tracking for analytics
+            document.querySelectorAll('.btn, .quick-link a').forEach(link => {
+                link.addEventListener('click', function(e) {
+                    console.log('LanOnasis Navigation:', e.target.href || e.target.textContent);
+                });
+            });
+        });
+    </script>
 </body>
-</html>`);
-  }
-});
-
-// Health endpoint
-app.get('/health', (req, res) => {
-  res.json({
-    name: 'Lanonasis Memory Service',
-    version: '1.0.0',
-    status: 'healthy',
-    timestamp: new Date().toISOString(),
-    environment: 'netlify',
-    database: 'connected',
-    endpoints: {
-      memory: 'operational',
-      auth: 'operational',
-      apiKeys: 'operational',
-      mcp: 'operational'
-    }
-  });
-});
-
-app.get('/api/v1/health', (req, res) => {
-  res.json({
-    name: 'Lanonasis Memory Service',
-    version: '1.0.0',
-    status: 'healthy',
-    timestamp: new Date().toISOString(),
-    environment: 'netlify',
-    database: 'connected',
-    endpoints: {
-      memory: 'operational',
-      auth: 'operational',
-      apiKeys: 'operational',
-      mcp: 'operational'
-    }
-  });
-});
-
-// Auth endpoints
-app.post('/api/v1/auth/login', (req, res) => {
-  res.json({
-    message: 'Authentication endpoint - implementation in progress',
-    endpoint: '/api/v1/auth/login',
-    status: 'placeholder'
-  });
-});
-
-app.post('/api/v1/auth/register', (req, res) => {
-  res.json({
-    message: 'Registration endpoint - implementation in progress',
-    endpoint: '/api/v1/auth/register',
-    status: 'placeholder'
-  });
-});
-
-// Memory endpoints
-app.get('/api/v1/memory', (req, res) => {
-  res.json({
-    message: 'Memory list endpoint - requires authentication',
-    endpoint: '/api/v1/memory',
-    status: 'placeholder',
-    note: 'Full implementation requires database connection'
-  });
-});
-
-app.post('/api/v1/memory', (req, res) => {
-  res.json({
-    message: 'Memory creation endpoint - requires authentication',
-    endpoint: '/api/v1/memory',
-    status: 'placeholder',
-    body: req.body
-  });
-});
-
-// API Key management endpoints
-app.get('/api/v1/api-keys', (req, res) => {
-  res.json({
-    message: 'API Keys management endpoint - requires authentication',
-    endpoint: '/api/v1/api-keys',
-    status: 'placeholder'
-  });
-});
-
-app.post('/api/v1/api-keys', (req, res) => {
-  res.json({
-    message: 'API Key creation endpoint - requires authentication',
-    endpoint: '/api/v1/api-keys',
-    status: 'placeholder',
-    body: req.body
-  });
-});
-
-// MCP endpoints
-app.get('/api/v1/mcp/status', (req, res) => {
-  res.json({
-    message: 'MCP status endpoint',
-    endpoint: '/api/v1/mcp/status',
-    status: 'operational',
-    protocol: 'Model Context Protocol v1.0',
-    features: ['api-key-management', 'memory-service', 'proxy-tokens']
-  });
-});
-
-// 404 handler
-app.use('*', (req, res) => {
-  res.status(404).json({
-    error: 'Endpoint not found',
-    path: req.originalUrl,
-    method: req.method,
-    available_endpoints: [
-      '/',
-      '/health',
-      '/api/v1/health',
-      '/api/v1/auth/login',
-      '/api/v1/auth/register',
-      '/api/v1/memory',
-      '/api/v1/api-keys',
-      '/api/v1/mcp/status'
-    ]
-  });
-});
-
-// Error handler
-app.use((err, req, res, next) => {
-  console.error('API Error:', err);
-  res.status(500).json({
-    error: 'Internal server error',
-    message: err.message,
-    timestamp: new Date().toISOString()
-  });
-});
-
-// Export serverless handler
-const serverlessHandler = serverless(app);
-
-exports.handler = async (event, context) => {
-  // Set timeout context
-  context.callbackWaitsForEmptyEventLoop = false;
-  
-  return await serverlessHandler(event, context);
-};
+</html>
