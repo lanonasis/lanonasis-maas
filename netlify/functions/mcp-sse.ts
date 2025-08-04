@@ -47,12 +47,12 @@ app.use((err: any, req: any, res: any, next: any) => {
   });
 });
 
-// Export serverless handler
-const handler = serverless(app);
+// Create serverless handler
+const serverlessHandler = serverless(app);
 
-export const netlifyHandler: Handler = async (event: HandlerEvent, context: HandlerContext) => {
+export const handler: Handler = async (event: HandlerEvent, context: HandlerContext) => {
   // Set timeout context for SSE connections
   context.callbackWaitsForEmptyEventLoop = false;
   
-  return await handler(event, context);
+  return await serverlessHandler(event, context);
 };
