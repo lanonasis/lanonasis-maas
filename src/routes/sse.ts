@@ -32,7 +32,8 @@ router.get('/', authMiddleware, asyncHandler(async (req: Request, res: Response)
   const userId = (req as any).user?.id;
   
   if (!userId) {
-    return res.status(401).json({ error: 'User ID not found' });
+    res.status(401).json({ error: 'User ID not found' });
+    return; // End function execution
   }
 
   // Set SSE headers
@@ -83,6 +84,8 @@ router.get('/', authMiddleware, asyncHandler(async (req: Request, res: Response)
   });
 
   logger.info('SSE connection established', { userId });
+  
+  // Keep connection alive - no explicit return needed for SSE
 }));
 
 /**

@@ -13,7 +13,7 @@ const mcpConnections = new Map<string, Response>();
 /**
  * Middleware to authenticate API key for MCP connections
  */
-const authenticateApiKey = async (req: Request, res: Response, next: any) => {
+const authenticateApiKey = async (req: Request, res: Response, next: any): Promise<Response | void> => {
   const apiKey = req.headers['x-api-key'] || req.query.api_key;
   
   if (!apiKey) {
@@ -70,7 +70,7 @@ const authenticateApiKey = async (req: Request, res: Response, next: any) => {
     (req as any).apiKey = keyData;
     next();
   } catch (error) {
-    logger.error('API key validation error', { error: error.message });
+    logger.error('API key validation error', { error: error instanceof Error ? error.message : String(error) });
     return res.status(500).json({ 
       error: 'Authentication error',
       message: 'Failed to validate API key'
