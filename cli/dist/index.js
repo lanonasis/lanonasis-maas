@@ -9,6 +9,7 @@ import { topicCommands } from './commands/topics.js';
 import { configCommands } from './commands/config.js';
 import { orgCommands } from './commands/organization.js';
 import { mcpCommands } from './commands/mcp.js';
+import apiKeysCommand from './commands/api-keys.js';
 import { CLIConfig } from './utils/config.js';
 import { getMCPClient } from './utils/mcp-client.js';
 // Load environment variables
@@ -161,6 +162,9 @@ const orgCmd = program
     .description('Organization management');
 requireAuth(orgCmd);
 orgCommands(orgCmd);
+// API Key management commands (require auth)
+requireAuth(apiKeysCommand);
+program.addCommand(apiKeysCommand);
 // Global commands that don't require auth
 program
     .command('status')
