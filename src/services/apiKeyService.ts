@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import crypto from 'crypto';
 import { z } from 'zod';
+import type { CipherGCM, DecipherGCM } from 'crypto';
 
 // Environment configuration
 const supabaseUrl = process.env.SUPABASE_URL!;
@@ -127,39 +128,37 @@ export interface MCPSession {
 class EncryptionUtils {
   private static algorithm = 'aes-256-gcm';
   private static keyLength = 32;
+  private static ivLength = 12; // 96-bit IV recommended for GCM
 
   static encrypt(text: string, key: string): string {
     const derivedKey = crypto.pbkdf2Sync(key, 'salt', 100000, this.keyLength, 'sha256');
-    const iv = crypto.randomBytes(16);
-    const cipher = crypto.createCipher(this.algorithm, derivedKey);
-    
-    let encrypted = cipher.update(text, 'utf8', 'hex');
-    encrypted += cipher.final('hex');
-    
+    const iv = crypto.randomBytes(this.ivLength);
+
+    const cipher = crypto.createCipheriv(this.algorithm, derivedKey, iv) as CipherGCM;
+
+    const encrypted = Buffer.concat([cipher.update(text, 'utf8'), cipher.final()]);
     const authTag = cipher.getAuthTag();
-    
-    return iv.toString('hex') + ':' + authTag.toString('hex') + ':' + encrypted;
+
+    // Return iv:authTag:ciphertext as hex strings
+    return [iv.toString('hex'), authTag.toString('hex'), encrypted.toString('hex')].join(':');
   }
 
   static decrypt(encryptedText: string, key: string): string {
     const derivedKey = crypto.pbkdf2Sync(key, 'salt', 100000, this.keyLength, 'sha256');
     const parts = encryptedText.split(':');
-    
-    if (parts.length !== 3) {
+    if (parts.length !== 3 || !parts[0] || !parts[1] || !parts[2]) {
       throw new Error('Invalid encrypted text format');
     }
-    
+
     const iv = Buffer.from(parts[0], 'hex');
     const authTag = Buffer.from(parts[1], 'hex');
-    const encrypted = parts[2];
-    
-    const decipher = crypto.createDecipher(this.algorithm, derivedKey);
+    const ciphertext = Buffer.from(parts[2], 'hex');
+
+    const decipher = crypto.createDecipheriv(this.algorithm, derivedKey, iv) as DecipherGCM;
     decipher.setAuthTag(authTag);
-    
-    let decrypted = decipher.update(encrypted, 'hex', 'utf8');
-    decrypted += decipher.final('utf8');
-    
-    return decrypted;
+
+    const decrypted = Buffer.concat([decipher.update(ciphertext), decipher.final()]);
+    return decrypted.toString('utf8');
   }
 }
 
@@ -470,7 +469,7 @@ export class ApiKeyService {
     } catch (error) {
       // Log security event
       await this.logSecurityEvent(undefined, 'unauthorized_access', 'high', 
-        `Failed proxy token request for session ${sessionId}, key ${keyName}: ${error.message}`);
+        `Failed proxy token request for session ${sessionId}, key ${keyName}: ${error instanceof Error ? error.message : String(error)}`);
       throw error;
     }
   }
