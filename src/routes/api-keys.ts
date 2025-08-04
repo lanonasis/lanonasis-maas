@@ -6,14 +6,44 @@ import { logger } from '../utils/logger.js';
 
 const router = express.Router();
 
+// Error handling utility
+const getErrorMessage = (error: unknown): string => {
+  if (error instanceof Error) return error.message;
+  return String(error);
+};
+
+// User validation utility
+const getUserId = (req: express.Request): string => {
+  if (!req.user?.id) {
+    throw new Error('User not authenticated');
+  }
+  return req.user.id;
+};
+
+const getOrganizationId = (req: express.Request): string => {
+  if (!req.user?.organizationId) {
+    throw new Error('User organization not found');
+  }
+  return req.user.organizationId;
+};
+
+const getValidatedParam = (req: express.Request, paramName: string): string => {
+  const value = req.params[paramName];
+  if (!value) {
+    throw new Error(`Required parameter ${paramName} is missing`);
+  }
+  return value;
+};
+
 // Validation middleware
-const validateRequest = (req: express.Request, res: express.Response, next: express.NextFunction) => {
+const validateRequest = (req: express.Request, res: express.Response, next: express.NextFunction): void => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
-    return res.status(400).json({
+    res.status(400).json({
       error: 'Validation failed',
       details: errors.array()
     });
+    return;
   }
   next();
 };
@@ -217,17 +247,18 @@ router.post('/projects', [
   body('settings').optional().isObject()
 ], validateRequest, async (req: express.Request, res: express.Response) => {
   try {
-    const project = await apiKeyService.createProject(req.body, req.user!.id);
+    const userId = getUserId(req);
+    const project = await apiKeyService.createProject(req.body, userId);
     
     logger.info('API key project created', {
       projectId: project.id,
-      userId: req.user!.id,
+      userId,
       organizationId: project.organizationId
     });
 
     res.status(201).json(project);
   } catch (error) {
-    logger.error('Failed to create API key project', error);
+    logger.error('Failed to create API key project', getErrorMessage(error));
     res.status(500).json({ error: 'Failed to create project' });
   }
 });
@@ -256,10 +287,11 @@ router.post('/projects', [
  */
 router.get('/projects', async (req: express.Request, res: express.Response) => {
   try {
-    const projects = await apiKeyService.getProjects(req.user!.organizationId);
+    const organizationId = getOrganizationId(req);
+    const projects = await apiKeyService.getProjects(organizationId);
     res.json(projects);
   } catch (error) {
-    logger.error('Failed to get API key projects', error);
+    logger.error('Failed to get API key projects', getErrorMessage(error));
     res.status(500).json({ error: 'Failed to get projects' });
   }
 });
@@ -350,12 +382,13 @@ router.post('/', [
   body('metadata').optional().isObject()
 ], validateRequest, async (req: express.Request, res: express.Response) => {
   try {
-    const apiKey = await apiKeyService.createApiKey(req.body, req.user!.id);
+    const userId = getUserId(req);
+    const apiKey = await apiKeyService.createApiKey(req.body, userId);
     
     logger.info('API key created', {
       keyId: apiKey.id,
       keyName: apiKey.name,
-      userId: req.user!.id,
+      userId,
       organizationId: apiKey.organizationId
     });
 
@@ -365,7 +398,7 @@ router.post('/', [
 
     res.status(201).json(safeApiKey);
   } catch (error) {
-    logger.error('Failed to create API key', error);
+    logger.error('Failed to create API key', getErrorMessage(error));
     res.status(500).json({ error: 'Failed to create API key' });
   }
 });
@@ -446,11 +479,13 @@ router.get('/:keyId', [
   param('keyId').isUUID()
 ], validateRequest, async (req: express.Request, res: express.Response) => {
   try {
-    const apiKey = await apiKeyService.getApiKeyById(req.params.keyId);
+    const keyId = getValidatedParam(req, 'keyId');
+    const apiKey = await apiKeyService.getApiKeyById(keyId);
     res.json(apiKey);
   } catch (error) {
-    logger.error('Failed to get API key', error);
-    if (error.message.includes('not found')) {
+    const errorMessage = getErrorMessage(error);
+    logger.error('Failed to get API key', errorMessage);
+    if (errorMessage.includes('not found')) {
       res.status(404).json({ error: 'API key not found' });
     } else {
       res.status(500).json({ error: 'Failed to get API key' });
@@ -539,18 +574,21 @@ router.put('/:keyId', [
   body('metadata').optional().isObject()
 ], validateRequest, async (req: express.Request, res: express.Response) => {
   try {
-    const apiKey = await apiKeyService.updateApiKey(req.params.keyId, req.body, req.user!.id);
+    const userId = getUserId(req);
+    const keyId = getValidatedParam(req, 'keyId');
+    const apiKey = await apiKeyService.updateApiKey(keyId, req.body, userId);
     
     logger.info('API key updated', {
       keyId: apiKey.id,
-      userId: req.user!.id,
+      userId,
       organizationId: apiKey.organizationId
     });
 
     res.json(apiKey);
   } catch (error) {
-    logger.error('Failed to update API key', error);
-    if (error.message.includes('not found')) {
+    const errorMessage = getErrorMessage(error);
+    logger.error('Failed to update API key', errorMessage);
+    if (errorMessage.includes('not found')) {
       res.status(404).json({ error: 'API key not found' });
     } else {
       res.status(500).json({ error: 'Failed to update API key' });
@@ -588,17 +626,20 @@ router.delete('/:keyId', [
   param('keyId').isUUID()
 ], validateRequest, async (req: express.Request, res: express.Response) => {
   try {
-    await apiKeyService.deleteApiKey(req.params.keyId, req.user!.id);
+    const userId = getUserId(req);
+    const keyId = getValidatedParam(req, 'keyId');
+    await apiKeyService.deleteApiKey(keyId, userId);
     
     logger.info('API key deleted', {
-      keyId: req.params.keyId,
-      userId: req.user!.id
+      keyId,
+      userId
     });
 
     res.status(204).send();
   } catch (error) {
-    logger.error('Failed to delete API key', error);
-    if (error.message.includes('not found')) {
+    const errorMessage = getErrorMessage(error);
+    logger.error('Failed to delete API key', errorMessage);
+    if (errorMessage.includes('not found')) {
       res.status(404).json({ error: 'API key not found' });
     } else {
       res.status(500).json({ error: 'Failed to delete API key' });
@@ -701,17 +742,18 @@ router.post('/mcp/tools', [
   body('riskLevel').optional().isIn(['low', 'medium', 'high', 'critical'])
 ], validateRequest, async (req: express.Request, res: express.Response) => {
   try {
-    const tool = await apiKeyService.registerMCPTool(req.body, req.user!.id);
+    const userId = getUserId(req);
+    const tool = await apiKeyService.registerMCPTool(req.body, userId);
     
     logger.info('MCP tool registered', {
       toolId: tool.toolId,
-      userId: req.user!.id,
+      userId,
       organizationId: tool.organizationId
     });
 
     res.status(201).json(tool);
   } catch (error) {
-    logger.error('Failed to register MCP tool', error);
+    logger.error('Failed to register MCP tool', getErrorMessage(error));
     res.status(500).json({ error: 'Failed to register MCP tool' });
   }
 });
@@ -901,22 +943,25 @@ router.post('/mcp/sessions/:sessionId/proxy-token', [
   body('keyName').isLength({ min: 1 })
 ], validateRequest, async (req: express.Request, res: express.Response) => {
   try {
+    const userId = getUserId(req);
+    const sessionId = getValidatedParam(req, 'sessionId');
     const { proxyToken, expiresAt } = await apiKeyService.getProxyTokenForKey(
-      req.params.sessionId,
+      sessionId,
       req.body.keyName
     );
     
     logger.info('Proxy token generated', {
-      sessionId: req.params.sessionId,
+      sessionId,
       keyName: req.body.keyName,
-      userId: req.user!.id
+      userId
     });
 
     res.json({ proxyToken, expiresAt });
   } catch (error) {
-    logger.error('Failed to generate proxy token', error);
-    if (error.message.includes('Invalid') || error.message.includes('expired')) {
-      res.status(403).json({ error: error.message });
+    const errorMessage = getErrorMessage(error);
+    logger.error('Failed to generate proxy token', errorMessage);
+    if (errorMessage.includes('Invalid') || errorMessage.includes('expired')) {
+      res.status(403).json({ error: errorMessage });
     } else {
       res.status(500).json({ error: 'Failed to generate proxy token' });
     }
