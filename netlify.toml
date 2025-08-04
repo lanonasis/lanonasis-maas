@@ -1,11 +1,13 @@
 [build]
-  # Build command for the dashboard
-  command = "cd dashboard && npm install && npm run build"
+  # Build command includes dashboard and functions using Bun
+  command = "bun install && bun run build && cd dashboard && bun install && bun run build"
   # Directory to publish
   publish = "dashboard/dist"
+  # Functions directory
+  functions = "netlify/functions"
 
 [build.environment]
-  # Node.js version
+  # Node.js version for Netlify functions compatibility
   NODE_VERSION = "18"
   # Build environment
   NODE_ENV = "production"
@@ -30,23 +32,25 @@
     X-XSS-Protection = "1; mode=block"
     Referrer-Policy = "strict-origin-when-cross-origin"
 
-# API proxy configuration (connects to your existing backend)
+# API routes handled by Netlify functions (no proxy loops)
 [[redirects]]
+  from = "/api/v1/*"
+  to = "/.netlify/functions/api"
+  status = 200
+
+[[redirects]]  
   from = "/api/*"
-  to = "https://api.lanonasis.com/api/:splat"
+  to = "/.netlify/functions/api"
   status = 200
-  force = true
 
-# SSE endpoint proxy
-[[redirects]]
-  from = "/sse"
-  to = "https://api.lanonasis.com/sse"
-  status = 200
-  force = true
-
-# MCP SSE endpoint proxy
+# MCP SSE endpoint handled by Netlify function
 [[redirects]]
   from = "/mcp/sse"
-  to = "https://api.lanonasis.com/mcp/sse"
+  to = "/.netlify/functions/mcp-sse"
   status = 200
-  force = true
+
+# SSE endpoint handled by Netlify function  
+[[redirects]]
+  from = "/sse"
+  to = "/.netlify/functions/api"
+  status = 200

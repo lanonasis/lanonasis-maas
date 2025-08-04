@@ -1,6 +1,6 @@
 import jwt from 'jsonwebtoken';
-import { config } from '@/config/environment';
-import { logger } from '@/utils/logger';
+import { config } from '../config/environment';
+import { logger } from '../utils/logger';
 export const authMiddleware = async (req, res, next) => {
     try {
         const authHeader = req.headers.authorization;

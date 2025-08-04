@@ -1,5 +1,5 @@
 {
-  "name": "@lanonasis/memory-service",
+  "name": "@lanonasis/memory-service-maas",
   "version": "1.2.0-dev",
   "description": "[DEVELOPMENT] Enterprise Memory as a Service (MaaS) with API Key Management and MCP Integration",
   "main": "dist/server.js",
@@ -48,6 +48,7 @@
   "author": "Seye Derick",
   "license": "MIT",
   "dependencies": {
+    "@netlify/functions": "^2.8.2",
     "@supabase/supabase-js": "^2.53.0",
     "bcryptjs": "^3.0.2",
     "compression": "^1.7.5",
@@ -62,6 +63,7 @@
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "redis": "^4.7.0",
+    "serverless-http": "^3.2.0",
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-express": "^5.0.1",
     "uuid": "^11.0.3",
