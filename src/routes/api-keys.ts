@@ -216,10 +216,11 @@ router.post('/projects', [
   body('description').optional().isString(),
   body('teamMembers').optional().isArray(),
   body('settings').optional().isObject()
-], validateRequest, async (req: express.Request, res: express.Response) => {
+], validateRequest, async (req: express.Request, res: express.Response): Promise<void> => {
   try {
     if (!req.user?.id) {
-      return res.status(401).json({ error: 'User authentication required' });
+      res.status(401).json({ error: 'User authentication required' });
+      return;
     }
 
     const project = await apiKeyService.createProject(req.body, req.user.id);
@@ -231,7 +232,7 @@ router.post('/projects', [
     });
 
     res.status(201).json(project);
-  } catch (error) {
+  } catch (error: unknown) {
     logger.error('Failed to create API key project', error);
     res.status(500).json({ error: 'Failed to create project' });
   }
@@ -259,11 +260,16 @@ router.post('/projects', [
  *       500:
  *         description: Internal server error
  */
-router.get('/projects', async (req: express.Request, res: express.Response) => {
+router.get('/projects', async (req: express.Request, res: express.Response): Promise<void> => {
   try {
-    const projects = await apiKeyService.getProjects(req.user!.organizationId);
+    if (!req.user?.id) {
+      res.status(401).json({ error: 'User authentication required' });
+      return;
+    }
+
+    const projects = await apiKeyService.getProjects(req.user.organizationId);
     res.json(projects);
-  } catch (error) {
+  } catch (error: unknown) {
     logger.error('Failed to get API key projects', error);
     res.status(500).json({ error: 'Failed to get projects' });
   }
@@ -353,10 +359,11 @@ router.post('/', [
   body('expiresAt').optional().isISO8601(),
   body('rotationFrequency').optional().isInt({ min: 1, max: 365 }),
   body('metadata').optional().isObject()
-], validateRequest, async (req: express.Request, res: express.Response) => {
+], validateRequest, async (req: express.Request, res: express.Response): Promise<void> => {
   try {
     if (!req.user?.id) {
-      return res.status(401).json({ error: 'User authentication required' });
+      res.status(401).json({ error: 'User authentication required' });
+      return;
     }
 
     const apiKey = await apiKeyService.createApiKey(req.body, req.user.id);
@@ -373,7 +380,7 @@ router.post('/', [
     delete (safeApiKey as any).value;
 
     res.status(201).json(safeApiKey);
-  } catch (error) {
+  } catch (error: unknown) {
     logger.error('Failed to create API key', error);
     res.status(500).json({ error: 'Failed to create API key' });
   }
@@ -410,12 +417,17 @@ router.post('/', [
  */
 router.get('/', [
   query('projectId').optional().isUUID()
-], validateRequest, async (req: express.Request, res: express.Response) => {
+], validateRequest, async (req: express.Request, res: express.Response): Promise<void> => {
   try {
+    if (!req.user?.id) {
+      res.status(401).json({ error: 'User authentication required' });
+      return;
+    }
+
     const { projectId } = req.query;
-    const apiKeys = await apiKeyService.getApiKeys(req.user!.organizationId, projectId as string);
+    const apiKeys = await apiKeyService.getApiKeys(req.user.organizationId, projectId as string | undefined);
     res.json(apiKeys);
-  } catch (error) {
+  } catch (error: unknown) {
     logger.error('Failed to get API keys', error);
     res.status(500).json({ error: 'Failed to get API keys' });
   }
@@ -453,13 +465,23 @@ router.get('/', [
  */
 router.get('/:keyId', [
   param('keyId').isUUID()
-], validateRequest, async (req: express.Request, res: express.Response) => {
+], validateRequest, async (req: express.Request, res: express.Response): Promise<void> => {
   try {
-    const apiKey = await apiKeyService.getApiKeyById(req.params.keyId);
+    if (!req.user?.id) {
+      res.status(401).json({ error: 'User authentication required' });
+      return;
+    }
+
+    const keyId = req.params.keyId;
+    if (!keyId) {
+      res.status(400).json({ error: 'Key ID is required' });
+      return;
+    }
+    const apiKey = await apiKeyService.getApiKeyById(keyId);
     res.json(apiKey);
-  } catch (error) {
+  } catch (error: unknown) {
     logger.error('Failed to get API key', error);
-    if (error.message.includes('not found')) {
+    if (error instanceof Error && error.message.includes('not found')) {
       res.status(404).json({ error: 'API key not found' });
     } else {
       res.status(500).json({ error: 'Failed to get API key' });
@@ -546,20 +568,30 @@ router.put('/:keyId', [
   body('expiresAt').optional().isISO8601(),
   body('rotationFrequency').optional().isInt({ min: 1, max: 365 }),
   body('metadata').optional().isObject()
-], validateRequest, async (req: express.Request, res: express.Response) => {
+], validateRequest, async (req: express.Request, res: express.Response): Promise<void> => {
   try {
-    const apiKey = await apiKeyService.updateApiKey(req.params.keyId, req.body, req.user!.id);
+    if (!req.user?.id) {
+      res.status(401).json({ error: 'User authentication required' });
+      return;
+    }
+
+    const keyId = req.params.keyId;
+    if (!keyId) {
+      res.status(400).json({ error: 'Key ID is required' });
+      return;
+    }
+    const apiKey = await apiKeyService.updateApiKey(keyId, req.body, req.user.id);
     
     logger.info('API key updated', {
       keyId: apiKey.id,
-      userId: req.user!.id,
+      userId: req.user.id,
       organizationId: apiKey.organizationId
     });
 
     res.json(apiKey);
-  } catch (error) {
+  } catch (error: unknown) {
     logger.error('Failed to update API key', error);
-    if (error.message.includes('not found')) {
+    if (error instanceof Error && error.message.includes('not found')) {
       res.status(404).json({ error: 'API key not found' });
     } else {
       res.status(500).json({ error: 'Failed to update API key' });
@@ -595,19 +627,29 @@ router.put('/:keyId', [
  */
 router.delete('/:keyId', [
   param('keyId').isUUID()
-], validateRequest, async (req: express.Request, res: express.Response) => {
+], validateRequest, async (req: express.Request, res: express.Response): Promise<void> => {
   try {
-    await apiKeyService.deleteApiKey(req.params.keyId, req.user!.id);
+    if (!req.user?.id) {
+      res.status(401).json({ error: 'User authentication required' });
+      return;
+    }
+
+    const keyId = req.params.keyId;
+    if (!keyId) {
+      res.status(400).json({ error: 'Key ID is required' });
+      return;
+    }
+    await apiKeyService.deleteApiKey(keyId, req.user.id);
     
     logger.info('API key deleted', {
-      keyId: req.params.keyId,
-      userId: req.user!.id
+      keyId: keyId,
+      userId: req.user.id
     });
 
     res.status(204).send();
-  } catch (error) {
+  } catch (error: unknown) {
     logger.error('Failed to delete API key', error);
-    if (error.message.includes('not found')) {
+    if (error instanceof Error && error.message.includes('not found')) {
       res.status(404).json({ error: 'API key not found' });
     } else {
       res.status(500).json({ error: 'Failed to delete API key' });
@@ -708,18 +750,23 @@ router.post('/mcp/tools', [
   body('webhookUrl').optional().isURL(),
   body('autoApprove').optional().isBoolean(),
   body('riskLevel').optional().isIn(['low', 'medium', 'high', 'critical'])
-], validateRequest, async (req: express.Request, res: express.Response) => {
+], validateRequest, async (req: express.Request, res: express.Response): Promise<void> => {
   try {
-    const tool = await apiKeyService.registerMCPTool(req.body, req.user!.id);
+    if (!req.user?.id) {
+      res.status(401).json({ error: 'User authentication required' });
+      return;
+    }
+
+    const tool = await apiKeyService.registerMCPTool(req.body, req.user.id);
     
     logger.info('MCP tool registered', {
       toolId: tool.toolId,
-      userId: req.user!.id,
+      userId: req.user.id,
       organizationId: tool.organizationId
     });
 
     res.status(201).json(tool);
-  } catch (error) {
+  } catch (error: unknown) {
     logger.error('Failed to register MCP tool', error);
     res.status(500).json({ error: 'Failed to register MCP tool' });
   }
@@ -747,11 +794,16 @@ router.post('/mcp/tools', [
  *       500:
  *         description: Internal server error
  */
-router.get('/mcp/tools', async (req: express.Request, res: express.Response) => {
+router.get('/mcp/tools', async (req: express.Request, res: express.Response): Promise<void> => {
   try {
-    const tools = await apiKeyService.getMCPTools(req.user!.organizationId);
+    if (!req.user?.id) {
+      res.status(401).json({ error: 'User authentication required' });
+      return;
+    }
+
+    const tools = await apiKeyService.getMCPTools(req.user.organizationId);
     res.json(tools);
-  } catch (error) {
+  } catch (error: unknown) {
     logger.error('Failed to get MCP tools', error);
     res.status(500).json({ error: 'Failed to get MCP tools' });
   }
@@ -835,14 +887,19 @@ router.post('/mcp/request-access', [
   body('justification').isLength({ min: 1 }),
   body('estimatedDuration').isInt({ min: 60, max: 3600 }),
   body('context').optional().isObject()
-], validateRequest, async (req: express.Request, res: express.Response) => {
+], validateRequest, async (req: express.Request, res: express.Response): Promise<void> => {
   try {
+    if (!req.user?.id) {
+      res.status(401).json({ error: 'User authentication required' });
+      return;
+    }
+
     const requestId = await apiKeyService.createMCPAccessRequest(req.body);
     
     logger.info('MCP access request created', {
       requestId,
       toolId: req.body.toolId,
-      userId: req.user!.id,
+      userId: req.user.id,
       organizationId: req.body.organizationId
     });
 
@@ -851,7 +908,7 @@ router.post('/mcp/request-access', [
       status: 'pending', // This could be 'approved' if auto-approved
       message: 'Access request created successfully'
     });
-  } catch (error) {
+  } catch (error: unknown) {
     logger.error('Failed to create MCP access request', error);
     res.status(500).json({ error: 'Failed to create access request' });
   }
@@ -908,23 +965,33 @@ router.post('/mcp/request-access', [
 router.post('/mcp/sessions/:sessionId/proxy-token', [
   param('sessionId').isLength({ min: 1 }),
   body('keyName').isLength({ min: 1 })
-], validateRequest, async (req: express.Request, res: express.Response) => {
+], validateRequest, async (req: express.Request, res: express.Response): Promise<void> => {
   try {
+    if (!req.user?.id) {
+      res.status(401).json({ error: 'User authentication required' });
+      return;
+    }
+
+    const sessionId = req.params.sessionId;
+    if (!sessionId) {
+      res.status(400).json({ error: 'Session ID is required' });
+      return;
+    }
     const { proxyToken, expiresAt } = await apiKeyService.getProxyTokenForKey(
-      req.params.sessionId,
+      sessionId,
       req.body.keyName
     );
     
     logger.info('Proxy token generated', {
-      sessionId: req.params.sessionId,
+      sessionId: sessionId,
       keyName: req.body.keyName,
-      userId: req.user!.id
+      userId: req.user.id
     });
 
     res.json({ proxyToken, expiresAt });
-  } catch (error) {
+  } catch (error: unknown) {
     logger.error('Failed to generate proxy token', error);
-    if (error.message.includes('Invalid') || error.message.includes('expired')) {
+    if (error instanceof Error && (error.message.includes('Invalid') || error.message.includes('expired'))) {
       res.status(403).json({ error: error.message });
     } else {
       res.status(500).json({ error: 'Failed to generate proxy token' });
@@ -976,16 +1043,21 @@ router.post('/mcp/sessions/:sessionId/proxy-token', [
 router.get('/analytics/usage', [
   query('keyId').optional().isUUID(),
   query('days').optional().isInt({ min: 1, max: 365 })
-], validateRequest, async (req: express.Request, res: express.Response) => {
+], validateRequest, async (req: express.Request, res: express.Response): Promise<void> => {
   try {
+    if (!req.user?.id) {
+      res.status(401).json({ error: 'User authentication required' });
+      return;
+    }
+
     const { keyId, days } = req.query;
     const analytics = await apiKeyService.getUsageAnalytics(
-      req.user!.organizationId,
-      keyId as string,
+      req.user.organizationId,
+      keyId as string | undefined,
       days ? parseInt(days as string) : 30
     );
     res.json(analytics);
-  } catch (error) {
+  } catch (error: unknown) {
     logger.error('Failed to get usage analytics', error);
     res.status(500).json({ error: 'Failed to get usage analytics' });
   }
@@ -1022,15 +1094,20 @@ router.get('/analytics/usage', [
  */
 router.get('/analytics/security-events', [
   query('severity').optional().isIn(['low', 'medium', 'high', 'critical'])
-], validateRequest, async (req: express.Request, res: express.Response) => {
+], validateRequest, async (req: express.Request, res: express.Response): Promise<void> => {
   try {
+    if (!req.user?.id) {
+      res.status(401).json({ error: 'User authentication required' });
+      return;
+    }
+
     const { severity } = req.query;
     const events = await apiKeyService.getSecurityEvents(
-      req.user!.organizationId,
-      severity as string
+      req.user.organizationId,
+      severity as string | undefined
     );
     res.json(events);
-  } catch (error) {
+  } catch (error: unknown) {
     logger.error('Failed to get security events', error);
     res.status(500).json({ error: 'Failed to get security events' });
   }
