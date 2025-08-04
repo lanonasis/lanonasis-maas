@@ -13,7 +13,7 @@ const mcpConnections = new Map<string, Response>();
 /**
  * Middleware to authenticate API key for MCP connections
  */
-const authenticateApiKey = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+const authenticateApiKey = async (req: Request, res: Response, next: NextFunction): Promise<Response | void> => {
   const apiKey = req.headers['x-api-key'] || req.query.api_key;
   
   if (!apiKey) {
