@@ -1,6 +1,6 @@
 # 🧠 Memory as a Service (MaaS) - Enterprise Memory Platform
 
-[![CI/CD Pipeline](https://github.com/seyederick/vibe-memory/workflows/CI/CD%20Pipeline/badge.svg)](https://github.com/seyederick/vibe-memory/actions)
+[![CI/CD Pipeline](https://github.com/lanonasis/lanonasis-maas/workflows/CI/CD%20Pipeline/badge.svg)](https://github.com/lanonasis/lanonasis-maas/actions)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![Node.js](https://img.shields.io/badge/Node.js-43853D?logo=node.js&logoColor=white)](https://nodejs.org/)
@@ -169,8 +169,8 @@ Deploy your own instance for complete control:
 
 ```bash
 # 1. Clone the repository
-git clone https://github.com/thefixer3x/vibe-memory.git
-cd vibe-memory
+git clone https://github.com/lanonasis/lanonasis-maas.git
+cd lanonasis-maas
 
 # 2. Install dependencies
 npm install
@@ -1000,8 +1000,8 @@ We welcome contributions! Here's how to get started:
 
 ```bash
 # 1. Fork and clone
-git clone https://github.com/yourusername/vibe-memory.git
-cd vibe-memory
+git clone https://github.com/lanonasis/lanonasis-maas.git
+cd lanonasis-maas
 
 # 2. Install dependencies
 npm install
