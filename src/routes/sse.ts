@@ -28,7 +28,7 @@ const sseConnections = new Map<string, Response>();
  *       401:
  *         description: Unauthorized
  */
-router.get('/', authMiddleware, asyncHandler(async (req: Request, res: Response) => {
+router.get('/', authMiddleware, asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const userId = (req as any).user?.id;
   
   if (!userId) {
@@ -77,7 +77,8 @@ router.get('/', authMiddleware, asyncHandler(async (req: Request, res: Response)
   });
 
   req.on('error', (error) => {
-    logger.error('SSE connection error', { userId, error: error.message });
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    logger.error('SSE connection error', { userId, error: errorMessage });
     clearInterval(heartbeat);
     sseConnections.delete(userId);
   });
