@@ -178,7 +178,7 @@ export class MemoryService {
         }
     }
 
-    private async makeAuthenticatedRequest(endpoint: string, options: RequestInit = {}): Promise<Response> {
+    private async makeAuthenticatedRequest(endpoint: string, options: RequestInit = {}): Promise<globalThis.Response> {
         const authHeader = await this.authService.getAuthenticationHeader();
         if (!authHeader) {
             throw new Error('Not authenticated. Please login first.');

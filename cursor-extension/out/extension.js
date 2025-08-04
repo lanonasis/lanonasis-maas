@@ -38,17 +38,22 @@ exports.deactivate = deactivate;
 const vscode = __importStar(require("vscode"));
 const MemoryTreeProvider_1 = require("./providers/MemoryTreeProvider");
 const MemoryCompletionProvider_1 = require("./providers/MemoryCompletionProvider");
+const ApiKeyTreeProvider_1 = require("./providers/ApiKeyTreeProvider");
 const MemoryService_1 = require("./services/MemoryService");
+const ApiKeyService_1 = require("./services/ApiKeyService");
 const AuthenticationService_1 = require("./auth/AuthenticationService");
 function activate(context) {
     console.log('Lanonasis Memory Extension for Cursor is now active');
     // Initialize authentication service with auto-redirect capabilities
     const authService = new AuthenticationService_1.AuthenticationService(context);
-    // Initialize memory service
+    // Initialize services
     const memoryService = new MemoryService_1.MemoryService(authService);
-    // Initialize tree provider
+    const apiKeyService = new ApiKeyService_1.ApiKeyService();
+    // Initialize tree providers
     const memoryTreeProvider = new MemoryTreeProvider_1.MemoryTreeProvider(memoryService, authService);
+    const apiKeyTreeProvider = new ApiKeyTreeProvider_1.ApiKeyTreeProvider(apiKeyService);
     vscode.window.registerTreeDataProvider('lanonasisMemories', memoryTreeProvider);
+    vscode.window.registerTreeDataProvider('lanonasisApiKeys', apiKeyTreeProvider);
     // Initialize completion provider
     const completionProvider = new MemoryCompletionProvider_1.MemoryCompletionProvider(memoryService);
     context.subscriptions.push(vscode.languages.registerCompletionItemProvider({ scheme: 'file' }, completionProvider, '@', '#', '//'));
@@ -81,6 +86,19 @@ function activate(context) {
         }),
         vscode.commands.registerCommand('lanonasis.switchMode', async () => {
             await switchConnectionMode(memoryService);
+        }),
+        // API Key Management Commands
+        vscode.commands.registerCommand('lanonasis.manageApiKeys', async () => {
+            await manageApiKeys(apiKeyService);
+        }),
+        vscode.commands.registerCommand('lanonasis.createProject', async () => {
+            await createProject(apiKeyService, apiKeyTreeProvider);
+        }),
+        vscode.commands.registerCommand('lanonasis.viewProjects', async () => {
+            await viewProjects(apiKeyService);
+        }),
+        vscode.commands.registerCommand('lanonasis.refreshApiKeys', async () => {
+            apiKeyTreeProvider.refresh();
         })
     ];
     context.subscriptions.push(...commands);
@@ -96,7 +114,7 @@ function activate(context) {
     // Show welcome message if first time
     const isFirstTime = context.globalState.get('lanonasis.firstTime', true);
     if (isFirstTime) {
-        showWelcomeMessage(authService);
+        showWelcomeMessage();
         context.globalState.update('lanonasis.firstTime', false);
     }
 }
@@ -333,7 +351,7 @@ async function ensureAuthenticated(authService) {
         return true;
     }
     vscode.window.showWarningMessage('Please authenticate with Lanonasis first', 'Authenticate')
-        .then(choice => {
+        .then((choice) => {
         if (choice === 'Authenticate') {
             vscode.commands.executeCommand('lanonasis.authenticate');
         }
@@ -354,11 +372,11 @@ ${memory.content}`;
     vscode.workspace.openTextDocument({
         content,
         language: 'markdown'
-    }).then(doc => {
+    }).then((doc) => {
         vscode.window.showTextDocument(doc);
     });
 }
-function showWelcomeMessage(authService) {
+function showWelcomeMessage() {
     const config = vscode.workspace.getConfiguration('lanonasis');
     const useAutoAuth = config.get('useAutoAuth', true);
     const authMethod = useAutoAuth ? 'auto-login with browser' : 'manual API key';
@@ -372,7 +390,7 @@ function showWelcomeMessage(authService) {
 
 Authentication method: ${authMethod}`;
     vscode.window.showInformationMessage(message, 'Get Started', 'Configure')
-        .then(selection => {
+        .then((selection) => {
         if (selection === 'Get Started') {
             vscode.commands.executeCommand('lanonasis.authenticate');
         }
@@ -412,6 +430,297 @@ function handleError(context, error) {
     const message = error instanceof Error ? error.message : 'Unknown error';
     console.error(`${context}:`, error);
     vscode.window.showErrorMessage(`${context}: ${message}`);
+}
+// API Key Management Functions
+async function manageApiKeys(apiKeyService) {
+    const quickPickItems = [
+        {
+            label: '$(key) View API Keys',
+            description: 'View all API keys across projects',
+            command: 'view'
+        },
+        {
+            label: '$(add) Create API Key',
+            description: 'Create a new API key',
+            command: 'create'
+        },
+        {
+            label: '$(folder) Manage Projects',
+            description: 'Create and manage API key projects',
+            command: 'projects'
+        },
+        {
+            label: '$(refresh) Refresh',
+            description: 'Refresh API key data',
+            command: 'refresh'
+        }
+    ];
+    const selected = await vscode.window.showQuickPick(quickPickItems, {
+        placeHolder: 'Choose an API key management action'
+    });
+    if (!selected)
+        return;
+    switch (selected.command) {
+        case 'view':
+            await viewApiKeys(apiKeyService);
+            break;
+        case 'create':
+            await createApiKey(apiKeyService);
+            break;
+        case 'projects':
+            await viewProjects(apiKeyService);
+            break;
+        case 'refresh':
+            vscode.commands.executeCommand('lanonasis.refreshApiKeys');
+            break;
+    }
+}
+async function viewApiKeys(apiKeyService) {
+    try {
+        vscode.window.withProgress({
+            location: vscode.ProgressLocation.Notification,
+            title: 'Loading API keys...',
+            cancellable: false
+        }, async () => {
+            const apiKeys = await apiKeyService.getApiKeys();
+            if (apiKeys.length === 0) {
+                vscode.window.showInformationMessage('No API keys found. Create your first API key to get started.');
+                return;
+            }
+            const items = apiKeys.map(key => ({
+                label: key.name,
+                description: `${key.environment} • ${key.keyType} • ${key.accessLevel}`,
+                detail: `Project: ${key.projectId} | Created: ${new Date(key.createdAt).toLocaleDateString()}`,
+                apiKey: key
+            }));
+            const selected = await vscode.window.showQuickPick(items, {
+                placeHolder: `Select an API key (${apiKeys.length} found)`
+            });
+            if (selected) {
+                await showApiKeyDetails(selected.apiKey);
+            }
+        });
+    }
+    catch (error) {
+        vscode.window.showErrorMessage(`Failed to load API keys: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+}
+async function createApiKey(apiKeyService) {
+    try {
+        // Get projects first
+        const projects = await apiKeyService.getProjects();
+        if (projects.length === 0) {
+            const createProjectChoice = await vscode.window.showInformationMessage('No projects found. You need to create a project first.', 'Create Project', 'Cancel');
+            if (createProjectChoice === 'Create Project') {
+                await createProject(apiKeyService, undefined);
+            }
+            return;
+        }
+        // Select project
+        const projectItems = projects.map(p => ({
+            label: p.name,
+            description: p.description || 'No description',
+            project: p
+        }));
+        const selectedProject = await vscode.window.showQuickPick(projectItems, {
+            placeHolder: 'Select a project for the API key'
+        });
+        if (!selectedProject)
+            return;
+        // Get key details
+        const name = await vscode.window.showInputBox({
+            prompt: 'API Key Name',
+            placeHolder: 'Enter a name for your API key'
+        });
+        if (!name)
+            return;
+        const value = await vscode.window.showInputBox({
+            prompt: 'API Key Value',
+            placeHolder: 'Enter the API key value',
+            password: true
+        });
+        if (!value)
+            return;
+        // Key type selection
+        const keyTypes = [
+            { label: 'API Key', value: 'api_key' },
+            { label: 'Database URL', value: 'database_url' },
+            { label: 'OAuth Token', value: 'oauth_token' },
+            { label: 'Certificate', value: 'certificate' },
+            { label: 'SSH Key', value: 'ssh_key' },
+            { label: 'Webhook Secret', value: 'webhook_secret' },
+            { label: 'Encryption Key', value: 'encryption_key' }
+        ];
+        const selectedKeyType = await vscode.window.showQuickPick(keyTypes, {
+            placeHolder: 'Select key type'
+        });
+        if (!selectedKeyType)
+            return;
+        // Environment selection
+        const config = vscode.workspace.getConfiguration('lanonasis');
+        const defaultEnv = config.get('defaultEnvironment', 'development');
+        const environments = [
+            { label: 'Development', value: 'development', picked: defaultEnv === 'development' },
+            { label: 'Staging', value: 'staging', picked: defaultEnv === 'staging' },
+            { label: 'Production', value: 'production', picked: defaultEnv === 'production' }
+        ];
+        const selectedEnvironment = await vscode.window.showQuickPick(environments, {
+            placeHolder: 'Select environment'
+        });
+        if (!selectedEnvironment)
+            return;
+        // Create the API key
+        await vscode.window.withProgress({
+            location: vscode.ProgressLocation.Notification,
+            title: 'Creating API key...',
+            cancellable: false
+        }, async () => {
+            await apiKeyService.createApiKey({
+                name,
+                value,
+                keyType: selectedKeyType.value,
+                environment: selectedEnvironment.value,
+                accessLevel: 'team',
+                projectId: selectedProject.project.id
+            });
+        });
+        vscode.window.showInformationMessage(`API key "${name}" created successfully`);
+        vscode.commands.executeCommand('lanonasis.refreshApiKeys');
+    }
+    catch (error) {
+        vscode.window.showErrorMessage(`Failed to create API key: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+}
+async function createProject(apiKeyService, apiKeyTreeProvider) {
+    try {
+        const name = await vscode.window.showInputBox({
+            prompt: 'Project Name',
+            placeHolder: 'Enter a name for your project'
+        });
+        if (!name)
+            return;
+        const description = await vscode.window.showInputBox({
+            prompt: 'Project Description (optional)',
+            placeHolder: 'Enter a description for your project'
+        });
+        const config = vscode.workspace.getConfiguration('lanonasis');
+        const organizationId = config.get('organizationId');
+        if (!organizationId) {
+            const orgId = await vscode.window.showInputBox({
+                prompt: 'Organization ID',
+                placeHolder: 'Enter your organization ID'
+            });
+            if (!orgId)
+                return;
+            await config.update('organizationId', orgId, vscode.ConfigurationTarget.Global);
+        }
+        await vscode.window.withProgress({
+            location: vscode.ProgressLocation.Notification,
+            title: 'Creating project...',
+            cancellable: false
+        }, async () => {
+            const project = await apiKeyService.createProject({
+                name,
+                description,
+                organizationId: organizationId || await config.get('organizationId')
+            });
+            if (apiKeyTreeProvider) {
+                await apiKeyTreeProvider.addProject(project);
+            }
+        });
+        vscode.window.showInformationMessage(`Project "${name}" created successfully`);
+        vscode.commands.executeCommand('lanonasis.refreshApiKeys');
+    }
+    catch (error) {
+        vscode.window.showErrorMessage(`Failed to create project: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+}
+async function viewProjects(apiKeyService) {
+    try {
+        vscode.window.withProgress({
+            location: vscode.ProgressLocation.Notification,
+            title: 'Loading projects...',
+            cancellable: false
+        }, async () => {
+            const projects = await apiKeyService.getProjects();
+            if (projects.length === 0) {
+                const createProjectOption = await vscode.window.showInformationMessage('No projects found. Create your first project to get started.', 'Create Project', 'Cancel');
+                if (createProjectOption === 'Create Project') {
+                    await createProject(apiKeyService, undefined);
+                }
+                return;
+            }
+            const items = projects.map(project => ({
+                label: project.name,
+                description: project.description || 'No description',
+                detail: `Organization: ${project.organizationId} | Created: ${new Date(project.createdAt).toLocaleDateString()}`,
+                project
+            }));
+            const selected = await vscode.window.showQuickPick(items, {
+                placeHolder: `Select a project (${projects.length} found)`
+            });
+            if (selected) {
+                await showProjectDetails(selected.project, apiKeyService);
+            }
+        });
+    }
+    catch (error) {
+        vscode.window.showErrorMessage(`Failed to load projects: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+}
+async function showApiKeyDetails(apiKey) {
+    const content = `# API Key: ${apiKey.name}
+
+**Type:** ${apiKey.keyType}
+**Environment:** ${apiKey.environment}
+**Access Level:** ${apiKey.accessLevel}
+**Project ID:** ${apiKey.projectId}
+**Created:** ${new Date(apiKey.createdAt).toLocaleString()}
+${apiKey.expiresAt ? `**Expires:** ${new Date(apiKey.expiresAt).toLocaleString()}` : '**Expires:** Never'}
+
+## Tags
+${apiKey.tags.length > 0 ? apiKey.tags.map((tag) => `- ${tag}`).join('\n') : 'No tags'}
+
+## Metadata
+\`\`\`json
+${JSON.stringify(apiKey.metadata, null, 2)}
+\`\`\``;
+    vscode.workspace.openTextDocument({
+        content,
+        language: 'markdown'
+    }).then((doc) => {
+        vscode.window.showTextDocument(doc);
+    });
+}
+async function showProjectDetails(project, apiKeyService) {
+    try {
+        const apiKeys = await apiKeyService.getApiKeys(project.id);
+        const content = `# Project: ${project.name}
+
+**Description:** ${project.description || 'No description'}
+**Organization ID:** ${project.organizationId}
+**Created:** ${new Date(project.createdAt).toLocaleString()}
+**Team Members:** ${project.teamMembers.length}
+
+## API Keys (${apiKeys.length})
+${apiKeys.length > 0 ?
+            apiKeys.map((key) => `- **${key.name}** (${key.keyType}, ${key.environment})`).join('\n') :
+            'No API keys found in this project'}
+
+## Settings
+\`\`\`json
+${JSON.stringify(project.settings, null, 2)}
+\`\`\``;
+        vscode.workspace.openTextDocument({
+            content,
+            language: 'markdown'
+        }).then((doc) => {
+            vscode.window.showTextDocument(doc);
+        });
+    }
+    catch (error) {
+        vscode.window.showErrorMessage(`Failed to load project details: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
 }
 function deactivate() {
     console.log('Lanonasis Memory Extension for Cursor is deactivated');
