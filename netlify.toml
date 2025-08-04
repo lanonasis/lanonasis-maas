@@ -44,6 +44,23 @@
   to = "/.netlify/functions/api"
   status = 200
 
+# Root endpoint handled by API function for service landing page
+[[redirects]]
+  from = "/"
+  to = "/.netlify/functions/api"
+  status = 200
+
+# Health and metrics endpoints
+[[redirects]]
+  from = "/health"
+  to = "/.netlify/functions/api"
+  status = 200
+
+[[redirects]]
+  from = "/metrics"
+  to = "/.netlify/functions/api"
+  status = 200
+
 # SPA routing configuration for dashboard (MUST come after API routes)
 [[redirects]]
   from = "/dashboard/*"
