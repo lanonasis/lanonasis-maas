@@ -74,14 +74,20 @@ export interface MemoryEntry {
  *           type: string
  *           minLength: 1
  *           maxLength: 200
+ *           description: Title of the memory entry
+ *           example: "React Performance Optimization Tips"
  *         content:
  *           type: string
  *           minLength: 1
  *           maxLength: 50000
+ *           description: Main content of the memory entry
+ *           example: "Use React.memo() to prevent unnecessary re-renders of expensive components. This is particularly useful for components that receive complex props."
  *         memory_type:
  *           type: string
  *           enum: [context, project, knowledge, reference, personal, workflow]
  *           default: context
+ *           description: Type of memory for categorization
+ *           example: "knowledge"
  *         tags:
  *           type: array
  *           items:
@@ -89,11 +95,20 @@ export interface MemoryEntry {
  *             minLength: 1
  *             maxLength: 50
  *           maxItems: 10
+ *           description: Tags for organization and filtering
+ *           example: ["react", "performance", "optimization", "frontend"]
  *         topic_id:
  *           type: string
  *           format: uuid
+ *           description: Optional topic ID for grouping memories
+ *           example: "550e8400-e29b-41d4-a716-446655440002"
  *         metadata:
  *           type: object
+ *           description: Additional metadata for the memory
+ *           example:
+ *             source: "documentation"
+ *             difficulty: "intermediate"
+ *             last_updated: "2025-01-01"
  */
 export declare const createMemorySchema: z.ZodObject<{
     title: z.ZodString;
@@ -251,6 +266,55 @@ export type MemoryType = 'context' | 'project' | 'knowledge' | 'reference' | 'pe
 export type CreateMemoryRequest = z.infer<typeof createMemorySchema>;
 export type UpdateMemoryRequest = z.infer<typeof updateMemorySchema>;
 export type SearchMemoryRequest = z.infer<typeof searchMemorySchema>;
+/**
+ * @swagger
+ * components:
+ *   schemas:
+ *     MemoryStats:
+ *       type: object
+ *       properties:
+ *         total_memories:
+ *           type: integer
+ *           description: Total number of memories in the organization
+ *           example: 1250
+ *         memories_by_type:
+ *           type: object
+ *           description: Memory count breakdown by type
+ *           properties:
+ *             context:
+ *               type: integer
+ *               example: 300
+ *             project:
+ *               type: integer
+ *               example: 450
+ *             knowledge:
+ *               type: integer
+ *               example: 200
+ *             reference:
+ *               type: integer
+ *               example: 150
+ *             personal:
+ *               type: integer
+ *               example: 100
+ *             workflow:
+ *               type: integer
+ *               example: 50
+ *         total_size_bytes:
+ *           type: integer
+ *           description: Total size of all memories in bytes
+ *           example: 52428800
+ *         avg_access_count:
+ *           type: number
+ *           description: Average access count across all memories
+ *           example: 3.7
+ *         most_accessed_memory:
+ *           $ref: '#/components/schemas/MemoryEntry'
+ *         recent_memories:
+ *           type: array
+ *           items:
+ *             $ref: '#/components/schemas/MemoryEntry'
+ *           description: Recently created or updated memories
+ */
 export interface MemoryStats {
     total_memories: number;
     memories_by_type: Record<MemoryType, number>;
