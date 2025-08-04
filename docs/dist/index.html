@@ -1,32 +1,259 @@
-<\!DOCTYPE html>
-<html>
+<!DOCTYPE html>
+<html lang="en">
 <head>
-    <title>Lanonasis Documentation</title>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lanonasis Memory as a Service - Documentation</title>
     <style>
-        body { font-family: system-ui; margin: 0; padding: 2rem; background: #f9fafb; }
-        .container { max-width: 800px; margin: 0 auto; background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-        h1 { color: #1e40af; margin-bottom: 1rem; }
-        p { line-height: 1.6; color: #374151; }
-        a { color: #3b82f6; text-decoration: none; }
-        a:hover { text-decoration: underline; }
-        .links { margin-top: 2rem; }
-        .links a { display: inline-block; margin-right: 1rem; padding: 0.5rem 1rem; background: #3b82f6; color: white; border-radius: 6px; }
-        .links a:hover { background: #2563eb; text-decoration: none; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .hero {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            padding: 3rem;
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        
+        .hero h1 {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .hero p {
+            font-size: 1.3rem;
+            color: #666;
+            margin-bottom: 2rem;
+        }
+        
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin-top: 2rem;
+        }
+        
+        .card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            padding: 2rem;
+            transition: transform 0.3s ease;
+        }
+        
+        .card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .card h3 {
+            color: #2d3748;
+            margin-bottom: 1rem;
+            font-size: 1.5rem;
+        }
+        
+        .card p {
+            color: #666;
+            margin-bottom: 1.5rem;
+        }
+        
+        .button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 6px;
+            font-size: 1rem;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+            transition: transform 0.2s;
+        }
+        
+        .button:hover {
+            transform: translateY(-2px);
+        }
+        
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin: 2rem 0;
+        }
+        
+        .feature {
+            background: rgba(255,255,255,0.9);
+            padding: 1.5rem;
+            border-radius: 8px;
+            text-align: center;
+        }
+        
+        .feature h4 {
+            color: #2d3748;
+            margin-bottom: 0.5rem;
+        }
+        
+        .nav {
+            background: rgba(255,255,255,0.95);
+            backdrop-filter: blur(10px);
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 2rem;
+        }
+        
+        .nav ul {
+            list-style: none;
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            flex-wrap: wrap;
+        }
+        
+        .nav a {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 500;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            transition: background 0.2s;
+        }
+        
+        .nav a:hover {
+            background: rgba(102, 126, 234, 0.1);
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>Lanonasis Documentation</h1>
-        <p>Welcome to the Lanonasis Memory-as-a-Service documentation. Our comprehensive documentation site is currently being built.</p>
-        <p>In the meantime, please visit:</p>
-        <div class="links">
-            <a href="https://dashboard.lanonasis.com">Dashboard</a>
-            <a href="https://www.npmjs.com/package/@lanonasis/cli">CLI Documentation</a>
-            <a href="https://github.com/lanonasis">GitHub</a>
+        <div class="hero">
+            <h1>🧠 Lanonasis Memory as a Service</h1>
+            <p>Enterprise-grade memory management with semantic search, multi-tenant support, and AI agent integration</p>
+            
+            <div class="nav">
+                <ul>
+                    <li><a href="/dashboard">📊 Dashboard</a></li>
+                    <li><a href="/docs">📖 API Documentation</a></li>
+                    <li><a href="/mcp">🔗 MCP Connection</a></li>
+                    <li><a href="/api/v1/health">💚 Health Check</a></li>
+                </ul>
+            </div>
         </div>
-        <p style="margin-top: 2rem; font-size: 0.875rem; color: #6b7280;">Full documentation coming soon with API references, SDK guides, and more.</p>
+        
+        <div class="grid">
+            <div class="card">
+                <h3>🚀 Quick Start</h3>
+                <p>Get started with Lanonasis Memory Service in minutes. Create your account, generate API keys, and begin storing memories.</p>
+                <a href="/dashboard" class="button">Get Started</a>
+            </div>
+            
+            <div class="card">
+                <h3>📖 API Documentation</h3>
+                <p>Complete API reference with interactive examples. Test endpoints directly in your browser with Swagger UI.</p>
+                <a href="/docs" class="button">View API Docs</a>
+            </div>
+            
+            <div class="card">
+                <h3>🔗 MCP Integration</h3>
+                <p>Connect external MCP clients like Claude Desktop to access your memory data remotely via Server-Sent Events.</p>
+                <a href="/mcp" class="button">Connect MCP</a>
+            </div>
+            
+            <div class="card">
+                <h3>🛠️ CLI Tools</h3>
+                <p>Command-line interface for developers and automation. Manage memories, search, and analytics from your terminal.</p>
+                <a href="#cli" class="button">Learn More</a>
+            </div>
+        </div>
+        
+        <div class="card" style="margin-top: 2rem;">
+            <h3>✨ Key Features</h3>
+            <div class="features">
+                <div class="feature">
+                    <h4>🔍 Semantic Search</h4>
+                    <p>Vector-based similarity search using OpenAI embeddings</p>
+                </div>
+                <div class="feature">
+                    <h4>🏷️ Smart Categorization</h4>
+                    <p>Memory types, tags, and topics for organization</p>
+                </div>
+                <div class="feature">
+                    <h4>👥 Multi-tenant</h4>
+                    <p>Organization-based isolation with role-based access</p>
+                </div>
+                <div class="feature">
+                    <h4>📊 Analytics</h4>
+                    <p>Usage statistics and access tracking</p>
+                </div>
+                <div class="feature">
+                    <h4>🔐 Security</h4>
+                    <p>JWT authentication with plan-based limitations</p>
+                </div>
+                <div class="feature">
+                    <h4>⚡ Performance</h4>
+                    <p>Optimized queries with pagination and caching</p>
+                </div>
+                <div class="feature">
+                    <h4>🔑 API Keys</h4>
+                    <p>Secure storage and rotation with MCP integration</p>
+                </div>
+                <div class="feature">
+                    <h4>🤖 AI Integration</h4>
+                    <p>Model Context Protocol for AI agent access</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card" style="margin-top: 2rem;">
+            <h3>📋 Memory Types</h3>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-top: 1rem;">
+                <div><strong>Context:</strong> General contextual information</div>
+                <div><strong>Project:</strong> Project-specific knowledge</div>
+                <div><strong>Knowledge:</strong> Educational content</div>
+                <div><strong>Reference:</strong> Quick reference materials</div>
+                <div><strong>Personal:</strong> User-specific private memories</div>
+                <div><strong>Workflow:</strong> Process documentation</div>
+            </div>
+        </div>
+        
+        <div class="card" style="margin-top: 2rem;">
+            <h3>📈 Plans & Pricing</h3>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem; margin-top: 1rem;">
+                <div style="padding: 1rem; background: #f7fafc; border-radius: 6px;">
+                    <strong>Free</strong><br>
+                    Up to 100 memories per organization
+                </div>
+                <div style="padding: 1rem; background: #e6fffa; border-radius: 6px;">
+                    <strong>Pro</strong><br>
+                    Up to 10,000 memories + bulk operations
+                </div>
+                <div style="padding: 1rem; background: #fef5e7; border-radius: 6px;">
+                    <strong>Enterprise</strong><br>
+                    Unlimited memories + advanced features
+                </div>
+            </div>
+        </div>
     </div>
 </body>
 </html>

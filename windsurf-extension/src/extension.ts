@@ -664,12 +664,12 @@ async function createApiKey(apiKeyService: ApiKeyService) {
         const projects = await apiKeyService.getProjects();
         
         if (projects.length === 0) {
-            const createProject = await vscode.window.showInformationMessage(
+            const createProjectResponse = await vscode.window.showInformationMessage(
                 'No projects found. You need to create a project first.',
                 'Create Project', 'Cancel'
             );
             
-            if (createProject === 'Create Project') {
+            if (createProjectResponse === 'Create Project') {
                 await createProject(apiKeyService, undefined);
             }
             return;

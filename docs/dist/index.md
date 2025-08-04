@@ -1,123 +1,225 @@
----
-layout: home
+# 🧠 Lanonasis Memory as a Service
 
-hero:
-  name: "Lanonasis Memory Service"
-  text: "Memory as a Service (MaaS)"
-  tagline: Enterprise-grade memory management for AI applications
-  image:
-    src: /logo.svg
-    alt: Lanonasis
-  actions:
-    - theme: brand
-      text: Get Started
-      link: /guide/
-    - theme: alt
-      text: API Reference
-      link: /api/
-    - theme: alt
-      text: View Dashboard
-      link: https://api.lanonasis.com/dashboard
+Enterprise-grade memory management with semantic search, multi-tenant support, and AI agent integration.
 
-features:
-  - icon: 🧠
-    title: Intelligent Memory Management
-    details: Store, search, and retrieve memories with advanced AI-powered embeddings and semantic search capabilities.
-  
-  - icon: 🔐
-    title: Enterprise Security
-    details: JWT authentication, API key management, and row-level security with comprehensive audit logging.
-  
-  - icon: ⚡
-    title: Real-time Updates
-    details: Server-sent events (SSE) for live memory updates, notifications, and system status monitoring.
-  
-  - icon: 🛠️
-    title: Developer-First
-    details: RESTful API, CLI tools, SDKs, and comprehensive documentation for seamless integration.
-  
-  - icon: 📊
-    title: Analytics & Insights
-    details: Usage analytics, performance metrics, and visual relationship graphs for your memory data.
-  
-  - icon: 🚀
-    title: Production Ready
-    details: Scalable architecture with Redis caching, rate limiting, and comprehensive monitoring.
----
+## 🚀 Quick Start
 
-## Quick Start
-
-Get started with Lanonasis Memory Service in minutes:
-
-### 1. Get Your API Key
-
+### 1. Create Account
 Visit the [Dashboard](https://api.lanonasis.com/dashboard) to create your account and generate API keys.
 
-### 2. Install the CLI
-
+### 2. Install SDK
 ```bash
-npm install -g @lanonasis/memory-cli
+npm install @lanonasis/memory-client
 ```
 
-### 3. Configure Authentication
-
-```bash
-lanonasis config set api-key YOUR_API_KEY
-lanonasis config set endpoint https://api.lanonasis.com
-```
-
-### 4. Create Your First Memory
-
-```bash
-lanonasis memory create \
-  --content "Important project meeting notes" \
-  --type "meeting" \
-  --tags "project,meeting,notes"
-```
-
-### 5. Search Memories
-
-```bash
-lanonasis memory search "project meeting"
-```
-
-## API Example
-
+### 3. Start Using
 ```javascript
-import { LanonasisClient } from '@lanonasis/memory-sdk';
+import { MemoryClient } from '@lanonasis/memory-client';
 
-const client = new LanonasisClient({
+const client = new MemoryClient({
   apiKey: 'your-api-key',
-  endpoint: 'https://api.lanonasis.com'
+  baseUrl: 'https://api.lanonasis.com'
 });
 
 // Create a memory
-const memory = await client.memories.create({
-  content: 'Important project meeting notes',
-  type: 'meeting',
-  tags: ['project', 'meeting', 'notes']
+const memory = await client.createMemory({
+  title: 'Important Note',
+  content: 'This is my important information',
+  type: 'project',
+  tags: ['important', 'project-alpha']
 });
 
 // Search memories
-const results = await client.memories.search('project meeting');
+const results = await client.searchMemories('important information');
 ```
 
-## Architecture
+## 🔗 Key Endpoints
 
-Lanonasis Memory Service provides a complete memory management solution:
+- **API Base URL**: `https://api.lanonasis.com/api/v1`
+- **Dashboard**: `https://api.lanonasis.com/dashboard`
+- **MCP SSE**: `https://mcp.lanonasis.com/sse`
+- **Documentation**: `https://api.lanonasis.com/docs`
 
-- **API Server**: RESTful API with JWT authentication at `api.lanonasis.com`
-- **Dashboard**: Self-service portal for API key management and analytics
-- **CLI Tools**: Command-line interface for developers and automation
-- **SDKs**: Official libraries for JavaScript/TypeScript and Python
-- **Real-time**: Server-sent events for live updates and notifications
+## ✨ Features
 
-## Enterprise Features
+### 🔍 Semantic Search
+Vector-based similarity search using OpenAI embeddings for intelligent memory retrieval.
 
-- 🔒 **Security**: JWT + API key authentication, RLS, audit logging
-- 📈 **Analytics**: Usage metrics, performance insights, relationship graphs  
-- 🔄 **Real-time**: SSE for live updates and system notifications
-- 🛡️ **Reliability**: Rate limiting, caching, comprehensive error handling
-- 📚 **Documentation**: Complete API docs, guides, and examples
+### 🏷️ Smart Categorization
+Organize memories with types, tags, and topics:
+- **context**: General contextual information
+- **project**: Project-specific knowledge and documentation
+- **knowledge**: Educational content and reference materials
+- **reference**: Quick reference information and code snippets
+- **personal**: User-specific private memories
+- **workflow**: Process and procedure documentation
+
+### 👥 Multi-tenant Support
+Organization-based isolation with role-based access control.
+
+### 📊 Analytics & Tracking
+- Usage statistics and access tracking
+- Memory access patterns
+- Search analytics
+- Performance metrics
+
+### 🔐 Security
+- JWT authentication with plan-based limitations
+- API key management and rotation
+- Role-based access control
+- Secure data encryption
+
+### 🤖 AI Integration
+- Model Context Protocol (MCP) support
+- Claude Desktop integration
+- Real-time memory updates via SSE
+- AI agent access to memories
+
+## 📋 Memory Operations
+
+### Create Memory
+```http
+POST /api/v1/memory
+Content-Type: application/json
+Authorization: Bearer YOUR_JWT_TOKEN
+
+{
+  "title": "Memory Title",
+  "content": "Memory content here...",
+  "type": "project",
+  "tags": ["tag1", "tag2"],
+  "metadata": {
+    "custom": "data"
+  }
+}
+```
+
+### Search Memories
+```http
+GET /api/v1/memory/search?query=search%20terms
+Authorization: Bearer YOUR_JWT_TOKEN
+```
+
+### Update Memory
+```http
+PUT /api/v1/memory/:id
+Content-Type: application/json
+Authorization: Bearer YOUR_JWT_TOKEN
+
+{
+  "title": "Updated Title",
+  "content": "Updated content..."
+}
+```
+
+### Delete Memory
+```http
+DELETE /api/v1/memory/:id
+Authorization: Bearer YOUR_JWT_TOKEN
+```
+
+## 🔑 API Key Management
+
+### Create API Key
+```http
+POST /api/v1/api-keys
+Content-Type: application/json
+Authorization: Bearer YOUR_JWT_TOKEN
+
+{
+  "name": "My API Key",
+  "projectId": "project-uuid",
+  "permissions": ["read", "write"],
+  "expiresAt": "2024-12-31T23:59:59Z"
+}
+```
+
+### List API Keys
+```http
+GET /api/v1/api-keys
+Authorization: Bearer YOUR_JWT_TOKEN
+```
+
+## 🔗 MCP Remote Connection
+
+Connect external MCP clients (like Claude Desktop) to your Memory Service:
+
+### Claude Desktop Configuration
+```json
+{
+  "mcpServers": {
+    "lanonasis-memory": {
+      "command": "npx",
+      "args": [
+        "@modelcontextprotocol/server-sse",
+        "https://mcp.lanonasis.com/sse"
+      ],
+      "env": {
+        "MCP_API_KEY": "your-lanonasis-api-key-here"
+      }
+    }
+  }
+}
+```
+
+### Authentication
+- **Header**: `X-API-Key: your-api-key`
+- **Query**: `?api_key=your-api-key`
+
+## 🛠️ Development Tools
+
+### CLI Installation
+```bash
+npm install -g @lanonasis/cli
+```
+
+### VS Code Extension
+Search for "Lanonasis Memory" in the VS Code marketplace.
+
+### SDKs Available
+- **JavaScript/TypeScript**: `@lanonasis/memory-client`
+- **Python**: `lanonasis-python` (coming soon)
+- **CLI**: `@lanonasis/cli`
+
+## 📈 Plans & Limits
+
+| Plan | Memories | Features |
+|------|----------|----------|
+| **Free** | 100 | Basic operations, standard search |
+| **Pro** | 10,000 | Bulk operations, advanced search, priority support |
+| **Enterprise** | Unlimited | Custom features, dedicated support, SLA |
+
+## 🔧 Configuration
+
+### Environment Variables
+```bash
+LANONASIS_API_KEY=your-api-key
+LANONASIS_BASE_URL=https://api.lanonasis.com
+LANONASIS_ORGANIZATION_ID=your-org-id
+```
+
+### Client Configuration
+```javascript
+const client = new MemoryClient({
+  apiKey: process.env.LANONASIS_API_KEY,
+  baseUrl: process.env.LANONASIS_BASE_URL,
+  organizationId: process.env.LANONASIS_ORGANIZATION_ID,
+  timeout: 30000,
+  retries: 3
+});
+```
+
+## 📚 Resources
+
+- 📊 **Dashboard**: Self-service portal for API key management and analytics
+- 🛠️ **CLI Tools**: Command-line interface for developers and automation
+- 🔗 **MCP Integration**: Connect AI agents like Claude Desktop
+- 📖 **API Documentation**: Complete reference with interactive examples
+- 💡 **Examples**: Sample implementations and use cases
+- 📞 **Support**: Community and enterprise support options
+
+## 🌟 Getting Started
 
 Ready to get started? [Create your account](https://api.lanonasis.com/dashboard) and begin building with Lanonasis Memory Service today!
+
+For questions and support, visit our [documentation](https://docs.lanonasis.com) or contact us at support@lanonasis.com.
