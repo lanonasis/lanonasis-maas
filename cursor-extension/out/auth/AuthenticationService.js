@@ -38,6 +38,7 @@ const vscode = __importStar(require("vscode"));
 const crypto = __importStar(require("crypto"));
 const http = __importStar(require("http"));
 const url_1 = require("url");
+const timers_1 = require("timers");
 class AuthenticationService {
     constructor(context) {
         this.authToken = null;
@@ -107,7 +108,7 @@ class AuthenticationService {
                 });
             }
             // Timeout after 5 minutes
-            setTimeout(() => {
+            (0, timers_1.setTimeout)(() => {
                 this.cleanup();
                 reject(new Error('Authentication timeout'));
             }, 5 * 60 * 1000);
