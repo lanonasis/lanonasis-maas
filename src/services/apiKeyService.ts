@@ -9,6 +9,17 @@ const encryptionKey = process.env.API_KEY_ENCRYPTION_KEY || process.env.JWT_SECR
 
 const supabase = createClient(supabaseUrl, supabaseKey);
 
+// Utility function for safe error message extraction
+function getErrorMessage(error: unknown): string {
+  if (error instanceof Error) {
+    return error.message;
+  }
+  if (typeof error === 'string') {
+    return error;
+  }
+  return 'An unknown error occurred';
+}
+
 // Validation schemas
 const CreateApiKeySchema = z.object({
   name: z.string().min(1).max(255),
@@ -131,7 +142,7 @@ class EncryptionUtils {
   static encrypt(text: string, key: string): string {
     const derivedKey = crypto.pbkdf2Sync(key, 'salt', 100000, this.keyLength, 'sha256');
     const iv = crypto.randomBytes(16);
-    const cipher = crypto.createCipheriv(this.algorithm, derivedKey, iv);
+    const cipher = crypto.createCipheriv(this.algorithm, derivedKey, iv) as crypto.CipherGCM;
     
     let encrypted = cipher.update(text, 'utf8', 'hex');
     encrypted += cipher.final('hex');
@@ -149,11 +160,11 @@ class EncryptionUtils {
       throw new Error('Invalid encrypted text format');
     }
     
-    const iv = Buffer.from(parts[0], 'hex');
-    const authTag = Buffer.from(parts[1], 'hex');
-    const encrypted = parts[2];
+    const iv = Buffer.from(parts[0]!, 'hex');
+    const authTag = Buffer.from(parts[1]!, 'hex');
+    const encrypted = parts[2]!;
     
-    const decipher = crypto.createDecipheriv(this.algorithm, derivedKey, iv);
+    const decipher = crypto.createDecipheriv(this.algorithm, derivedKey, iv) as crypto.DecipherGCM;
     decipher.setAuthTag(authTag);
     
     let decrypted = decipher.update(encrypted, 'hex', 'utf8');
@@ -470,7 +481,7 @@ export class ApiKeyService {
     } catch (error) {
       // Log security event
       await this.logSecurityEvent(undefined, 'unauthorized_access', 'high', 
-        `Failed proxy token request for session ${sessionId}, key ${keyName}: ${error.message}`);
+        `Failed proxy token request for session ${sessionId}, key ${keyName}: ${getErrorMessage(error)}`);
       throw error;
     }
   }

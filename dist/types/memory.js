@@ -13,14 +13,20 @@ import { z } from 'zod';
  *           type: string
  *           minLength: 1
  *           maxLength: 200
+ *           description: Title of the memory entry
+ *           example: "React Performance Optimization Tips"
  *         content:
  *           type: string
  *           minLength: 1
  *           maxLength: 50000
+ *           description: Main content of the memory entry
+ *           example: "Use React.memo() to prevent unnecessary re-renders of expensive components. This is particularly useful for components that receive complex props."
  *         memory_type:
  *           type: string
  *           enum: [context, project, knowledge, reference, personal, workflow]
  *           default: context
+ *           description: Type of memory for categorization
+ *           example: "knowledge"
  *         tags:
  *           type: array
  *           items:
@@ -28,11 +34,20 @@ import { z } from 'zod';
  *             minLength: 1
  *             maxLength: 50
  *           maxItems: 10
+ *           description: Tags for organization and filtering
+ *           example: ["react", "performance", "optimization", "frontend"]
  *         topic_id:
  *           type: string
  *           format: uuid
+ *           description: Optional topic ID for grouping memories
+ *           example: "550e8400-e29b-41d4-a716-446655440002"
  *         metadata:
  *           type: object
+ *           description: Additional metadata for the memory
+ *           example:
+ *             source: "documentation"
+ *             difficulty: "intermediate"
+ *             last_updated: "2025-01-01"
  */
 export const createMemorySchema = z.object({
     title: z.string().min(1).max(200),
