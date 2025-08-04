@@ -131,7 +131,7 @@ class EncryptionUtils {
   static encrypt(text: string, key: string): string {
     const derivedKey = crypto.pbkdf2Sync(key, 'salt', 100000, this.keyLength, 'sha256');
     const iv = crypto.randomBytes(16);
-    const cipher = crypto.createCipher(this.algorithm, derivedKey);
+    const cipher = crypto.createCipheriv(this.algorithm, derivedKey, iv);
     
     let encrypted = cipher.update(text, 'utf8', 'hex');
     encrypted += cipher.final('hex');
@@ -153,7 +153,7 @@ class EncryptionUtils {
     const authTag = Buffer.from(parts[1], 'hex');
     const encrypted = parts[2];
     
-    const decipher = crypto.createDecipher(this.algorithm, derivedKey);
+    const decipher = crypto.createDecipheriv(this.algorithm, derivedKey, iv);
     decipher.setAuthTag(authTag);
     
     let decrypted = decipher.update(encrypted, 'hex', 'utf8');
