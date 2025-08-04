@@ -12,17 +12,6 @@
   # Build environment
   NODE_ENV = "production"
 
-# SPA routing configuration for dashboard
-[[redirects]]
-  from = "/dashboard/*"
-  to = "/dashboard/index.html"
-  status = 200
-
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200
-
 # Headers for security and CORS
 [[headers]]
   for = "/*"
@@ -32,15 +21,15 @@
     X-XSS-Protection = "1; mode=block"
     Referrer-Policy = "strict-origin-when-cross-origin"
 
-# API routes handled by Netlify functions (no proxy loops)
+# API routes handled by Netlify functions (MUST come before catch-all)
 [[redirects]]
   from = "/api/v1/*"
-  to = "/.netlify/functions/api"
+  to = "/.netlify/functions/api/:splat"
   status = 200
 
 [[redirects]]  
   from = "/api/*"
-  to = "/.netlify/functions/api"
+  to = "/.netlify/functions/api/:splat"
   status = 200
 
 # MCP SSE endpoint handled by Netlify function
@@ -53,4 +42,16 @@
 [[redirects]]
   from = "/sse"
   to = "/.netlify/functions/api"
+  status = 200
+
+# SPA routing configuration for dashboard (MUST come after API routes)
+[[redirects]]
+  from = "/dashboard/*"
+  to = "/dashboard/index.html"
+  status = 200
+
+# Catch-all redirect for SPA (MUST be last)
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
   status = 200
