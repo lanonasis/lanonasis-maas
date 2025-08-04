@@ -40,3 +40,8 @@
 .read-the-docs {
   color: #888;
 }
+
+/* Progress bar component */
+.progress-bar {
+  width: var(--progress-width, 0%);
+}
