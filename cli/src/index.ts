@@ -234,7 +234,7 @@ program
 // Help customization
 program.configureHelp({
   formatHelp: (cmd, helper) => {
-    const term = helper.termWidth || 80;
+    const term = (helper as any).termWidth || 80;
     const helpWidth = Math.min(term - 2, 80);
     
     let help = chalk.blue.bold('🧠 Memory as a Service CLI\n\n');
