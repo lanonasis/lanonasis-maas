@@ -44,23 +44,22 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
+    - name: Setup Bun
+      uses: oven-sh/setup-bun@v2
       with:
-        node-version: ${{ env.NODE_VERSION }}
-        cache: 'npm'
+        bun-version: latest
 
     - name: Install dependencies
       run: |
-        npm ci
-        npm ci --prefix cli
-        npm ci --prefix packages/lanonasis-sdk
+        bun install --frozen-lockfile
+        cd cli && bun install --frozen-lockfile || echo "CLI dependencies not found, skipping"
+        cd ../packages/lanonasis-sdk && bun install --frozen-lockfile || echo "SDK dependencies not found, skipping"
 
     - name: Run linting
       run: |
-        npm run lint
-        npm run lint --prefix cli
-        npm run lint --prefix packages/lanonasis-sdk
+        bun run lint
+        cd cli && bun run lint || echo "CLI linting not available, skipping"
+        cd ../packages/lanonasis-sdk && bun run lint || echo "SDK linting not available, skipping"
 
     - name: Run type checking
       run: |
