@@ -68,7 +68,7 @@ export interface GetMemoriesParams {
   limit?: number;
   offset?: number;
   memory_type?: MemoryType;
-  tags?: string[];
+  tags?: string[] | string;
   topic_id?: string;
   sort_by?: 'created_at' | 'updated_at' | 'last_accessed' | 'access_count';
   sort_order?: 'asc' | 'desc';
@@ -143,13 +143,19 @@ export interface HealthStatus {
 }
 
 export interface PaginatedResponse<T> {
-  data: T[];
+  data?: T[];
+  memories?: T[];
+  results?: T[];
   pagination: {
     total: number;
     limit: number;
     offset: number;
     has_more: boolean;
+    page?: number;
+    pages?: number;
   };
+  total_results?: number;
+  search_time_ms?: number;
 }
 
 export interface ApiErrorResponse {
@@ -319,6 +325,27 @@ export class APIClient {
   // Health check
   async getHealth(): Promise<HealthStatus> {
     const response = await this.client.get('/api/v1/health');
+    return response.data;
+  }
+
+  // Generic HTTP methods
+  async get<T = any>(url: string, config?: AxiosRequestConfig): Promise<T> {
+    const response = await this.client.get(url, config);
+    return response.data;
+  }
+
+  async post<T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<T> {
+    const response = await this.client.post(url, data, config);
+    return response.data;
+  }
+
+  async put<T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<T> {
+    const response = await this.client.put(url, data, config);
+    return response.data;
+  }
+
+  async delete<T = any>(url: string, config?: AxiosRequestConfig): Promise<T> {
+    const response = await this.client.delete(url, config);
     return response.data;
   }
 
