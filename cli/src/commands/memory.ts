@@ -200,13 +200,14 @@ export function memoryCommands(program: Command): void {
         const result = await apiClient.getMemories(params);
         spinner.stop();
 
-        if (result.memories.length === 0) {
+        const memories = result.memories || result.data || [];
+        if (memories.length === 0) {
           console.log(chalk.yellow('No memories found'));
           return;
         }
 
         console.log(chalk.blue.bold(`\n📚 Memories (${result.pagination.total} total)`));
-        console.log(chalk.gray(`Page ${result.pagination.page} of ${result.pagination.pages}`));
+        console.log(chalk.gray(`Page ${result.pagination.page || 1} of ${result.pagination.pages || Math.ceil(result.pagination.total / result.pagination.limit)}`));
         console.log();
 
         const outputFormat = process.env.CLI_OUTPUT_FORMAT || 'table';
@@ -215,7 +216,7 @@ export function memoryCommands(program: Command): void {
           console.log(JSON.stringify(result, null, 2));
         } else {
           // Table format
-          const tableData = result.memories.map((memory: MemoryEntry) => [
+          const tableData = memories.map((memory: MemoryEntry) => [
             truncateText(memory.title, 30),
             memory.memory_type,
             memory.tags.slice(0, 3).join(', '),
@@ -238,7 +239,10 @@ export function memoryCommands(program: Command): void {
             ]
           };
 
-          console.log(table([tableConfig.header, ...tableData], tableConfig));
+          console.log(table([tableConfig.header, ...tableData], { 
+            columnDefault: tableConfig.columnDefault,
+            columns: tableConfig.columns 
+          }));
 
           // Pagination info
           if (result.pagination.pages > 1) {
@@ -271,7 +275,7 @@ export function memoryCommands(program: Command): void {
         };
 
         if (options.type) {
-          searchOptions.memory_types = options.type.split(',').map((t: string) => t.trim());
+          searchOptions.memory_types = options.type.split(',').map((t: string) => t.trim()) as MemoryType[];
         }
 
         if (options.tags) {
@@ -281,16 +285,17 @@ export function memoryCommands(program: Command): void {
         const result = await apiClient.searchMemories(query, searchOptions);
         spinner.stop();
 
-        if (result.results.length === 0) {
+        const results = result.results || result.data || [];
+        if (results.length === 0) {
           console.log(chalk.yellow('No memories found matching your search'));
           return;
         }
 
-        console.log(chalk.blue.bold(`\n🔍 Search Results (${result.total_results} found)`));
-        console.log(chalk.gray(`Query: "${query}" | Search time: ${result.search_time_ms}ms`));
+        console.log(chalk.blue.bold(`\n🔍 Search Results (${result.total_results || results.length} found)`));
+        console.log(chalk.gray(`Query: "${query}" | Search time: ${result.search_time_ms || 0}ms`));
         console.log();
 
-        result.results.forEach((memory: MemoryEntry & { relevance_score: number }, index: number) => {
+        results.forEach((memory: MemoryEntry & { relevance_score: number }, index: number) => {
           const score = (memory.relevance_score * 100).toFixed(1);
           console.log(chalk.green(`${index + 1}. ${memory.title}`) + chalk.gray(` (${score}% match)`));
           console.log(chalk.white(`   ${truncateText(memory.content, 100)}`));
