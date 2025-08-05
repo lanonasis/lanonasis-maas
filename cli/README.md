@@ -18,6 +18,16 @@ The Lanonasis CLI provides a powerful command-line interface for interacting wit
 - **Hybrid Architecture**: Seamless switching between local MCP and remote API
 - **Real-time Updates**: SSE streaming for live memory synchronization
 
+## 🆕 New in v1.2.1 - Enhanced CLI Experience
+- **🎨 Colorful VPS-style Interface**: Beautiful terminal output with intuitive color coding
+- **📊 Enhanced System Status**: Comprehensive health checks and service monitoring
+- **🔍 Improved Version Management**: Better version tracking and update notifications
+- **⚡ Performance Optimizations**: Faster command execution and response times
+- **🛡️ Enhanced Security Checks**: Real-time API endpoint validation
+- **📈 Usage Statistics**: Track your CLI usage patterns and command history
+- **🌈 Color-coded Output**: Error states, success messages, and warnings in vibrant colors
+- **🔄 Auto-update Notifications**: Get notified when new versions are available
+
 ## ⚡ Quick Start
 
 ```bash
