@@ -132,6 +132,23 @@ export class APIClient {
         const response = await this.client.get('/api/v1/health');
         return response.data;
     }
+    // Generic HTTP methods
+    async get(url, config) {
+        const response = await this.client.get(url, config);
+        return response.data;
+    }
+    async post(url, data, config) {
+        const response = await this.client.post(url, data, config);
+        return response.data;
+    }
+    async put(url, data, config) {
+        const response = await this.client.put(url, data, config);
+        return response.data;
+    }
+    async delete(url, config) {
+        const response = await this.client.delete(url, config);
+        return response.data;
+    }
     // Generic request method
     async request(config) {
         const response = await this.client.request(config);
