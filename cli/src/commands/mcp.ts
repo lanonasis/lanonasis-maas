@@ -4,7 +4,6 @@ import ora from 'ora';
 import { table } from 'table';
 import { getMCPClient } from '../utils/mcp-client.js';
 import { CLIConfig } from '../utils/config.js';
-import { formatOutput } from '../utils/formatting.js';
 
 export function mcpCommands(program: Command) {
   const mcp = program
@@ -54,7 +53,7 @@ export function mcpCommands(program: Command) {
         } else {
           spinner.fail('Failed to auto-connect to MCP');
         }
-      } catch (error) {
+      } catch {
         spinner.fail('MCP auto-connect failed');
       }
     });
@@ -220,7 +219,7 @@ export function mcpCommands(program: Command) {
         if (options.args) {
           try {
             args = JSON.parse(options.args);
-          } catch (error) {
+          } catch {
             spinner.fail('Invalid JSON arguments');
             process.exit(1);
           }

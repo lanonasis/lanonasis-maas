@@ -44,12 +44,8 @@
   to = "/.netlify/functions/api"
   status = 200
 
-# Root endpoint handled by API function for service landing page
-[[redirects]]
-  from = "/"
-  to = "/.netlify/functions/api"
-  status = 200
-  force = true
+# Root endpoint handled by React dashboard (landing page integrated into SPA)
+# Removed redirect to API function - dashboard now serves landing page
 
 # Health and metrics endpoints
 [[redirects]]
@@ -62,14 +58,8 @@
   to = "/.netlify/functions/api"
   status = 200
 
-# SPA routing configuration for dashboard (MUST come after API routes)
+# SPA routing configuration - React app handles all routes (MUST come after API routes)
 [[redirects]]
-  from = "/dashboard/*"
-  to = "/dashboard/index.html"
-  status = 200
-
-# Dashboard root redirect (without trailing slash)
-[[redirects]]
-  from = "/dashboard"
-  to = "/dashboard/index.html"
+  from = "/*"
+  to = "/index.html"
   status = 200

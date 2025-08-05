@@ -92,23 +92,22 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
+    - name: Setup Bun
+      uses: oven-sh/setup-bun@v2
       with:
-        node-version: ${{ env.NODE_VERSION }}
-        cache: 'npm'
+        bun-version: latest
 
     - name: Install dependencies
       run: |
-        npm ci
-        npm ci --prefix cli
-        npm ci --prefix packages/lanonasis-sdk
+        bun install --frozen-lockfile
+        cd cli && bun install --frozen-lockfile
+        cd ../packages/lanonasis-sdk && bun install --frozen-lockfile
 
     - name: Build applications
       run: |
-        npm run build
-        npm run build --prefix cli
-        npm run build --prefix packages/lanonasis-sdk
+        bun run build
+        cd cli && bun run build
+        cd ../packages/lanonasis-sdk && bun run build
 
     - name: Upload build artifacts
       uses: actions/upload-artifact@v4
@@ -126,15 +125,18 @@ jobs:
     needs: build
     if: startsWith(github.ref, 'refs/tags/sdk-v') || (github.ref == 'refs/heads/main' && contains(github.event.head_commit.message, '[publish-sdk]'))
     
+    environment:
+      name: npm-publishing
+      url: https://www.npmjs.com/package/@lanonasis/sdk
+    
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
+    - name: Setup Bun
+      uses: oven-sh/setup-bun@v2
       with:
-        node-version: ${{ env.NODE_VERSION }}
-        registry-url: https://${{ env.REGISTRY_URL }}
+        bun-version: latest
 
     - name: Download build artifacts
       uses: actions/download-artifact@v4
@@ -142,21 +144,22 @@ jobs:
         name: build-artifacts
 
     - name: Install dependencies
-      run: npm ci --prefix packages/lanonasis-sdk
+      run: cd packages/lanonasis-sdk && bun install --frozen-lockfile
 
     - name: Update version from tag
       if: startsWith(github.ref, 'refs/tags/sdk-v')
       run: |
         VERSION=${GITHUB_REF#refs/tags/sdk-v}
         cd packages/lanonasis-sdk
-        npm version $VERSION --no-git-tag-version
+        bun version $VERSION --no-git-tag-version
 
     - name: Publish to NPM
       env:
-        NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
       run: |
         cd packages/lanonasis-sdk
-        npm publish --access public
+        echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > .npmrc
+        bun publish --access public
 
     - name: Create GitHub release
       if: startsWith(github.ref, 'refs/tags/sdk-v')
@@ -191,15 +194,18 @@ jobs:
     needs: build
     if: startsWith(github.ref, 'refs/tags/cli-v') || (github.ref == 'refs/heads/main' && contains(github.event.head_commit.message, '[publish-cli]'))
     
+    environment:
+      name: npm-publishing
+      url: https://www.npmjs.com/package/@lanonasis/cli
+    
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
+    - name: Setup Bun
+      uses: oven-sh/setup-bun@v2
       with:
-        node-version: ${{ env.NODE_VERSION }}
-        registry-url: https://${{ env.REGISTRY_URL }}
+        bun-version: latest
 
     - name: Download build artifacts
       uses: actions/download-artifact@v4
@@ -207,28 +213,29 @@ jobs:
         name: build-artifacts
 
     - name: Install dependencies
-      run: npm ci --prefix cli
+      run: cd cli && bun install --frozen-lockfile
 
     - name: Update version from tag
       if: startsWith(github.ref, 'refs/tags/cli-v')
       run: |
         VERSION=${GITHUB_REF#refs/tags/cli-v}
         cd cli
-        npm version $VERSION --no-git-tag-version
+        bun version $VERSION --no-git-tag-version
 
     - name: Test CLI installation
       run: |
         cd cli
-        npm link
+        bun link
         lanonasis --help
         memory --help
 
     - name: Publish to NPM
       env:
-        NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
       run: |
         cd cli
-        npm publish --access public
+        echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > .npmrc
+        bun publish --access public
 
     - name: Create GitHub release
       if: startsWith(github.ref, 'refs/tags/cli-v')
