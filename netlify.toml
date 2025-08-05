@@ -68,3 +68,8 @@
   to = "/dashboard/index.html"
   status = 200
 
+# Dashboard root redirect (without trailing slash)
+[[redirects]]
+  from = "/dashboard"
+  to = "/dashboard/index.html"
+  status = 200
