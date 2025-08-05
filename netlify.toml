@@ -49,6 +49,7 @@
   from = "/"
   to = "/.netlify/functions/api"
   status = 200
+  force = true
 
 # Health and metrics endpoints
 [[redirects]]
@@ -67,8 +68,3 @@
   to = "/dashboard/index.html"
   status = 200
 
-# Catch-all redirect for SPA (MUST be last)
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200
