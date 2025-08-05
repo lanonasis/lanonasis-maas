@@ -380,6 +380,199 @@ app.get('/', (req, res) => {
             </div>
         </div>
 
+        <!-- New Developer Tools Section -->
+        <div style="margin: 40px 0;">
+            <h2 style="text-align: center; margin-bottom: 30px; color: #333; font-size: 2rem;">Developer Tools & SDKs</h2>
+            <div class="services">
+                <div class="service-card">
+                    <h3 class="service-title">TypeScript SDK</h3>
+                    <p class="service-description">Official JavaScript/TypeScript SDK for memory management, API key management, and password management with full MCP integration.</p>
+                    <div class="features">
+                        <span class="feature-tag">v1.2.0</span>
+                        <span class="feature-tag">Memory Mgmt</span>
+                        <span class="feature-tag">API Keys</span>
+                        <span class="feature-tag">Password Mgmt</span>
+                    </div>
+                    <div class="service-links">
+                        <a href="https://www.npmjs.com/package/@lanonasis/sdk" class="btn btn-primary">Install SDK</a>
+                        <a href="/docs#sdk" class="btn btn-secondary">SDK Docs</a>
+                    </div>
+                    <div style="margin-top: 15px; padding: 15px; background: #f0f0f0; border-radius: 8px; font-family: monospace; font-size: 0.9rem;">
+                        <div>$ npm install @lanonasis/sdk</div>
+                        <div style="margin-top: 8px; color: #666;">import { LanonasisClient } from '@lanonasis/sdk';</div>
+                    </div>
+                </div>
+
+                <div class="service-card">
+                    <h3 class="service-title">Command Line Interface</h3>
+                    <p class="service-description">Globally deployed CLI with MCP connectors for Claude Desktop and local platforms. No installation required with npx.</p>
+                    <div class="features">
+                        <span class="feature-tag">Global NPM</span>
+                        <span class="feature-tag">MCP Connectors</span>
+                        <span class="feature-tag">Claude Desktop</span>
+                        <span class="feature-tag">Zero Install</span>
+                    </div>
+                    <div class="service-links">
+                        <a href="https://www.npmjs.com/package/@lanonasis/cli" class="btn btn-primary">View on NPM</a>
+                        <a href="/docs#cli" class="btn btn-secondary">CLI Docs</a>
+                    </div>
+                    <div style="margin-top: 15px; padding: 15px; background: #f0f0f0; border-radius: 8px; font-family: monospace; font-size: 0.9rem;">
+                        <div># Direct usage (no install needed):</div>
+                        <div style="color: #0066cc;">$ npx -y @lanonasis/cli</div>
+                        <div style="margin-top: 8px;"># Global install:</div>
+                        <div style="color: #0066cc;">$ npm install -g @lanonasis/cli</div>
+                    </div>
+                </div>
+
+                <div class="service-card">
+                    <h3 class="service-title">IDE Extensions</h3>
+                    <p class="service-description">VS Code and Windsurf extensions deployed to marketplace for seamless development integration.</p>
+                    <div class="features">
+                        <span class="feature-tag">VS Code</span>
+                        <span class="feature-tag">Windsurf</span>
+                        <span class="feature-tag">Marketplace</span>
+                        <span class="feature-tag">Live Deploy</span>
+                    </div>
+                    <div class="service-links">
+                        <a href="https://marketplace.visualstudio.com/search?term=lanonasis" class="btn btn-primary">VS Code Extension</a>
+                        <a href="/docs#extensions" class="btn btn-secondary">Extension Docs</a>
+                    </div>
+                </div>
+
+                <div class="service-card">
+                    <h3 class="service-title">Memory Visualizer</h3>
+                    <p class="service-description">Interactive dashboard for exploring memory relationships with graph, grid, and timeline views.</p>
+                    <div class="features">
+                        <span class="feature-tag">Graph View</span>
+                        <span class="feature-tag">Timeline</span>
+                        <span class="feature-tag">Search & Filter</span>
+                        <span class="feature-tag">Real-time</span>
+                    </div>
+                    <div class="service-links">
+                        <a href="https://dashboard.lanonasis.com/visualizer" class="btn btn-primary">Open Visualizer</a>
+                        <a href="/docs#visualizer" class="btn btn-secondary">Learn More</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- New Management Tools Section -->
+        <div style="margin: 40px 0;">
+            <h2 style="text-align: center; margin-bottom: 30px; color: #333; font-size: 2rem;">Management & Upload Tools</h2>
+            <div class="services">
+                <div class="service-card">
+                    <h3 class="service-title">Manual Context Upload</h3>
+                    <p class="service-description">Drag-and-drop interface for bulk memory uploads supporting multiple formats and batch processing.</p>
+                    <div class="features">
+                        <span class="feature-tag">Multi-format</span>
+                        <span class="feature-tag">Batch Upload</span>
+                        <span class="feature-tag">YAML Support</span>
+                        <span class="feature-tag">CSV/JSON</span>
+                    </div>
+                    <div class="service-links">
+                        <a href="https://dashboard.lanonasis.com/upload" class="btn btn-primary">Upload Memories</a>
+                        <a href="/docs#upload" class="btn btn-secondary">Upload Guide</a>
+                    </div>
+                </div>
+
+                <div class="service-card">
+                    <h3 class="service-title">Enterprise Dashboard</h3>
+                    <p class="service-description">Complete management interface with analytics, API key management, and system monitoring.</p>
+                    <div class="features">
+                        <span class="feature-tag">Analytics</span>
+                        <span class="feature-tag">User Management</span>
+                        <span class="feature-tag">API Keys</span>
+                        <span class="feature-tag">Monitoring</span>
+                    </div>
+                    <div class="service-links">
+                        <a href="https://dashboard.lanonasis.com" class="btn btn-primary">Open Dashboard</a>
+                        <a href="/docs#dashboard" class="btn btn-secondary">Dashboard Guide</a>
+                    </div>
+                </div>
+
+                <div class="service-card">
+                    <h3 class="service-title">MCP Server (SSE)</h3>
+                    <p class="service-description">Real-time Model Context Protocol server with Server-Sent Events for live AI agent integration.</p>
+                    <div class="features">
+                        <span class="feature-tag">Server-Sent Events</span>
+                        <span class="feature-tag">Real-time</span>
+                        <span class="feature-tag">AI Agents</span>
+                        <span class="feature-tag">Secure</span>
+                    </div>
+                    <div class="service-links">
+                        <a href="https://mcp.lanonasis.com/sse" class="btn btn-primary">Connect SSE</a>
+                        <a href="/docs#mcp-sse" class="btn btn-secondary">SSE Guide</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- New Open Banking API Section -->
+        <div style="margin: 40px 0;">
+            <h2 style="text-align: center; margin-bottom: 30px; color: #333; font-size: 2rem;">Open Banking API Compliance</h2>
+            <div class="services">
+                <div class="service-card">
+                    <h3 class="service-title">PSD2 Compliance</h3>
+                    <p class="service-description">Full compliance with European Payment Services Directive 2 (PSD2) for secure financial data access and third-party integrations.</p>
+                    <div class="features">
+                        <span class="feature-tag">PSD2 Ready</span>
+                        <span class="feature-tag">EU Regulation</span>
+                        <span class="feature-tag">Strong Auth</span>
+                        <span class="feature-tag">GDPR</span>
+                    </div>
+                    <div class="service-links">
+                        <a href="/docs#psd2" class="btn btn-primary">PSD2 Guide</a>
+                        <a href="/api/psd2/spec" class="btn btn-secondary">API Spec</a>
+                    </div>
+                </div>
+
+                <div class="service-card">
+                    <h3 class="service-title">Open Banking Standard</h3>
+                    <p class="service-description">Implements UK Open Banking standards with secure API access for account information, payments, and transaction data.</p>
+                    <div class="features">
+                        <span class="feature-tag">UK Standard</span>
+                        <span class="feature-tag">Account Info</span>
+                        <span class="feature-tag">Payments</span>
+                        <span class="feature-tag">OAuth2</span>
+                    </div>
+                    <div class="service-links">
+                        <a href="/docs#open-banking" class="btn btn-primary">Open Banking Docs</a>
+                        <a href="/api/openbanking/spec" class="btn btn-secondary">API Reference</a>
+                    </div>
+                </div>
+
+                <div class="service-card">
+                    <h3 class="service-title">Global API Standards</h3>
+                    <p class="service-description">Supports international open banking frameworks including Berlin Group, STET, and emerging standards from major markets.</p>
+                    <div class="features">
+                        <span class="feature-tag">Berlin Group</span>
+                        <span class="feature-tag">STET</span>
+                        <span class="feature-tag">Multi-Region</span>
+                        <span class="feature-tag">ISO 20022</span>
+                    </div>
+                    <div class="service-links">
+                        <a href="/docs#global-standards" class="btn btn-primary">Standards Guide</a>
+                        <a href="/api/global/compliance" class="btn btn-secondary">Compliance Check</a>
+                    </div>
+                </div>
+
+                <div class="service-card">
+                    <h3 class="service-title">Financial Data Security</h3>
+                    <p class="service-description">Bank-grade security with FIDO2, MTLS, and advanced fraud detection for safe financial data processing and storage.</p>
+                    <div class="features">
+                        <span class="feature-tag">FIDO2</span>
+                        <span class="feature-tag">MTLS</span>
+                        <span class="feature-tag">Fraud Detection</span>
+                        <span class="feature-tag">Encryption</span>
+                    </div>
+                    <div class="service-links">
+                        <a href="/docs#security" class="btn btn-primary">Security Overview</a>
+                        <a href="/api/security/audit" class="btn btn-secondary">Security Audit</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <div class="quick-links">
             <div class="quick-link">
                 <a href="/docs">📚 API Documentation</a>
