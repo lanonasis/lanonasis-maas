@@ -57,7 +57,7 @@ export interface GetMemoriesParams {
     limit?: number;
     offset?: number;
     memory_type?: MemoryType;
-    tags?: string[];
+    tags?: string[] | string;
     topic_id?: string;
     sort_by?: 'created_at' | 'updated_at' | 'last_accessed' | 'access_count';
     sort_order?: 'asc' | 'desc';
@@ -125,13 +125,19 @@ export interface HealthStatus {
     }>;
 }
 export interface PaginatedResponse<T> {
-    data: T[];
+    data?: T[];
+    memories?: T[];
+    results?: T[];
     pagination: {
         total: number;
         limit: number;
         offset: number;
         has_more: boolean;
+        page?: number;
+        pages?: number;
     };
+    total_results?: number;
+    search_time_ms?: number;
 }
 export interface ApiErrorResponse {
     error: string;
@@ -159,6 +165,10 @@ export declare class APIClient {
     updateTopic(id: string, data: UpdateTopicRequest): Promise<MemoryTopic>;
     deleteTopic(id: string): Promise<void>;
     getHealth(): Promise<HealthStatus>;
+    get<T = any>(url: string, config?: AxiosRequestConfig): Promise<T>;
+    post<T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<T>;
+    put<T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<T>;
+    delete<T = any>(url: string, config?: AxiosRequestConfig): Promise<T>;
     request<T = Record<string, unknown>>(config: AxiosRequestConfig): Promise<T>;
 }
 export declare const apiClient: APIClient;

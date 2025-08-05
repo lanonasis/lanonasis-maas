@@ -3,18 +3,30 @@ import inquirer from 'inquirer';
 import chalk from 'chalk';
 import Table from 'cli-table3';
 import { apiClient } from '../utils/api.js';
-import { formatTableData, formatDate, truncateText } from '../utils/formatting.js';
+import { formatDate, truncateText } from '../utils/formatting.js';
+
+// Enhanced VPS-style color scheme
+const colors = {
+  primary: chalk.blue.bold,
+  success: chalk.green,
+  warning: chalk.yellow,
+  error: chalk.red,
+  info: chalk.cyan,
+  accent: chalk.magenta,
+  muted: chalk.gray,
+  highlight: chalk.white.bold
+};
 
 const apiKeysCommand = new Command('api-keys')
   .alias('keys')
-  .description('Manage API keys securely');
+  .description(colors.info('🔐 Manage API keys securely with enterprise-grade encryption'));
 
 // ============================================================================
 // PROJECT COMMANDS
 // ============================================================================
 
 const projectsCommand = new Command('projects')
-  .description('Manage API key projects');
+  .description(colors.accent('📁 Manage API key projects and organization'));
 
 projectsCommand
   .command('create')
@@ -233,14 +245,16 @@ apiKeysCommand
 
       const apiKey = await apiClient.post('/api-keys', keyData);
       
-      console.log(chalk.green('✅ API key created successfully!'));
-      console.log(chalk.blue(`Key ID: ${apiKey.id}`));
-      console.log(chalk.blue(`Name: ${apiKey.name}`));
-      console.log(chalk.blue(`Type: ${apiKey.keyType}`));
-      console.log(chalk.blue(`Environment: ${apiKey.environment}`));
-      console.log(chalk.yellow('⚠️  The key value is securely encrypted and cannot be retrieved later.'));
+      console.log(colors.success('🔐 API key created successfully!'));
+      console.log(colors.info('━'.repeat(50)));
+      console.log(`${colors.highlight('Key ID:')} ${colors.primary(apiKey.id)}`);
+      console.log(`${colors.highlight('Name:')} ${colors.accent(apiKey.name)}`);
+      console.log(`${colors.highlight('Type:')} ${colors.info(apiKey.keyType)}`);
+      console.log(`${colors.highlight('Environment:')} ${colors.accent(apiKey.environment)}`);
+      console.log(colors.info('━'.repeat(50)));
+      console.log(colors.warning('⚠️  The key value is securely encrypted and cannot be retrieved later.'));
     } catch (error) {
-      console.error(chalk.red('❌ Failed to create API key:'), error.message);
+      console.error(colors.error('✖ Failed to create API key:'), colors.muted(error.message));
       process.exit(1);
     }
   });
@@ -266,18 +280,22 @@ apiKeysCommand
       }
 
       if (apiKeys.length === 0) {
-        console.log(chalk.yellow('No API keys found'));
+        console.log(colors.warning('⚠️  No API keys found'));
+        console.log(colors.muted('Run: lanonasis api-keys create'));
         return;
       }
 
+      console.log(colors.primary('🔐 API Key Management'));
+      console.log(colors.info('═'.repeat(80)));
+
       const table = new Table({
-        head: ['ID', 'Name', 'Type', 'Environment', 'Status', 'Usage', 'Last Rotated'].map(h => chalk.cyan(h)),
+        head: ['ID', 'Name', 'Type', 'Environment', 'Status', 'Usage', 'Last Rotated'].map(h => colors.accent(h)),
         style: { head: [], border: [] }
       });
 
       apiKeys.forEach((key: any) => {
-        const statusColor = key.status === 'active' ? chalk.green : 
-                           key.status === 'rotating' ? chalk.yellow : chalk.red;
+        const statusColor = key.status === 'active' ? colors.success :
+                           key.status === 'rotating' ? colors.warning : colors.error;
         
         table.push([
           truncateText(key.id, 20),
@@ -285,15 +303,16 @@ apiKeysCommand
           key.keyType,
           key.environment,
           statusColor(key.status),
-          key.usageCount.toString(),
+          colors.highlight(key.usageCount.toString()),
           formatDate(key.lastRotated)
         ]);
       });
 
       console.log(table.toString());
-      console.log(chalk.gray(`Total: ${apiKeys.length} API keys`));
+      console.log(colors.info('═'.repeat(80)));
+      console.log(colors.muted(`🔢 Total: ${colors.highlight(apiKeys.length)} API keys`));
     } catch (error) {
-      console.error(chalk.red('❌ Failed to list API keys:'), error.message);
+      console.error(colors.error('✖ Failed to list API keys:'), colors.muted(error.message));
       process.exit(1);
     }
   });
@@ -312,26 +331,32 @@ apiKeysCommand
         return;
       }
 
-      console.log(chalk.cyan('API Key Details:'));
-      console.log(`ID: ${apiKey.id}`);
-      console.log(`Name: ${apiKey.name}`);
-      console.log(`Type: ${apiKey.keyType}`);
-      console.log(`Environment: ${apiKey.environment}`);
-      console.log(`Project ID: ${apiKey.projectId}`);
-      console.log(`Access Level: ${apiKey.accessLevel}`);
-      console.log(`Status: ${apiKey.status}`);
-      console.log(`Usage Count: ${apiKey.usageCount}`);
-      console.log(`Tags: ${apiKey.tags.join(', ') || 'None'}`);
-      console.log(`Rotation Frequency: ${apiKey.rotationFrequency} days`);
-      console.log(`Last Rotated: ${formatDate(apiKey.lastRotated)}`);
-      console.log(`Created: ${formatDate(apiKey.createdAt)}`);
-      console.log(`Updated: ${formatDate(apiKey.updatedAt)}`);
+      console.log(colors.primary('🔍 API Key Details'));
+      console.log(colors.info('═'.repeat(60)));
+      console.log(`${colors.highlight('ID:')} ${colors.primary(apiKey.id)}`);
+      console.log(`${colors.highlight('Name:')} ${colors.accent(apiKey.name)}`);
+      console.log(`${colors.highlight('Type:')} ${colors.info(apiKey.keyType)}`);
+      console.log(`${colors.highlight('Environment:')} ${colors.accent(apiKey.environment)}`);
+      console.log(`${colors.highlight('Project ID:')} ${colors.muted(apiKey.projectId)}`);
+      console.log(`${colors.highlight('Access Level:')} ${colors.warning(apiKey.accessLevel)}`);
+      
+      const statusColor = apiKey.status === 'active' ? colors.success :
+                         apiKey.status === 'rotating' ? colors.warning : colors.error;
+      console.log(`${colors.highlight('Status:')} ${statusColor(apiKey.status)}`);
+      
+      console.log(`${colors.highlight('Usage Count:')} ${colors.accent(apiKey.usageCount)}`);
+      console.log(`${colors.highlight('Tags:')} ${colors.muted(apiKey.tags.join(', ') || 'None')}`);
+      console.log(`${colors.highlight('Rotation Frequency:')} ${colors.info(apiKey.rotationFrequency)} days`);
+      console.log(`${colors.highlight('Last Rotated:')} ${colors.muted(formatDate(apiKey.lastRotated))}`);
+      console.log(`${colors.highlight('Created:')} ${colors.muted(formatDate(apiKey.createdAt))}`);
+      console.log(`${colors.highlight('Updated:')} ${colors.muted(formatDate(apiKey.updatedAt))}`);
       
       if (apiKey.expiresAt) {
-        console.log(`Expires: ${formatDate(apiKey.expiresAt)}`);
+        console.log(`${colors.highlight('Expires:')} ${colors.warning(formatDate(apiKey.expiresAt))}`);
       }
+      console.log(colors.info('═'.repeat(60)));
     } catch (error) {
-      console.error(chalk.red('❌ Failed to get API key:'), error.message);
+      console.error(colors.error('✖ Failed to get API key:'), colors.muted(error.message));
       process.exit(1);
     }
   });
@@ -402,14 +427,16 @@ apiKeysCommand
 
       const updatedKey = await apiClient.put(`/api-keys/${keyId}`, updateData);
       
-      console.log(chalk.green('✅ API key updated successfully!'));
-      console.log(chalk.blue(`Name: ${updatedKey.name}`));
-      console.log(chalk.blue(`Status: ${updatedKey.status}`));
+      console.log(colors.success('🔄 API key updated successfully!'));
+      console.log(colors.info('━'.repeat(40)));
+      console.log(`${colors.highlight('Name:')} ${colors.accent(updatedKey.name)}`);
+      console.log(`${colors.highlight('Status:')} ${colors.success(updatedKey.status)}`);
       if (updateData.value) {
-        console.log(chalk.yellow('⚠️  The key value has been updated and re-encrypted.'));
+        console.log(colors.warning('⚠️  The key value has been updated and re-encrypted.'));
       }
+      console.log(colors.info('━'.repeat(40)));
     } catch (error) {
-      console.error(chalk.red('❌ Failed to update API key:'), error.message);
+      console.error(colors.error('✖ Failed to update API key:'), colors.muted(error.message));
       process.exit(1);
     }
   });
@@ -435,16 +462,16 @@ apiKeysCommand
         ]);
 
         if (!confirm) {
-          console.log(chalk.yellow('Operation cancelled'));
+          console.log(colors.warning('🚫 Operation cancelled'));
           return;
         }
       }
 
       await apiClient.delete(`/api-keys/${keyId}`);
       
-      console.log(chalk.green('✅ API key deleted successfully!'));
+      console.log(colors.success('🗑️  API key deleted successfully!'));
     } catch (error) {
-      console.error(chalk.red('❌ Failed to delete API key:'), error.message);
+      console.error(colors.error('✖ Failed to delete API key:'), colors.muted(error.message));
       process.exit(1);
     }
   });
@@ -454,7 +481,7 @@ apiKeysCommand
 // ============================================================================
 
 const mcpCommand = new Command('mcp')
-  .description('Manage MCP tools and access');
+  .description(colors.accent('🤖 Model Context Protocol (MCP) - Secure AI agent access'));
 
 mcpCommand
   .command('register-tool')
@@ -575,13 +602,15 @@ mcpCommand
 
       const tool = await apiClient.post('/api-keys/mcp/tools', toolData);
       
-      console.log(chalk.green('✅ MCP tool registered successfully!'));
-      console.log(chalk.blue(`Tool ID: ${tool.toolId}`));
-      console.log(chalk.blue(`Name: ${tool.toolName}`));
-      console.log(chalk.blue(`Risk Level: ${tool.riskLevel}`));
-      console.log(chalk.blue(`Auto Approve: ${tool.autoApprove ? 'Yes' : 'No'}`));
+      console.log(colors.success('🤖 MCP tool registered successfully!'));
+      console.log(colors.info('━'.repeat(50)));
+      console.log(`${colors.highlight('Tool ID:')} ${colors.primary(tool.toolId)}`);
+      console.log(`${colors.highlight('Name:')} ${colors.accent(tool.toolName)}`);
+      console.log(`${colors.highlight('Risk Level:')} ${colors.warning(tool.riskLevel)}`);
+      console.log(`${colors.highlight('Auto Approve:')} ${tool.autoApprove ? colors.success('Yes') : colors.error('No')}`);
+      console.log(colors.info('━'.repeat(50)));
     } catch (error) {
-      console.error(chalk.red('❌ Failed to register MCP tool:'), error.message);
+      console.error(colors.error('✖ Failed to register MCP tool:'), colors.muted(error.message));
       process.exit(1);
     }
   });
@@ -600,33 +629,38 @@ mcpCommand
       }
 
       if (tools.length === 0) {
-        console.log(chalk.yellow('No MCP tools found'));
+        console.log(colors.warning('⚠️  No MCP tools found'));
+        console.log(colors.muted('Run: lanonasis api-keys mcp register-tool'));
         return;
       }
 
+      console.log(colors.primary('🤖 Registered MCP Tools'));
+      console.log(colors.info('═'.repeat(80)));
+
       const table = new Table({
-        head: ['Tool ID', 'Name', 'Risk Level', 'Status', 'Auto Approve', 'Created'].map(h => chalk.cyan(h)),
+        head: ['Tool ID', 'Name', 'Risk Level', 'Status', 'Auto Approve', 'Created'].map(h => colors.accent(h)),
         style: { head: [], border: [] }
       });
 
       tools.forEach((tool: any) => {
-        const statusColor = tool.status === 'active' ? chalk.green : 
-                           tool.status === 'suspended' ? chalk.red : chalk.yellow;
+        const statusColor = tool.status === 'active' ? colors.success :
+                           tool.status === 'suspended' ? colors.error : colors.warning;
         
         table.push([
           tool.toolId,
           tool.toolName,
           tool.riskLevel,
           statusColor(tool.status),
-          tool.autoApprove ? 'Yes' : 'No',
+          tool.autoApprove ? colors.success('Yes') : colors.error('No'),
           formatDate(tool.createdAt)
         ]);
       });
 
       console.log(table.toString());
-      console.log(chalk.gray(`Total: ${tools.length} MCP tools`));
+      console.log(colors.info('═'.repeat(80)));
+      console.log(colors.muted(`🤖 Total: ${colors.highlight(tools.length)} MCP tools`));
     } catch (error) {
-      console.error(chalk.red('❌ Failed to list MCP tools:'), error.message);
+      console.error(colors.error('✖ Failed to list MCP tools:'), colors.muted(error.message));
       process.exit(1);
     }
   });
@@ -712,12 +746,14 @@ mcpCommand
 
       const response = await apiClient.post('/api-keys/mcp/request-access', requestData);
       
-      console.log(chalk.green('✅ Access request created successfully!'));
-      console.log(chalk.blue(`Request ID: ${response.requestId}`));
-      console.log(chalk.blue(`Status: ${response.status}`));
-      console.log(chalk.yellow('💡 Check the status with: memory api-keys analytics usage'));
+      console.log(colors.success('🔐 Access request created successfully!'));
+      console.log(colors.info('━'.repeat(50)));
+      console.log(`${colors.highlight('Request ID:')} ${colors.primary(response.requestId)}`);
+      console.log(`${colors.highlight('Status:')} ${colors.accent(response.status)}`);
+      console.log(colors.info('━'.repeat(50)));
+      console.log(colors.warning('💡 Check the status with: lanonasis api-keys analytics usage'));
     } catch (error) {
-      console.error(chalk.red('❌ Failed to create access request:'), error.message);
+      console.error(colors.error('✖ Failed to create access request:'), colors.muted(error.message));
       process.exit(1);
     }
   });
@@ -765,7 +801,7 @@ analyticsCommand
       });
 
       analytics.forEach((entry: any) => {
-        const successColor = entry.success ? chalk.green('✓') : chalk.red('✗');
+        const successColor = entry.success ? colors.success('✓') : colors.error('✗');
         
         table.push([
           truncateText(entry.keyId || '-', 20),
@@ -777,9 +813,10 @@ analyticsCommand
       });
 
       console.log(table.toString());
-      console.log(chalk.gray(`Total: ${analytics.length} events`));
+      console.log(colors.info('═'.repeat(80)));
+      console.log(colors.muted(`📈 Total: ${colors.highlight(analytics.length)} events`));
     } catch (error) {
-      console.error(chalk.red('❌ Failed to get usage analytics:'), error.message);
+      console.error(colors.error('✖ Failed to get usage analytics:'), colors.muted(error.message));
       process.exit(1);
     }
   });
@@ -804,33 +841,37 @@ analyticsCommand
       }
 
       if (events.length === 0) {
-        console.log(chalk.yellow('No security events found'));
+        console.log(colors.success('✅ No security events found'));
         return;
       }
 
+      console.log(colors.primary('🛡️  Security Events Monitor'));
+      console.log(colors.info('═'.repeat(80)));
+
       const table = new Table({
-        head: ['Event Type', 'Severity', 'Description', 'Resolved', 'Timestamp'].map(h => chalk.cyan(h)),
+        head: ['Event Type', 'Severity', 'Description', 'Resolved', 'Timestamp'].map(h => colors.accent(h)),
         style: { head: [], border: [] }
       });
 
       events.forEach((event: any) => {
-        const severityColor = event.severity === 'critical' ? chalk.red :
-                             event.severity === 'high' ? chalk.magenta :
-                             event.severity === 'medium' ? chalk.yellow : chalk.green;
+        const severityColor = event.severity === 'critical' ? colors.error :
+                             event.severity === 'high' ? colors.accent :
+                             event.severity === 'medium' ? colors.warning : colors.success;
         
         table.push([
           event.eventType,
           severityColor(event.severity.toUpperCase()),
           truncateText(event.description, 40),
-          event.resolved ? chalk.green('✓') : chalk.yellow('Pending'),
+          event.resolved ? colors.success('✓') : colors.warning('Pending'),
           formatDate(event.timestamp)
         ]);
       });
 
       console.log(table.toString());
-      console.log(chalk.gray(`Total: ${events.length} security events`));
+      console.log(colors.info('═'.repeat(80)));
+      console.log(colors.muted(`🛡️  Total: ${colors.highlight(events.length)} security events`));
     } catch (error) {
-      console.error(chalk.red('❌ Failed to get security events:'), error.message);
+      console.error(colors.error('✖ Failed to get security events:'), colors.muted(error.message));
       process.exit(1);
     }
   });
