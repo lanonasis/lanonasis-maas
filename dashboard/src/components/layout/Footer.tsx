@@ -12,12 +12,12 @@ export const Footer = () => {
         <div className="grid grid-cols-1 gap-8 md:grid-cols-4">
           {/* Brand Section */}
           <div className="md:col-span-1">
-            <Link to="/" className="flex items-center gap-2 text-xl font-semibold tracking-tight mb-4">
+            <a href="https://lanonasis.com" className="flex items-center gap-2 text-xl font-semibold tracking-tight mb-4">
               <span className="text-primary">Lanonasis</span>
               <span className="text-foreground">Platform</span>
-            </Link>
+            </a>
             <p className="text-sm text-muted-foreground mb-6 max-w-xs">
-              A next-generation SaaS platform for modern businesses, powered by cutting-edge technology.
+              AI-powered fintech solutions transforming industries across Africa with intelligent compliance, risk management, and seamless payment systems.
             </p>
             <div className="flex items-center space-x-4">
               <a
@@ -57,16 +57,46 @@ export const Footer = () => {
               Platform
             </h3>
             <ul className="space-y-3">
-              {["Features", "Pricing", "Roadmap", "Status", "API Documentation"].map((item) => (
-                <li key={item}>
-                  <a
-                    href="#"
-                    className="text-sm text-muted-foreground hover:text-foreground transition-colors duration-300"
-                  >
-                    {item}
-                  </a>
-                </li>
-              ))}
+              <li>
+                <a
+                  href="https://lanonasis.com#ecosystem"
+                  className="text-sm text-muted-foreground hover:text-foreground transition-colors duration-300"
+                >
+                  Features
+                </a>
+              </li>
+              <li>
+                <a
+                  href="https://lanonasis.com#pricing"
+                  className="text-sm text-muted-foreground hover:text-foreground transition-colors duration-300"
+                >
+                  Pricing
+                </a>
+              </li>
+              <li>
+                <a
+                  href="https://lanonasis.com#roadmap"
+                  className="text-sm text-muted-foreground hover:text-foreground transition-colors duration-300"
+                >
+                  Roadmap
+                </a>
+              </li>
+              <li>
+                <a
+                  href="https://api.lanonasis.com/"
+                  className="text-sm text-muted-foreground hover:text-foreground transition-colors duration-300"
+                >
+                  Status
+                </a>
+              </li>
+              <li>
+                <a
+                  href="https://docs.lanonasis.com"
+                  className="text-sm text-muted-foreground hover:text-foreground transition-colors duration-300"
+                >
+                  API Documentation
+                </a>
+              </li>
             </ul>
           </div>
 
@@ -75,16 +105,46 @@ export const Footer = () => {
               Company
             </h3>
             <ul className="space-y-3">
-              {["About Us", "Careers", "Blog", "Press", "Partners"].map((item) => (
-                <li key={item}>
-                  <a
-                    href="#"
-                    className="text-sm text-muted-foreground hover:text-foreground transition-colors duration-300"
-                  >
-                    {item}
-                  </a>
-                </li>
-              ))}
+              <li>
+                <a
+                  href="https://lanonasis.com#story"
+                  className="text-sm text-muted-foreground hover:text-foreground transition-colors duration-300"
+                >
+                  About Us
+                </a>
+              </li>
+              <li>
+                <a
+                  href="https://lanonasis.com#contact"
+                  className="text-sm text-muted-foreground hover:text-foreground transition-colors duration-300"
+                >
+                  Careers
+                </a>
+              </li>
+              <li>
+                <a
+                  href="https://lanonasis.com#blog"
+                  className="text-sm text-muted-foreground hover:text-foreground transition-colors duration-300"
+                >
+                  Blog
+                </a>
+              </li>
+              <li>
+                <a
+                  href="https://lanonasis.com#press"
+                  className="text-sm text-muted-foreground hover:text-foreground transition-colors duration-300"
+                >
+                  Press
+                </a>
+              </li>
+              <li>
+                <a
+                  href="https://lanonasis.com#partners"
+                  className="text-sm text-muted-foreground hover:text-foreground transition-colors duration-300"
+                >
+                  Partners
+                </a>
+              </li>
             </ul>
           </div>
 
@@ -93,16 +153,54 @@ export const Footer = () => {
               Resources
             </h3>
             <ul className="space-y-3">
-              {["Documentation", "Guides", "Support", "Security", "Privacy Policy", "Terms of Service"].map((item) => (
-                <li key={item}>
-                  <a
-                    href="#"
-                    className="text-sm text-muted-foreground hover:text-foreground transition-colors duration-300"
-                  >
-                    {item}
-                  </a>
-                </li>
-              ))}
+              <li>
+                <a
+                  href="https://docs.lanonasis.com"
+                  className="text-sm text-muted-foreground hover:text-foreground transition-colors duration-300"
+                >
+                  Documentation
+                </a>
+              </li>
+              <li>
+                <a
+                  href="https://docs.lanonasis.com/guides"
+                  className="text-sm text-muted-foreground hover:text-foreground transition-colors duration-300"
+                >
+                  Guides
+                </a>
+              </li>
+              <li>
+                <a
+                  href="https://lanonasis.com#contact"
+                  className="text-sm text-muted-foreground hover:text-foreground transition-colors duration-300"
+                >
+                  Support
+                </a>
+              </li>
+              <li>
+                <a
+                  href="https://lanonasis.com#security"
+                  className="text-sm text-muted-foreground hover:text-foreground transition-colors duration-300"
+                >
+                  Security
+                </a>
+              </li>
+              <li>
+                <a
+                  href="https://lanonasis.com/privacy"
+                  className="text-sm text-muted-foreground hover:text-foreground transition-colors duration-300"
+                >
+                  Privacy Policy
+                </a>
+              </li>
+              <li>
+                <a
+                  href="https://lanonasis.com/terms"
+                  className="text-sm text-muted-foreground hover:text-foreground transition-colors duration-300"
+                >
+                  Terms of Service
+                </a>
+              </li>
             </ul>
           </div>
         </div>
@@ -113,19 +211,19 @@ export const Footer = () => {
           </p>
           <div className="flex flex-col md:flex-row space-y-2 md:space-y-0 md:space-x-6">
             <a
-              href="#"
+              href="https://lanonasis.com/privacy"
               className="text-sm text-muted-foreground hover:text-foreground transition-colors duration-300"
             >
               Privacy Policy
             </a>
             <a
-              href="#"
+              href="https://lanonasis.com/terms"
               className="text-sm text-muted-foreground hover:text-foreground transition-colors duration-300"
             >
               Terms of Service
             </a>
             <a
-              href="#"
+              href="https://lanonasis.com/cookies"
               className="text-sm text-muted-foreground hover:text-foreground transition-colors duration-300"
             >
               Cookie Policy

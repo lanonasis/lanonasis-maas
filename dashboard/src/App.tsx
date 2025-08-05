@@ -37,7 +37,12 @@ const App = () => (
               <Route path="/auth/register" element={<Auth />} />
               <Route path="/auth/forgot-password" element={<Auth />} />
               <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/dashboard/memory-visualizer" element={<Dashboard />} />
+              <Route path="/dashboard/api-keys" element={<Dashboard />} />
+              <Route path="/dashboard/extensions" element={<Dashboard />} />
+              <Route path="/dashboard/upload" element={<Dashboard />} />
               <Route path="/api-docs" element={<ApiDocs />} />
+              <Route path="/docs" element={<ApiDocs />} />
               <Route path="/api-analytics" element={<ApiAnalytics />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />

@@ -1,10 +1,8 @@
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
-import { CallToolResultSchema } from '@modelcontextprotocol/sdk/types.js';
 import chalk from 'chalk';
 import { CLIConfig } from './config.js';
 import * as path from 'path';
-import { spawn } from 'child_process';
 import { EventSource } from 'eventsource';
 import { fileURLToPath } from 'url';
 
@@ -90,12 +88,12 @@ export class MCPClient {
         try {
           const data = JSON.parse(event.data);
           console.log(chalk.blue('📡 Real-time update:'), data.type);
-        } catch (error) {
+        } catch {
           // Ignore parse errors
         }
       };
 
-      this.sseConnection.onerror = (error) => {
+      this.sseConnection.onerror = () => {
         console.error(chalk.yellow('⚠️  SSE connection error (will retry)'));
       };
     }
@@ -175,20 +173,21 @@ export class MCPClient {
       },
       'memory_get_memory': {
         method: 'GET',
-        endpoint: `/api/v1/memory/${args.memory_id}`,
+        endpoint: '/api/v1/memory/{id}',
         transform: () => undefined
       },
       'memory_update_memory': {
         method: 'PUT',
-        endpoint: `/api/v1/memory/${args.memory_id}`,
+        endpoint: '/api/v1/memory/{id}',
         transform: (args) => {
-          const { memory_id, ...data } = args;
+          const data = { ...args };
+          delete data.memory_id;
           return data;
         }
       },
       'memory_delete_memory': {
         method: 'DELETE',
-        endpoint: `/api/v1/memory/${args.memory_id}`,
+        endpoint: '/api/v1/memory/{id}',
         transform: () => undefined
       },
       'memory_list_memories': {
@@ -205,9 +204,16 @@ export class MCPClient {
 
     try {
       const axios = (await import('axios')).default;
+      
+      // Handle dynamic endpoint for memory operations that need ID
+      let endpoint = mapping.endpoint;
+      if (endpoint.includes('{id}') && args.memory_id) {
+        endpoint = endpoint.replace('{id}', args.memory_id);
+      }
+      
       const response = await axios({
         method: mapping.method,
-        url: `${apiUrl}${mapping.endpoint}`,
+        url: `${apiUrl}${endpoint}`,
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'

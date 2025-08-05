@@ -48,7 +48,7 @@ export function mcpCommands(program) {
                 spinner.fail('Failed to auto-connect to MCP');
             }
         }
-        catch (error) {
+        catch {
             spinner.fail('MCP auto-connect failed');
         }
     });
@@ -196,7 +196,7 @@ export function mcpCommands(program) {
                 try {
                     args = JSON.parse(options.args);
                 }
-                catch (error) {
+                catch {
                     spinner.fail('Invalid JSON arguments');
                     process.exit(1);
                 }
