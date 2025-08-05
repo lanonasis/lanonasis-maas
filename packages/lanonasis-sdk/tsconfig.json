@@ -18,16 +18,7 @@
     "isolatedModules": true,
     "noEmitOnError": true,
     "experimentalDecorators": true,
-    "emitDecoratorMetadata": true,
-    "baseUrl": "./src",
-    "paths": {
-      "@/*": ["./*"],
-      "@/client/*": ["./client/*"],
-      "@/memory/*": ["./memory/*"],
-      "@/api-keys/*": ["./api-keys/*"],
-      "@/mcp/*": ["./mcp/*"],
-      "@/types/*": ["./types/*"]
-    }
+    "emitDecoratorMetadata": true
   },
   "include": [
     "src/**/*"
