@@ -28,12 +28,23 @@ interface MCPToolArgs {
 /**
  * Interface for MCP tool response
  */
-interface MCPToolResponse {
+export interface MCPToolResponse {
   result?: unknown;
   error?: {
     code: number;
     message: string;
   };
+  // Memory-related fields for tool responses
+  id?: string;
+  title?: string;
+  memory_type?: string;
+  // For array-like responses
+  length?: number;
+  forEach?: (callback: (item: any, index: number) => void) => void;
+  // For generic responses
+  code?: number;
+  message?: string;
+  response?: any;
 }
 
 /**
@@ -123,7 +134,7 @@ export class MCPClient {
           
           console.log(chalk.cyan(`Connecting to local MCP server at ${serverPath}...`));
         
-          const transport = new StdioClientTransport({
+          const localTransport = new StdioClientTransport({
             command: 'node',
             args: [serverPath]
           });
@@ -134,11 +145,11 @@ export class MCPClient {
           }, {
             capabilities: {}
           });
+          
+          await this.client.connect(localTransport);
         }
-
-        await this.client.connect(transport);
-        this.isConnected = true;
         
+        this.isConnected = true;
         console.log(chalk.green('✓ Connected to MCP server'));
         return true;
       }
@@ -310,7 +321,12 @@ export class MCPClient {
           arguments: args
         });
 
-        return result;
+        // Convert the SDK result to our expected MCPToolResponse format
+        return {
+          result: result,
+          code: 200,
+          message: 'Success'
+        } as MCPToolResponse;
       } catch (error) {
         throw new Error(`MCP tool call failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
       }
@@ -377,7 +393,8 @@ export class MCPClient {
       // Handle dynamic endpoint for memory operations that need ID
       let endpoint = mapping.endpoint;
       if (endpoint.includes('{id}') && args.memory_id) {
-        endpoint = endpoint.replace('{id}', args.memory_id);
+        // Ensure memory_id is treated as a string for replacement
+        endpoint = endpoint.replace('{id}', String(args.memory_id));
       }
       
       const response = await axios({
@@ -393,7 +410,11 @@ export class MCPClient {
 
       return response.data;
     } catch (error: unknown) {
-      throw new Error(`Remote tool call failed: ${error.response?.data?.error || error.message}`);
+      // Safely handle errors with type checking
+      const errorObj = error as Record<string, any>;
+      const errorMsg = errorObj.response?.data?.error || 
+                      (errorObj.message ? errorObj.message : 'Unknown error');
+      throw new Error(`Remote tool call failed: ${errorMsg}`);
     }
   }
 
