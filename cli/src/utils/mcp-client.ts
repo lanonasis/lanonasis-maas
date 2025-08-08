@@ -5,6 +5,7 @@ import { CLIConfig } from './config.js';
 import * as path from 'path';
 import { EventSource } from 'eventsource';
 import { fileURLToPath } from 'url';
+import WebSocket from 'ws';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -13,6 +14,50 @@ interface MCPConnectionOptions {
   serverPath?: string;
   serverUrl?: string;
   useRemote?: boolean;
+  useWebSocket?: boolean;
+  connectionMode?: 'local' | 'remote' | 'websocket';
+}
+
+/**
+ * Interface for MCP tool arguments
+ */
+interface MCPToolArgs {
+  [key: string]: unknown;
+}
+
+/**
+ * Interface for MCP tool response
+ */
+interface MCPToolResponse {
+  result?: unknown;
+  error?: {
+    code: number;
+    message: string;
+  };
+}
+
+/**
+ * Interface for remote tool mapping configuration
+ */
+interface RemoteToolMapping {
+  method: string;
+  endpoint: string;
+  transform?: (args: MCPToolArgs) => Record<string, unknown>;
+}
+
+/**
+ * Interface for MCP WebSocket messages
+ */
+export interface MCPWebSocketMessage {
+  id: number;
+  method?: string;
+  params?: Record<string, unknown>;
+  result?: Record<string, unknown>;
+  error?: {
+    code: number;
+    message: string;
+    data?: unknown;
+  };
 }
 
 export class MCPClient {
@@ -20,6 +65,7 @@ export class MCPClient {
   private config: CLIConfig;
   private isConnected: boolean = false;
   private sseConnection: EventSource | null = null;
+  private wsConnection: WebSocket | null = null;
 
   constructor() {
     this.config = new CLIConfig();
@@ -30,35 +76,65 @@ export class MCPClient {
    */
   async connect(options: MCPConnectionOptions = {}): Promise<boolean> {
     try {
-      const useRemote = options.useRemote ?? this.config.get('mcpUseRemote') ?? false;
+      // Determine connection mode with priority to explicit mode option
+      const connectionMode = options.connectionMode ?? 
+                            (options.useWebSocket ? 'websocket' : 
+                             options.useRemote ? 'remote' : 
+                             this.config.get('mcpConnectionMode') ?? 
+                             this.config.get('mcpUseRemote') ? 'remote' : 'local');
       
-      if (useRemote) {
-        // For remote MCP, we'll use the REST API with MCP-style interface
-        const serverUrl = options.serverUrl ?? this.config.get('mcpServerUrl') ?? 'https://api.lanonasis.com';
-        console.log(chalk.cyan(`Connecting to remote MCP server at ${serverUrl}...`));
+      let wsUrl: string;
+      let serverUrl: string;
+      let serverPath: string;
+      
+      switch (connectionMode) {
+        case 'websocket':
+          // WebSocket connection mode for enterprise users
+          wsUrl = options.serverUrl ?? 
+                  this.config.get('mcpWebSocketUrl') ?? 
+                  'ws://localhost:8081/mcp/ws';
+          console.log(chalk.cyan(`Connecting to WebSocket MCP server at ${wsUrl}...`));
+          
+          // Initialize WebSocket connection
+          await this.initializeWebSocket(wsUrl);
+          
+          this.isConnected = true;
+          return true;
+          
+        case 'remote':
+          // For remote MCP, we'll use the REST API with MCP-style interface
+          serverUrl = options.serverUrl ?? 
+                     this.config.get('mcpServerUrl') ?? 
+                     'https://api.lanonasis.com';
+          console.log(chalk.cyan(`Connecting to remote MCP server at ${serverUrl}...`));
+          
+          // Initialize SSE connection for real-time updates
+          await this.initializeSSE(serverUrl);
+          
+          this.isConnected = true;
+          return true;
+          
+        case 'local':
+        default: {
+          // Local MCP server connection
+          serverPath = options.serverPath ?? 
+                      this.config.get('mcpServerPath') ?? 
+                      path.join(__dirname, '../../../../onasis-gateway/mcp-server/server.js');
+          
+          console.log(chalk.cyan(`Connecting to local MCP server at ${serverPath}...`));
         
-        // Initialize SSE connection for real-time updates
-        await this.initializeSSE(serverUrl);
-        
-        this.isConnected = true;
-        return true;
-      } else {
-        // Local MCP server connection
-        const serverPath = options.serverPath ?? this.config.get('mcpServerPath') ?? path.join(__dirname, '../../../../onasis-gateway/mcp-server/server.js');
-        
-        console.log(chalk.cyan(`Connecting to local MCP server at ${serverPath}...`));
-        
-        const transport = new StdioClientTransport({
-          command: 'node',
-          args: [serverPath]
-        });
+          const transport = new StdioClientTransport({
+            command: 'node',
+            args: [serverPath]
+          });
 
-        this.client = new Client({
-          name: '@lanonasis/cli',
-          version: '1.0.0'
-        }, {
-          capabilities: {}
-        });
+          this.client = new Client({
+            name: '@lanonasis/cli',
+            version: '1.0.0'
+          }, {
+            capabilities: {}
+          });
+        }
 
         await this.client.connect(transport);
         this.isConnected = true;
@@ -98,6 +174,99 @@ export class MCPClient {
       };
     }
   }
+  
+  /**
+   * Initialize WebSocket connection for enterprise MCP server
+   */
+  private async initializeWebSocket(wsUrl: string): Promise<void> {
+    const token = this.config.get('token');
+    
+    if (!token) {
+      throw new Error('API key required for WebSocket mode. Set LANONASIS_API_KEY or login first.');
+    }
+    
+    return new Promise((resolve, reject) => {
+      try {
+        // Close existing connection if any
+        if (this.wsConnection) {
+          this.wsConnection.close();
+          this.wsConnection = null;
+        }
+        
+        // Create new WebSocket connection with authentication
+        this.wsConnection = new WebSocket(wsUrl, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'X-API-Key': token
+          }
+        });
+        
+        this.wsConnection.on('open', () => {
+          console.log(chalk.green('✅ Connected to MCP WebSocket server'));
+          
+          // Send initialization message
+          this.sendWebSocketMessage({
+            id: 1,
+            method: 'initialize',
+            params: {
+              protocolVersion: '2024-11-05',
+              capabilities: {
+                tools: ['memory_management', 'workflow_orchestration']
+              },
+              clientInfo: {
+                name: '@lanonasis/cli',
+                version: '1.1.0'
+              }
+            }
+          });
+          
+          resolve();
+        });
+        
+        this.wsConnection.on('message', (data) => {
+          try {
+            const message = JSON.parse(data.toString());
+            console.log(chalk.blue('📡 MCP message:'), message.id, message.method || 'response');
+          } catch (error) {
+            console.error('Failed to parse WebSocket message:', error);
+          }
+        });
+        
+        this.wsConnection.on('error', (error) => {
+          console.error(chalk.red('WebSocket error:'), error);
+          reject(error);
+        });
+        
+        this.wsConnection.on('close', (code, reason) => {
+          console.log(chalk.yellow(`WebSocket connection closed (${code}): ${reason}`));
+          
+          // Auto-reconnect after delay
+          setTimeout(() => {
+            if (this.isConnected) {
+              console.log(chalk.blue('🔄 Attempting to reconnect to WebSocket...'));
+              this.initializeWebSocket(wsUrl).catch(err => {
+                console.error('Failed to reconnect:', err);
+              });
+            }
+          }, 5000);
+        });
+        
+      } catch (error) {
+        reject(error);
+      }
+    });
+  }
+  
+  /**
+   * Send a message over the WebSocket connection
+   */
+  private sendWebSocketMessage(message: MCPWebSocketMessage): void {
+    if (!this.wsConnection) {
+      throw new Error('WebSocket not connected');
+    }
+    
+    this.wsConnection.send(JSON.stringify(message));
+  }
 
   /**
    * Disconnect from MCP server
@@ -119,7 +288,7 @@ export class MCPClient {
   /**
    * Call an MCP tool
    */
-  async callTool(toolName: string, args: any): Promise<any> {
+  async callTool(toolName: string, args: MCPToolArgs): Promise<MCPToolResponse> {
     if (!this.isConnected) {
       throw new Error('Not connected to MCP server. Run "lanonasis mcp connect" first.');
     }
@@ -151,7 +320,7 @@ export class MCPClient {
   /**
    * Call remote tool via REST API with MCP interface
    */
-  private async callRemoteTool(toolName: string, args: any): Promise<any> {
+  private async callRemoteTool(toolName: string, args: MCPToolArgs): Promise<MCPToolResponse> {
     const apiUrl = this.config.get('apiUrl') ?? 'https://api.lanonasis.com';
     const token = this.config.get('token');
 
@@ -160,7 +329,7 @@ export class MCPClient {
     }
 
     // Map MCP tool names to REST API endpoints
-    const toolMappings: Record<string, { method: string; endpoint: string; transform?: (args: any) => any }> = {
+    const toolMappings: Record<string, RemoteToolMapping> = {
       'memory_create_memory': {
         method: 'POST',
         endpoint: '/api/v1/memory',
@@ -223,7 +392,7 @@ export class MCPClient {
       });
 
       return response.data;
-    } catch (error: any) {
+    } catch (error: unknown) {
       throw new Error(`Remote tool call failed: ${error.response?.data?.error || error.message}`);
     }
   }
