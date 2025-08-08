@@ -90,7 +90,7 @@ router.post('/', asyncHandler(async (req: Request, res: Response) => {
   const memory = await memoryService.createMemory(memoryId, {
     ...validatedData,
     user_id: userId,
-    organization_id: organizationId
+    group_id: organizationId
   });
 
   logMemoryOperation('create', userId, organizationId, {

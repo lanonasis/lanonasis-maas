@@ -33,7 +33,7 @@ export declare class MemoryService {
      */
     createMemory(id: string, data: CreateMemoryRequest & {
         user_id: string;
-        organization_id: string;
+        group_id: string;
     }): Promise<MemoryEntry>;
     /**
      * Get memory by ID

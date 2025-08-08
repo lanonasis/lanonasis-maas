@@ -6,18 +6,24 @@ CREATE EXTENSION IF NOT EXISTS vector;
 CREATE TYPE memory_type AS ENUM ('context', 'project', 'knowledge', 'reference', 'personal', 'workflow');
 CREATE TYPE user_role AS ENUM ('admin', 'user', 'viewer');
 CREATE TYPE plan_type AS ENUM ('free', 'pro', 'enterprise');
+CREATE TYPE group_type AS ENUM ('family', 'team', 'project', 'social', 'workspace', 'community');
 
--- Organizations table
-CREATE TABLE organizations (
+-- Groups table (families, teams, projects, social squads, etc.)
+CREATE TABLE groups (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     name VARCHAR(255) NOT NULL,
+    description TEXT,
+    group_type group_type NOT NULL DEFAULT 'team',
     plan plan_type NOT NULL DEFAULT 'free',
     settings JSONB DEFAULT '{}',
+    invite_code VARCHAR(32) UNIQUE, -- For easy group joining
+    max_members INTEGER DEFAULT 10, -- Scalable limits
+    created_by UUID, -- Will be set after users table
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     
     -- Indexes
-    CONSTRAINT organizations_name_check CHECK (LENGTH(name) >= 2)
+    CONSTRAINT groups_name_check CHECK (LENGTH(name) >= 2)
 );
 
 -- Users table
