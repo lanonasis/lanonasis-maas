@@ -155,13 +155,43 @@ app.use(helmet({
 }));
 
 // CORS configuration
+const allowedOrigins = process.env.NODE_ENV === 'production' 
+  ? [
+      'https://api.lanonasis.com',
+      'https://dashboard.lanonasis.com', 
+      'https://mcp.lanonasis.com',
+      'https://docs.lanonasis.com',
+      'https://api.vortexai.io',
+      'https://gateway.apiendpoint.net',
+      'https://onasis.io',
+      'https://connectionpoint.tech',
+      'https://vortexcore.app'
+    ]
+  : [
+      'http://localhost:3000', 
+      'http://localhost:3001',
+      'http://localhost:5173',
+      'http://127.0.0.1:3000',
+      'http://127.0.0.1:5173'
+    ];
+
 app.use(cors({
-  origin: process.env.NODE_ENV === 'production' 
-    ? ['https://yourdomain.com'] 
-    : ['http://localhost:3000', 'http://localhost:3001'],
+  origin: (origin, callback) => {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    
+    // Log blocked origin for debugging
+    console.warn(`CORS blocked origin: ${origin}`);
+    callback(new Error('Not allowed by CORS'));
+  },
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-API-Key']
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-API-Key', 'X-Session-ID'],
+  exposedHeaders: ['X-Total-Count', 'X-Rate-Limit-Remaining']
 }));
 
 // Compression and parsing
