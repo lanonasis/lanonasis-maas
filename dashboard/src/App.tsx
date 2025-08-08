@@ -44,6 +44,7 @@ const App = () => (
               <Route path="/api-docs" element={<ApiDocs />} />
               <Route path="/docs" element={<ApiDocs />} />
               <Route path="/api-analytics" element={<ApiAnalytics />} />
+              <Route path="/mcp/connect" element={<Index />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
