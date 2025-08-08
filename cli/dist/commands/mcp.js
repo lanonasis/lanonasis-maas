@@ -54,40 +54,59 @@ export function mcpCommands(program) {
     });
     // Connect command
     mcp.command('connect')
-        .description('Connect to MCP server (local or remote)')
+        .description('Connect to MCP server (local, remote, or WebSocket)')
         .option('-l, --local', 'Connect to local MCP server')
         .option('-r, --remote', 'Connect to remote MCP server (api.lanonasis.com)')
+        .option('-w, --websocket', 'Connect using WebSocket mode for enterprise users')
         .option('-s, --server <path>', 'Local MCP server path')
-        .option('-u, --url <url>', 'Remote MCP server URL')
+        .option('-u, --url <url>', 'Remote/WebSocket server URL')
         .action(async (options) => {
         const spinner = ora('Connecting to MCP server...').start();
         const config = new CLIConfig();
         try {
-            // Determine connection mode
-            let useRemote = options.remote;
-            if (!options.local && !options.remote) {
-                // Default to remote if authenticated, otherwise local
-                useRemote = !!config.get('token');
+            let connectionMode;
+            // Determine connection mode - WebSocket takes precedence over remote and local
+            if (options.websocket) {
+                connectionMode = 'websocket';
             }
-            // Save preference
-            config.set('mcpUseRemote', useRemote);
+            else if (options.remote) {
+                connectionMode = 'remote';
+            }
+            else if (options.local) {
+                connectionMode = 'local';
+            }
+            else {
+                // Default to remote if authenticated, otherwise local
+                connectionMode = !!config.get('token') ? 'remote' : 'local';
+            }
+            // Save preferences
+            config.set('mcpConnectionMode', connectionMode);
             if (options.server) {
                 config.set('mcpServerPath', options.server);
             }
             if (options.url) {
-                config.set('mcpServerUrl', options.url);
+                if (connectionMode === 'websocket') {
+                    config.set('mcpWebSocketUrl', options.url);
+                }
+                else {
+                    config.set('mcpServerUrl', options.url);
+                }
             }
             const client = getMCPClient();
             const connected = await client.connect({
-                useRemote,
+                connectionMode,
                 serverPath: options.server,
                 serverUrl: options.url
             });
             if (connected) {
-                spinner.succeed(chalk.green(`Connected to ${useRemote ? 'remote' : 'local'} MCP server`));
-                if (useRemote) {
+                spinner.succeed(chalk.green(`Connected to MCP server in ${connectionMode} mode`));
+                if (connectionMode === 'remote') {
                     console.log(chalk.cyan('ℹ️  Using remote MCP via api.lanonasis.com'));
                     console.log(chalk.cyan('📡 SSE endpoint active for real-time updates'));
+                }
+                else if (connectionMode === 'websocket') {
+                    console.log(chalk.cyan('ℹ️  Using enterprise WebSocket MCP server'));
+                    console.log(chalk.cyan('📡 WebSocket connection active with auto-reconnect'));
                 }
             }
             else {
