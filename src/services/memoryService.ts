@@ -73,7 +73,7 @@ export class MemoryService {
   /**
    * Create a new memory entry
    */
-  async createMemory(id: string, data: CreateMemoryRequest & { user_id: string; organization_id: string }): Promise<MemoryEntry> {
+  async createMemory(id: string, data: CreateMemoryRequest & { user_id: string; group_id: string }): Promise<MemoryEntry> {
     const startTime = Date.now();
 
     try {
@@ -88,7 +88,7 @@ export class MemoryService {
         tags: data.tags || [],
         topic_id: data.topic_id || null,
         user_id: data.user_id,
-        organization_id: data.organization_id,
+        group_id: data.group_id,
         embedding: JSON.stringify(embedding) as unknown as number[], // Supabase expects string format
         metadata: data.metadata || {} as Record<string, unknown>,
         created_at: new Date().toISOString(),
@@ -108,7 +108,7 @@ export class MemoryService {
       }
 
       // Log analytics
-      await this.logAnalytics(data.organization_id, data.user_id, 'memory_created', 'memory', id, {
+      await this.logAnalytics(data.group_id, data.user_id, 'memory_created', 'memory', id, {
         memory_type: data.memory_type,
         content_length: data.content.length
       });

@@ -218,15 +218,76 @@ app.use(`${config.API_PREFIX}/${config.API_VERSION}/mcp/api-keys`, mcpApiKeyRout
 app.use('/mcp', mcpSseRoutes);
 // Metrics endpoint (no auth required for Prometheus scraping)
 app.use('/metrics', metricsRoutes);
-// Root endpoint
+// Root endpoint - Enterprise Services Landing Page
 app.get('/', (req, res) => {
-    res.json({
-        service: 'Memory as a Service (MaaS)',
-        version: '1.0.0',
-        status: 'operational',
-        documentation: '/docs',
-        health: `${config.API_PREFIX}/${config.API_VERSION}/health`
-    });
+    // Check if request prefers JSON (API clients) or HTML (browsers)
+    const acceptsJson = req.headers.accept && req.headers.accept.includes('application/json');
+    const isApiRequest = req.get('User-Agent')?.includes('curl') ||
+        req.get('User-Agent')?.includes('Postman') ||
+        req.get('User-Agent')?.includes('HTTPie') ||
+        acceptsJson;
+    if (isApiRequest || req.query.format === 'json') {
+        // Return JSON for API clients
+        res.json({
+            platform: 'LanOnasis Enterprise Services',
+            tagline: 'Unified API Gateway for Enterprise Solutions',
+            version: '1.0.0',
+            status: 'operational',
+            baseUrl: 'https://api.lanonasis.com',
+            services: {
+                memory: {
+                    name: 'Memory as a Service (MaaS)',
+                    description: 'AI-powered memory management with semantic search',
+                    endpoints: {
+                        base: `${config.API_PREFIX}/${config.API_VERSION}/memory`,
+                        docs: '/docs#memory'
+                    },
+                    features: ['Vector Search', 'Multi-tenant', 'Role-based Access', 'Analytics']
+                },
+                apiKeys: {
+                    name: 'API Key Management',
+                    description: 'Secure storage and rotation of API keys',
+                    endpoints: {
+                        base: `${config.API_PREFIX}/${config.API_VERSION}/api-keys`,
+                        docs: '/docs#api-keys'
+                    },
+                    features: ['Secure Storage', 'Automatic Rotation', 'Access Control', 'Audit Logging']
+                },
+                mcp: {
+                    name: 'Model Context Protocol',
+                    description: 'Secure AI agent access to enterprise secrets',
+                    endpoints: {
+                        base: `${config.API_PREFIX}/${config.API_VERSION}/mcp`,
+                        docs: '/docs#mcp'
+                    },
+                    features: ['AI Agent Integration', 'Secure Context', 'Zero-trust Access', 'Real-time Updates']
+                }
+            },
+            endpoints: {
+                documentation: '/docs',
+                dashboard: '/dashboard',
+                health: `${config.API_PREFIX}/${config.API_VERSION}/health`,
+                authentication: `${config.API_PREFIX}/${config.API_VERSION}/auth`,
+                mcp: '/mcp',
+                metrics: '/metrics'
+            },
+            integrations: {
+                database: 'Supabase PostgreSQL with Vector Extensions',
+                authentication: 'JWT with Role-based Access Control',
+                ai: 'OpenAI Embeddings for Semantic Search',
+                monitoring: 'Prometheus Metrics & Winston Logging'
+            },
+            support: {
+                documentation: 'https://docs.lanonasis.com',
+                contact: 'support@lanonasis.com',
+                github: 'https://github.com/lanonasis'
+            }
+        });
+    }
+    else {
+        // Serve HTML landing page for browsers
+        res.sendFile(path.join(__dirname, 'static/index.html'));
+    }
 });
 // 404 handler
 app.use('*', (req, res) => {

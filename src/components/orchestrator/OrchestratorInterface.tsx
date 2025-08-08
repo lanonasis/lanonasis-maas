@@ -10,25 +10,8 @@ declare const window: {
   open: (url: string, target?: string) => void;
 };
 
-// Note: Orchestrator temporarily disabled due to missing dependencies
-// import { orchestrate, parseOnly, ContextualOrchestrator, OrchestratorResult, ParsedCommand } from '../../../seyederick-monorepo-starter/packages/orchestrator';
-
-// Temporary interfaces for compilation
-interface OrchestratorResult {
-  success: boolean;
-  data?: Record<string, unknown>;
-  error?: string;
-  executionTime: number;
-  command: ParsedCommand;
-}
-
-interface ParsedCommand {
-  action: string;
-  target: string;
-  parameters: Record<string, unknown>;
-  confidence?: number;
-  tool?: string;
-}
+// Import orchestrator from local source
+import { orchestrate, parseOnly, ContextualOrchestrator, OrchestratorResult, ParsedCommand } from '../../orchestrator';
 
 interface Message {
   id: string;
@@ -62,8 +45,7 @@ export const OrchestratorInterface: React.FC<OrchestratorInterfaceProps> = ({
   
   const messagesEndRef = useRef<unknown>(null);
   const inputRef = useRef<unknown>(null);
-  // Temporarily disabled orchestrator
-  // const orchestrator = useRef(null);
+  const orchestrator = useRef(new ContextualOrchestrator());
 
   const scrollToBottom = () => {
     const element = messagesEndRef.current as { scrollIntoView?: (options: { behavior: string }) => void } | null;
@@ -108,12 +90,7 @@ Type your command below and press Enter!`,
     // Show command preview for non-empty input
     if (value.trim() && value.length > 3) {
       try {
-        // Temporarily disabled orchestrator
-        const preview: ParsedCommand = {
-          action: 'placeholder',
-          target: value,
-          parameters: {}
-        };
+        const preview = await parseOnly(value);
         setCommandPreview(preview);
         setShowPreview(true);
       } catch {
@@ -140,17 +117,10 @@ Type your command below and press Enter!`,
     });
 
     try {
-      // Temporarily disabled orchestrator - return placeholder result
-      const result: OrchestratorResult = {
-        success: false,
-        error: 'Orchestrator temporarily disabled - missing dependencies',
-        executionTime: 0,
-        command: {
-          action: 'placeholder',
-          target: command,
-          parameters: {}
-        }
-      };
+      // Execute command with orchestrator
+      const result = orchestrator.current ? 
+        await orchestrator.current.orchestrate(command) : 
+        await orchestrate(command);
       
       if (result.success) {
         // Add success result
