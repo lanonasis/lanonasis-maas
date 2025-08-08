@@ -38,10 +38,10 @@
   to = "/.netlify/functions/mcp-sse"
   status = 200
 
-# SSE endpoint handled by Netlify function  
+# SSE endpoint handled by MCP SSE Netlify function  
 [[redirects]]
   from = "/sse"
-  to = "/.netlify/functions/api"
+  to = "/.netlify/functions/mcp-sse"
   status = 200
 
 # Root endpoint handled by React dashboard (landing page integrated into SPA)
