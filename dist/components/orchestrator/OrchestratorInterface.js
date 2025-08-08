@@ -4,6 +4,8 @@ import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
  * Provides a chat-like interface for natural language command execution
  */
 import { useState, useRef, useEffect } from 'react';
+// Import orchestrator from local source
+import { orchestrate, parseOnly, ContextualOrchestrator } from '../../orchestrator';
 export const OrchestratorInterface = ({ className = '', onCommandExecuted, onUIAction, placeholder = 'Type a command... (e.g., "search for project notes", "create memory", "open dashboard")', disabled = false }) => {
     const [messages, setMessages] = useState([]);
     const [input, setInput] = useState('');
@@ -12,8 +14,7 @@ export const OrchestratorInterface = ({ className = '', onCommandExecuted, onUIA
     const [commandPreview, setCommandPreview] = useState(null);
     const messagesEndRef = useRef(null);
     const inputRef = useRef(null);
-    // Temporarily disabled orchestrator
-    // const orchestrator = useRef(null);
+    const orchestrator = useRef(new ContextualOrchestrator());
     const scrollToBottom = () => {
         const element = messagesEndRef.current;
         element?.scrollIntoView?.({ behavior: 'smooth' });
@@ -52,12 +53,7 @@ Type your command below and press Enter!`,
         // Show command preview for non-empty input
         if (value.trim() && value.length > 3) {
             try {
-                // Temporarily disabled orchestrator
-                const preview = {
-                    action: 'placeholder',
-                    target: value,
-                    parameters: {}
-                };
+                const preview = await parseOnly(value);
                 setCommandPreview(preview);
                 setShowPreview(true);
             }
@@ -83,17 +79,10 @@ Type your command below and press Enter!`,
             content: command,
         });
         try {
-            // Temporarily disabled orchestrator - return placeholder result
-            const result = {
-                success: false,
-                error: 'Orchestrator temporarily disabled - missing dependencies',
-                executionTime: 0,
-                command: {
-                    action: 'placeholder',
-                    target: command,
-                    parameters: {}
-                }
-            };
+            // Execute command with orchestrator
+            const result = orchestrator.current ?
+                await orchestrator.current.orchestrate(command) :
+                await orchestrate(command);
             if (result.success) {
                 // Add success result
                 addMessage({

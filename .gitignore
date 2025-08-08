@@ -1,11 +1,15 @@
 # Node modules
 node_modules/
 
-# Environment variables
+# Environment variables - NEVER commit real API keys
 .env
 .env.*
+.env.local
+.env.development
+.env.production
+.env.test
 !.env.example
-!.env.production
+!.env.template
 
 # Build outputs
 dist/
