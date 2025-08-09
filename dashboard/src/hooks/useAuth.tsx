@@ -61,12 +61,39 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     fetchSession();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
+      async (event, session) => {
         setSession(session);
         setUser(session?.user || null);
         
         if (session?.user) {
           await fetchProfile(session.user.id);
+          
+          // Handle OAuth callback - create profile if it doesn't exist
+          if (event === 'SIGNED_IN' && session.user.app_metadata.provider !== 'email') {
+            const { data: existingProfile } = await supabase
+              .from('profiles')
+              .select('*')
+              .eq('id', session.user.id)
+              .single();
+            
+            if (!existingProfile) {
+              // Create profile for OAuth users
+              const { error } = await supabase
+                .from('profiles')
+                .insert({
+                  id: session.user.id,
+                  email: session.user.email,
+                  full_name: session.user.user_metadata.full_name || session.user.user_metadata.name || null,
+                  avatar_url: session.user.user_metadata.avatar_url || session.user.user_metadata.picture || null,
+                  created_at: new Date().toISOString(),
+                  updated_at: new Date().toISOString()
+                });
+              
+              if (!error) {
+                await fetchProfile(session.user.id);
+              }
+            }
+          }
         } else {
           setProfile(null);
         }
