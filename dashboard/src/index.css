@@ -1,7 +1,4 @@
-
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
 @layer base {
   :root {
@@ -87,12 +84,15 @@
 
 @layer base {
   * {
-    @apply border-border;
+    border-color: hsl(var(--border));
   }
 
   body {
-    @apply bg-background text-foreground antialiased;
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
     font-feature-settings: "ss01", "ss03";
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 
   /* Smooth scrolling */
@@ -102,7 +102,8 @@
 
   /* Better focus states */
   :focus-visible {
-    @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
+    outline: none;
+    box-shadow: 0 0 0 2px hsl(var(--ring)), 0 0 0 4px hsl(var(--background));
   }
 }
 
@@ -118,37 +119,43 @@
   }
 
   .scrollbar-thin::-webkit-scrollbar-track {
-    @apply bg-secondary;
+    background-color: hsl(var(--secondary));
   }
 
   .scrollbar-thin::-webkit-scrollbar-thumb {
-    @apply bg-muted-foreground/50 rounded-full;
+    background-color: hsl(var(--muted-foreground) / 0.5);
+    border-radius: 9999px;
   }
 
   /* Glass effect */
   .glass-effect {
-    @apply bg-background/80 backdrop-blur-md backdrop-saturate-150 border border-border/60;
+    background-color: hsl(var(--background) / 0.8);
+    backdrop-filter: blur(12px) saturate(150%);
+    -webkit-backdrop-filter: blur(12px) saturate(150%);
+    border: 1px solid hsl(var(--border) / 0.6);
   }
   
   /* Elegant transitions */
   .transition-elegant {
-    @apply transition-all duration-300 ease-out-expo;
+    transition: all 300ms cubic-bezier(0.19, 1, 0.22, 1);
   }
   
   /* Page transitions */
   .page-enter {
-    @apply opacity-0;
+    opacity: 0;
   }
   
   .page-enter-active {
-    @apply opacity-100 transition-all duration-300 ease-out-expo;
+    opacity: 1;
+    transition: all 300ms cubic-bezier(0.19, 1, 0.22, 1);
   }
   
   .page-exit {
-    @apply opacity-100;
+    opacity: 1;
   }
   
   .page-exit-active {
-    @apply opacity-0 transition-all duration-300 ease-out-expo;
+    opacity: 0;
+    transition: all 300ms cubic-bezier(0.19, 1, 0.22, 1);
   }
 }
