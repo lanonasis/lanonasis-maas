@@ -62,6 +62,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        console.log('Auth state change:', event, session?.user?.email);
         setSession(session);
         setUser(session?.user || null);
         
@@ -70,6 +71,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           
           // Handle OAuth callback - create profile if it doesn't exist
           if (event === 'SIGNED_IN' && session.user.app_metadata.provider !== 'email') {
+            console.log('OAuth sign-in detected, provider:', session.user.app_metadata.provider);
+            
             const { data: existingProfile } = await supabase
               .from('profiles')
               .select('*')
@@ -77,6 +80,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
               .single();
             
             if (!existingProfile) {
+              console.log('Creating new profile for OAuth user');
               // Create profile for OAuth users
               const { error } = await supabase
                 .from('profiles')
@@ -93,6 +97,18 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                 await fetchProfile(session.user.id);
               }
             }
+            
+            // Redirect to dashboard after OAuth login
+            console.log('Redirecting to dashboard after OAuth login');
+            toast({
+              title: "Welcome!",
+              description: "Successfully signed in. Redirecting to dashboard...",
+            });
+            
+            // Use setTimeout to ensure state updates are complete
+            setTimeout(() => {
+              navigate('/dashboard');
+            }, 100);
           }
         } else {
           setProfile(null);

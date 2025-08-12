@@ -27,9 +27,8 @@ const createAuditLogger = (projectName) => {
   };
 };
 
-const createJWTMiddleware = (_config) => {
+const createJWTMiddleware = (config) => {
   return async (request) => {
-    // Basic JWT validation placeholder (config unused in placeholder implementation)
     const authHeader = request.headers.get('Authorization');
     if (!authHeader?.startsWith('Bearer ')) {
       return {
@@ -37,6 +36,24 @@ const createJWTMiddleware = (_config) => {
         error: 'Missing or invalid authorization header'
       };
     }
+
+    // TODO: Implement actual JWT validation
+    // const token = authHeader.substring(7);
+    // try {
+    //   const decoded = await verifyJWT(token, config.supabaseServiceKey);
+    //   return {
+    //     isValid: true,
+    //     userId: decoded.sub,
+    //     projectScope: decoded.project_scope || config.projectName
+    //   };
+    // } catch (error) {
+    //   return {
+    //     isValid: false,
+    //     error: 'Invalid or expired token'
+    //   };
+    // }
+
+    // WARNING: Placeholder implementation - DO NOT DEPLOY TO PRODUCTION
     return {
       isValid: true,
       userId: 'placeholder-user',
@@ -44,11 +61,17 @@ const createJWTMiddleware = (_config) => {
     };
   };
 };
+};
 
-// Configuration
+// Configuration with fail-fast validation
 const SUPABASE_URL=https://<project-ref>.supabase.co
 const SUPABASE_SERVICE_KEY=REDACTED_SUPABASE_SERVICE_ROLE_KEY
 const PROJECT_NAME = 'lanonasis-maas';
+
+// Fail-fast validation for required environment variables
+if (!SUPABASE_SERVICE_KEY=REDACTED_SUPABASE_SERVICE_ROLE_KEY
+  throw new Error('SUPABASE_SERVICE_KEY=REDACTED_SUPABASE_SERVICE_ROLE_KEY
+}
 
 // Initialize audit logger
 const auditLogger = createAuditLogger(PROJECT_NAME);

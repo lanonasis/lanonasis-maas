@@ -21,10 +21,10 @@ if (isSilentMode) {
   console.debug = () => {};
 } else {
   // Redirect to stderr for debugging
-  console.log = (...args: any[]) => originalConsoleError('[MCP-LOG]', ...args);
-  console.error = (...args: any[]) => originalConsoleError('[MCP-ERROR]', ...args);
-  console.warn = (...args: any[]) => originalConsoleError('[MCP-WARN]', ...args);
-  console.info = (...args: any[]) => originalConsoleError('[MCP-INFO]', ...args);
+  console.log = (...args: unknown[]) => originalConsoleError('[MCP-LOG]', ...args);
+  console.error = (...args: unknown[]) => originalConsoleError('[MCP-ERROR]', ...args);
+  console.warn = (...args: unknown[]) => originalConsoleError('[MCP-WARN]', ...args);
+  console.info = (...args: unknown[]) => originalConsoleError('[MCP-INFO]', ...args);
 }
 
 // Disable colors and verbose output for MCP protocol compliance

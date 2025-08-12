@@ -9,14 +9,19 @@ const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY=REDACTED
 // import { supabase } from "@/integrations/supabase/client";
 
 // Determine correct redirect URL based on environment
-const getRedirectUrl = () => {
+export const getRedirectUrl = () => {
   if (typeof window === 'undefined') return 'https://dashboard.lanonasis.com';
   const isLocalDev = window.location.hostname === 'localhost';
   return isLocalDev ? window.location.origin : 'https://dashboard.lanonasis.com';
 };
 
-export const supabase = createClient<Database>(SUPABASE_URL=https://<project-ref>.supabase.co
-  auth: {
-    flowType: 'pkce'
+export const supabase = createClient<Database>(
+  SUPABASE_URL=https://<project-ref>.supabase.co
+  SUPABASE_PUBLISHABLE_KEY,
+  {
+    auth: {
+      redirectTo: getRedirectUrl(),
+      flowType: 'pkce',
+    },
   }
-});
+);
