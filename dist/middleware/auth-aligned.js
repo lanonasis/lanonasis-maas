@@ -1,6 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
-import { config } from '../config/environment';
-import { logger } from '../utils/logger';
+import { config } from '@/config/environment';
+import { logger } from '@/utils/logger';
 const supabase = createClient(config.SUPABASE_URL=https://<project-ref>.supabase.co
 /**
  * Authentication middleware aligned with Supabase auth system

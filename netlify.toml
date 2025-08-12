@@ -11,6 +11,8 @@
   NODE_VERSION = "18"
   # Build environment
   NODE_ENV = "production"
+  # Note: Supabase environment variables (SUPABASE_URL=https://<project-ref>.supabase.co
+  # must be set in Netlify Dashboard → Site Settings → Environment Variables
 
 # Headers for security and CORS
 [[headers]]

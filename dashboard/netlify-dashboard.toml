@@ -1,0 +1,45 @@
+[build]
+  command = "bun run build"
+  publish = "dist"
+
+[dev]
+  command = "bun run dev"
+  port = 8080
+  targetPort = 8080
+
+# Environment variables for dashboard
+[build.environment]
+  VITE_API_URL = "https://api.lanonasis.com"
+  VITE_APP_NAME = "Lanonasis MaaS Dashboard"
+  VITE_APP_URL = "https://maas.lanonasis.com"
+
+# API proxy to backend
+[[redirects]]
+  from = "/api/*"
+  to = "https://api.lanonasis.com/api/:splat"
+  status = 200
+  force = true
+  headers = {X-From = "dashboard"}
+
+# Health check proxy
+[[redirects]]
+  from = "/health"
+  to = "https://api.lanonasis.com/api/v1/health"
+  status = 200
+
+# SPA redirect rules - CRITICAL for React Router
+# This MUST come after API redirects
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+# Headers for security
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.gpteng.co; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://api.lanonasis.com https://*.supabase.co wss://*.supabase.co"
+    Permissions-Policy = "camera=(), microphone=(), geolocation=()"

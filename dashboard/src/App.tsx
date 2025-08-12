@@ -12,6 +12,7 @@ import Dashboard from "./pages/Dashboard";
 import NotFound from "./pages/NotFound";
 import ApiDocs from "./pages/ApiDocs";
 import ApiAnalytics from "./pages/ApiAnalytics";
+import OAuthAuthorize from "./pages/OAuthAuthorize";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -45,6 +46,8 @@ const App = () => (
               <Route path="/docs" element={<ApiDocs />} />
               <Route path="/api-analytics" element={<ApiAnalytics />} />
               <Route path="/mcp/connect" element={<Index />} />
+              <Route path="/oauth/authorize" element={<OAuthAuthorize />} />
+              <Route path="/device" element={<OAuthAuthorize />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>

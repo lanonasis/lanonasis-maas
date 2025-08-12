@@ -27,7 +27,7 @@ export const StatCard = ({
   return (
     <div
       className={cn(
-        "bg-card rounded-lg border border-border/60 p-5 transition-all duration-300 hover:shadow-subtle flex",
+        "bg-card rounded-lg border border-gray-200/60 dark:border-gray-700/60 p-5 transition-all duration-300 hover:shadow-subtle flex",
         className
       )}
     >

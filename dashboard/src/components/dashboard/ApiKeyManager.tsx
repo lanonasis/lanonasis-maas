@@ -418,7 +418,7 @@ export const ApiKeyManager = () => {
                           </div>
                         </div>
                         
-                        <div className="mt-3 pt-3 border-t border-border flex justify-between items-center">
+                        <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700 flex justify-between items-center">
                           <div className="text-xs">
                             Last used: {key.last_used ? formatDate(key.last_used) : "Never"}
                           </div>

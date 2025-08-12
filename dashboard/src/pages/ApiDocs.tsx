@@ -468,7 +468,7 @@ fetch('https://api.lanonasis.com/v1/memories', {
                   ))}
                 </div>
                 
-                <Card className="border border-border/60">
+                <Card className="border border-gray-200/60 dark:border-gray-700/60">
                   <CardHeader className="pb-2">
                     <CardTitle className="text-base">JavaScript SDK Example</CardTitle>
                   </CardHeader>

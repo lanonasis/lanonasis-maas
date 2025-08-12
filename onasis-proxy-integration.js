@@ -10,7 +10,7 @@ function setupMemoryServiceProxy(app) {
   console.log(`Setting up Memory Service proxy to: ${memoryServiceUrl}`);
 
   // Health check endpoint (direct)
-  app.get('/api/memory/health', async (req, res) => {
+  app.get('/api/v1/memory/health', async (req, res) => {
     try {
       const response = await fetch(`${memoryServiceUrl}/api/v1/health`);
       const data = await response.json();
@@ -34,7 +34,7 @@ function setupMemoryServiceProxy(app) {
     target: memoryServiceUrl,
     changeOrigin: true,
     pathRewrite: {
-      '^/api/memory': '/api/v1'  // Rewrite path
+      '^/api/v1/memory': '/api/v1/memory'  // Direct path mapping
     },
     onProxyReq: (proxyReq, req, res) => {
       // Add service identification headers
@@ -66,7 +66,7 @@ function setupMemoryServiceProxy(app) {
   });
 
   // Apply proxy to memory routes
-  app.use('/api/memory', memoryProxy);
+  app.use('/api/v1/memory', memoryProxy);
   
   // MCP Server proxy (if using MCP mode)
   if (process.env.ENABLE_MEMORY_MCP === 'true') {
@@ -75,11 +75,11 @@ function setupMemoryServiceProxy(app) {
       ws: true,
       changeOrigin: true,
       pathRewrite: {
-        '^/api/memory/mcp': '/'
+        '^/api/v1/memory/mcp': '/'
       }
     });
     
-    app.use('/api/memory/mcp', mcpProxy);
+    app.use('/api/v1/memory/mcp', mcpProxy);
   }
 }
 

@@ -9,7 +9,24 @@
 
 env = { }
 
-# Edge Functions (if any) can be mapped here
-# [[edge_functions]]
-# path = "/functions/*"
-# function = "<function-name>"
+# API proxy to backend
+[[redirects]]
+  from = "/api/*"
+  to = "https://api.lanonasis.com/:splat"
+  status = 200
+  force = true
+
+# SPA redirect rules - CRITICAL for React Router
+# This MUST come after API redirects to prevent overriding them
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+  
+# Headers for security
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"

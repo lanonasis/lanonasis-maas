@@ -104,7 +104,7 @@ fetch('https://api.lanonasis.com/v1/bank-statements/retrieve', {
               Upload bank statements in PDF, CSV, or image formats for automated extraction and processing.
             </p>
             
-            <div className="p-4 border-2 border-dashed border-border rounded-md text-center">
+            <div className="p-4 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-md text-center">
               <Upload className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
               <p className="text-sm font-medium">Drag & drop files or click to upload</p>
               <p className="text-xs text-muted-foreground mt-1">
