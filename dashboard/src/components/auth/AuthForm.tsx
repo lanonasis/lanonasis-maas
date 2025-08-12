@@ -4,7 +4,7 @@ import { Link } from "react-router-dom";
 import { AnimatedButton } from "../ui/AnimatedButton";
 import { cn } from "@/lib/utils";
 import { Eye, EyeOff } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, getRedirectUrl } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { GoogleIcon, GitHubIcon, LinkedInIcon, DiscordIcon, AppleIcon } from "../icons/social-providers";
 
@@ -117,16 +117,10 @@ export const AuthForm = ({ mode, onSubmit, isLoading = false }: AuthFormProps) =
 
   const handleSocialLogin = async (provider: 'google' | 'github' | 'linkedin' | 'discord' | 'apple') => {
     try {
-      // Determine correct redirect URL based on current domain
-      const isLocalDev = window.location.hostname === 'localhost';
-      const redirectUrl = isLocalDev 
-        ? `${window.location.origin}/dashboard`
-        : 'https://dashboard.lanonasis.com/dashboard';
-      
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider,
         options: {
-          redirectTo: redirectUrl,
+          redirectTo: `${getRedirectUrl()}/dashboard`,
           scopes: provider === 'github' ? 'read:user user:email' : undefined,
         }
       });

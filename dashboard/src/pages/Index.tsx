@@ -13,7 +13,9 @@ const Index = () => {
   // Redirect authenticated users to dashboard
   useEffect(() => {
     if (!isLoading && user) {
-      navigate('/dashboard');
+      console.log('Index page: Authenticated user detected, redirecting to dashboard');
+      // Use replace to avoid back button issues
+      navigate('/dashboard', { replace: true });
     }
   }, [user, isLoading, navigate]);
   return (
