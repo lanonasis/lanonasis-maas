@@ -18,7 +18,12 @@ const OAUTH_CONFIG = {
   scope: process.env.OAUTH_SCOPE || 'memory:read memory:write api:access mcp:connect',
   authorizationEndpoint: '/oauth/authorize',
   tokenEndpoint: '/oauth/token',
-  expiresIn: '1h'
+  expiresIn: '1h',
+  clients: {
+    'lanonasis_mcp_client_2024': {
+      redirectUris: ['https://dashboard.lanonasis.com/auth/oauth/callback', 'https://api.lanonasis.com/auth/oauth/callback']
+    }
+  } as Record<string, { redirectUris: string[] }>
 };
 
 // In-memory store for authorization codes (use Redis in production)
@@ -67,7 +72,8 @@ router.get('/authorize', (req, res) => {
   } = validation.data;
 
   // Validate client_id
-  if (!OAUTH_CONFIG.clients[client_id]) {
+  const clientConfig = OAUTH_CONFIG.clients[client_id];
+  if (!clientConfig) {
     res.status(400).json({
       error: 'invalid_client',
       error_description: 'Invalid client ID'
@@ -76,7 +82,7 @@ router.get('/authorize', (req, res) => {
   }
 
   // Validate redirect_uri
-  if (!OAUTH_CONFIG.clients[client_id].redirectUris.includes(redirect_uri)) {
+  if (!clientConfig.redirectUris.includes(redirect_uri)) {
     res.status(400).json({
       error: 'invalid_request',
       error_description: 'Invalid redirect URI'
@@ -105,12 +111,13 @@ router.get('/authorize', (req, res) => {
 
   try {
     res.redirect(`${redirect_uri}?${params.toString()}`);
-  } catch (error) {
+  } catch (err) {
     res.status(500).json({
-      error: 'invalid_grant',
-      error_description: 'Redirect URI mismatch'
+      error: 'server_error',
+      error_description: 'Internal server error'
     });
-  }
+    return;
+  }  
 });
 
 /**
@@ -135,13 +142,12 @@ router.post('/token', async (req, res) => {
     });
   }
 
-  const { 
-    grant_type, 
-    code, 
-    redirect_uri, 
-    client_id, 
+  const {
+    code,
+    redirect_uri,
+    client_id,
     client_secret,
-    code_verifier 
+    code_verifier
   } = validation.data;
 
   // Validate client credentials
@@ -212,17 +218,18 @@ router.post('/token', async (req, res) => {
   authorizationCodes.delete(code);
 
   // Generate access token
+  const jwtSecret = process.env.JWT_SECRET || 'fallback-secret-key';
   const accessToken = jwt.sign(
     {
       client_id,
       scope: codeData.scope,
       aud: 'lanonasis-mcp-api',
-      iss: 'https://api.lanonasis.com'
+      iss: 'https://api.lanonasis.com',
+      jti: crypto.randomUUID()
     },
-    process.env.JWT_SECRET!,
+    jwtSecret,
     { 
-      expiresIn: OAUTH_CONFIG.expiresIn,
-      jwtid: crypto.randomUUID()
+      expiresIn: '1h'
     }
   );
 
@@ -234,7 +241,7 @@ router.post('/token', async (req, res) => {
       aud: 'lanonasis-mcp-api',
       iss: 'https://api.lanonasis.com'
     },
-    process.env.JWT_SECRET!,
+    jwtSecret,
     { 
       expiresIn: '7d',
       jwtid: crypto.randomUUID()
@@ -248,6 +255,7 @@ router.post('/token', async (req, res) => {
     refresh_token: refreshToken,
     scope: codeData.scope
   });
+  return;
 });
 
 /**

@@ -208,13 +208,13 @@ export class ExecutionAgent extends BaseAgent {
         endpoint: apiCall.endpoint,
         headers,
         body: apiCall.body,
-        timeout: apiCall.timeout
+        timeout: apiCall.timeout || 30000
       });
 
       return {
         success: result.success,
         data: result.data,
-        error: result.error,
+        error: result.error || '',
         metadata: {
           api_call: {
             method: apiCall.method,
@@ -485,7 +485,7 @@ export class ExecutionAgent extends BaseAgent {
     
     // Look for "tagged with" or "tags:"
     const tagMatch = input.match(/(?:tagged with|tags:)\s*([^.!?]+)/i);
-    if (tagMatch) {
+    if (tagMatch && tagMatch[1]) {
       const additionalTags = tagMatch[1].split(/[,\s]+/).filter(tag => tag.length > 0);
       tags.push(...additionalTags);
     }
