@@ -3,7 +3,10 @@
  * Handles actual execution of memory operations and external API calls
  */
 
-import { BaseAgent, AgentConfig, AgentRequest, AgentResponse, AgentContext } from './base-agent.js';
+import { BaseAgent, AgentConfig, AgentRequest, AgentResponse, AgentContext } from './base-agent';
+
+// Use globalThis for Node.js globals to avoid redeclaration errors
+const { AbortController, setTimeout, clearTimeout } = globalThis;
 
 interface MemoryOperation {
   type: 'create' | 'search' | 'update' | 'delete' | 'list';
@@ -119,19 +122,21 @@ export class ExecutionAgent extends BaseAgent {
           };
           break;
 
-        case 'update':
+        case 'update': {
           if (!payload.id) {
             throw new Error('Memory ID required for update operation');
           }
           endpoint = `/api/v1/memory/${payload.id}`;
           method = 'PUT';
-          body = {} as Record<string, any>;
-          if (payload.title) (body as any).title = payload.title;
-          if (payload.content) (body as any).content = payload.content;
-          if (payload.memory_type) (body as any).memory_type = payload.memory_type;
-          if (payload.tags) (body as any).tags = payload.tags;
-          if (payload.metadata) (body as any).metadata = payload.metadata;
+          const updateBody: Record<string, unknown> = {};
+          if (payload.title) updateBody.title = payload.title;
+          if (payload.content) updateBody.content = payload.content;
+          if (payload.memory_type) updateBody.memory_type = payload.memory_type;
+          if (payload.tags) updateBody.tags = payload.tags;
+          if (payload.metadata) updateBody.metadata = payload.metadata;
+          body = updateBody;
           break;
+        }
 
         case 'delete':
           if (!payload.id) {
@@ -382,8 +387,8 @@ export class ExecutionAgent extends BaseAgent {
       ? request.endpoint 
       : `${this.apiBaseUrl}${request.endpoint}`;
 
-    const controller = new (globalThis.AbortController || AbortController)();
-    const timeoutId = (globalThis.setTimeout || setTimeout)(() => {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => {
       controller.abort();
     }, request.timeout || 30000);
 
