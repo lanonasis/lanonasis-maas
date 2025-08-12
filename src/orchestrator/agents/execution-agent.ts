@@ -125,13 +125,12 @@ export class ExecutionAgent extends BaseAgent {
           }
           endpoint = `/api/v1/memory/${payload.id}`;
           method = 'PUT';
-          body = {
-            ...(payload.title && { title: payload.title }),
-            ...(payload.content && { content: payload.content }),
-            ...(payload.memory_type && { memory_type: payload.memory_type }),
-            ...(payload.tags && { tags: payload.tags }),
-            ...(payload.metadata && { metadata: payload.metadata })
-          };
+          body = {} as Record<string, any>;
+          if (payload.title) (body as any).title = payload.title;
+          if (payload.content) (body as any).content = payload.content;
+          if (payload.memory_type) (body as any).memory_type = payload.memory_type;
+          if (payload.tags) (body as any).tags = payload.tags;
+          if (payload.metadata) (body as any).metadata = payload.metadata;
           break;
 
         case 'delete':
@@ -142,17 +141,17 @@ export class ExecutionAgent extends BaseAgent {
           method = 'DELETE';
           break;
 
-        case 'list':
+        case 'list': {
           const queryParams = new URLSearchParams();
           if (payload.limit) queryParams.append('limit', String(payload.limit));
           if (payload.memory_type) queryParams.append('memory_type', String(payload.memory_type));
           if (payload.tags && Array.isArray(payload.tags)) {
             queryParams.append('tags', (payload.tags as string[]).join(','));
           }
-          
           endpoint = `/api/v1/memory${queryParams.toString() ? '?' + queryParams.toString() : ''}`;
           method = 'GET';
           break;
+        }
 
         default:
           throw new Error(`Unsupported memory operation: ${type}`);
@@ -167,13 +166,14 @@ export class ExecutionAgent extends BaseAgent {
         method,
         endpoint,
         headers,
-        body
+        body,
+        timeout: 30000
       });
 
       return {
         success: result.success,
         data: result.data,
-        error: result.error,
+        error: result.error || '',
         metadata: {
           operation: type,
           endpoint,
@@ -386,12 +386,17 @@ export class ExecutionAgent extends BaseAgent {
     const timeoutId = setTimeout(() => controller.abort(), request.timeout || 30000);
 
     try {
-      const response = await fetch(url, {
+      const fetchOptions: RequestInit = {
         method: request.method,
         headers: request.headers || this.defaultHeaders,
-        body: request.body ? JSON.stringify(request.body) : undefined,
         signal: controller.signal
-      });
+      };
+      
+      if (request.body) {
+        fetchOptions.body = JSON.stringify(request.body);
+      }
+      
+      const response = await fetch(url, fetchOptions);
 
       clearTimeout(timeoutId);
 
