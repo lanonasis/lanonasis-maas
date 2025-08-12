@@ -1,4 +1,4 @@
-import { logRequest } from '../utils/logger';
+import { logRequest } from '@/utils/logger';
 export const requestLogger = (req, res, next) => {
     const startTime = Date.now();
     // Capture the original res.end function

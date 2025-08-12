@@ -18,7 +18,7 @@ const Index = () => {
         <div className="container relative px-4 md:px-6">
           <div className="flex flex-col items-center text-center">
             <div className="animate-slide-down">
-              <div className="inline-flex items-center rounded-full border border-border/60 bg-background/80 backdrop-blur-sm px-3 py-1 text-sm font-medium text-foreground mb-6">
+              <div className="inline-flex items-center rounded-full border border-gray-200/60 dark:border-gray-700/60 bg-background/80 backdrop-blur-sm px-3 py-1 text-sm font-medium text-foreground mb-6">
                 <span className="flex h-2 w-2 rounded-full bg-accent mr-2"></span>
                 <span>Introducing Lanonasis</span>
               </div>
@@ -46,8 +46,8 @@ const Index = () => {
             </div>
             
             {/* Browser Frame */}
-            <div className="animate-scale-in w-full max-w-5xl mx-auto rounded-lg overflow-hidden shadow-subtle-xl border border-border/60 bg-card/60 backdrop-blur-sm">
-              <div className="h-12 flex items-center px-4 border-b border-border/60 bg-secondary/50">
+            <div className="animate-scale-in w-full max-w-5xl mx-auto rounded-lg overflow-hidden shadow-subtle-xl border border-gray-200/60 dark:border-gray-700/60 bg-card/60 backdrop-blur-sm">
+              <div className="h-12 flex items-center px-4 border-b border-gray-200/60 dark:border-gray-700/60 bg-secondary/50">
                 <div className="flex space-x-2">
                   <div className="h-3 w-3 rounded-full bg-destructive/80"></div>
                   <div className="h-3 w-3 rounded-full bg-accent/80"></div>
@@ -83,7 +83,7 @@ const Index = () => {
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {/* Feature 1 */}
-            <div className="bg-card border border-border/60 rounded-lg p-6 transition-all duration-300 hover:shadow-subtle-md">
+            <div className="bg-card border border-gray-200/60 dark:border-gray-700/60 rounded-lg p-6 transition-all duration-300 hover:shadow-subtle-md">
               <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center mb-5">
                 <Zap className="h-6 w-6 text-primary" />
               </div>
@@ -102,7 +102,7 @@ const Index = () => {
             </div>
             
             {/* Feature 2 */}
-            <div className="bg-card border border-border/60 rounded-lg p-6 transition-all duration-300 hover:shadow-subtle-md">
+            <div className="bg-card border border-gray-200/60 dark:border-gray-700/60 rounded-lg p-6 transition-all duration-300 hover:shadow-subtle-md">
               <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center mb-5">
                 <Shield className="h-6 w-6 text-primary" />
               </div>
@@ -121,7 +121,7 @@ const Index = () => {
             </div>
             
             {/* Feature 3 */}
-            <div className="bg-card border border-border/60 rounded-lg p-6 transition-all duration-300 hover:shadow-subtle-md">
+            <div className="bg-card border border-gray-200/60 dark:border-gray-700/60 rounded-lg p-6 transition-all duration-300 hover:shadow-subtle-md">
               <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center mb-5">
                 <Clock className="h-6 w-6 text-primary" />
               </div>
@@ -140,7 +140,7 @@ const Index = () => {
             </div>
             
             {/* Feature 4 */}
-            <div className="bg-card border border-border/60 rounded-lg p-6 transition-all duration-300 hover:shadow-subtle-md">
+            <div className="bg-card border border-gray-200/60 dark:border-gray-700/60 rounded-lg p-6 transition-all duration-300 hover:shadow-subtle-md">
               <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center mb-5">
                 <CreditCard className="h-6 w-6 text-primary" />
               </div>
@@ -159,7 +159,7 @@ const Index = () => {
             </div>
             
             {/* Feature 5 */}
-            <div className="bg-card border border-border/60 rounded-lg p-6 transition-all duration-300 hover:shadow-subtle-md">
+            <div className="bg-card border border-gray-200/60 dark:border-gray-700/60 rounded-lg p-6 transition-all duration-300 hover:shadow-subtle-md">
               <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center mb-5">
                 <UserCheck className="h-6 w-6 text-primary" />
               </div>
@@ -178,7 +178,7 @@ const Index = () => {
             </div>
             
             {/* Feature 6 */}
-            <div className="bg-card border border-border/60 rounded-lg p-6 transition-all duration-300 hover:shadow-subtle-md">
+            <div className="bg-card border border-gray-200/60 dark:border-gray-700/60 rounded-lg p-6 transition-all duration-300 hover:shadow-subtle-md">
               <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center mb-5">
                 <FileText className="h-6 w-6 text-primary" />
               </div>
@@ -255,7 +255,7 @@ const Index = () => {
               </div>
             </div>
             
-            <div className="bg-secondary p-6 rounded-lg border border-border">
+            <div className="bg-secondary p-6 rounded-lg border border-gray-200 dark:border-gray-700">
               <div className="text-sm font-mono overflow-x-auto">
                 <pre className="text-muted-foreground">
                   <code>

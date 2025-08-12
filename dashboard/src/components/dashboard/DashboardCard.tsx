@@ -24,14 +24,14 @@ export const DashboardCard = ({
   return (
     <div 
       className={cn(
-        "bg-card rounded-lg border border-border/60 transition-all duration-300 hover:shadow-subtle",
+        "bg-card rounded-lg border border-gray-200/60 dark:border-gray-700/60 transition-all duration-300 hover:shadow-subtle",
         fullHeight && "h-full",
         className
       )}
     >
       {/* Card Header */}
       {(title || subtitle || headerAction) && (
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between p-5 border-b border-border/60">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between p-5 border-b border-gray-200/60 dark:border-gray-700/60">
           <div>
             {title && (
               <h3 className="text-base font-medium leading-6 text-foreground">

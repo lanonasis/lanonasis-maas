@@ -137,7 +137,7 @@ export const AuthForm = ({ mode, onSubmit, isLoading = false }: AuthFormProps) =
   };
 
   return (
-    <div className="bg-card shadow-subtle-md rounded-lg border border-border/60 w-full max-w-md mx-auto overflow-hidden">
+    <div className="bg-card shadow-subtle-md rounded-lg border border-gray-200/60 dark:border-gray-700/60 w-full max-w-md mx-auto overflow-hidden">
       <div className="p-8">
         <div className="text-center mb-6">
           <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
@@ -280,7 +280,7 @@ export const AuthForm = ({ mode, onSubmit, isLoading = false }: AuthFormProps) =
           <div className="mt-6">
             <div className="relative">
               <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-border"></div>
+                <div className="w-full border-t border-gray-200 dark:border-gray-700"></div>
               </div>
               <div className="relative flex justify-center text-xs uppercase">
                 <span className="bg-card px-2 text-muted-foreground">Or continue with</span>
