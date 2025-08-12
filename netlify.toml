@@ -60,6 +60,19 @@
   to = "/.netlify/functions/api"
   status = 200
 
+# Domain-specific routing for api.lanonasis.com - API endpoints only
+[[redirects]]
+  from = "/dashboard"
+  to = "https://dashboard.lanonasis.com/dashboard"
+  status = 301
+  conditions = {Host = ["api.lanonasis.com"]}
+
+[[redirects]]
+  from = "/auth/*"
+  to = "https://dashboard.lanonasis.com/auth/:splat"
+  status = 301
+  conditions = {Host = ["api.lanonasis.com"]}
+
 # Documentation routing for docs.lanonasis.com domain
 [[redirects]]
   from = "/*"
@@ -67,8 +80,16 @@
   status = 200
   conditions = {Host = ["docs.lanonasis.com"]}
 
-# SPA routing configuration - React app handles all routes (MUST come after API routes)
+# Dashboard domain routing - SPA handles all routes for dashboard.lanonasis.com
 [[redirects]]
   from = "/*"
   to = "/index.html"
   status = 200
+  conditions = {Host = ["dashboard.lanonasis.com"]}
+
+# API domain routing - serve API documentation/landing page for api.lanonasis.com
+[[redirects]]
+  from = "/*"
+  to = "/.netlify/functions/api"
+  status = 200
+  conditions = {Host = ["api.lanonasis.com"]}
