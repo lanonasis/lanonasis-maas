@@ -12,7 +12,7 @@ type AuthMode = "login" | "register" | "forgot-password";
 
 interface AuthFormProps {
   mode: AuthMode;
-  onSubmit: (data: any) => void;
+  onSubmit: (data: Record<string, string>) => void;
   isLoading?: boolean;
 }
 
@@ -117,20 +117,27 @@ export const AuthForm = ({ mode, onSubmit, isLoading = false }: AuthFormProps) =
 
   const handleSocialLogin = async (provider: 'google' | 'github' | 'linkedin' | 'discord' | 'apple') => {
     try {
+      // Determine correct redirect URL based on current domain
+      const isLocalDev = window.location.hostname === 'localhost';
+      const redirectUrl = isLocalDev 
+        ? `${window.location.origin}/dashboard`
+        : 'https://dashboard.lanonasis.com/dashboard';
+      
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider,
         options: {
-          redirectTo: `${window.location.origin}/dashboard`,
+          redirectTo: redirectUrl,
           scopes: provider === 'github' ? 'read:user user:email' : undefined,
         }
       });
 
       if (error) throw error;
       
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : `Failed to login with ${provider}`;
       toast({
         title: "Login failed",
-        description: error.message || `Failed to login with ${provider}`,
+        description: errorMessage,
         variant: "destructive",
       });
     }

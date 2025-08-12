@@ -1,44 +1,35 @@
 /**
- * Netlify Edge Function middleware for lanonasis-maas
+ * Netlify Edge Functions Middleware
  * 
- * This middleware enforces JWT validation and project scope checking
+ * This middleware provides authentication and audit logging
  * for all Edge Functions in the lanonasis-maas project.
  */
 
+/* eslint-env browser, node */
+/* global Response, console, process, URL, Headers */
+
 // Local security utilities to avoid dependency resolution issues in Netlify
-const createErrorResponse = (message: string, statusCode: number = 400): Response => {
+const createErrorResponse = (message, statusCode = 400) => {
   return new Response(JSON.stringify({ error: message }), {
     status: statusCode,
     headers: { 'Content-Type': 'application/json' }
   });
 };
 
-interface AuditLogger {
-  log: (event: string, details: unknown) => void;
-  logFunctionCall: (functionName: string, userId: string, projectScope: string) => void;
-}
-
-const createAuditLogger = (projectName: string): AuditLogger => {
+const createAuditLogger = (projectName) => {
   return {
-    log: (event: string, details: unknown) => {
+    log: (event, details) => {
       console.log(`[${projectName}] ${event}:`, details);
     },
-    logFunctionCall: (functionName: string, userId: string, projectScope: string) => {
+    logFunctionCall: (functionName, userId, projectScope) => {
       console.log(`[${projectName}] Function call: ${functionName}, User: ${userId}, Scope: ${projectScope}`);
     }
   };
 };
 
-interface ValidationResult {
-  isValid: boolean;
-  error?: string;
-  userId?: string;
-  projectScope?: string;
-}
-
-const createJWTMiddleware = (_config: unknown) => {
-  return async (request: Request): Promise<ValidationResult> => {
-    // Basic JWT validation placeholder
+const createJWTMiddleware = (_config) => {
+  return async (request) => {
+    // Basic JWT validation placeholder (config unused in placeholder implementation)
     const authHeader = request.headers.get('Authorization');
     if (!authHeader?.startsWith('Bearer ')) {
       return {
@@ -80,7 +71,7 @@ const PUBLIC_PATHS = [
 /**
  * Main middleware handler
  */
-export default async function middleware(request: Request): Promise<Response | void> {
+export default async function middleware(request) {
   const url = new URL(request.url);
   const pathname = url.pathname;
 

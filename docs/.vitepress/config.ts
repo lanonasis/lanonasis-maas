@@ -1,6 +1,5 @@
 import { defineConfig } from 'vitepress'
 
-// @ts-ignore
 export default defineConfig({
   title: 'Lanonasis Memory Service',
   description: 'Complete documentation for Lanonasis Memory as a Service (MaaS)',
