@@ -2,6 +2,7 @@
   "name": "@lanonasis/docs",
   "version": "1.0.0",
   "description": "Lanonasis Memory Service Documentation Site",
+  "type": "module",
   "private": true,
   "scripts": {
     "dev": "vitepress dev",

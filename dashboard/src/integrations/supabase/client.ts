@@ -8,9 +8,15 @@ const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY=REDACTED
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";
 
+// Determine correct redirect URL based on environment
+const getRedirectUrl = () => {
+  if (typeof window === 'undefined') return 'https://dashboard.lanonasis.com';
+  const isLocalDev = window.location.hostname === 'localhost';
+  return isLocalDev ? window.location.origin : 'https://dashboard.lanonasis.com';
+};
+
 export const supabase = createClient<Database>(SUPABASE_URL=https://<project-ref>.supabase.co
   auth: {
-    redirectTo: window.location.origin,
     flowType: 'pkce'
   }
 });
