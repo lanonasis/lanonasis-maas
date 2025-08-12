@@ -1,10 +1,21 @@
 import { Layout } from "@/components/layout/Layout";
 import { AnimatedButton } from "@/components/ui/AnimatedButton";
 import { Button } from "@/components/ui/button";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { ArrowRight, CheckCircle, Shield, Zap, Clock, CreditCard, UserCheck, FileText, Code } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
+import { useEffect } from "react";
 
 const Index = () => {
+  const { user, isLoading } = useAuth();
+  const navigate = useNavigate();
+
+  // Redirect authenticated users to dashboard
+  useEffect(() => {
+    if (!isLoading && user) {
+      navigate('/dashboard');
+    }
+  }, [user, isLoading, navigate]);
   return (
     <Layout>
       {/* Hero Section */}
@@ -33,9 +44,9 @@ const Index = () => {
             </p>
             
             <div className="animate-slide-up flex flex-col sm:flex-row gap-4 mb-12">
-              <Link to="/auth/register">
+              <Link to={user ? "/dashboard" : "/auth/register"}>
                 <AnimatedButton size="lg" className="min-w-[160px]">
-                  Get Started <ArrowRight className="ml-2 h-4 w-4" />
+                  {user ? "Go to Dashboard" : "Get Started"} <ArrowRight className="ml-2 h-4 w-4" />
                 </AnimatedButton>
               </Link>
               <Link to="#features">
