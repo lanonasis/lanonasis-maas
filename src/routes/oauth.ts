@@ -49,10 +49,11 @@ router.get('/authorize', (req, res) => {
 
   const validation = schema.safeParse(req.query);
   if (!validation.success) {
-    return res.status(400).json({
+    res.status(400).json({
       error: 'invalid_request',
       error_description: 'Invalid authorization request parameters'
     });
+    return;
   }
 
   const { 
@@ -66,19 +67,21 @@ router.get('/authorize', (req, res) => {
   } = validation.data;
 
   // Validate client_id
-  if (client_id !== OAUTH_CONFIG.clientId) {
-    return res.status(400).json({
+  if (!OAUTH_CONFIG.clients[client_id]) {
+    res.status(400).json({
       error: 'invalid_client',
       error_description: 'Invalid client ID'
     });
+    return;
   }
 
   // Validate redirect_uri
-  if (redirect_uri !== OAUTH_CONFIG.redirectUri) {
-    return res.status(400).json({
+  if (!OAUTH_CONFIG.clients[client_id].redirectUris.includes(redirect_uri)) {
+    res.status(400).json({
       error: 'invalid_request',
       error_description: 'Invalid redirect URI'
     });
+    return;
   }
 
   // Generate authorization code
@@ -89,8 +92,8 @@ router.get('/authorize', (req, res) => {
     clientId: client_id,
     redirectUri: redirect_uri,
     scope,
-    codeChallenge: code_challenge,
-    codeChallengeMethod: code_challenge_method,
+    ...(code_challenge && { codeChallenge: code_challenge }),
+    ...(code_challenge_method && { codeChallengeMethod: code_challenge_method }),
     expiresAt: Date.now() + 10 * 60 * 1000 // 10 minutes
   });
 
@@ -100,7 +103,14 @@ router.get('/authorize', (req, res) => {
     ...(state && { state })
   });
 
-  res.redirect(`${OAUTH_CONFIG.redirectUri}?${params.toString()}`);
+  try {
+    res.redirect(`${redirect_uri}?${params.toString()}`);
+  } catch (error) {
+    res.status(500).json({
+      error: 'invalid_grant',
+      error_description: 'Redirect URI mismatch'
+    });
+  }
 });
 
 /**

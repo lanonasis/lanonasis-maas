@@ -245,14 +245,16 @@ export class EmbeddingAgent extends BaseAgent {
           const index = uncachedIndices[i];
           const embedding = item.embedding;
           
-          // Cache the result
-          this.cache.set(this.getCacheKey(text), embedding);
-          
-          results[index] = {
-            text,
-            embedding,
-            cached: false
-          };
+          // Cache the result - ensure text is defined
+          if (text && index !== undefined) {
+            this.cache.set(this.getCacheKey(text), embedding);
+            
+            results[index] = {
+              text,
+              embedding,
+              cached: false
+            };
+          }
         });
 
       } catch (error) {
@@ -336,9 +338,11 @@ export class EmbeddingAgent extends BaseAgent {
     let normB = 0;
 
     for (let i = 0; i < vecA.length; i++) {
-      dotProduct += vecA[i] * vecB[i];
-      normA += vecA[i] * vecA[i];
-      normB += vecB[i] * vecB[i];
+      const a = vecA[i] ?? 0;
+      const b = vecB[i] ?? 0;
+      dotProduct += a * b;
+      normA += a * a;
+      normB += b * b;
     }
 
     normA = Math.sqrt(normA);
