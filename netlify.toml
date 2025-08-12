@@ -60,6 +60,13 @@
   to = "/.netlify/functions/api"
   status = 200
 
+# Documentation routing for docs.lanonasis.com domain
+[[redirects]]
+  from = "/*"
+  to = "/docs/:splat"
+  status = 200
+  conditions = {Host = ["docs.lanonasis.com"]}
+
 # SPA routing configuration - React app handles all routes (MUST come after API routes)
 [[redirects]]
   from = "/*"
