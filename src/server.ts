@@ -23,6 +23,8 @@ import metricsRoutes from '@/routes/metrics';
 import apiKeyRoutes from '@/routes/api-keys';
 import mcpApiKeyRoutes from '@/routes/mcp-api-keys';
 import mcpSseRoutes from '@/routes/mcp-sse';
+import emergencyRoutes from '@/routes/emergency-admin';
+import oauthRoutes from '@/routes/oauth';
 
 const app = express();
 
@@ -259,6 +261,15 @@ app.use(`${config.API_PREFIX}/${config.API_VERSION}/health`, healthRoutes);
 
 // Authentication routes (no auth required for login/register)
 app.use(`${config.API_PREFIX}/${config.API_VERSION}/auth`, authRoutes);
+
+// OAuth routes (no auth required for OAuth flow)
+app.use(`${config.API_PREFIX}/${config.API_VERSION}`, oauthRoutes);
+
+// Emergency admin route (TEMPORARY - REMOVE AFTER SETUP)
+if (process.env.EMERGENCY_BOOTSTRAP_TOKEN) {
+  app.use(`${config.API_PREFIX}/${config.API_VERSION}`, emergencyRoutes);
+  console.warn('⚠️  EMERGENCY ADMIN ROUTE ACTIVE - Remove after initial setup!');
+}
 
 // Protected routes
 app.use(`${config.API_PREFIX}/${config.API_VERSION}/memory`, authMiddleware, memoryRoutes);

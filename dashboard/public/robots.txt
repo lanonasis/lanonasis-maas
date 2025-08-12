@@ -1,14 +1,33 @@
-User-agent: Googlebot
+# Robots.txt for Lan Onasis
+# https://lanonasis.com
+
+# Allow all robots
+User-agent: *
 Allow: /
 
-User-agent: Bingbot
+# Disallow admin or private areas (if any)
+# Disallow: /admin/
+# Disallow: /api/
+
+# Crawl-delay for respectful crawling
+Crawl-delay: 1
+
+# Sitemap location
+Sitemap: https://lanonasis.com/sitemap.xml
+
+# Allow social media crawlers for better social sharing
+User-agent: facebookexternalhit/*
 Allow: /
 
 User-agent: Twitterbot
 Allow: /
 
-User-agent: facebookexternalhit
+User-agent: LinkedInBot
 Allow: /
 
-User-agent: *
-Allow: /
+# Block bad bots (optional)
+User-agent: AhrefsBot
+Disallow: /
+
+User-agent: SemrushBot
+Crawl-delay: 10

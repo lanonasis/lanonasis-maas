@@ -22,7 +22,7 @@ export const routingConfig: RoutingConfig = {
   fallbackToDirectSupabase: true,
   
   // Direct Supabase URL for fallback
-  supabaseUrl: process.env.SUPABASE_URL || 'https://mxtsdgkwzjzlttpotole.supabase.co',
+  supabaseUrl: process.env.SUPABASE_URL || 'https://your-project.supabase.co',
   
   // Service routing map - orchestrator actions to unified router endpoints
   routingMap: {
@@ -38,10 +38,10 @@ export const routingConfig: RoutingConfig = {
     'transcribe': '/api/transcribe',
     
     // Memory operations - can be direct or through router
-    'memory-search': '/api/memory/search',
-    'memory-create': '/api/memory',
-    'memory-update': '/api/memory',
-    'memory-delete': '/api/memory',
+    'memory-search': '/api/v1/memory/search',
+    'memory-create': '/api/v1/memory',
+    'memory-update': '/api/v1/memory',
+    'memory-delete': '/api/v1/memory',
     
     // MCP tools through unified router
     'mcp': '/api/mcp-handler'

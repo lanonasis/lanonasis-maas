@@ -3,10 +3,10 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { v4 as uuidv4 } from 'uuid';
 import { createClient } from '@supabase/supabase-js';
-import { config } from '../config/environment';
-import { logger } from '../utils/logger';
-import { asyncHandler } from '../middleware/errorHandler';
-import { loginSchema, registerSchema } from '../types/auth';
+import { config } from '@/config/environment';
+import { logger } from '@/utils/logger';
+import { asyncHandler } from '@/middleware/errorHandler';
+import { loginSchema, registerSchema } from '@/types/auth';
 const router = Router();
 const supabase = createClient(config.SUPABASE_URL, config.SUPABASE_SERVICE_KEY);
 /**

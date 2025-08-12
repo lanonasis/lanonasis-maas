@@ -1,6 +1,6 @@
 # 🔗 MCP Remote Connection Guide
 
-Connect external MCP clients (like Claude Desktop) to your Lanonasis Memory Service via `mcp.lanonasis.com/sse`.
+Connect external MCP clients (like Claude Desktop) to your Lanonasis Memory Service via `api.lanonasis.com/sse`.
 
 ## 🎯 **Overview**
 
@@ -19,7 +19,7 @@ Add this configuration to your Claude Desktop MCP settings:
       "command": "npx",
       "args": [
         "@modelcontextprotocol/server-sse",
-        "https://mcp.lanonasis.com/sse"
+        "https://api.lanonasis.com/sse"
       ],
       "env": {
         "MCP_API_KEY": "your-lanonasis-api-key-here"
@@ -35,7 +35,7 @@ Connect to the SSE endpoint with API key authentication:
 
 ```javascript
 const eventSource = new EventSource(
-  'https://mcp.lanonasis.com/sse?client_id=my-client',
+  'https://api.lanonasis.com/sse?client_id=my-client',
   {
     headers: {
       'X-API-Key': 'your-lanonasis-api-key'

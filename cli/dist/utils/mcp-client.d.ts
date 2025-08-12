@@ -14,12 +14,20 @@ interface MCPToolArgs {
 /**
  * Interface for MCP tool response
  */
-interface MCPToolResponse {
+export interface MCPToolResponse {
     result?: unknown;
     error?: {
         code: number;
         message: string;
     };
+    id?: string;
+    title?: string;
+    memory_type?: string;
+    length?: number;
+    forEach?: (callback: (item: any, index: number) => void) => void;
+    code?: number;
+    message?: string;
+    response?: any;
 }
 /**
  * Interface for MCP WebSocket messages

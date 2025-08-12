@@ -1,10 +1,11 @@
 {
   "name": "@lanonasis/cli",
-  "version": "1.2.2",
+  "version": "1.4.1",
   "description": "LanOnasis Enterprise CLI - Memory as a Service, API Key Management, and Infrastructure Orchestration",
   "main": "dist/index-simple.js",
   "bin": {
     "lanonasis": "dist/index-simple.js",
+    "lanonasis-mcp-server": "dist/mcp-server.js",
     "memory": "dist/index-simple.js",
     "maas": "dist/index-simple.js"
   },
@@ -40,6 +41,7 @@
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.17.0",
     "@types/eventsource": "^1.1.15",
+    "@types/ws": "^8.18.1",
     "axios": "^1.11.0",
     "chalk": "^5.4.1",
     "cli-table3": "^0.6.5",
@@ -52,7 +54,8 @@
     "open": "^10.2.0",
     "ora": "^8.2.0",
     "table": "^6.9.0",
-    "word-wrap": "^1.2.5"
+    "word-wrap": "^1.2.5",
+    "ws": "^8.18.3"
   },
   "devDependencies": {
     "@types/inquirer": "^9.0.7",

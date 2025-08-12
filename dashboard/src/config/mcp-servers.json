@@ -1,0 +1,150 @@
+{
+  "mcpServers": {
+    "hostinger-api": {
+      "command": "node",
+      "args": [
+        "/Users/seyederick/DevOps/_project_folders/hostinger-api-mcp-server/server.js"
+      ],
+      "env": {
+        "APITOKEN": "YOUR_HOSTINGER_API_TOKEN_HERE"
+      }
+    },
+    "Context7": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@upstash/context7-mcp"
+      ]
+    },
+    "@21st-dev/magic": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@21st-dev/magic@latest",
+        "API_KEY=YOUR_MAGIC_API_KEY_HERE"
+      ]
+    },
+    "perplexity-ask": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "server-perplexity-ask"
+      ],
+      "env": {
+        "PERPLEXITY_API_KEY": "YOUR_PERPLEXITY_API_KEY_HERE"
+      }
+    },
+    "github-mcp-server": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-github"
+      ],
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "YOUR_GITHUB_PAT_HERE"
+      }
+    },
+    "supabase-mcp-server": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@supabase/mcp-server-supabase@latest",
+        "--access-token",
+        "YOUR_SUPABASE_ACCESS_TOKEN_HERE"
+      ],
+      "env": {}
+    },
+    "stripe": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@stripe/mcp",
+        "--tools=all",
+        "--api-key=YOUR_STRIPE_API_KEY_HERE"
+      ],
+      "env": {}
+    },
+    "sequential-thinking": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-sequential-thinking"
+      ]
+    },
+    "browserbase": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@browserbasehq/mcp"
+      ],
+      "env": {
+        "BROWSERBASE_API_KEY": "YOUR_BROWSERBASE_API_KEY_HERE",
+        "BROWSERBASE_PROJECT_ID": "YOUR_BROWSERBASE_PROJECT_ID_HERE"
+      }
+    },
+    "playwright": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@playwright/mcp@latest"
+      ],
+      "env": {}
+    },
+    "brave-search": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-brave-search"
+      ],
+      "env": {
+        "BRAVE_API_KEY": "optional_but_gets_better_results"
+      }
+    },
+    "puppeteer": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-puppeteer"
+      ],
+      "env": {}
+    },
+    "browserbase2": {
+      "command": "npx",
+      "args": [
+        "@browserbasehq/mcp",
+        "--proxies",
+        "--advancedStealth",
+        "--browserHeight",
+        "1080",
+        "--browserWidth",
+        "1920"
+      ],
+      "env": {
+        "BROWSERBASE_API_KEY": "YOUR_BROWSERBASE_API_KEY_HERE",
+        "BROWSERBASE_PROJECT_ID": "YOUR_BROWSERBASE_PROJECT_ID_HERE"
+      }
+    },
+    "picsart": {
+      "command": "node",
+      "args": [
+        "/Users/seyederick/DevOps/_project_folders/picsart-mcp-server/dist/index.js"
+      ],
+      "env": {
+        "PICSART_API_KEY": "YOUR_PICSART_API_KEY_HERE"
+      }
+    },
+    "lanonasis": {
+      "command": "lanonasis",
+      "args": [
+        "mcp",
+        "connect",
+        "--server",
+        "remote"
+      ],
+      "env": {
+        "LANONASIS_API_KEY": "sk_live_superadmin_placeholder",
+        "LANONASIS_API_URL": "https://api.lanonasis.com"
+      }
+    }
+  }
+}

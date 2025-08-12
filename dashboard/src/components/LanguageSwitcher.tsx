@@ -31,7 +31,7 @@ export const LanguageSwitcher: React.FC = () => {
     <div className="relative">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-2 px-3 py-2 text-sm border border-border rounded-lg hover:bg-accent hover:text-accent-foreground transition-colors"
+        className="flex items-center gap-2 px-3 py-2 text-sm border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-accent hover:text-accent-foreground transition-colors"
         aria-label="Select Language"
       >
         <Globe className="h-4 w-4" />
@@ -49,7 +49,7 @@ export const LanguageSwitcher: React.FC = () => {
           />
           
           {/* Dropdown */}
-          <div className="absolute right-0 top-full mt-2 w-64 bg-popover border border-border rounded-lg shadow-lg z-50 overflow-hidden">
+          <div className="absolute right-0 top-full mt-2 w-64 bg-popover border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-50 overflow-hidden">
             <div className="p-1">
               {languages.map((lang) => (
                 <button
@@ -71,7 +71,7 @@ export const LanguageSwitcher: React.FC = () => {
             </div>
             
             {/* Footer */}
-            <div className="px-3 py-2 bg-muted/50 border-t border-border">
+            <div className="px-3 py-2 bg-muted/50 border-t border-gray-200 dark:border-gray-700">
               <p className="text-xs text-muted-foreground text-center">
                 🌐 SaaS Platform Translations
               </p>

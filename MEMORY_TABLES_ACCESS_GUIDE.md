@@ -28,8 +28,8 @@ https://mxtsdgkwzjzlttpotole.supabase.co/rest/v1/
 
 ### **Authentication Headers Required:**
 ```http
-apikey: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im14dHNkZ2t3emp6bHR0cG90b2xlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDcxMDUyNTksImV4cCI6MjA2MjY4MTI1OX0.2KM8JxBEsqQidSvjhuLs8HCX-7g-q6YNswedQ5ZYq3g
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im14dHNkZ2t3emp6bHR0cG90b2xlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDcxMDUyNTksImV4cCI6MjA2MjY4MTI1OX0.2KM8JxBEsqQidSvjhuLs8HCX-7g-q6YNswedQ5ZYq3g
+apikey: your_supabase_anon_key_here
+Authorization: Bearer your_supabase_anon_key_here
 Content-Type: application/json
 ```
 
@@ -205,7 +205,7 @@ curl -H "apikey: [ANON_KEY]" \
 
 ```bash
 # Test connection and list first memory
-curl -s -H "apikey: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im14dHNkZ2t3emp6bHR0cG90b2xlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDcxMDUyNTksImV4cCI6MjA2MjY4MTI1OX0.2KM8JxBEsqQidSvjhuLs8HCX-7g-q6YNswedQ5ZYq3g" \
+curl -s -H "apikey: your_supabase_anon_key_here" \
      "https://mxtsdgkwzjzlttpotole.supabase.co/rest/v1/agent_banks_memories?limit=1"
 ```
 

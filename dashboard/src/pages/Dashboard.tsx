@@ -1,8 +1,9 @@
 
 import { useEffect } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { Layout } from "@/components/layout/Layout";
 import { ApiDashboard } from "@/components/dashboard/ApiDashboard";
+import MCPServerManager from "@/components/mcp/MCPServerManager";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Home, Sun, Moon, Laptop } from "lucide-react";
@@ -40,12 +41,12 @@ const Dashboard = () => {
     <Layout>
       <div className="container mx-auto py-8">
         <div className="flex justify-between items-center mb-6">
-          <Link to="/">
-            <Button variant="outline" size="sm" className="gap-2">
+          <Button asChild variant="outline" size="sm" className="gap-2">
+            <a href="https://www.lanonasis.com">
               <Home className="h-4 w-4" />
               Return to Homepage
-            </Button>
-          </Link>
+            </a>
+          </Button>
           
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -79,7 +80,10 @@ const Dashboard = () => {
           </DropdownMenu>
         </div>
         
-        <ApiDashboard />
+        <div className="space-y-8">
+          <ApiDashboard />
+          <MCPServerManager />
+        </div>
       </div>
     </Layout>
   );
