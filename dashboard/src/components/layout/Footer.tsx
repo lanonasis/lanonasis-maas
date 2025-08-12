@@ -7,7 +7,7 @@ export const Footer = () => {
   const year = new Date().getFullYear();
   
   return (
-    <footer className="border-t border-border/40 bg-background py-12">
+    <footer className="border-t border-gray-200/40 dark:border-gray-700/40 bg-background py-12">
       <div className="container mx-auto px-4">
         <div className="grid grid-cols-1 gap-8 md:grid-cols-4">
           {/* Brand Section */}
@@ -205,7 +205,7 @@ export const Footer = () => {
           </div>
         </div>
 
-        <div className="mt-12 border-t border-border/40 pt-8 flex flex-col md:flex-row justify-between items-center">
+        <div className="mt-12 border-t border-gray-200/40 dark:border-gray-700/40 pt-8 flex flex-col md:flex-row justify-between items-center">
           <p className="text-sm text-muted-foreground mb-4 md:mb-0">
             © {year} Lanonasis. All rights reserved.
           </p>

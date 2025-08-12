@@ -42,8 +42,8 @@ JWT_SECRET=REDACTED_JWT_SECRET
 
 ```env
 # ❌ NEVER COMMIT - Current fresh API keys:
-SUPABASE_KEY=REDACTED_JWT
-
+SUPABASE_KEY=your_supabase_anon_key_here
+# Service role key (keep secret!)
 SUPABASE_SERVICE_KEY=REDACTED_SUPABASE_SERVICE_ROLE_KEY
 ```
 
