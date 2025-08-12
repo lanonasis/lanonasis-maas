@@ -208,11 +208,14 @@ export class EmbeddingAgent extends BaseAgent {
     texts.forEach((text, index) => {
       const cacheKey = this.getCacheKey(text);
       if (this.cache.has(cacheKey)) {
-        results[index] = {
-          text,
-          embedding: this.cache.get(cacheKey)!,
-          cached: true
-        };
+        const cachedEmbedding = this.cache.get(cacheKey);
+        if (cachedEmbedding) {
+          results[index] = {
+            text,
+            embedding: cachedEmbedding,
+            cached: true
+          };
+        }
       } else {
         uncachedTexts.push(text);
         uncachedIndices.push(index);
