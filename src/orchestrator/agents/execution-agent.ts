@@ -382,8 +382,10 @@ export class ExecutionAgent extends BaseAgent {
       ? request.endpoint 
       : `${this.apiBaseUrl}${request.endpoint}`;
 
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), request.timeout || 30000);
+    const controller = new (globalThis.AbortController || AbortController)();
+    const timeoutId = (globalThis.setTimeout || setTimeout)(() => {
+      controller.abort();
+    }, request.timeout || 30000);
 
     try {
       const fetchOptions: RequestInit = {
@@ -398,7 +400,7 @@ export class ExecutionAgent extends BaseAgent {
       
       const response = await fetch(url, fetchOptions);
 
-      clearTimeout(timeoutId);
+      (globalThis.clearTimeout || clearTimeout)(timeoutId);
 
       const data = await response.json().catch(() => null);
 
@@ -415,7 +417,7 @@ export class ExecutionAgent extends BaseAgent {
       };
 
     } catch (error) {
-      clearTimeout(timeoutId);
+      (globalThis.clearTimeout || clearTimeout)(timeoutId);
       
       if ((error as Error).name === 'AbortError') {
         return {
