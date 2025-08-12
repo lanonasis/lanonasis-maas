@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { JWTPayload } from '@/types/auth';
+import { JWTPayload } from '../types/auth';
 export interface UnifiedUser extends JWTPayload {
     id?: string;
     email?: string;
