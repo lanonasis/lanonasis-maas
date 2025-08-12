@@ -14,7 +14,7 @@ const supabase = createClient(
 )
 
 // Netlify function handler
-exports.handler = async (event, _context) => {
+exports.handler = async (event) => {
   // Handle CORS preflight
   if (event.httpMethod === 'OPTIONS') {
     return {
@@ -209,17 +209,16 @@ exports.handler = async (event, _context) => {
   }
 }
 
-// Helper function to format SSE data
-function formatSSEData(data) {
-  return `data: ${JSON.stringify(data)}\n\n`
-}
+// Helper functions commented out - currently unused due to Netlify limitations
+// function formatSSEData(data) {
+//   return `data: ${JSON.stringify(data)}\n\n`;
+// }
 
-// Helper function to send SSE event
-function sendSSEEvent(eventType, data, connectionId) {
-  return formatSSEData({
-    type: eventType,
-    data,
-    timestamp: new Date().toISOString(),
-    connectionId
-  })
-}
+// const sendSSEEvent = (data, event = 'message', id = null) => {
+//   return formatSSEData({
+//     type: event,
+//     data,
+//     timestamp: new Date().toISOString(),
+//     connectionId: id
+//   });
+// };
