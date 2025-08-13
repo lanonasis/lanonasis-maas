@@ -13,12 +13,15 @@ const Auth = () => {
   const { signIn, signUp, resetPassword, isLoading, user } = useAuth();
   const [mode, setMode] = useState<"login" | "register" | "forgot-password">("login");
   
-  // Redirect if already logged in
+  // Redirect if already logged in - but only if not on root path
   useEffect(() => {
-    if (user) {
+    if (user && location.pathname !== '/') {
+      navigate('/dashboard');
+    } else if (user && location.pathname === '/') {
+      // For root path, show a welcome back message and provide dashboard link
       navigate('/dashboard');
     }
-  }, [user, navigate]);
+  }, [user, navigate, location.pathname]);
 
   // Set mode based on URL
   useEffect(() => {
