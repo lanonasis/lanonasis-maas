@@ -64,7 +64,7 @@ export class CLIConfig {
   getApiUrl(): string {
     return process.env.MEMORY_API_URL || 
            this.config.apiUrl || 
-           'https://dashboard.lanonasis.com/api/v1';
+           'http://localhost:3000/api/v1';  // Use local backend for testing
   }
 
   async setApiUrl(url: string): Promise<void> {
@@ -158,7 +158,7 @@ export class CLIConfig {
   }
 
   getMCPServerUrl(): string {
-    return this.config.mcpServerUrl || 'https://dashboard.lanonasis.com';
+    return this.config.mcpServerUrl || 'http://localhost:3000';  // Use local backend for testing
   }
 
   shouldUseRemoteMCP(): boolean {

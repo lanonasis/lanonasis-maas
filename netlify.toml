@@ -1,113 +1,79 @@
 [build]
-  # Build command includes dashboard and functions using Bun
-  command = "bun install && bun run build && cd dashboard && bun install && bun run build"
-  # Directory to publish
-  publish = "dashboard/dist"
-  # Functions directory
+  command = "bun install && bun run build"
   functions = "netlify/functions"
+  publish = "dashboard/dist"
 
 [build.environment]
-  # Node.js version for Netlify functions compatibility
-  NODE_VERSION = "18"
-  # Build environment
-  NODE_ENV = "production"
-  # Note: Supabase environment variables (SUPABASE_URL, SUPABASE_SERVICE_KEY) 
-  # must be set in Netlify Dashboard → Site Settings → Environment Variables
+  NODE_VERSION = "20"
 
-# Headers for security and CORS
-[[headers]]
-  for = "/*"
-  [headers.values]
-    X-Frame-Options = "SAMEORIGIN"
-    X-Content-Type-Options = "nosniff"
-    X-XSS-Protection = "1; mode=block"
-    Referrer-Policy = "strict-origin-when-cross-origin"
-
-# MCP SSE endpoints MUST come first before API routes
-[[redirects]]
-  from = "/mcp/sse"
-  to = "/.netlify/functions/mcp-sse"
-  status = 200
-
+# SSE endpoint redirects - high priority for both domains
 [[redirects]]
   from = "/sse"
   to = "/.netlify/functions/mcp-sse"
   status = 200
+  force = true
 
-# API routes handled by Netlify functions (MUST come before catch-all)
 [[redirects]]
-  from = "/api/v1/orchestrate"
-  to = "/.netlify/functions/orchestrate"
+  from = "/mcp/sse"
+  to = "/.netlify/functions/mcp-sse"
+  status = 200
+  force = true
+
+# Domain-specific redirects for MCP and Dashboard domains
+
+# MCP domain configuration
+[[redirects]]
+  from = "https://mcp.lanonasis.com/sse"
+  to = "/.netlify/functions/mcp-sse"
+  status = 200
+  force = true
+  
+[[redirects]]
+  from = "https://mcp.lanonasis.com/*"
+  to = "/.netlify/functions/mcp-sse"
+  status = 200
+  force = true
+
+# Dashboard domain configuration
+[[redirects]]
+  from = "https://dashboard.lanonasis.com/api/*"
+  to = "https://api.lanonasis.com/api/:splat"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "https://dashboard.lanonasis.com/*"
+  to = "/index.html"
   status = 200
 
+# API redirects - fixed paths
 [[redirects]]
   from = "/api/v1/*"
   to = "/.netlify/functions/api/:splat"
   status = 200
+  force = true
 
-[[redirects]]  
+[[redirects]]
   from = "/api/*"
   to = "/.netlify/functions/api/:splat"
   status = 200
+  force = true
 
-# Root endpoint handled by React dashboard (landing page integrated into SPA)
-# Removed redirect to API function - dashboard now serves landing page
+[functions]
+  directory = "netlify/functions"
+  node_bundler = "esbuild"
 
-# Health and metrics endpoints
-[[redirects]]
-  from = "/health"
-  to = "/.netlify/functions/api"
-  status = 200
+[context.production.environment]
+  LANONASIS_ENV = "production"
 
-[[redirects]]
-  from = "/metrics"
-  to = "/.netlify/functions/api"
-  status = 200
+[context.deploy-preview.environment]
+  LANONASIS_ENV = "preview"
 
-# Domain-specific routing for api.lanonasis.com - Redirect auth/dashboard to dashboard domain
-[[redirects]]
-  from = "/dashboard*"
-  to = "https://dashboard.lanonasis.com/dashboard"
-  status = 302
-  conditions = {Host = ["api.lanonasis.com"]}
+[context.branch-deploy.environment]
+  LANONASIS_ENV = "development"
 
-[[redirects]]
-  from = "/auth*"
-  to = "https://dashboard.lanonasis.com/"
-  status = 302
-  conditions = {Host = ["api.lanonasis.com"]}
-
-[[redirects]]
-  from = "/"
-  to = "https://dashboard.lanonasis.com/"
-  status = 302
-  conditions = {Host = ["api.lanonasis.com"]}
-
-# Documentation routing for docs.lanonasis.com domain
-[[redirects]]
-  from = "/*"
-  to = "/docs/:splat"
-  status = 200
-  conditions = {Host = ["docs.lanonasis.com"]}
-
-# Dashboard domain routing - SPA handles all routes for dashboard.lanonasis.com
-# Auth callback handling for OAuth - MUST come before SPA catch-all
-[[redirects]]
-  from = "/auth/callback*"
-  to = "/index.html"
-  status = 200
-  conditions = {Host = ["dashboard.lanonasis.com"]}
-
-# All other dashboard routes - SPA handles routing
+# SPA fallback - lowest priority (after all API and SSE routes)
 [[redirects]]
   from = "/*"
   to = "/index.html"
   status = 200
-  conditions = {Host = ["dashboard.lanonasis.com"]}
-
-# API domain routing - serve API function for api.lanonasis.com (MUST be LAST)
-[[redirects]]
-  from = "/*"
-  to = "/.netlify/functions/api"
-  status = 200
-  conditions = {Host = ["api.lanonasis.com"]}

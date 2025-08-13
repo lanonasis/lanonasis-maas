@@ -39,7 +39,7 @@ export class CLIConfig {
     getApiUrl() {
         return process.env.MEMORY_API_URL ||
             this.config.apiUrl ||
-            'https://dashboard.lanonasis.com/api/v1';
+            'http://localhost:3000/api/v1'; // Use local backend for testing
     }
     async setApiUrl(url) {
         this.config.apiUrl = url;
@@ -120,7 +120,7 @@ export class CLIConfig {
         return this.config.mcpServerPath || path.join(__dirname, '../../../../onasis-gateway/mcp-server/server.js');
     }
     getMCPServerUrl() {
-        return this.config.mcpServerUrl || 'https://dashboard.lanonasis.com';
+        return this.config.mcpServerUrl || 'http://localhost:3000'; // Use local backend for testing
     }
     shouldUseRemoteMCP() {
         const preference = this.config.mcpPreference || 'auto';
