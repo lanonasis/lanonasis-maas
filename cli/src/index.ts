@@ -95,7 +95,7 @@ process.on('unhandledRejection', (reason, promise) => {
 // Enhanced welcome message
 const showWelcome = () => {
   console.log();
-  console.log(colors.primary('🚀 LanOnasis Enterprise CLI v1.2.0'));
+  console.log(colors.primary('🚀 LanOnasis Enterprise CLI v1.4.2'));
   console.log(colors.info('━'.repeat(50)));
   console.log(colors.highlight('Enterprise-grade Memory as a Service, API Management & Infrastructure Orchestration'));
   console.log();

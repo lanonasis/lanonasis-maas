@@ -1,22 +1,86 @@
 {
   "version": 2,
-  "buildCommand": "cd dashboard && npm install && npm run build",
-  "outputDirectory": "dashboard/dist",
-  "installCommand": "npm install",
-  "framework": null,
-  "functions": {},
-  "rewrites": [
+  "name": "lanonasis-developer",
+  "builds": [
     {
-      "source": "/api/(.*)",
-      "destination": "https://api.lanonasis.com/api/$1"
+      "src": "dashboard/package.json",
+      "use": "@vercel/static-build",
+      "config": {
+        "distDir": "dist"
+      }
     },
     {
-      "source": "/sse",
-      "destination": "https://api.lanonasis.com/sse"
+      "src": "api/functions/api.js",
+      "use": "@vercel/node"
+    },
+    {
+      "src": "api/functions/mcp-sse.js", 
+      "use": "@vercel/node"
+    },
+    {
+      "src": "api/functions/orchestrate.js",
+      "use": "@vercel/node"
+    }
+  ],
+  "functions": {
+    "api/functions/api.js": {
+      "maxDuration": 30
+    },
+    "api/functions/mcp-sse.js": {
+      "maxDuration": 300
+    },
+    "api/functions/orchestrate.js": {
+      "maxDuration": 60
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/api/v1/health",
+      "destination": "/api/functions/api"
+    },
+    {
+      "source": "/api/v1/orchestrate",
+      "destination": "/api/functions/orchestrate"
+    },
+    {
+      "source": "/api/v1/(.*)",
+      "destination": "/api/functions/api"
     },
     {
       "source": "/mcp/sse",
-      "destination": "https://api.lanonasis.com/mcp/sse"
+      "destination": "/api/functions/mcp-sse"
+    },
+    {
+      "source": "/sse",
+      "destination": "/api/functions/mcp-sse"
+    },
+    {
+      "source": "/health",
+      "destination": "/api/functions/api"
+    },
+    {
+      "source": "/metrics",
+      "destination": "/api/functions/api"
+    },
+    {
+      "source": "/dashboard",
+      "destination": "/dashboard.html"
+    },
+    {
+      "source": "/dashboard/(.*)",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/docs",
+      "destination": "/docs/index.html"
+    },
+    {
+      "source": "/docs/(.*)",
+      "destination": "/docs/$1"
+    },
+    {
+      "source": "/",
+      "destination": "/index.html"
     },
     {
       "source": "/(.*)",
@@ -42,11 +106,51 @@
         {
           "key": "Referrer-Policy",
           "value": "strict-origin-when-cross-origin"
+        },
+        {
+          "key": "Access-Control-Allow-Origin",
+          "value": "*"
+        },
+        {
+          "key": "Access-Control-Allow-Methods",
+          "value": "GET, POST, PUT, DELETE, OPTIONS"
+        },
+        {
+          "key": "Access-Control-Allow-Headers",
+          "value": "Content-Type, Authorization, X-API-Key"
+        }
+      ]
+    },
+    {
+      "source": "/api/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-cache"
+        }
+      ]
+    },
+    {
+      "source": "/mcp/sse",
+      "headers": [
+        {
+          "key": "Content-Type",
+          "value": "text/event-stream"
+        },
+        {
+          "key": "Cache-Control",
+          "value": "no-cache"
+        },
+        {
+          "key": "Connection",
+          "value": "keep-alive"
         }
       ]
     }
   ],
   "env": {
-    "NODE_VERSION": "18"
-  }
+    "NODE_VERSION": "18",
+    "NODE_ENV": "production"
+  },
+  "regions": ["iad1"]
 }
