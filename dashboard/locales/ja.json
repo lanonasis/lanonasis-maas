@@ -1,10 +1,93 @@
 {
   "app": {
-    "name": "Lanonasis Memory Service",
+    "name": "Lanonasis メモリーサービス",
     "tagline": "エンタープライズ向け金融ソリューション"
   },
+  "common": {
+    "buttons": {
+      "save": "保存",
+      "cancel": "キャンセル",
+      "submit": "送信",
+      "delete": "削除",
+      "edit": "編集",
+      "add": "追加",
+      "create": "作成",
+      "back": "戻る",
+      "next": "次へ",
+      "previous": "前へ",
+      "copy": "コピー",
+      "view": "表示",
+      "addCustomCategory": "カスタムカテゴリを追加",
+      "viewApiReference": "APIリファレンスを表示",
+      "viewDetails": "詳細を表示",
+      "backToDashboard": "ダッシュボードに戻る",
+      "viewCompletePricing": "完全な料金を表示",
+      "sdkDocumentation": "SDKドキュメント",
+      "githubRepository": "GitHubリポジトリ"
+    },
+    "labels": {
+      "name": "名前",
+      "email": "メールアドレス",
+      "password": "パスワード",
+      "fullName": "氏名",
+      "categoryName": "カテゴリ名",
+      "parentCategory": "親カテゴリ",
+      "keywordPatterns": "キーワードパターン",
+      "responseFormat": "レスポンス形式",
+      "enableAiAnalysis": "AI分析を有効にする",
+      "mlConfidenceThreshold": "ML信頼度しきい値",
+      "customBranding": "カスタムブランディング",
+      "whiteLabelReports": "ホワイトラベルレポート",
+      "embeddableWidgets": "埋め込み可能なウィジェット",
+      "pdfExport": "PDFエクスポート",
+      "amount": "金額",
+      "cardNumber": "カード番号",
+      "expiryDate": "月/年",
+      "cvc": "セキュリティコード"
+    },
+    "placeholders": {
+      "fullName": "氏名",
+      "email": "name@example.com",
+      "password": "••••••••",
+      "confirmPassword": "••••••••",
+      "categoryName": "例：事業費用",
+      "parentCategorySelect": "選択するか、トップレベルの場合は空白のままにしてください",
+      "keywordPatterns": "キーワードをカンマで区切って入力",
+      "selectAnalysisType": "分析タイプを選択",
+      "selectTimeframe": "期間を選択",
+      "select": "選択",
+      "amount": "金額",
+      "cardNumber": "4242 4242 4242 4242",
+      "expiryDate": "MM/YY",
+      "cvc": "CVC"
+    },
+    "messages": {
+      "loading": "読み込み中...",
+      "error": "エラーが発生しました",
+      "success": "操作が正常に完了しました",
+      "welcome": "ようこそ、{{name}}さん"
+    },
+    "badges": {
+      "interactive": "インタラクティブ"
+    },
+    "ariaLabels": {
+      "selectLanguage": "言語を選択",
+      "pagination": "ページネーション",
+      "goToPreviousPage": "前のページへ移動",
+      "goToNextPage": "次のページへ移動",
+      "breadcrumb": "パンくずリスト",
+      "toggleSidebar": "サイドバーの切り替え",
+      "themeSettings": "テーマ設定",
+      "copyApiKey": "APIキーをコピー",
+      "github": "GitHub",
+      "twitter": "Twitter",
+      "linkedin": "LinkedIn",
+      "email": "メール"
+    }
+  },
   "dashboard": {
-    "title": "ビジネスダッシュボード",
+    "title": "APIダッシュボード",
+    "subtitle": "APIサービス一式の管理と統合",
     "overview": "ビジネス概要",
     "revenue": "収益",
     "expenses": "事業費用",
@@ -18,6 +101,64 @@
     "documentation": "APIドキュメント",
     "rate_limits": "レート制限",
     "webhooks": "ウェブフック"
+  },
+  "banking": {
+    "statements": {
+      "title": "銀行取引明細書",
+      "insights": {
+        "title": "財務インサイトエンジン",
+        "subtitle": "財務データの高度な分析",
+        "insightTypes": {
+          "title": "インサイトの種類",
+          "subtitle": "利用可能な財務インサイト"
+        },
+        "interactiveReports": {
+          "title": "インタラクティブ財務レポート",
+          "subtitle": "ユーザー向けの豊富でインタラクティブなレポートを生成"
+        },
+        "customizationOptions": "カスタマイズオプション",
+        "spendingDistribution": "支出分布",
+        "financialTrends": "財務トレンド"
+      },
+      "docs": {
+        "title": "APIドキュメント",
+        "subtitle": "実装ガイドとリファレンス",
+        "quickStartGuide": "クイックスタートガイド",
+        "interactiveApiExplorer": "インタラクティブAPIエクスプローラー"
+      },
+      "categorize": {
+        "title": "取引カテゴリ分類",
+        "subtitle": "銀行取引の自動分類",
+        "categoryHierarchy": {
+          "title": "カテゴリ階層",
+          "subtitle": "標準化された取引カテゴリ"
+        },
+        "customCategories": {
+          "title": "カスタムカテゴリ",
+          "subtitle": "独自の取引カテゴリを作成"
+        },
+        "categories": {
+          "transportation": "交通費",
+          "shopping": "ショッピング"
+        }
+      },
+      "retrieve": {
+        "title": "銀行取引明細書の取得",
+        "subtitle": "財務明細書への直接APIアクセス",
+        "uploadProcess": {
+          "title": "アップロード＆処理",
+          "subtitle": "処理のための明細書を提出"
+        },
+        "dataQualityControls": {
+          "title": "データ品質管理",
+          "subtitle": "高品質な明細書データを確保"
+        },
+        "supportedInstitutions": {
+          "title": "対応金融機関",
+          "subtitle": "当社のAPIと互換性のある銀行および金融サービス"
+        }
+      }
+    }
   },
   "analytics": {
     "title": "分析",

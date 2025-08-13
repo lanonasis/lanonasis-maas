@@ -3,8 +3,91 @@
     "name": "Lanonasis Memory Service",
     "tagline": "Решения для управления финансами на уровне предприятия"
   },
+  "common": {
+    "buttons": {
+      "save": "Сохранить",
+      "cancel": "Отмена",
+      "submit": "Отправить",
+      "delete": "Удалить",
+      "edit": "Редактировать",
+      "add": "Добавить",
+      "create": "Создать",
+      "back": "Назад",
+      "next": "Далее",
+      "previous": "Предыдущий",
+      "copy": "Копировать",
+      "view": "Просмотреть",
+      "addCustomCategory": "Добавить пользовательскую категорию",
+      "viewApiReference": "Просмотреть API-справочник",
+      "viewDetails": "Просмотреть детали",
+      "backToDashboard": "Вернуться к панели управления",
+      "viewCompletePricing": "Просмотреть полное ценообразование",
+      "sdkDocumentation": "Документация SDK",
+      "githubRepository": "Репозиторий GitHub"
+    },
+    "labels": {
+      "name": "Имя",
+      "email": "Электронная почта",
+      "password": "Пароль",
+      "fullName": "Полное имя",
+      "categoryName": "Название категории",
+      "parentCategory": "Родительская категория",
+      "keywordPatterns": "Шаблоны ключевых слов",
+      "responseFormat": "Формат ответа",
+      "enableAiAnalysis": "Включить AI-анализ",
+      "mlConfidenceThreshold": "Порог уверенности ML",
+      "customBranding": "Индивидуальный брендинг",
+      "whiteLabelReports": "Отчёты без указания бренда",
+      "embeddableWidgets": "Встраиваемые виджеты",
+      "pdfExport": "Экспорт в PDF",
+      "amount": "Сумма",
+      "cardNumber": "Номер карты",
+      "expiryDate": "ММ/ГГ",
+      "cvc": "CVC"
+    },
+    "placeholders": {
+      "fullName": "Полное имя",
+      "email": "name@example.com",
+      "password": "••••••••",
+      "confirmPassword": "••••••••",
+      "categoryName": "например, Бизнес-расходы",
+      "parentCategorySelect": "Выберите или оставьте пустым для верхнего уровня",
+      "keywordPatterns": "Введите ключевые слова через запятую",
+      "selectAnalysisType": "Выберите тип анализа",
+      "selectTimeframe": "Выберите временной интервал",
+      "select": "Выбрать",
+      "amount": "Сумма",
+      "cardNumber": "4242 4242 4242 4242",
+      "expiryDate": "ММ/ГГ",
+      "cvc": "CVC"
+    },
+    "messages": {
+      "loading": "Загрузка...",
+      "error": "Произошла ошибка",
+      "success": "Операция успешно завершена",
+      "welcome": "Добро пожаловать, {{name}}"
+    },
+    "badges": {
+      "interactive": "Интерактивный"
+    },
+    "ariaLabels": {
+      "selectLanguage": "Выбрать язык",
+      "pagination": "пагинация",
+      "goToPreviousPage": "Перейти на предыдущую страницу",
+      "goToNextPage": "Перейти на следующую страницу",
+      "breadcrumb": "хлебные крошки",
+      "toggleSidebar": "Переключить боковую панель",
+      "themeSettings": "Настройки темы",
+      "copyApiKey": "Скопировать API-ключ",
+      "github": "GitHub",
+      "twitter": "Twitter",
+      "linkedin": "LinkedIn",
+      "email": "Электронная почта"
+    }
+  },
   "dashboard": {
-    "title": "Бизнес-панель",
+    "title": "Панель управления API",
+    "subtitle": "Управляйте и интегрируйтесь с нашим набором API-сервисов",
     "overview": "Обзор бизнеса",
     "revenue": "Доход",
     "expenses": "Расходы бизнеса",
@@ -18,6 +101,64 @@
     "documentation": "Документация API",
     "rate_limits": "Ограничения скорости",
     "webhooks": "Вебхуки"
+  },
+  "banking": {
+    "statements": {
+      "title": "Банковские выписки",
+      "insights": {
+        "title": "Модуль финансовой аналитики",
+        "subtitle": "Продвинутая аналитика финансовых данных",
+        "insightTypes": {
+          "title": "Типы аналитики",
+          "subtitle": "Доступные финансовые аналитические данные"
+        },
+        "interactiveReports": {
+          "title": "Интерактивные финансовые отчёты",
+          "subtitle": "Создавайте насыщенные, интерактивные отчёты для ваших пользователей"
+        },
+        "customizationOptions": "Варианты настройки",
+        "spendingDistribution": "Распределение расходов",
+        "financialTrends": "Финансовые тенденции"
+      },
+      "docs": {
+        "title": "Документация API",
+        "subtitle": "Руководства по внедрению и справочные материалы",
+        "quickStartGuide": "Руководство по быстрому старту",
+        "interactiveApiExplorer": "Интерактивный исследователь API"
+      },
+      "categorize": {
+        "title": "Категоризация транзакций",
+        "subtitle": "Автоматическая классификация банковских транзакций",
+        "categoryHierarchy": {
+          "title": "Иерархия категорий",
+          "subtitle": "Стандартизированные категории транзакций"
+        },
+        "customCategories": {
+          "title": "Пользовательские категории",
+          "subtitle": "Создавайте собственные категории транзакций"
+        },
+        "categories": {
+          "transportation": "Транспорт",
+          "shopping": "Покупки"
+        }
+      },
+      "retrieve": {
+        "title": "Получение банковских выписок",
+        "subtitle": "Прямой доступ к финансовым выпискам через API",
+        "uploadProcess": {
+          "title": "Загрузка и обработка",
+          "subtitle": "Отправляйте выписки для обработки"
+        },
+        "dataQualityControls": {
+          "title": "Контроль качества данных",
+          "subtitle": "Обеспечьте высокое качество данных выписок"
+        },
+        "supportedInstitutions": {
+          "title": "Поддерживаемые учреждения",
+          "subtitle": "Банки и финансовые услуги, совместимые с нашим API"
+        }
+      }
+    }
   },
   "analytics": {
     "title": "Аналитика",

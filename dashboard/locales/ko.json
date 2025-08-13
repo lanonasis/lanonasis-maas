@@ -1,10 +1,93 @@
 {
   "app": {
-    "name": "Lanonasis Memory Service",
+    "name": "Lanonasis 메모리 서비스",
     "tagline": "기업 금융 솔루션"
   },
+  "common": {
+    "buttons": {
+      "save": "저장",
+      "cancel": "취소",
+      "submit": "제출",
+      "delete": "삭제",
+      "edit": "편집",
+      "add": "추가",
+      "create": "생성",
+      "back": "뒤로",
+      "next": "다음",
+      "previous": "이전",
+      "copy": "복사",
+      "view": "보기",
+      "addCustomCategory": "사용자 정의 카테고리 추가",
+      "viewApiReference": "API 참조 보기",
+      "viewDetails": "세부 정보 보기",
+      "backToDashboard": "대시보드로 돌아가기",
+      "viewCompletePricing": "전체 가격 보기",
+      "sdkDocumentation": "SDK 문서",
+      "githubRepository": "GitHub 저장소"
+    },
+    "labels": {
+      "name": "이름",
+      "email": "이메일",
+      "password": "비밀번호",
+      "fullName": "성명",
+      "categoryName": "카테고리 이름",
+      "parentCategory": "상위 카테고리",
+      "keywordPatterns": "키워드 패턴",
+      "responseFormat": "응답 형식",
+      "enableAiAnalysis": "AI 분석 활성화",
+      "mlConfidenceThreshold": "ML 신뢰도 임계값",
+      "customBranding": "맞춤 브랜딩",
+      "whiteLabelReports": "화이트 라벨 보고서",
+      "embeddableWidgets": "임베드 가능한 위젯",
+      "pdfExport": "PDF 내보내기",
+      "amount": "금액",
+      "cardNumber": "카드 번호",
+      "expiryDate": "MM/YY",
+      "cvc": "CVC"
+    },
+    "placeholders": {
+      "fullName": "전체 이름",
+      "email": "name@example.com",
+      "password": "••••••••",
+      "confirmPassword": "••••••••",
+      "categoryName": "예: 비즈니스 지출",
+      "parentCategorySelect": "선택하거나 최상위 수준은 비워두기",
+      "keywordPatterns": "쉼표로 구분된 키워드 입력",
+      "selectAnalysisType": "분석 유형 선택",
+      "selectTimeframe": "기간 선택",
+      "select": "선택",
+      "amount": "금액",
+      "cardNumber": "4242 4242 4242 4242",
+      "expiryDate": "MM/YY",
+      "cvc": "CVC"
+    },
+    "messages": {
+      "loading": "로딩 중...",
+      "error": "오류가 발생했습니다",
+      "success": "작업이 성공적으로 완료되었습니다",
+      "welcome": "환영합니다, {{name}}님"
+    },
+    "badges": {
+      "interactive": "인터랙티브"
+    },
+    "ariaLabels": {
+      "selectLanguage": "언어 선택",
+      "pagination": "페이지네이션",
+      "goToPreviousPage": "이전 페이지로 이동",
+      "goToNextPage": "다음 페이지로 이동",
+      "breadcrumb": "경로 탐색",
+      "toggleSidebar": "사이드바 전환",
+      "themeSettings": "테마 설정",
+      "copyApiKey": "API 키 복사",
+      "github": "깃허브",
+      "twitter": "트위터",
+      "linkedin": "링크드인",
+      "email": "이메일"
+    }
+  },
   "dashboard": {
-    "title": "비즈니스 대시보드",
+    "title": "API 대시보드",
+    "subtitle": "API 서비스 제품군 관리 및 통합",
     "overview": "비즈니스 개요",
     "revenue": "수익",
     "expenses": "비즈니스 지출",
@@ -18,6 +101,64 @@
     "documentation": "API 문서",
     "rate_limits": "요청 제한",
     "webhooks": "웹훅"
+  },
+  "banking": {
+    "statements": {
+      "title": "은행 명세서",
+      "insights": {
+        "title": "금융 인사이트 엔진",
+        "subtitle": "금융 데이터를 위한 고급 분석",
+        "insightTypes": {
+          "title": "인사이트 유형",
+          "subtitle": "이용 가능한 금융 인사이트"
+        },
+        "interactiveReports": {
+          "title": "인터랙티브 금융 보고서",
+          "subtitle": "사용자를 위한 풍부하고 인터랙티브한 보고서 생성"
+        },
+        "customizationOptions": "맞춤 설정 옵션",
+        "spendingDistribution": "지출 분포",
+        "financialTrends": "금융 트렌드"
+      },
+      "docs": {
+        "title": "API 문서",
+        "subtitle": "구현 가이드 및 참조 자료",
+        "quickStartGuide": "빠른 시작 가이드",
+        "interactiveApiExplorer": "인터랙티브 API 탐색기"
+      },
+      "categorize": {
+        "title": "거래 분류",
+        "subtitle": "은행 거래 자동 분류",
+        "categoryHierarchy": {
+          "title": "카테고리 계층 구조",
+          "subtitle": "표준화된 거래 카테고리"
+        },
+        "customCategories": {
+          "title": "맞춤 카테고리",
+          "subtitle": "자신만의 거래 카테고리 생성"
+        },
+        "categories": {
+          "transportation": "교통",
+          "shopping": "쇼핑"
+        }
+      },
+      "retrieve": {
+        "title": "은행 명세서 가져오기",
+        "subtitle": "금융 명세서에 대한 직접 API 접근",
+        "uploadProcess": {
+          "title": "업로드 및 처리",
+          "subtitle": "처리할 명세서 제출"
+        },
+        "dataQualityControls": {
+          "title": "데이터 품질 관리",
+          "subtitle": "고품질 명세서 데이터 보장"
+        },
+        "supportedInstitutions": {
+          "title": "지원되는 금융기관",
+          "subtitle": "우리 API와 호환되는 은행 및 금융 서비스"
+        }
+      }
+    }
   },
   "analytics": {
     "title": "분석",

@@ -1,10 +1,93 @@
 {
   "app": {
-    "name": "Lanonasis Memory Service",
+    "name": "Servicio de memoria Lanonasis",
     "tagline": "Soluciones financieras empresariales"
   },
+  "common": {
+    "buttons": {
+      "save": "Guardar",
+      "cancel": "Cancelar",
+      "submit": "Enviar",
+      "delete": "Eliminar",
+      "edit": "Editar",
+      "add": "Añadir",
+      "create": "Crear",
+      "back": "Atrás",
+      "next": "Siguiente",
+      "previous": "Anterior",
+      "copy": "Copiar",
+      "view": "Ver",
+      "addCustomCategory": "Añadir categoría personalizada",
+      "viewApiReference": "Ver referencia de API",
+      "viewDetails": "Ver detalles",
+      "backToDashboard": "Volver al panel",
+      "viewCompletePricing": "Ver precios completos",
+      "sdkDocumentation": "Documentación del SDK",
+      "githubRepository": "Repositorio de GitHub"
+    },
+    "labels": {
+      "name": "Nombre",
+      "email": "Correo electrónico",
+      "password": "Contraseña",
+      "fullName": "Nombre completo",
+      "categoryName": "Nombre de categoría",
+      "parentCategory": "Categoría principal",
+      "keywordPatterns": "Patrones de palabras clave",
+      "responseFormat": "Formato de respuesta",
+      "enableAiAnalysis": "Habilitar análisis de IA",
+      "mlConfidenceThreshold": "Umbral de confianza ML",
+      "customBranding": "Personalización de marca",
+      "whiteLabelReports": "Informes de marca blanca",
+      "embeddableWidgets": "Widgets incrustables",
+      "pdfExport": "Exportación PDF",
+      "amount": "Importe",
+      "cardNumber": "Número de tarjeta",
+      "expiryDate": "MM/AA",
+      "cvc": "CVC"
+    },
+    "placeholders": {
+      "fullName": "Nombre completo",
+      "email": "nombre@ejemplo.com",
+      "password": "••••••••",
+      "confirmPassword": "••••••••",
+      "categoryName": "p. ej., Gastos empresariales",
+      "parentCategorySelect": "Seleccionar o dejar en blanco para nivel superior",
+      "keywordPatterns": "Introduce palabras clave separadas por comas",
+      "selectAnalysisType": "Seleccionar tipo de análisis",
+      "selectTimeframe": "Seleccionar periodo de tiempo",
+      "select": "Seleccionar",
+      "amount": "Importe",
+      "cardNumber": "4242 4242 4242 4242",
+      "expiryDate": "MM/AA",
+      "cvc": "CVC"
+    },
+    "messages": {
+      "loading": "Cargando...",
+      "error": "Ha ocurrido un error",
+      "success": "Operación completada con éxito",
+      "welcome": "Bienvenido/a, {{name}}"
+    },
+    "badges": {
+      "interactive": "Interactivo"
+    },
+    "ariaLabels": {
+      "selectLanguage": "Seleccionar idioma",
+      "pagination": "paginación",
+      "goToPreviousPage": "Ir a la página anterior",
+      "goToNextPage": "Ir a la página siguiente",
+      "breadcrumb": "migas de pan",
+      "toggleSidebar": "Alternar barra lateral",
+      "themeSettings": "Configuración del tema",
+      "copyApiKey": "Copiar clave API",
+      "github": "GitHub",
+      "twitter": "Twitter",
+      "linkedin": "LinkedIn",
+      "email": "Correo electrónico"
+    }
+  },
   "dashboard": {
-    "title": "Panel de control empresarial",
+    "title": "Panel de control de API",
+    "subtitle": "Gestiona e integra con nuestra suite de servicios API",
     "overview": "Resumen empresarial",
     "revenue": "Ingresos",
     "expenses": "Gastos empresariales",
@@ -18,6 +101,64 @@
     "documentation": "Documentación de API",
     "rate_limits": "Límites de tasa",
     "webhooks": "Webhooks"
+  },
+  "banking": {
+    "statements": {
+      "title": "Extractos bancarios",
+      "insights": {
+        "title": "Motor de información financiera",
+        "subtitle": "Análisis avanzado para datos financieros",
+        "insightTypes": {
+          "title": "Tipos de información",
+          "subtitle": "Perspectivas financieras disponibles"
+        },
+        "interactiveReports": {
+          "title": "Informes financieros interactivos",
+          "subtitle": "Genera informes completos e interactivos para tus usuarios"
+        },
+        "customizationOptions": "Opciones de personalización",
+        "spendingDistribution": "Distribución de gastos",
+        "financialTrends": "Tendencias financieras"
+      },
+      "docs": {
+        "title": "Documentación de API",
+        "subtitle": "Guías de implementación y referencias",
+        "quickStartGuide": "Guía de inicio rápido",
+        "interactiveApiExplorer": "Explorador interactivo de API"
+      },
+      "categorize": {
+        "title": "Categorización de transacciones",
+        "subtitle": "Clasificación automatizada de transacciones bancarias",
+        "categoryHierarchy": {
+          "title": "Jerarquía de categorías",
+          "subtitle": "Categorías de transacciones estandarizadas"
+        },
+        "customCategories": {
+          "title": "Categorías personalizadas",
+          "subtitle": "Crea tus propias categorías de transacciones"
+        },
+        "categories": {
+          "transportation": "Transporte",
+          "shopping": "Compras"
+        }
+      },
+      "retrieve": {
+        "title": "Obtener extractos bancarios",
+        "subtitle": "Acceso directo a extractos financieros mediante API",
+        "uploadProcess": {
+          "title": "Cargar y procesar",
+          "subtitle": "Envía extractos para su procesamiento"
+        },
+        "dataQualityControls": {
+          "title": "Controles de calidad de datos",
+          "subtitle": "Garantiza datos de extractos de alta calidad"
+        },
+        "supportedInstitutions": {
+          "title": "Instituciones compatibles",
+          "subtitle": "Bancos y servicios financieros compatibles con nuestra API"
+        }
+      }
+    }
   },
   "analytics": {
     "title": "Analítica",

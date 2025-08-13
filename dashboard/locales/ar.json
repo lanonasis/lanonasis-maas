@@ -1,10 +1,93 @@
 {
   "app": {
-    "name": "Lanonasis Memory Service",
+    "name": "خدمة ذاكرة لانوناسيس",
     "tagline": "حلول مالية للمؤسسات"
   },
+  "common": {
+    "buttons": {
+      "save": "حفظ",
+      "cancel": "إلغاء",
+      "submit": "إرسال",
+      "delete": "حذف",
+      "edit": "تعديل",
+      "add": "إضافة",
+      "create": "إنشاء",
+      "back": "رجوع",
+      "next": "التالي",
+      "previous": "السابق",
+      "copy": "نسخ",
+      "view": "عرض",
+      "addCustomCategory": "إضافة فئة مخصصة",
+      "viewApiReference": "عرض مرجع واجهة برمجة التطبيقات",
+      "viewDetails": "عرض التفاصيل",
+      "backToDashboard": "العودة إلى لوحة التحكم",
+      "viewCompletePricing": "عرض التسعير الكامل",
+      "sdkDocumentation": "وثائق مجموعة أدوات التطوير",
+      "githubRepository": "مستودع جيثب"
+    },
+    "labels": {
+      "name": "الاسم",
+      "email": "البريد الإلكتروني",
+      "password": "كلمة المرور",
+      "fullName": "الاسم الكامل",
+      "categoryName": "اسم الفئة",
+      "parentCategory": "الفئة الأساسية",
+      "keywordPatterns": "أنماط الكلمات المفتاحية",
+      "responseFormat": "تنسيق الاستجابة",
+      "enableAiAnalysis": "تمكين تحليل الذكاء الاصطناعي",
+      "mlConfidenceThreshold": "عتبة ثقة التعلم الآلي",
+      "customBranding": "العلامة التجارية المخصصة",
+      "whiteLabelReports": "تقارير العلامة البيضاء",
+      "embeddableWidgets": "أدوات قابلة للتضمين",
+      "pdfExport": "تصدير PDF",
+      "amount": "المبلغ",
+      "cardNumber": "رقم البطاقة",
+      "expiryDate": "الشهر/السنة",
+      "cvc": "رمز التحقق CVC"
+    },
+    "placeholders": {
+      "fullName": "الاسم الكامل",
+      "email": "name@example.com",
+      "password": "••••••••",
+      "confirmPassword": "••••••••",
+      "categoryName": "مثال: نفقات الأعمال",
+      "parentCategorySelect": "حدد أو اترك فارغًا للمستوى الأعلى",
+      "keywordPatterns": "أدخل الكلمات المفتاحية مفصولة بفواصل",
+      "selectAnalysisType": "حدد نوع التحليل",
+      "selectTimeframe": "حدد الإطار الزمني",
+      "select": "اختر",
+      "amount": "المبلغ",
+      "cardNumber": "4242 4242 4242 4242",
+      "expiryDate": "شهر/سنة",
+      "cvc": "رمز التحقق"
+    },
+    "messages": {
+      "loading": "جارٍ التحميل...",
+      "error": "حدث خطأ",
+      "success": "تمت العملية بنجاح",
+      "welcome": "مرحبًا، {{name}}"
+    },
+    "badges": {
+      "interactive": "تفاعلي"
+    },
+    "ariaLabels": {
+      "selectLanguage": "اختيار اللغة",
+      "pagination": "ترقيم الصفحات",
+      "goToPreviousPage": "الانتقال إلى الصفحة السابقة",
+      "goToNextPage": "الانتقال إلى الصفحة التالية",
+      "breadcrumb": "مسار التنقل",
+      "toggleSidebar": "تبديل الشريط الجانبي",
+      "themeSettings": "إعدادات المظهر",
+      "copyApiKey": "نسخ مفتاح واجهة برمجة التطبيقات",
+      "github": "جيثب",
+      "twitter": "تويتر",
+      "linkedin": "لينكد إن",
+      "email": "البريد الإلكتروني"
+    }
+  },
   "dashboard": {
-    "title": "لوحة تحكم الأعمال",
+    "title": "لوحة تحكم واجهة برمجة التطبيقات",
+    "subtitle": "إدارة والتكامل مع مجموعة خدمات واجهة برمجة التطبيقات لدينا",
     "overview": "نظرة عامة على الأعمال",
     "revenue": "الإيرادات",
     "expenses": "نفقات الأعمال",
@@ -18,6 +101,64 @@
     "documentation": "توثيق واجهة برمجة التطبيقات",
     "rate_limits": "حدود المعدل",
     "webhooks": "الويب هوكس"
+  },
+  "banking": {
+    "statements": {
+      "title": "كشوف الحساب المصرفية",
+      "insights": {
+        "title": "محرك الرؤى المالية",
+        "subtitle": "تحليلات متقدمة للبيانات المالية",
+        "insightTypes": {
+          "title": "أنواع الرؤى",
+          "subtitle": "الرؤى المالية المتاحة"
+        },
+        "interactiveReports": {
+          "title": "تقارير مالية تفاعلية",
+          "subtitle": "إنشاء تقارير غنية وتفاعلية للمستخدمين"
+        },
+        "customizationOptions": "خيارات التخصيص",
+        "spendingDistribution": "توزيع الإنفاق",
+        "financialTrends": "الاتجاهات المالية"
+      },
+      "docs": {
+        "title": "توثيق واجهة برمجة التطبيقات",
+        "subtitle": "أدلة التنفيذ والمراجع",
+        "quickStartGuide": "دليل البدء السريع",
+        "interactiveApiExplorer": "مستكشف واجهة برمجة التطبيقات التفاعلي"
+      },
+      "categorize": {
+        "title": "تصنيف المعاملات",
+        "subtitle": "التصنيف الآلي للمعاملات المصرفية",
+        "categoryHierarchy": {
+          "title": "تسلسل الفئات",
+          "subtitle": "فئات المعاملات الموحدة"
+        },
+        "customCategories": {
+          "title": "الفئات المخصصة",
+          "subtitle": "إنشاء فئات المعاملات الخاصة بك"
+        },
+        "categories": {
+          "transportation": "المواصلات",
+          "shopping": "التسوق"
+        }
+      },
+      "retrieve": {
+        "title": "جلب كشوف الحسابات المصرفية",
+        "subtitle": "وصول مباشر لواجهة برمجة التطبيقات إلى الكشوف المالية",
+        "uploadProcess": {
+          "title": "تحميل ومعالجة",
+          "subtitle": "تقديم الكشوف للمعالجة"
+        },
+        "dataQualityControls": {
+          "title": "ضوابط جودة البيانات",
+          "subtitle": "ضمان بيانات كشوف حساب عالية الجودة"
+        },
+        "supportedInstitutions": {
+          "title": "المؤسسات المدعومة",
+          "subtitle": "البنوك والخدمات المالية المتوافقة مع واجهة برمجة التطبيقات الخاصة بنا"
+        }
+      }
+    }
   },
   "analytics": {
     "title": "التحليلات",

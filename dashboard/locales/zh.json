@@ -3,8 +3,91 @@
     "name": "Lanonasis Memory Service",
     "tagline": "企业财务解决方案"
   },
+  "common": {
+    "buttons": {
+      "save": "保存",
+      "cancel": "取消",
+      "submit": "提交",
+      "delete": "删除",
+      "edit": "编辑",
+      "add": "添加",
+      "create": "创建",
+      "back": "返回",
+      "next": "下一步",
+      "previous": "上一步",
+      "copy": "复制",
+      "view": "查看",
+      "addCustomCategory": "添加自定义类别",
+      "viewApiReference": "查看 API 参考",
+      "viewDetails": "查看详情",
+      "backToDashboard": "返回仪表板",
+      "viewCompletePricing": "查看完整定价",
+      "sdkDocumentation": "SDK 文档",
+      "githubRepository": "GitHub 仓库"
+    },
+    "labels": {
+      "name": "名称",
+      "email": "电子邮件",
+      "password": "密码",
+      "fullName": "全名",
+      "categoryName": "类别名称",
+      "parentCategory": "父类别",
+      "keywordPatterns": "关键词模式",
+      "responseFormat": "响应格式",
+      "enableAiAnalysis": "启用 AI 分析",
+      "mlConfidenceThreshold": "机器学习置信度阈值",
+      "customBranding": "自定义品牌",
+      "whiteLabelReports": "白标报告",
+      "embeddableWidgets": "可嵌入小部件",
+      "pdfExport": "PDF 导出",
+      "amount": "金额",
+      "cardNumber": "卡号",
+      "expiryDate": "MM/YY",
+      "cvc": "CVC"
+    },
+    "placeholders": {
+      "fullName": "全名",
+      "email": "name@example.com",
+      "password": "••••••••",
+      "confirmPassword": "••••••••",
+      "categoryName": "例如：业务支出",
+      "parentCategorySelect": "选择或留空以设为顶级类别",
+      "keywordPatterns": "输入用逗号分隔的关键词",
+      "selectAnalysisType": "选择分析类型",
+      "selectTimeframe": "选择时间范围",
+      "select": "选择",
+      "amount": "金额",
+      "cardNumber": "4242 4242 4242 4242",
+      "expiryDate": "MM/YY",
+      "cvc": "CVC"
+    },
+    "messages": {
+      "loading": "加载中...",
+      "error": "发生错误",
+      "success": "操作成功完成",
+      "welcome": "欢迎，{{name}}"
+    },
+    "badges": {
+      "interactive": "互动"
+    },
+    "ariaLabels": {
+      "selectLanguage": "选择语言",
+      "pagination": "分页",
+      "goToPreviousPage": "转到上一页",
+      "goToNextPage": "转到下一页",
+      "breadcrumb": "面包屑导航",
+      "toggleSidebar": "切换侧边栏",
+      "themeSettings": "主题设置",
+      "copyApiKey": "复制 API 密钥",
+      "github": "GitHub",
+      "twitter": "Twitter",
+      "linkedin": "LinkedIn",
+      "email": "电子邮件"
+    }
+  },
   "dashboard": {
-    "title": "业务仪表板",
+    "title": "API 仪表板",
+    "subtitle": "管理并集成我们的 API 服务套件",
     "overview": "业务概览",
     "revenue": "收入",
     "expenses": "业务支出",
@@ -18,6 +101,64 @@
     "documentation": "API 文档",
     "rate_limits": "速率限制",
     "webhooks": "Webhooks"
+  },
+  "banking": {
+    "statements": {
+      "title": "银行对账单",
+      "insights": {
+        "title": "财务洞察引擎",
+        "subtitle": "财务数据的高级分析",
+        "insightTypes": {
+          "title": "洞察类型",
+          "subtitle": "可用的财务洞察"
+        },
+        "interactiveReports": {
+          "title": "交互式财务报告",
+          "subtitle": "为您的用户生成丰富的交互式报告"
+        },
+        "customizationOptions": "自定义选项",
+        "spendingDistribution": "支出分布",
+        "financialTrends": "财务趋势"
+      },
+      "docs": {
+        "title": "API 文档",
+        "subtitle": "实施指南和参考资料",
+        "quickStartGuide": "快速入门指南",
+        "interactiveApiExplorer": "交互式 API 探索器"
+      },
+      "categorize": {
+        "title": "交易分类",
+        "subtitle": "银行交易的自动分类",
+        "categoryHierarchy": {
+          "title": "类别层级",
+          "subtitle": "标准化的交易类别"
+        },
+        "customCategories": {
+          "title": "自定义类别",
+          "subtitle": "创建您自己的交易类别"
+        },
+        "categories": {
+          "transportation": "交通",
+          "shopping": "购物"
+        }
+      },
+      "retrieve": {
+        "title": "获取银行对账单",
+        "subtitle": "直接通过 API 访问财务对账单",
+        "uploadProcess": {
+          "title": "上传与处理",
+          "subtitle": "提交对账单进行处理"
+        },
+        "dataQualityControls": {
+          "title": "数据质量控制",
+          "subtitle": "确保高质量的对账单数据"
+        },
+        "supportedInstitutions": {
+          "title": "支持的机构",
+          "subtitle": "与我们 API 兼容的银行和金融服务"
+        }
+      }
+    }
   },
   "analytics": {
     "title": "分析",

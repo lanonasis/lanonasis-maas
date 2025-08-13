@@ -3,8 +3,91 @@
     "name": "Lanonasis Memory Service",
     "tagline": "Enterprise-Finanzlösungen"
   },
+  "common": {
+    "buttons": {
+      "save": "Speichern",
+      "cancel": "Abbrechen",
+      "submit": "Absenden",
+      "delete": "Löschen",
+      "edit": "Bearbeiten",
+      "add": "Hinzufügen",
+      "create": "Erstellen",
+      "back": "Zurück",
+      "next": "Weiter",
+      "previous": "Zurück",
+      "copy": "Kopieren",
+      "view": "Ansehen",
+      "addCustomCategory": "Benutzerdefinierte Kategorie hinzufügen",
+      "viewApiReference": "API-Referenz ansehen",
+      "viewDetails": "Details ansehen",
+      "backToDashboard": "Zurück zum Dashboard",
+      "viewCompletePricing": "Vollständige Preisübersicht ansehen",
+      "sdkDocumentation": "SDK-Dokumentation",
+      "githubRepository": "GitHub-Repository"
+    },
+    "labels": {
+      "name": "Name",
+      "email": "E-Mail",
+      "password": "Passwort",
+      "fullName": "Vollständiger Name",
+      "categoryName": "Kategoriename",
+      "parentCategory": "Übergeordnete Kategorie",
+      "keywordPatterns": "Stichwortmuster",
+      "responseFormat": "Antwortformat",
+      "enableAiAnalysis": "KI-Analyse aktivieren",
+      "mlConfidenceThreshold": "ML-Vertrauensschwelle",
+      "customBranding": "Individuelles Branding",
+      "whiteLabelReports": "White-Label-Berichte",
+      "embeddableWidgets": "Einbettbare Widgets",
+      "pdfExport": "PDF-Export",
+      "amount": "Betrag",
+      "cardNumber": "Kartennummer",
+      "expiryDate": "MM/JJ",
+      "cvc": "CVC"
+    },
+    "placeholders": {
+      "fullName": "Vollständiger Name",
+      "email": "name@beispiel.de",
+      "password": "••••••••",
+      "confirmPassword": "••••••••",
+      "categoryName": "z.B. Geschäftsausgaben",
+      "parentCategorySelect": "Auswählen oder leer lassen für oberste Ebene",
+      "keywordPatterns": "Stichworte durch Kommas getrennt eingeben",
+      "selectAnalysisType": "Analysetyp auswählen",
+      "selectTimeframe": "Zeitraum auswählen",
+      "select": "Auswählen",
+      "amount": "Betrag",
+      "cardNumber": "4242 4242 4242 4242",
+      "expiryDate": "MM/JJ",
+      "cvc": "CVC"
+    },
+    "messages": {
+      "loading": "Wird geladen...",
+      "error": "Ein Fehler ist aufgetreten",
+      "success": "Vorgang erfolgreich abgeschlossen",
+      "welcome": "Willkommen, {{name}}"
+    },
+    "badges": {
+      "interactive": "Interaktiv"
+    },
+    "ariaLabels": {
+      "selectLanguage": "Sprache auswählen",
+      "pagination": "Seitennummerierung",
+      "goToPreviousPage": "Zur vorherigen Seite",
+      "goToNextPage": "Zur nächsten Seite",
+      "breadcrumb": "Brotkrümelnavigation",
+      "toggleSidebar": "Seitenleiste ein-/ausblenden",
+      "themeSettings": "Design-Einstellungen",
+      "copyApiKey": "API-Schlüssel kopieren",
+      "github": "GitHub",
+      "twitter": "Twitter",
+      "linkedin": "LinkedIn",
+      "email": "E-Mail"
+    }
+  },
   "dashboard": {
-    "title": "Business-Dashboard",
+    "title": "API-Dashboard",
+    "subtitle": "Verwalten und integrieren Sie unsere API-Dienste",
     "overview": "Geschäftsübersicht",
     "revenue": "Umsatz",
     "expenses": "Geschäftsausgaben",
@@ -18,6 +101,64 @@
     "documentation": "API-Dokumentation",
     "rate_limits": "Ratenbegrenzungen",
     "webhooks": "Webhooks"
+  },
+  "banking": {
+    "statements": {
+      "title": "Kontoauszüge",
+      "insights": {
+        "title": "Finanzanalyse-Engine",
+        "subtitle": "Erweiterte Analysen für Finanzdaten",
+        "insightTypes": {
+          "title": "Arten von Erkenntnissen",
+          "subtitle": "Verfügbare finanzielle Erkenntnisse"
+        },
+        "interactiveReports": {
+          "title": "Interaktive Finanzberichte",
+          "subtitle": "Erstellen Sie umfangreiche, interaktive Berichte für Ihre Nutzer"
+        },
+        "customizationOptions": "Anpassungsoptionen",
+        "spendingDistribution": "Ausgabenverteilung",
+        "financialTrends": "Finanztrends"
+      },
+      "docs": {
+        "title": "API-Dokumentation",
+        "subtitle": "Implementierungsleitfäden und Referenzen",
+        "quickStartGuide": "Schnellstartanleitung",
+        "interactiveApiExplorer": "Interaktiver API-Explorer"
+      },
+      "categorize": {
+        "title": "Transaktionskategorisierung",
+        "subtitle": "Automatisierte Klassifizierung von Banktransaktionen",
+        "categoryHierarchy": {
+          "title": "Kategoriehierarchie",
+          "subtitle": "Standardisierte Transaktionskategorien"
+        },
+        "customCategories": {
+          "title": "Benutzerdefinierte Kategorien",
+          "subtitle": "Erstellen Sie Ihre eigenen Transaktionskategorien"
+        },
+        "categories": {
+          "transportation": "Transport",
+          "shopping": "Einkaufen"
+        }
+      },
+      "retrieve": {
+        "title": "Kontoauszüge abrufen",
+        "subtitle": "Direkter API-Zugriff auf Kontoauszüge",
+        "uploadProcess": {
+          "title": "Hochladen & Verarbeiten",
+          "subtitle": "Kontoauszüge zur Verarbeitung einreichen"
+        },
+        "dataQualityControls": {
+          "title": "Datenqualitätskontrollen",
+          "subtitle": "Gewährleistung hochwertiger Kontoauszugsdaten"
+        },
+        "supportedInstitutions": {
+          "title": "Unterstützte Finanzinstitute",
+          "subtitle": "Banken und Finanzdienstleistungen, die mit unserer API kompatibel sind"
+        }
+      }
+    }
   },
   "analytics": {
     "title": "Analytik",
