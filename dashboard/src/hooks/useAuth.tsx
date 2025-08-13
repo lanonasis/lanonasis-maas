@@ -107,7 +107,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             
             // Use setTimeout to ensure state updates are complete
             setTimeout(() => {
-              navigate('/dashboard');
+              const redirectPath = localStorage.getItem('redirectAfterLogin') || '/dashboard';
+              localStorage.removeItem('redirectAfterLogin');
+              navigate(redirectPath);
             }, 100);
           }
         } else {
@@ -151,7 +153,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         description: "Welcome back!",
       });
       
-      navigate('/dashboard');
+      // Check if there's a stored redirect path
+      const redirectPath = localStorage.getItem('redirectAfterLogin') || '/dashboard';
+      localStorage.removeItem('redirectAfterLogin');
+      navigate(redirectPath);
     } catch (error: any) {
       toast({
         title: "Error signing in",
