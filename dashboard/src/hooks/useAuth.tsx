@@ -132,6 +132,40 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     if (error) {
       console.error('Error fetching profile:', error);
+      
+      // If profile doesn't exist, try to create one
+      if (error.code === 'PGRST116') { // Row not found
+        console.log('Profile not found, attempting to create one...');
+        
+        const { data: session } = await supabase.auth.getSession();
+        const currentUser = session.session?.user;
+        
+        if (currentUser) {
+          const { data: newProfile, error: createError } = await supabase
+            .from('profiles')
+            .insert({
+              id: userId,
+              email: currentUser.email,
+              full_name: currentUser.user_metadata?.full_name || currentUser.user_metadata?.name || null,
+              role: currentUser.user_metadata?.role || 'user',
+              avatar_url: currentUser.user_metadata?.avatar_url || currentUser.user_metadata?.picture || null,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            })
+            .select()
+            .single();
+          
+          if (createError) {
+            console.error('Error creating profile:', createError);
+            return;
+          }
+          
+          console.log('Profile created successfully:', newProfile);
+          setProfile(newProfile);
+          return;
+        }
+      }
+      
       return;
     }
 
