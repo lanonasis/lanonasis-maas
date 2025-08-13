@@ -740,12 +740,5 @@ app.use((err, req, res, next) => {
   });
 });
 
-// Export serverless handler
-const serverlessHandler = serverless(app);
-
-exports.handler = async (event, context) => {
-  // Set timeout context
-  context.callbackWaitsForEmptyEventLoop = false;
-  
-  return await serverlessHandler(event, context);
-};
+// Export for Vercel serverless functions
+module.exports = serverless(app);
