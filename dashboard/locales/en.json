@@ -3,11 +3,94 @@
     "name": "Lanonasis Memory Service",
     "tagline": "Enterprise Financial Solutions"
   },
+  "common": {
+    "buttons": {
+      "save": "Save",
+      "cancel": "Cancel", 
+      "submit": "Submit",
+      "delete": "Delete",
+      "edit": "Edit",
+      "add": "Add",
+      "create": "Create",
+      "back": "Back",
+      "next": "Next",
+      "previous": "Previous",
+      "copy": "Copy",
+      "view": "View",
+      "addCustomCategory": "Add Custom Category",
+      "viewApiReference": "View API Reference",
+      "viewDetails": "View Details",
+      "backToDashboard": "Back to Dashboard",
+      "viewCompletePricing": "View Complete Pricing",
+      "sdkDocumentation": "SDK Documentation",
+      "githubRepository": "GitHub Repository"
+    },
+    "labels": {
+      "name": "Name",
+      "email": "Email", 
+      "password": "Password",
+      "fullName": "Full name",
+      "categoryName": "Category Name",
+      "parentCategory": "Parent Category",
+      "keywordPatterns": "Keyword Patterns",
+      "responseFormat": "Response Format",
+      "enableAiAnalysis": "Enable AI Analysis",
+      "mlConfidenceThreshold": "ML Confidence Threshold",
+      "customBranding": "Custom Branding",
+      "whiteLabelReports": "White Label Reports",
+      "embeddableWidgets": "Embeddable Widgets",
+      "pdfExport": "PDF Export",
+      "amount": "Amount",
+      "cardNumber": "Card Number",
+      "expiryDate": "MM/YY", 
+      "cvc": "CVC"
+    },
+    "placeholders": {
+      "fullName": "Full name",
+      "email": "name@example.com",
+      "password": "••••••••",
+      "confirmPassword": "••••••••",
+      "categoryName": "e.g., Business Expenses",
+      "parentCategorySelect": "Select or leave blank for top-level",
+      "keywordPatterns": "Enter keywords separated by commas",
+      "selectAnalysisType": "Select analysis type",
+      "selectTimeframe": "Select timeframe",
+      "select": "Select",
+      "amount": "Amount",
+      "cardNumber": "4242 4242 4242 4242",
+      "expiryDate": "MM/YY",
+      "cvc": "CVC"
+    },
+    "messages": {
+      "loading": "Loading...",
+      "error": "An error occurred",
+      "success": "Operation completed successfully",
+      "welcome": "Welcome, {{name}}"
+    },
+    "badges": {
+      "interactive": "Interactive"
+    },
+    "ariaLabels": {
+      "selectLanguage": "Select Language",
+      "pagination": "pagination",
+      "goToPreviousPage": "Go to previous page",
+      "goToNextPage": "Go to next page",
+      "breadcrumb": "breadcrumb",
+      "toggleSidebar": "Toggle Sidebar",
+      "themeSettings": "Theme settings",
+      "copyApiKey": "Copy API key",
+      "github": "GitHub",
+      "twitter": "Twitter",
+      "linkedin": "LinkedIn",
+      "email": "Email"
+    }
+  },
   "dashboard": {
-    "title": "Business Dashboard",
+    "title": "API Dashboard",
+    "subtitle": "Manage and integrate with our suite of API services",
     "overview": "Business Overview",
     "revenue": "Revenue",
-    "expenses": "Business Expenses",
+    "expenses": "Business Expenses", 
     "profit_margin": "Profit Margin",
     "team_spending": "Team Spending"
   },
@@ -18,6 +101,64 @@
     "documentation": "API Documentation",
     "rate_limits": "Rate Limits",
     "webhooks": "Webhooks"
+  },
+  "banking": {
+    "statements": {
+      "title": "Bank Statements",
+      "insights": {
+        "title": "Financial Insights Engine",
+        "subtitle": "Advanced analytics for financial data",
+        "insightTypes": {
+          "title": "Insight Types",
+          "subtitle": "Available financial insights"
+        },
+        "interactiveReports": {
+          "title": "Interactive Financial Reports",
+          "subtitle": "Generate rich, interactive reports for your users"
+        },
+        "customizationOptions": "Customization Options",
+        "spendingDistribution": "Spending Distribution",
+        "financialTrends": "Financial Trends"
+      },
+      "docs": {
+        "title": "API Documentation",
+        "subtitle": "Implementation guides and references",
+        "quickStartGuide": "Quick Start Guide",
+        "interactiveApiExplorer": "Interactive API Explorer"
+      },
+      "categorize": {
+        "title": "Transaction Categorization",
+        "subtitle": "Automated classification of bank transactions",
+        "categoryHierarchy": {
+          "title": "Category Hierarchy", 
+          "subtitle": "Standardized transaction categories"
+        },
+        "customCategories": {
+          "title": "Custom Categories",
+          "subtitle": "Create your own transaction categories"
+        },
+        "categories": {
+          "transportation": "Transportation",
+          "shopping": "Shopping"
+        }
+      },
+      "retrieve": {
+        "title": "Fetch Bank Statements",
+        "subtitle": "Direct API access to financial statements",
+        "uploadProcess": {
+          "title": "Upload & Process",
+          "subtitle": "Submit statements for processing"
+        },
+        "dataQualityControls": {
+          "title": "Data Quality Controls",
+          "subtitle": "Ensure high-quality statement data"
+        },
+        "supportedInstitutions": {
+          "title": "Supported Institutions",
+          "subtitle": "Banks and financial services compatible with our API"
+        }
+      }
+    }
   },
   "analytics": {
     "title": "Analytics",
@@ -31,7 +172,7 @@
     "current_plan": "Current Plan",
     "usage_this_month": "Usage This Month",
     "billing_history": "Billing History",
-    "upgrade_plan": "Upgrade Plan",
+    "upgrade_plan": "Upgrade Plan", 
     "payment_methods": "Payment Methods"
   },
   "team": {
