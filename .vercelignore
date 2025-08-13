@@ -1,0 +1,20 @@
+# Ignore package-lock.json files to force bun
+package-lock.json
+**/package-lock.json
+
+# Ignore non-essential directories
+vscode-extension/
+cursor-extension/
+windsurf-extension/
+packages/
+tests/
+k8s/
+deploy/
+scripts/
+docs/node_modules/
+cli/node_modules/
+dashboard/node_modules/
+
+# Keep bun.lock files
+!bun.lock
+!**/bun.lock
