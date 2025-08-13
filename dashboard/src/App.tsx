@@ -38,6 +38,7 @@ const App = () => (
               <Route path="/auth/login" element={<Auth />} />
               <Route path="/auth/register" element={<Auth />} />
               <Route path="/auth/forgot-password" element={<Auth />} />
+              <Route path="/auth/callback" element={<Auth />} />
               <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
               <Route path="/dashboard/memory-visualizer" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
               <Route path="/dashboard/api-keys" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />

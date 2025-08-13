@@ -84,6 +84,13 @@
   status = 200
   conditions = {Host = ["docs.lanonasis.com"]}
 
+# Auth callback handling for OAuth - MUST come before SPA catch-all
+[[redirects]]
+  from = "/auth/callback*"
+  to = "/index.html"
+  status = 200
+  conditions = {Host = ["dashboard.lanonasis.com"]}
+
 # Dashboard domain routing - SPA handles all routes for dashboard.lanonasis.com
 [[redirects]]
   from = "/*"
