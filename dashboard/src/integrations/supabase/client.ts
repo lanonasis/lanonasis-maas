@@ -10,17 +10,16 @@ const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY=REDACTED
 
 // Determine correct redirect URL based on environment
 export const getRedirectUrl = () => {
-  if (typeof window === 'undefined') return 'https://dashboard.lanonasis.com/dashboard';
+  if (typeof window === 'undefined') return 'https://dashboard.lanonasis.com/';
   
-  const isLocalDev = window.location.hostname === 'localhost';
   const isLocalhost = window.location.hostname === '127.0.0.1' || window.location.hostname === 'localhost';
   
   if (isLocalhost) {
-    return `${window.location.origin}/dashboard`;
+    return `${window.location.origin}/`;
   }
   
-  // Always redirect to dashboard.lanonasis.com for production OAuth
-  return 'https://dashboard.lanonasis.com/dashboard';
+  // Always redirect to dashboard.lanonasis.com root for OAuth (auth component will handle dashboard redirect)
+  return 'https://dashboard.lanonasis.com/';
 };
 
 // OAuth callback URL for provider configurations
