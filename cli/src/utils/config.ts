@@ -158,7 +158,7 @@ export class CLIConfig {
   }
 
   getMCPServerUrl(): string {
-    return this.config.mcpServerUrl || 'https://dashboard.lanonasis.com';
+    return this.config.mcpServerUrl || 'http://localhost:3000';  // Use local backend for testing
   }
 
   shouldUseRemoteMCP(): boolean {

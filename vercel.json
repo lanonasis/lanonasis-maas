@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "buildCommand": "cd dashboard && npm install && npm run build",
+  "buildCommand": "cd dashboard && bun install && bun run build",
   "outputDirectory": "dashboard/dist",
-  "installCommand": "npm install",
+  "installCommand": "bun install",
   "framework": null,
   "functions": {},
   "rewrites": [
