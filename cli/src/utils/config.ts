@@ -64,7 +64,7 @@ export class CLIConfig {
   getApiUrl(): string {
     return process.env.MEMORY_API_URL || 
            this.config.apiUrl || 
-           'http://localhost:3000/api/v1';
+           'https://api.lanonasis.com/api/v1';
   }
 
   async setApiUrl(url: string): Promise<void> {

@@ -1,10 +1,8 @@
 
-import { useEffect } from "react";
-import { useNavigate } from "react-router-dom";
 import { Layout } from "@/components/layout/Layout";
 import { ApiDashboard } from "@/components/dashboard/ApiDashboard";
 import MCPServerManager from "@/components/mcp/MCPServerManager";
-import { useAuth } from "@/hooks/useAuth";
+import { UserProfile } from "@/components/dashboard/UserProfile";
 import { Button } from "@/components/ui/button";
 import { Home, Sun, Moon, Laptop } from "lucide-react";
 import { useTheme } from "@/hooks/useTheme";
@@ -16,26 +14,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 const Dashboard = () => {
-  const { user, isLoading } = useAuth();
-  const navigate = useNavigate();
   const { theme, setTheme, resolvedTheme } = useTheme();
-
-  // Redirect to login if not authenticated
-  useEffect(() => {
-    if (!isLoading && !user) {
-      navigate('/auth/login');
-    }
-  }, [user, isLoading, navigate]);
-
-  if (isLoading) {
-    return (
-      <Layout>
-        <div className="flex items-center justify-center min-h-[60vh]">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-        </div>
-      </Layout>
-    );
-  }
 
   return (
     <Layout>
@@ -81,6 +60,7 @@ const Dashboard = () => {
         </div>
         
         <div className="space-y-8">
+          <UserProfile />
           <ApiDashboard />
           <MCPServerManager />
         </div>

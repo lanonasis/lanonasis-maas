@@ -10,9 +10,9 @@ const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || "your
 
 // Determine correct redirect URL based on environment
 export const getRedirectUrl = () => {
-  if (typeof window === 'undefined') return 'https://dashboard.lanonasis.com';
+  if (typeof window === 'undefined') return 'https://dashboard.lanonasis.com/dashboard';
   const isLocalDev = window.location.hostname === 'localhost';
-  return isLocalDev ? window.location.origin : 'https://dashboard.lanonasis.com';
+  return isLocalDev ? `${window.location.origin}/dashboard` : 'https://dashboard.lanonasis.com/dashboard';
 };
 
 export const supabase = createClient<Database>(
