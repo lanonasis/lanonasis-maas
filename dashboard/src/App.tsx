@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import { ThemeProvider } from "@/hooks/useTheme";
+import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
@@ -37,11 +38,11 @@ const App = () => (
               <Route path="/auth/login" element={<Auth />} />
               <Route path="/auth/register" element={<Auth />} />
               <Route path="/auth/forgot-password" element={<Auth />} />
-              <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/dashboard/memory-visualizer" element={<Dashboard />} />
-              <Route path="/dashboard/api-keys" element={<Dashboard />} />
-              <Route path="/dashboard/extensions" element={<Dashboard />} />
-              <Route path="/dashboard/upload" element={<Dashboard />} />
+              <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+              <Route path="/dashboard/memory-visualizer" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+              <Route path="/dashboard/api-keys" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+              <Route path="/dashboard/extensions" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+              <Route path="/dashboard/upload" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
               <Route path="/api-docs" element={<ApiDocs />} />
               <Route path="/docs" element={<ApiDocs />} />
               <Route path="/api-analytics" element={<ApiAnalytics />} />
