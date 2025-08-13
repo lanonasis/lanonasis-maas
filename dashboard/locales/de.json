@@ -181,5 +181,19 @@
     "roles": "Rollen & Berechtigungen",
     "invite_member": "Mitglied einladen",
     "activity_log": "Aktivitätsprotokoll"
+  },
+  "auth": {
+    "login": "Anmelden",
+    "register": "Konto erstellen",
+    "forgotPassword": "Passwort zurücksetzen",
+    "validation": {
+      "emailRequired": "E-Mail ist erforderlich",
+      "emailInvalid": "E-Mail ist ungültig",
+      "passwordRequired": "Passwort ist erforderlich",
+      "passwordMinLength": "Passwort muss mindestens 6 Zeichen lang sein",
+      "nameRequired": "Name ist erforderlich",
+      "confirmPasswordRequired": "Bitte bestätigen Sie Ihr Passwort",
+      "passwordsMismatch": "Passwörter stimmen nicht überein"
+    }
   }
 }

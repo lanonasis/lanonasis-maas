@@ -181,5 +181,19 @@
     "roles": "역할 및 권한",
     "invite_member": "멤버 초대",
     "activity_log": "활동 로그"
+  },
+  "auth": {
+    "login": "로그인",
+    "register": "계정 만들기",
+    "forgotPassword": "비밀번호 재설정",
+    "validation": {
+      "emailRequired": "이메일을 입력해주세요",
+      "emailInvalid": "유효하지 않은 이메일입니다",
+      "passwordRequired": "비밀번호를 입력해주세요",
+      "passwordMinLength": "비밀번호는 최소 6자 이상이어야 합니다",
+      "nameRequired": "이름을 입력해주세요",
+      "confirmPasswordRequired": "비밀번호를 확인해주세요",
+      "passwordsMismatch": "비밀번호가 일치하지 않습니다"
+    }
   }
 }

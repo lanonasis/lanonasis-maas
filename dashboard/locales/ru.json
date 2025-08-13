@@ -181,5 +181,19 @@
     "roles": "Роли и разрешения",
     "invite_member": "Пригласить участника",
     "activity_log": "Журнал активности"
+  },
+  "auth": {
+    "login": "Войти",
+    "register": "Создать аккаунт",
+    "forgotPassword": "Сбросить пароль",
+    "validation": {
+      "emailRequired": "Требуется адрес электронной почты",
+      "emailInvalid": "Неверный адрес электронной почты",
+      "passwordRequired": "Требуется пароль",
+      "passwordMinLength": "Пароль должен содержать не менее 6 символов",
+      "nameRequired": "Требуется имя",
+      "confirmPasswordRequired": "Пожалуйста, подтвердите пароль",
+      "passwordsMismatch": "Пароли не совпадают"
+    }
   }
 }

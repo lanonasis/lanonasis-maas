@@ -181,5 +181,19 @@
     "roles": "الأدوار والصلاحيات",
     "invite_member": "دعوة عضو",
     "activity_log": "سجل النشاطات"
+  },
+  "auth": {
+    "login": "تسجيل الدخول",
+    "register": "إنشاء حساب",
+    "forgotPassword": "إعادة تعيين كلمة المرور",
+    "validation": {
+      "emailRequired": "البريد الإلكتروني مطلوب",
+      "emailInvalid": "البريد الإلكتروني غير صالح",
+      "passwordRequired": "كلمة المرور مطلوبة",
+      "passwordMinLength": "يجب أن تتكون كلمة المرور من 6 أحرف على الأقل",
+      "nameRequired": "الاسم مطلوب",
+      "confirmPasswordRequired": "يرجى تأكيد كلمة المرور الخاصة بك",
+      "passwordsMismatch": "كلمات المرور غير متطابقة"
+    }
   }
 }

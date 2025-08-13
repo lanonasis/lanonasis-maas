@@ -181,5 +181,19 @@
     "roles": "Roles & Permissions",
     "invite_member": "Invite Member",
     "activity_log": "Activity Log"
+  },
+  "auth": {
+    "login": "Sign In",
+    "register": "Create Account",
+    "forgotPassword": "Reset Password",
+    "validation": {
+      "emailRequired": "Email is required",
+      "emailInvalid": "Email is invalid",
+      "passwordRequired": "Password is required",
+      "passwordMinLength": "Password must be at least 6 characters",
+      "nameRequired": "Name is required",
+      "confirmPasswordRequired": "Please confirm your password",
+      "passwordsMismatch": "Passwords do not match"
+    }
   }
 }

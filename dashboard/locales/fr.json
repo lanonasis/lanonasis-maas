@@ -181,5 +181,19 @@
     "roles": "Rôles et permissions",
     "invite_member": "Inviter un membre",
     "activity_log": "Journal d'activité"
+  },
+  "auth": {
+    "login": "Se connecter",
+    "register": "Créer un compte",
+    "forgotPassword": "Réinitialiser le mot de passe",
+    "validation": {
+      "emailRequired": "L'e-mail est requis",
+      "emailInvalid": "L'e-mail est invalide",
+      "passwordRequired": "Le mot de passe est requis",
+      "passwordMinLength": "Le mot de passe doit comporter au moins 6 caractères",
+      "nameRequired": "Le nom est requis",
+      "confirmPasswordRequired": "Veuillez confirmer votre mot de passe",
+      "passwordsMismatch": "Les mots de passe ne correspondent pas"
+    }
   }
 }

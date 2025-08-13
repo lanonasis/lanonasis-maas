@@ -1,5 +1,6 @@
 
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 import { AnimatedButton } from "../ui/AnimatedButton";
 import { cn } from "@/lib/utils";
@@ -17,6 +18,7 @@ interface AuthFormProps {
 }
 
 export const AuthForm = ({ mode, onSubmit, isLoading = false }: AuthFormProps) => {
+  const { t } = useTranslation();
   const { toast } = useToast();
   const [formData, setFormData] = useState({
     email: "",
