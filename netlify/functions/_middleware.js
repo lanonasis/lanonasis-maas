@@ -64,7 +64,7 @@ const createJWTMiddleware = (config) => {
 };
 
 // Configuration with fail-fast validation
-const SUPABASE_URL = (typeof process !== 'undefined' ? process.env.SUPABASE_URL : null) || 'https://mxtsdgkwzjzlttpotole.supabase.co';
+const SUPABASE_URL = (typeof process !== 'undefined' ? process.env.SUPABASE_URL : null) || 'https://lanonasis.supabase.co';
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY;
 const PROJECT_NAME = 'lanonasis-maas';
 
