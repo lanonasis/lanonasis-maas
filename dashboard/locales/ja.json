@@ -181,5 +181,19 @@
     "roles": "役割と権限",
     "invite_member": "メンバーを招待",
     "activity_log": "アクティビティログ"
+  },
+  "auth": {
+    "login": "サインイン",
+    "register": "アカウント作成",
+    "forgotPassword": "パスワードをリセット",
+    "validation": {
+      "emailRequired": "メールアドレスが必要です",
+      "emailInvalid": "メールアドレスが無効です",
+      "passwordRequired": "パスワードが必要です",
+      "passwordMinLength": "パスワードは6文字以上である必要があります",
+      "nameRequired": "名前が必要です",
+      "confirmPasswordRequired": "パスワードを確認してください",
+      "passwordsMismatch": "パスワードが一致しません"
+    }
   }
 }

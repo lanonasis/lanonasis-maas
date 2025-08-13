@@ -181,5 +181,19 @@
     "roles": "Ruoli e permessi",
     "invite_member": "Invita membro",
     "activity_log": "Registro attività"
+  },
+  "auth": {
+    "login": "Accedi",
+    "register": "Crea account",
+    "forgotPassword": "Reimposta password",
+    "validation": {
+      "emailRequired": "Email obbligatoria",
+      "emailInvalid": "Email non valida",
+      "passwordRequired": "Password obbligatoria",
+      "passwordMinLength": "La password deve contenere almeno 6 caratteri",
+      "nameRequired": "Nome obbligatorio",
+      "confirmPasswordRequired": "Conferma la tua password",
+      "passwordsMismatch": "Le password non corrispondono"
+    }
   }
 }

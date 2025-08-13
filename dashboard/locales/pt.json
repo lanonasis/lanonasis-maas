@@ -181,5 +181,19 @@
     "roles": "Funções e permissões",
     "invite_member": "Convidar membro",
     "activity_log": "Registo de atividades"
+  },
+  "auth": {
+    "login": "Entrar",
+    "register": "Criar conta",
+    "forgotPassword": "Redefinir senha",
+    "validation": {
+      "emailRequired": "O email é obrigatório",
+      "emailInvalid": "O email é inválido",
+      "passwordRequired": "A senha é obrigatória",
+      "passwordMinLength": "A senha deve ter pelo menos 6 caracteres",
+      "nameRequired": "O nome é obrigatório",
+      "confirmPasswordRequired": "Por favor, confirme sua senha",
+      "passwordsMismatch": "As senhas não coincidem"
+    }
   }
 }

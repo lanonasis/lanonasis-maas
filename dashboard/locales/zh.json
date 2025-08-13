@@ -181,5 +181,19 @@
     "roles": "角色与权限",
     "invite_member": "邀请成员",
     "activity_log": "活动日志"
+  },
+  "auth": {
+    "login": "登录",
+    "register": "创建账户",
+    "forgotPassword": "重置密码",
+    "validation": {
+      "emailRequired": "邮箱是必填项",
+      "emailInvalid": "邮箱格式无效",
+      "passwordRequired": "密码是必填项",
+      "passwordMinLength": "密码长度必须至少为 6 个字符",
+      "nameRequired": "姓名是必填项",
+      "confirmPasswordRequired": "请确认您的密码",
+      "passwordsMismatch": "两次输入的密码不匹配"
+    }
   }
 }

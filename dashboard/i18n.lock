@@ -130,3 +130,13 @@ checksums:
     team/roles: 766190959c36bdfa5506b087f190707d
     team/invite_member: f5e857a1a55466588ed76433de430248
     team/activity_log: dfb613b68e97be8c594869c159ff137d
+    auth/login: ec7b8f314fe9bc6591006707484ede61
+    auth/register: 3c3c9666b2acc1404eaa89e34e17f946
+    auth/forgotPassword: 52ec990b25991808a4f49db84986eefc
+    auth/validation/emailRequired: 26c1cc9143c4863de2601fa704aa81e5
+    auth/validation/emailInvalid: 06a24777aa91a6436b0645a02173c40c
+    auth/validation/passwordRequired: 19ff103c40080105aaaee40e2689e257
+    auth/validation/passwordMinLength: 1095ab607e723946b3cac90ed260f289
+    auth/validation/nameRequired: 9cfb07618c3bfb2d8d50f93c983e9ae6
+    auth/validation/confirmPasswordRequired: d4777835f4c7b6995aa451ddfc2d07f3
+    auth/validation/passwordsMismatch: 37ca1f4e0afc9a0b8e9617f767103c92
