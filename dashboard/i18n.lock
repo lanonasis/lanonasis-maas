@@ -1,9 +1,78 @@
 version: 1
 checksums:
   55dc377b5e931bfc64e4add83e35d9ea:
-    app/name: 38dcb022adb11ce743a7ccdf3cbb8ddb
+    app/name: a6b824934a6d277722de8d46f10d1e7f
     app/tagline: f75e624b2a8e23dc7d730ff864585ba1
-    dashboard/title: 655f74f626977e68f91ac621c426be1a
+    common/buttons/save: f7a2929f33bc420195e59ac5a8bcd454
+    common/buttons/cancel: 2e2a849c2223911717de8caa2c71bade
+    common/buttons/submit: 7c91ef5f747eea9f77a9c4f23e19fb2e
+    common/buttons/delete: 8bcf303dd10a645b5baacb02b47d72c9
+    common/buttons/edit: eee7f39ff90b18852afc1671f21fbaa9
+    common/buttons/add: 87c4a663507f2bcbbf79934af8164e13
+    common/buttons/create: 757ccd28dd533ff3a933355273c1e32a
+    common/buttons/back: f541015a827e37cb3b1234e56bc2aa3c
+    common/buttons/next: 89ddbcf710eba274963494f312bdc8a9
+    common/buttons/previous: 25c58dd62f190368a3d2c4c97b385ea9
+    common/buttons/copy: 627c00d2c850b9b45f7341a6ac01b6bb
+    common/buttons/view: 36a9b5e3dc153c036d320460d72a03c3
+    common/buttons/addCustomCategory: f078b08cc6d95620da8df56c1b168f37
+    common/buttons/viewApiReference: cc888b19dd80477547d3be6598c0c85f
+    common/buttons/viewDetails: f89b1a0b178c4e8448cdbee27998ed03
+    common/buttons/backToDashboard: 3307b46d8e54605dd8bc83c17112af28
+    common/buttons/viewCompletePricing: ea8bd64b0a1194195343a93f8f753bca
+    common/buttons/sdkDocumentation: f32a34ff3ad0b25978c19c294556cab9
+    common/buttons/githubRepository: dec80a1b2d6d5871f458fd1c06566266
+    common/labels/name: 9368b5a047572b6051f334af5aa76819
+    common/labels/email: e7f34943a0c2fb849db1839ff6ef5cb5
+    common/labels/password: 223a61cf906ab9c40d22612c588dff48
+    common/labels/fullName: f45991923345e8322c9ff8cd6b7e2b16
+    common/labels/categoryName: af03e079cbe712ce34f241627e6bfe7e
+    common/labels/parentCategory: 3bf0ac72ccf45e7634dbf6aa4c1d3964
+    common/labels/keywordPatterns: 7bb6af397aacaa17ac580d9b0cc22869
+    common/labels/responseFormat: 4a8a5d89a6ecb528644e4138963ed1a0
+    common/labels/enableAiAnalysis: e9dfa52d8bc42b4d2de7114bef4e5191
+    common/labels/mlConfidenceThreshold: 55b19e9160895d81ff252e22d522cf15
+    common/labels/customBranding: dccb2766844e8ad097f1a1a30112dd92
+    common/labels/whiteLabelReports: 434e6075688377b7807ed357d61a2fab
+    common/labels/embeddableWidgets: b9c39cb556a3daf33925e26cea55baf2
+    common/labels/pdfExport: 7b69da3847372ae47e54db3bbf2d98ea
+    common/labels/amount: a0ae9c6ff98b57475cdce56f66066aa4
+    common/labels/cardNumber: 67227b10d7b0dafdb8762054876c96db
+    common/labels/expiryDate: ebff6b100e92b9cb4df6b7b49887c6bd
+    common/labels/cvc: 31e44946a1af23afb0a28f5f4f88b04b
+    common/placeholders/fullName: f45991923345e8322c9ff8cd6b7e2b16
+    common/placeholders/email: 03e1a04b846b5c2d57591802c4f12c1e
+    common/placeholders/password: 5ee7cd1a4a7fe6fb896e8a0c4b2d7255
+    common/placeholders/confirmPassword: 5ee7cd1a4a7fe6fb896e8a0c4b2d7255
+    common/placeholders/categoryName: a83f73ba0ac83b5038f2226fbfbc7248
+    common/placeholders/parentCategorySelect: 92d50c52e4db99059733a1dc523a34a5
+    common/placeholders/keywordPatterns: 964a9977e8cdb2de14f40ccd8f128f2e
+    common/placeholders/selectAnalysisType: 0677c7a4a02d5abee5b3e2fe30925368
+    common/placeholders/selectTimeframe: b1a4d5ede674704d65b79c380566bd7a
+    common/placeholders/select: 5ac04c47a98deb85906bc02e0de91ab0
+    common/placeholders/amount: a0ae9c6ff98b57475cdce56f66066aa4
+    common/placeholders/cardNumber: 064878d727fa62d6152c8e80ad198c3f
+    common/placeholders/expiryDate: ebff6b100e92b9cb4df6b7b49887c6bd
+    common/placeholders/cvc: 31e44946a1af23afb0a28f5f4f88b04b
+    common/messages/loading: 82b4ea7ed1439094d7c4be13aaba9a66
+    common/messages/error: 53a2b5f5e7d83c737c8e02fe18fb4bdb
+    common/messages/success: e6dcd73052dc41dbe05d86af9887d2c4
+    common/messages/welcome: 83922c5de4d6be6b5c6cd93978e0e78b
+    common/badges/interactive: 59a309148c57d00d184d2d0e2eb6a9ce
+    common/ariaLabels/selectLanguage: d75cf5fbce8a4c7a9055e2210af74480
+    common/ariaLabels/pagination: 384d94b176acce25289ed8acbb5ed963
+    common/ariaLabels/goToPreviousPage: 85620c2e33f602ff20fe6e5233cdb892
+    common/ariaLabels/goToNextPage: a8ecb84396af205fc7722faa92147281
+    common/ariaLabels/breadcrumb: 6ff91b79dc0ab911eabd5433c4702fea
+    common/ariaLabels/toggleSidebar: 0ef91fcb33b04612eb8a202f673d7881
+    common/ariaLabels/themeSettings: c22c4c818712715feff6bd1d196684c3
+    common/ariaLabels/copyApiKey: 8a3d131d341221a2ef85f794f10b1fcc
+    common/ariaLabels/github: 6e1cf3c00fa6fbe24afcc78ea3b5f3e4
+    common/ariaLabels/twitter: ba3d4aed69a50759b53a0b7c319a3ad9
+    common/ariaLabels/linkedin: f29b78f253094277c2e9ef79d10b5e4f
+    common/ariaLabels/email: e7f34943a0c2fb849db1839ff6ef5cb5
+    dashboard/title: b462d273a3b15bc6a1685aa3fe965be4
+    dashboard/subtitle: 78fe999c57d410f969bd724155bcc9a0
     dashboard/overview: 2687869f370e433a15a73b6b63ae9489
     dashboard/revenue: ff03ab827646d3027cc63ed72943c03d
     dashboard/expenses: c8083007493401ec7d7ee5c8e2797793
@@ -15,6 +84,36 @@ checksums:
     api/documentation: db334795446f17fc54eb91d91064a7ec
     api/rate_limits: a2ec21fa095cb897ce9d5bd526c95b72
     api/webhooks: 0329bc102d3ab3c73410d126e119de12
+    banking/statements/title: 83af20f0f209f5c553a4b08da092d388
+    banking/statements/insights/title: c6b4071e19dd01cb842283ab13e4cbb9
+    banking/statements/insights/subtitle: 1267b803b07a91ce882dcf6bdc68cfec
+    banking/statements/insights/insightTypes/title: 383a193f3c05ce86b83149dac2390f6c
+    banking/statements/insights/insightTypes/subtitle: 05242c0fd938e2c028d7e370a8f954fc
+    banking/statements/insights/interactiveReports/title: f5767cc7ff7e3e132b2deffcc755298e
+    banking/statements/insights/interactiveReports/subtitle: 4e571da764cc7f6c67fb02657f70ac2e
+    banking/statements/insights/customizationOptions: b038fb71772ce983ddf07afa8d92b94e
+    banking/statements/insights/spendingDistribution: bd7dee3f6fd7c7a8b2460230f6b3f2ce
+    banking/statements/insights/financialTrends: a9f2eafdeaf57bed525ce1cb7d8af8b0
+    banking/statements/docs/title: db334795446f17fc54eb91d91064a7ec
+    banking/statements/docs/subtitle: 4fee22c45da6722cf0396632ea7ee9bd
+    banking/statements/docs/quickStartGuide: 9ba354903c0c56c24a9662b5342aaa6a
+    banking/statements/docs/interactiveApiExplorer: 88afcc29adb1fd85e2c8ce56ec74a776
+    banking/statements/categorize/title: 2eae6fd9c64df8cd52cce6ad568d823a
+    banking/statements/categorize/subtitle: ff576b00e9a71d53669b850dda5dbb77
+    banking/statements/categorize/categoryHierarchy/title: ca7b17366adb0b5e08dc2930b843511d
+    banking/statements/categorize/categoryHierarchy/subtitle: 9628a9e777665561f932bd408949f06e
+    banking/statements/categorize/customCategories/title: 03fa39efe479451f41c2bf016f8773c8
+    banking/statements/categorize/customCategories/subtitle: 114267873d09fa652cd118bc31e9dfe8
+    banking/statements/categorize/categories/transportation: 53db4b5e5eb2967fe70dd233d3b9c770
+    banking/statements/categorize/categories/shopping: ad612104307de617619fde0fdecba28b
+    banking/statements/retrieve/title: 02beeb444b4e2180638d81288af56a29
+    banking/statements/retrieve/subtitle: 6404efa9b0a377163c4143535df181e5
+    banking/statements/retrieve/uploadProcess/title: 64b1202074fc44bd23075642b65bb786
+    banking/statements/retrieve/uploadProcess/subtitle: 36ca55610f6543178fc379c93aa087d5
+    banking/statements/retrieve/dataQualityControls/title: 279dd031c10db6bde5b95333459d8b63
+    banking/statements/retrieve/dataQualityControls/subtitle: 4f83f4e10036ea1451bfd6ae515570d2
+    banking/statements/retrieve/supportedInstitutions/title: 6c5f2c5092faf4de9762d0ad9a4c0f8a
+    banking/statements/retrieve/supportedInstitutions/subtitle: 1ccd82cda8d10376b33f7a4dfab49f70
     analytics/title: ec67586974cc78f25959d47bb36683a7
     analytics/performance: cfb4b356395162140347101f7e48e0ef
     analytics/user_activity: 4aa1d3649f1aaf05ddde7471bfe1342a
