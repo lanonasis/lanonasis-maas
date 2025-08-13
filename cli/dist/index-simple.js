@@ -33,7 +33,7 @@ program
     .alias('memory')
     .alias('maas')
     .description(colors.info('🧠 LanOnasis Enterprise CLI - Memory as a Service, API Management & Infrastructure Orchestration'))
-    .version('1.2.0', '-v, --version', 'display version number')
+    .version('1.4.2', '-v, --version', 'display version number')
     .option('-V, --verbose', 'enable verbose logging')
     .option('--api-url <url>', 'override API URL')
     .option('--output <format>', 'output format (json, table, yaml)', 'table')
@@ -85,7 +85,7 @@ process.on('unhandledRejection', (reason, promise) => {
 // Enhanced welcome message
 const showWelcome = () => {
     console.log();
-    console.log(colors.primary('🚀 LanOnasis Enterprise CLI v1.2.0'));
+    console.log(colors.primary('🚀 LanOnasis Enterprise CLI v1.4.2'));
     console.log(colors.info('━'.repeat(50)));
     console.log(colors.highlight('Enterprise-grade Memory as a Service, API Management & Infrastructure Orchestration'));
     console.log();
@@ -308,7 +308,7 @@ sdkCmd
     console.log(colors.primary('🔧 SDK Status Check'));
     console.log(colors.info('━'.repeat(40)));
     console.log(`${colors.highlight('Memory Client SDK:')} ${colors.success('@lanonasis/memory-client@1.0.0')}`);
-    console.log(`${colors.highlight('CLI Package:')} ${colors.success('@lanonasis/cli@1.2.0')}`);
+    console.log(`${colors.highlight('CLI Package:')} ${colors.success('@lanonasis/cli@1.4.2')}`);
     console.log(`${colors.highlight('NPM Registry:')} ${colors.success('✅ Published')}`);
     console.log(`${colors.highlight('GitHub Packages:')} ${colors.success('✅ Available')}`);
 });
@@ -379,7 +379,7 @@ deployCmd
     console.log(`  REST API: ${colors.success('✅ All endpoints active')}`);
     console.log();
     console.log(colors.highlight('📦 Package Distribution:'));
-    console.log(`  CLI Package: ${colors.success('✅ @lanonasis/cli@1.2.0')}`);
+    console.log(`  CLI Package: ${colors.success('✅ @lanonasis/cli@1.4.2')}`);
     console.log(`  SDK Package: ${colors.success('✅ @lanonasis/memory-client@1.0.0')}`);
     console.log(`  Memory Service: ${colors.success('✅ @lanonasis/memory-service@1.0.0')}`);
     console.log();

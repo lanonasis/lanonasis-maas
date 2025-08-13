@@ -1,14 +1,62 @@
-# 🧠 Memory as a Service (MaaS) - Enterprise Memory Platform
+# Lanonasis Memory as a Service (MaaS)
 
-[![CI/CD Pipeline](https://github.com/lanonasis/lanonasis-maas/workflows/CI/CD%20Pipeline/badge.svg)](https://github.com/lanonasis/lanonasis-maas/actions)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/your-username/lanonasis-maas)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-[![Node.js](https://img.shields.io/badge/Node.js-43853D?logo=node.js&logoColor=white)](https://nodejs.org/)
 [![MCP Integration](https://img.shields.io/badge/MCP-Model%20Context%20Protocol-purple)](https://modelcontextprotocol.com)
-[![npm version](https://img.shields.io/npm/v/@lanonasis/memory-client)](https://www.npmjs.com/package/@lanonasis/memory-client)
-[![CLI Tool](https://img.shields.io/npm/v/@lanonasis/cli)](https://www.npmjs.com/package/@lanonasis/cli)
 
-**Enterprise-Grade Memory as a Service** - Complete B2B2C Memory platform with vector search, semantic memory management, Model Context Protocol (MCP) integration, and comprehensive developer ecosystem. Transform your memory infrastructure into a distributable, monetizable service with AI agent capabilities.
+Enterprise-grade memory management and AI orchestration platform with multi-domain deployment ready for immediate Vercel deployment.
+
+## 🚀 Quick Deployment to Vercel
+
+This repository is ready for immediate deployment to Vercel with zero configuration:
+
+### 1. Deploy Now
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/your-username/lanonasis-maas)
+
+### 2. One-Click Setup
+1. Click "Deploy" above
+2. Connect your GitHub account
+3. The project auto-deploys with default domain
+4. Add your environment variables in Vercel dashboard
+
+### 3. Environment Variables Required
+```env
+SUPABASE_URL=https://<project-ref>.supabase.co
+SUPABASE_SERVICE_KEY=REDACTED_SUPABASE_SERVICE_ROLE_KEY
+SUPABASE_ANON_KEY=REDACTED_SUPABASE_ANON_KEY
+OPENAI_API_KEY=REDACTED_OPENAI_API_KEY
+```
+
+## 🌐 Single Domain Structure
+
+After deployment, your Vercel app will be available at `developer.lanonasis.com`:
+- `https://developer.lanonasis.com/` - Landing page
+- `https://developer.lanonasis.com/dashboard` - Main dashboard
+- `https://developer.lanonasis.com/api/v1/*` - API endpoints
+- `https://developer.lanonasis.com/mcp/sse` - MCP SSE endpoint
+- `https://developer.lanonasis.com/docs/*` - Documentation
+
+## 🎯 Deployment Strategy
+
+This configuration allows **both Netlify and Vercel deployments** to coexist:
+- **Netlify**: `api.lanonasis.com`, `dashboard.lanonasis.com`, `docs.lanonasis.com`
+- **Vercel**: `developer.lanonasis.com` (all paths under single domain)
+
+## 📁 Project Structure
+
+```
+lanonasis-maas/
+├── vercel.json              # Vercel deployment config
+├── dashboard/               # React dashboard (main build)
+│   ├── dist/               # Built dashboard files
+│   └── public/docs/        # Documentation files
+├── api/functions/          # Serverless functions
+│   ├── api.js             # Main API handler
+│   ├── mcp-sse.js         # MCP SSE endpoint
+│   └── orchestrate.js     # AI orchestration
+└── cli/                    # CLI tools
+```
 
 ## 🚀 **Live Platform**
 

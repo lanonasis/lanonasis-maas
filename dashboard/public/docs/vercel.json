@@ -1,0 +1,5 @@
+{
+  "buildCommand": "echo 'No build needed'",
+  "outputDirectory": "dist",
+  "framework": null
+}
