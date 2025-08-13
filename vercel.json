@@ -30,31 +30,31 @@
   "rewrites": [
     {
       "source": "/api/v1/health",
-      "destination": "/api/functions/api"
+      "destination": "/api/functions/api?path=/api/v1/health"
     },
     {
       "source": "/api/v1/orchestrate",
-      "destination": "/api/functions/orchestrate"
+      "destination": "/api/functions/orchestrate?path=/api/v1/orchestrate"
     },
     {
       "source": "/api/v1/(.*)",
-      "destination": "/api/functions/api"
+      "destination": "/api/functions/api?path=/api/v1/$1"
     },
     {
       "source": "/mcp/sse",
-      "destination": "/api/functions/mcp-sse"
+      "destination": "/api/functions/mcp-sse?path=/mcp/sse"
     },
     {
       "source": "/sse",
-      "destination": "/api/functions/mcp-sse"
+      "destination": "/api/functions/mcp-sse?path=/sse"
     },
     {
       "source": "/health",
-      "destination": "/api/functions/api"
+      "destination": "/api/functions/api?path=/health"
     },
     {
       "source": "/metrics",
-      "destination": "/api/functions/api"
+      "destination": "/api/functions/api?path=/metrics"
     },
     {
       "source": "/dashboard",
