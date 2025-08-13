@@ -36,6 +36,11 @@
 
 # API routes handled by Netlify functions (MUST come before catch-all)
 [[redirects]]
+  from = "/api/v1/orchestrate"
+  to = "/.netlify/functions/orchestrate"
+  status = 200
+
+[[redirects]]
   from = "/api/v1/*"
   to = "/.netlify/functions/api/:splat"
   status = 200
