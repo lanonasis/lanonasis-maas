@@ -11,8 +11,30 @@ const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY=REDACTED
 // Determine correct redirect URL based on environment
 export const getRedirectUrl = () => {
   if (typeof window === 'undefined') return 'https://dashboard.lanonasis.com/dashboard';
+  
   const isLocalDev = window.location.hostname === 'localhost';
-  return isLocalDev ? `${window.location.origin}/dashboard` : 'https://dashboard.lanonasis.com/dashboard';
+  const isLocalhost = window.location.hostname === '127.0.0.1' || window.location.hostname === 'localhost';
+  
+  if (isLocalhost) {
+    return `${window.location.origin}/dashboard`;
+  }
+  
+  // Always redirect to dashboard.lanonasis.com for production OAuth
+  return 'https://dashboard.lanonasis.com/dashboard';
+};
+
+// OAuth callback URL for provider configurations
+export const getOAuthCallbackUrl = () => {
+  if (typeof window === 'undefined') return 'https://dashboard.lanonasis.com/auth/callback';
+  
+  const isLocalhost = window.location.hostname === '127.0.0.1' || window.location.hostname === 'localhost';
+  
+  if (isLocalhost) {
+    return `${window.location.origin}/auth/callback`;
+  }
+  
+  // Always use dashboard.lanonasis.com for OAuth callbacks
+  return 'https://dashboard.lanonasis.com/auth/callback';
 };
 
 export const supabase = createClient<Database>(
