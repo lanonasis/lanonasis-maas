@@ -23,6 +23,17 @@
     X-XSS-Protection = "1; mode=block"
     Referrer-Policy = "strict-origin-when-cross-origin"
 
+# MCP SSE endpoints MUST come first before API routes
+[[redirects]]
+  from = "/mcp/sse"
+  to = "/.netlify/functions/mcp-sse"
+  status = 200
+
+[[redirects]]
+  from = "/sse"
+  to = "/.netlify/functions/mcp-sse"
+  status = 200
+
 # API routes handled by Netlify functions (MUST come before catch-all)
 [[redirects]]
   from = "/api/v1/*"
@@ -32,18 +43,6 @@
 [[redirects]]  
   from = "/api/*"
   to = "/.netlify/functions/api/:splat"
-  status = 200
-
-# MCP SSE endpoint handled by Netlify function
-[[redirects]]
-  from = "/mcp/sse"
-  to = "/.netlify/functions/mcp-sse"
-  status = 200
-
-# SSE endpoint handled by MCP SSE Netlify function  
-[[redirects]]
-  from = "/sse"
-  to = "/.netlify/functions/mcp-sse"
   status = 200
 
 # Root endpoint handled by React dashboard (landing page integrated into SPA)
