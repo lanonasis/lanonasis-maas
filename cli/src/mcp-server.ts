@@ -274,7 +274,7 @@ class LanonasisMCPServer {
 
       try {
         const apiKey = process.env.LANONASIS_API_KEY;
-        const apiUrl = process.env.LANONASIS_API_URL || 'https://api.lanonasis.com';
+        const apiUrl = process.env.LANONASIS_API_URL || 'https://dashboard.lanonasis.com';
 
         if (!apiKey) {
           return {
