@@ -346,11 +346,18 @@ export const AuthForm = ({ mode, onSubmit, isLoading = false }: AuthFormProps) =
         )}
 
         {/* Footer Text */}
-        <div className="mt-6 text-center text-sm text-muted-foreground">
-          <span>{footerText}</span>{" "}
-          <Link to={footerLinkPath} className="text-primary hover:underline">
-            {footerLinkText}
-          </Link>
+        <div className="mt-6 text-center text-sm text-muted-foreground space-y-2">
+          <div>
+            <span>{footerText}</span>{" "}
+            <Link to={footerLinkPath} className="text-primary hover:underline">
+              {footerLinkText}
+            </Link>
+          </div>
+          <div>
+            <Link to="/landing" className="text-primary/70 hover:text-primary hover:underline">
+              Learn more about Lanonasis Platform
+            </Link>
+          </div>
         </div>
       </div>
     </div>
