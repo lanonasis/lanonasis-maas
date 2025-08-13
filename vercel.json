@@ -1,14 +1,10 @@
 {
   "version": 2,
   "name": "lanonasis-developer",
+  "buildCommand": "cd dashboard && bun install && bun run build",
+  "outputDirectory": "dashboard/dist",
+  "installCommand": "bun install",
   "builds": [
-    {
-      "src": "dashboard/package.json",
-      "use": "@vercel/static-build",
-      "config": {
-        "distDir": "dist"
-      }
-    },
     {
       "src": "api/functions/api.js",
       "use": "@vercel/node"
@@ -150,7 +146,8 @@
   ],
   "env": {
     "NODE_VERSION": "18",
-    "NODE_ENV": "production"
+    "NODE_ENV": "production",
+    "ENABLE_EXPERIMENTAL_COREPACK": "1"
   },
   "regions": ["iad1"]
 }
