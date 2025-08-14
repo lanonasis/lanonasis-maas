@@ -64,25 +64,6 @@
   to = "/.netlify/functions/api"
   status = 200
 
-# Domain-specific routing for api.lanonasis.com - Redirect auth/dashboard to dashboard domain
-[[redirects]]
-  from = "/dashboard*"
-  to = "https://dashboard.lanonasis.com/dashboard"
-  status = 302
-  conditions = {Host = ["api.lanonasis.com"]}
-
-[[redirects]]
-  from = "/auth*"
-  to = "https://dashboard.lanonasis.com/"
-  status = 302
-  conditions = {Host = ["api.lanonasis.com"]}
-
-[[redirects]]
-  from = "/"
-  to = "https://dashboard.lanonasis.com/"
-  status = 302
-  conditions = {Host = ["api.lanonasis.com"]}
-
 # Documentation routing for docs.lanonasis.com domain
 [[redirects]]
   from = "/*"
@@ -104,10 +85,3 @@
   to = "/index.html"
   status = 200
   conditions = {Host = ["dashboard.lanonasis.com"]}
-
-# API domain routing - serve API function for api.lanonasis.com (MUST be LAST)
-[[redirects]]
-  from = "/*"
-  to = "/.netlify/functions/api"
-  status = 200
-  conditions = {Host = ["api.lanonasis.com"]}

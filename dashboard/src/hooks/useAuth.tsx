@@ -47,7 +47,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   // TODO: TEMPORARY - Mock user data for testing dashboard without auth
   // Remove this when Core Gateway auth is ready
-  const MOCK_USER_MODE = true; // Set to false to re-enable real auth
+  const MOCK_USER_MODE = false; // Set to false to re-enable real auth
   
   const mockUser: User = {
     id: "mock-user-123",

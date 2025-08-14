@@ -8,6 +8,13 @@ interface ProtectedRouteProps {
 }
 
 export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
+  // TODO: TEMPORARY - Auth guards disabled for testing dashboard routes
+  // Remove this and uncomment the auth logic below when Core Gateway auth is ready
+  
+  return <>{children}</>;
+
+  /* 
+  // COMMENTED OUT FOR TESTING - Re-enable when auth is ready
   const { user, isLoading } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -27,7 +34,7 @@ export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
     return (
       <Layout>
         <div className="flex items-center justify-center min-h-[60vh]">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+          <div role="status" className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
         </div>
       </Layout>
     );
@@ -38,4 +45,5 @@ export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
   }
 
   return <>{children}</>;
+  */
 };
