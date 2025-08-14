@@ -5,7 +5,7 @@
 [dev]
   command = "bun run dev"
   port = 3000
-  targetPort = 3000
+  targetPort = 8080
 
 env = { }
 
@@ -13,6 +13,13 @@ env = { }
 [[redirects]]
   from = "/api/*"
   to = "https://api.lanonasis.com/:splat"
+  status = 200
+  force = true
+
+# Auth proxy to backend
+[[redirects]]
+  from = "/v1/*"
+  to = "https://api.lanonasis.com/v1/:splat"
   status = 200
   force = true
 
