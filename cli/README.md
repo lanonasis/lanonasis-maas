@@ -4,9 +4,9 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![MCP Integration](https://img.shields.io/badge/MCP-Model%20Context%20Protocol-purple)](https://modelcontextprotocol.com)
 
-🚀 **Professional CLI for Lanonasis Platform Services with MCP Integration**
+🚀⚡ **Professional CLI for Lanonasis Platform Services with MCP Integration**
 
-The Lanonasis CLI provides a powerful command-line interface for interacting with the entire Lanonasis ecosystem, including Memory as a Service (MaaS), infrastructure management, and multi-service orchestration. Now with **Model Context Protocol (MCP)** integration for unified AI-agent communication. Manage your memories, search through knowledge bases, organize your thoughts, and control your infrastructure - all from the terminal.
+The Lanonasis CLI provides a powerful command-line interface for interacting with the entire Lanonasis ecosystem, including Memory as a Service (MaaS), infrastructure management, and multi-service orchestration. Now with **Model Context Protocol (MCP)** integration for unified AI-agent communication and **Centralized Core Gateway Authentication** for seamless OAuth and password flows. Manage your memories, search through knowledge bases, organize your thoughts, and control your infrastructure - all from the terminal.
 
 ## 🆕 New in v1.2.0 - API Key Management Integration
 - **API Key Management**: Complete CLI commands for secure API key lifecycle management
@@ -18,15 +18,15 @@ The Lanonasis CLI provides a powerful command-line interface for interacting wit
 - **Hybrid Architecture**: Seamless switching between local MCP and remote API
 - **Real-time Updates**: SSE streaming for live memory synchronization
 
-## 🆕 New in v1.2.1 - Enhanced CLI Experience
-- **🎨 Colorful VPS-style Interface**: Beautiful terminal output with intuitive color coding
-- **📊 Enhanced System Status**: Comprehensive health checks and service monitoring
-- **🔍 Improved Version Management**: Better version tracking and update notifications
-- **⚡ Performance Optimizations**: Faster command execution and response times
-- **🛡️ Enhanced Security Checks**: Real-time API endpoint validation
-- **📈 Usage Statistics**: Track your CLI usage patterns and command history
-- **🌈 Color-coded Output**: Error states, success messages, and warnings in vibrant colors
-- **🔄 Auto-update Notifications**: Get notified when new versions are available
+## 🆕 New in v1.4.2 - Centralized Authentication & Enhanced UX
+- **🔐 Dual Authentication Flow**: Password + OAuth browser flow via Core Gateway
+- **🌐 Centralized Auth**: All auth via `https://api.lanonasis.com/v1/auth/*`
+- **🎯 Project-Scoped JWTs**: Secure tokens with `project_scope: 'maas'`
+- **⚡ Short Command Support**: `onasis -h` and `lanonasis -h` for quick access
+- **🎨 Tab Completion Hints**: Post-authentication tab completion guidance
+- **🔄 Session Management**: Centralized session handling via Core Gateway
+- **📊 Memory Operations**: All memory ops via `/api/v1/maas/*` endpoints
+- **🛡️ Enhanced Security**: Audit logging and centralized user management
 
 ## ⚡ Quick Start
 
@@ -40,11 +40,11 @@ npx -y @lanonasis/cli init
 # Initialize Lanonasis services
 lanonasis init
 
-# Configure your services
-lanonasis config set api-url https://your-lanonasis-service.com
+# Authenticate (Core Gateway with OAuth/Password)
+lanonasis login
 
-# Authenticate
-lanonasis auth login
+# Or use short command
+onasis login
 
 # Memory operations (also available as 'memory' and 'maas' commands)
 lanonasis memory create -t "My First Memory" -c "This is the content of my memory"
@@ -84,10 +84,12 @@ npx lanonasis --help
 - `lanonasis config list` - List all configuration options
 - `lanonasis status` - Show CLI status and configuration
 
-### 🔐 Authentication
-- `lanonasis auth login` - Authenticate with your services
-- `lanonasis auth logout` - Sign out
+### 🔐 Authentication (Core Gateway)
+- `lanonasis login [--method <method>]` - Login (password/oauth/auto)
+- `lanonasis auth login` - Interactive login with method selection
+- `lanonasis auth logout` - Sign out and clear session
 - `lanonasis auth status` - Check authentication status
+- `onasis login` - Short command for quick access
 
 ### 📝 Memory Operations
 - `lanonasis create -t "Title" -c "Content" [--type <type>]` - Create new memory
@@ -136,17 +138,53 @@ lanonasis config list
 
 ## 🔒 Authentication
 
-Authenticate with your Lanonasis platform:
+**New in v1.4.2: Centralized Core Gateway Authentication**
 
+Authenticate via `https://api.lanonasis.com/v1/auth/*` with dual login methods:
+
+### Login Methods
+
+**1. Interactive Login (Recommended)**
 ```bash
-# Login to your service
+# Choose between password or OAuth
+lanonasis login
+# or
 lanonasis auth login
+```
+
+**2. Username/Password Flow**
+```bash
+# Direct password authentication
+lanonasis login --method password
+lanonasis login -e user@example.com -p password
+```
+
+**3. OAuth Browser Flow**
+```bash
+# OAuth via browser redirect
+lanonasis login --method oauth
+```
+
+### Authentication Commands
+```bash
+# Login with method selection
+lanonasis login
 
 # Check authentication status
 lanonasis auth status
 
 # Logout
 lanonasis auth logout
+```
+
+### Short Commands
+```bash
+# Quick help
+onasis -h
+lanonasis -h
+
+# Quick login
+onasis login
 ```
 
 ## 📖 Usage Examples
@@ -262,20 +300,35 @@ lanonasis mcp test --tool <name> # Test specific tool
 - **🎯 Auto-detection**: Intelligently chooses best mode
 - **📝 Full Memory API**: All operations exposed as MCP tools
 
-## 🌐 MaaS Service Integration
+## 🌐 Core Gateway Integration
 
-This CLI is designed to work with Memory as a Service platforms that provide:
-- RESTful API endpoints
-- JWT or API key authentication
-- Vector-based memory search
-- Multi-tenant memory storage
+This CLI integrates with the centralized Lanonasis Core Gateway that provides:
+- **Centralized Authentication**: `https://api.lanonasis.com/v1/auth/*`
+- **Memory Services**: `https://api.lanonasis.com/api/v1/maas/*`
+- **Project-Scoped JWTs**: Tokens with `project_scope: 'maas'`
+- **Session Management**: Centralized session handling
+- **Audit Logging**: Comprehensive audit trails
+- **OAuth Support**: Browser-based OAuth flows
+- **Vector Search**: OpenAI embeddings with semantic search
+- **Multi-tenant Architecture**: Organization isolation with RLS
 
-### Setting up your MaaS Service
+### Getting Started with Core Gateway
 
-1. **Deploy** a MaaS service using the provided backend
-2. **Configure** the CLI with your service endpoint
-3. **Authenticate** using your service credentials
-4. **Start** managing your memories!
+1. **Install** the CLI globally: `npm install -g @lanonasis/cli`
+2. **Initialize** configuration: `lanonasis init`
+3. **Authenticate** via Core Gateway: `lanonasis login`
+4. **Choose** your auth method (OAuth recommended)
+5. **Start** managing memories with tab completion!
+
+### Remote Usage (NPX)
+```bash
+# Use without installation
+npx -y @lanonasis/cli login
+npx -y @lanonasis/cli memory search "my query"
+
+# With API key authentication
+LANONASIS_API_KEY=your-key npx -y @lanonasis/cli memory list
+```
 
 ## 🛠️ Development
 

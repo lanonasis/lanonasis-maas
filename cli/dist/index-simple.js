@@ -30,14 +30,16 @@ const program = new Command();
 const cliConfig = new CLIConfig();
 program
     .name('lanonasis')
+    .alias('onasis')
     .alias('memory')
     .alias('maas')
-    .description(colors.info('🧠 LanOnasis Enterprise CLI - Memory as a Service, API Management & Infrastructure Orchestration'))
+    .description(colors.info(' LanOnasis Enterprise CLI - Memory as a Service, API Management & Infrastructure Orchestration'))
     .version('1.4.2', '-v, --version', 'display version number')
     .option('-V, --verbose', 'enable verbose logging')
     .option('--api-url <url>', 'override API URL')
     .option('--output <format>', 'output format (json, table, yaml)', 'table')
     .option('--no-mcp', 'disable MCP and use direct API')
+    .option('-h, --help', 'display help for command')
     .hook('preAction', async (thisCommand, actionCommand) => {
     const opts = thisCommand.opts();
     if (opts.verbose) {
@@ -69,14 +71,14 @@ program
 });
 // Enhanced global error handler
 process.on('uncaughtException', (error) => {
-    console.error(colors.error('✖ Unexpected error:'), error.message);
+    console.error(colors.error(' Unexpected error:'), error.message);
     if (process.env.CLI_VERBOSE === 'true') {
         console.error(colors.muted(error.stack || ''));
     }
     process.exit(1);
 });
 process.on('unhandledRejection', (reason, promise) => {
-    console.error(colors.error('✖ Unhandled promise rejection:'), reason);
+    console.error(colors.error(' Unhandled promise rejection:'), reason);
     if (process.env.CLI_VERBOSE === 'true') {
         console.error(colors.muted(String(promise)));
     }
@@ -85,30 +87,34 @@ process.on('unhandledRejection', (reason, promise) => {
 // Enhanced welcome message
 const showWelcome = () => {
     console.log();
-    console.log(colors.primary('🚀 LanOnasis Enterprise CLI v1.4.2'));
+    console.log(colors.primary(' LanOnasis Enterprise CLI v1.4.2'));
     console.log(colors.info('━'.repeat(50)));
     console.log(colors.highlight('Enterprise-grade Memory as a Service, API Management & Infrastructure Orchestration'));
     console.log();
-    console.log(colors.warning('🏁 Quick Start:'));
+    console.log(colors.warning(' Quick Start:'));
     console.log(`  ${colors.success('lanonasis init')}     ${colors.muted('# Initialize CLI configuration')}`);
-    console.log(`  ${colors.success('lanonasis login')}    ${colors.muted('# Authenticate with your account')}`);
+    console.log(`  ${colors.success('lanonasis login')}    ${colors.muted('# Authenticate (password or OAuth)')}`);
     console.log(`  ${colors.success('lanonasis health')}   ${colors.muted('# Check system health')}`);
     console.log(`  ${colors.success('lanonasis --help')}   ${colors.muted('# Show all available commands')}`);
     console.log();
-    console.log(colors.info('📚 Documentation: https://api.lanonasis.com/docs'));
-    console.log(colors.info('🌐 Dashboard: https://api.lanonasis.com/dashboard'));
+    console.log(colors.accent(' Short Commands:'));
+    console.log(`  ${colors.success('onasis -h')}          ${colors.muted('# Quick help')}`);
+    console.log(`  ${colors.success('lanonasis -h')}       ${colors.muted('# Quick help')}`);
+    console.log();
+    console.log(colors.info(' Documentation: https://api.lanonasis.com/docs'));
+    console.log(colors.info(' Dashboard: https://api.lanonasis.com/dashboard'));
     console.log();
 };
 // Enhanced system health check
 const healthCheck = async () => {
-    console.log(colors.primary('🏥 LanOnasis System Health Check'));
+    console.log(colors.primary(' LanOnasis System Health Check'));
     console.log(colors.info('═'.repeat(40)));
     console.log();
     // Authentication status
     process.stdout.write('Authentication status: ');
     const isAuth = await cliConfig.isAuthenticated();
     if (isAuth) {
-        console.log(colors.success('✅ Authenticated'));
+        console.log(colors.success(' Authenticated'));
         const user = await cliConfig.getCurrentUser();
         if (user) {
             console.log(`  Email: ${colors.highlight(user.email)}`);
@@ -117,7 +123,7 @@ const healthCheck = async () => {
         }
     }
     else {
-        console.log(colors.error('❌ Not authenticated'));
+        console.log(colors.error(' Not authenticated'));
         console.log(colors.muted('  Run: lanonasis login'));
     }
     // API connectivity
@@ -125,11 +131,11 @@ const healthCheck = async () => {
     process.stdout.write('API connectivity: ');
     try {
         const apiUrl = cliConfig.getApiUrl();
-        console.log(colors.success('✅ Connected'));
+        console.log(colors.success(' Connected'));
         console.log(`  Endpoint: ${colors.highlight(apiUrl)}`);
     }
     catch (error) {
-        console.log(colors.error('❌ Failed'));
+        console.log(colors.error(' Failed'));
         console.log(colors.muted(`  Error: ${error instanceof Error ? error.message : 'Unknown error'}`));
     }
     // MCP status
@@ -138,14 +144,14 @@ const healthCheck = async () => {
     try {
         const client = getMCPClient();
         if (client.isConnectedToServer()) {
-            console.log(colors.success('✅ Connected'));
+            console.log(colors.success(' Connected'));
         }
         else {
-            console.log(colors.warning('⚠️  Disconnected'));
+            console.log(colors.warning('  Disconnected'));
         }
     }
     catch (error) {
-        console.log(colors.error('❌ Error'));
+        console.log(colors.error(' Error'));
         console.log(colors.muted(`  ${error instanceof Error ? error.message : 'Unknown error'}`));
     }
     // Configuration status
@@ -153,24 +159,33 @@ const healthCheck = async () => {
     process.stdout.write('Configuration: ');
     const configExists = await cliConfig.exists();
     if (configExists) {
-        console.log(colors.success('✅ Found'));
+        console.log(colors.success(' Found'));
         console.log(`  Location: ${colors.highlight(cliConfig.getConfigPath())}`);
     }
     else {
-        console.log(colors.warning('⚠️  Not found'));
+        console.log(colors.warning('  Not found'));
         console.log(colors.muted('  Run: lanonasis init'));
     }
     console.log();
-    console.log(colors.info('💡 For detailed diagnostics, run: lanonasis status --verbose'));
+    console.log(colors.info(' For detailed diagnostics, run: lanonasis status --verbose'));
+    console.log(colors.accent(' Tab Completion: Available after authentication'));
 };
-// Check if user is authenticated for protected commands
+// Check if user is authenticated for protected commands with tab completion info
 const requireAuth = (command) => {
     command.hook('preAction', async () => {
         const isAuthenticated = await cliConfig.isAuthenticated();
         if (!isAuthenticated) {
             console.error(chalk.red('✖ Authentication required'));
-            console.log(chalk.yellow('Please run:'), chalk.white('memory login'));
+            console.log(chalk.yellow('Please run:'), chalk.white('lanonasis login'));
+            console.log(chalk.gray('After login, you\'ll have access to tab completions and all features'));
             process.exit(1);
+        }
+        else {
+            // Show tab completion hint for first-time users
+            const user = await cliConfig.getCurrentUser();
+            if (user && process.env.CLI_VERBOSE !== 'true') {
+                console.log(chalk.dim(`✓ Authenticated as ${user.email} | Tab completion available`));
+            }
         }
     });
 };
@@ -187,9 +202,18 @@ const authCmd = program
     .description('Authentication commands');
 authCmd
     .command('login')
-    .description('Login to your MaaS account')
-    .option('-e, --email <email>', 'email address')
-    .option('-p, --password <password>', 'password')
+    .description('Login to your MaaS account (password or OAuth)')
+    .option('-e, --email <email>', 'email address (for password auth)')
+    .option('-p, --password <password>', 'password (for password auth)')
+    .option('-m, --method <method>', 'auth method: password, oauth, or auto', 'auto')
+    .action(loginCommand);
+// Direct login command for convenience
+program
+    .command('login')
+    .description('Login to your MaaS account (password or OAuth)')
+    .option('-e, --email <email>', 'email address (for password auth)')
+    .option('-p, --password <password>', 'password (for password auth)')
+    .option('-m, --method <method>', 'auth method: password, oauth, or auto', 'auto')
     .action(loginCommand);
 authCmd
     .command('logout')
