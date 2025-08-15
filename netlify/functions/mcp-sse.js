@@ -53,17 +53,9 @@ exports.handler = async (event) => {
 
     // Validate API key - try direct database lookup first (more reliable in Netlify)
     let keyData = null;
-    
+  
     console.log('🔍 Starting API key authentication...');
-    console.log('Environment check:', {
-      hasSupabaseUrl: !!process.env.SUPABASE_URL=https://<project-ref>.supabase.co
-      hasSupabaseKey: !!process.env.SUPABASE_SERVICE_KEY=REDACTED_SUPABASE_SERVICE_ROLE_KEY
-      supabaseUrl: process.env.SUPABASE_URL=https://<project-ref>.supabase.co
-      serviceKeyPrefix: process.env.SUPABASE_SERVICE_KEY=REDACTED_SUPABASE_SERVICE_ROLE_KEY
-      apiKeyLength: apiKey?.length,
-      apiKeyPrefix: apiKey?.substring(0, 20) + '...'
-    });
-    
+  
     // Create a new Supabase client with explicit configuration for Netlify environment
     let authSupabase;
     try {
@@ -161,6 +153,24 @@ exports.handler = async (event) => {
     const connectionId = `mcp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
     
     console.log('✅ MCP SSE connection established successfully');
+
+    // Central audit log (best-effort; ignore if table not present)
+    try {
+      await supabase
+        .from('core.logs')
+        .insert({
+          project: 'lanonasis-maas',
+          function_called: 'netlify:mcp-sse',
+          user_id: keyData.user_id || null,
+          organization_id: keyData.organization_id || null,
+          status: 'connected',
+          ip_address: event.headers['x-forwarded-for'] || event.headers['x-real-ip'] || 'Unknown',
+          user_agent: event.headers['user-agent'] || 'Unknown',
+          timestamp: new Date().toISOString()
+        });
+    } catch (auditErr) {
+      console.log('Note: Could not write to core.logs:', auditErr.message);
+    }
     
     // Log connection for analytics (optional)
     try {
@@ -194,7 +204,7 @@ exports.handler = async (event) => {
     return {
       statusCode: 200,
       headers,
-      body: `data: ${JSON.stringify(responseData)}\n\n`,
+      body: `retry: 30000\ndata: ${JSON.stringify(responseData)}\n\n`,
       isBase64Encoded: false
     }
 

@@ -42,7 +42,7 @@
       "pdfExport": "PDF 내보내기",
       "amount": "금액",
       "cardNumber": "카드 번호",
-      "expiryDate": "MM/YY",
+      "expiryDate": "유효기간",
       "cvc": "CVC"
     },
     "placeholders": {
@@ -58,7 +58,7 @@
       "select": "선택",
       "amount": "금액",
       "cardNumber": "4242 4242 4242 4242",
-      "expiryDate": "MM/YY",
+      "expiryDate": "유효기간",
       "cvc": "CVC"
     },
     "messages": {

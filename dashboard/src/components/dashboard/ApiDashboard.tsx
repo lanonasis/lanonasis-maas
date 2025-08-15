@@ -30,7 +30,8 @@ const apiUsageData = [
 
 export const ApiDashboard = () => {
   const { t } = useTranslation();
-  const [activeTab, setActiveTab] = useState("overview");
+  const { user } = useAuth();
+  const [selectedTab, setSelectedTab] = useState("overview");
   const { profile } = useAuth();
 
   return (
@@ -63,7 +64,7 @@ export const ApiDashboard = () => {
         </div>
       </div>
 
-      <Tabs defaultValue="overview" value={activeTab} onValueChange={setActiveTab} className="w-full">
+      <Tabs defaultValue="overview" value={selectedTab} onValueChange={setSelectedTab} className="w-full">
         <TabsList className="grid grid-cols-2 md:grid-cols-8 mb-8">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="payment-gateways">Payments</TabsTrigger>
@@ -79,38 +80,38 @@ export const ApiDashboard = () => {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <Card>
               <CardHeader className="pb-2">
-                <CardDescription>Total API Calls (Last 7 days)</CardDescription>
+                <CardDescription>{t('dashboard.metrics.totalApiCalls')}</CardDescription>
                 <CardTitle className="text-3xl font-bold">24,892</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="text-xs text-muted-foreground flex items-center">
                   <div className="mr-2 text-green-500">+8.2%</div>
-                  <div>from previous period</div>
+                  <div>{t('dashboard.metrics.fromPreviousPeriod')}</div>
                 </div>
               </CardContent>
             </Card>
             
             <Card>
               <CardHeader className="pb-2">
-                <CardDescription>Active API Keys</CardDescription>
+                <CardDescription>{t('dashboard.metrics.activeApiKeys')}</CardDescription>
                 <CardTitle className="text-3xl font-bold">4</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="text-xs text-muted-foreground">
-                  Last created: 3 days ago
+                  {t('dashboard.metrics.lastCreated', { days: 3 })}
                 </div>
               </CardContent>
             </Card>
             
             <Card>
               <CardHeader className="pb-2">
-                <CardDescription>Average Response Time</CardDescription>
+                <CardDescription>{t('dashboard.metrics.averageResponseTime')}</CardDescription>
                 <CardTitle className="text-3xl font-bold">187ms</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="text-xs text-muted-foreground flex items-center">
                   <div className="mr-2 text-green-500">-12.5%</div>
-                  <div>from previous period</div>
+                  <div>{t('dashboard.metrics.fromPreviousPeriod')}</div>
                 </div>
               </CardContent>
             </Card>
@@ -123,9 +124,9 @@ export const ApiDashboard = () => {
                   <div>
                     <CardTitle className="flex items-center">
                       <LineChart className="h-5 w-5 mr-2 text-primary" />
-                      API Usage Trend
+                      {t('dashboard.charts.apiUsageTrend')}
                     </CardTitle>
-                    <CardDescription>Daily API requests (last 7 days)</CardDescription>
+                    <CardDescription>{t('dashboard.charts.dailyApiRequests')}</CardDescription>
                   </div>
                   <Link to="/api-analytics">
                     <Button variant="ghost" size="sm" className="gap-1">
@@ -169,24 +170,24 @@ export const ApiDashboard = () => {
               <CardHeader className="pb-2">
                 <CardTitle className="flex items-center">
                   <Gauge className="h-5 w-5 mr-2 text-primary" />
-                  Service Health
+                  {t('dashboard.charts.serviceHealth')}
                 </CardTitle>
-                <CardDescription>Current status of API services</CardDescription>
+                <CardDescription>{t('dashboard.charts.currentStatus')}</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
                   {[
-                    { name: 'Payment Gateways', status: 'Operational', uptime: '99.99%' },
-                    { name: 'Bank Statement API', status: 'Operational', uptime: '99.95%' },
-                    { name: 'Verification Services', status: 'Degraded', uptime: '98.76%' },
-                    { name: 'Wallet Services', status: 'Operational', uptime: '99.98%' },
-                    { name: 'Fraud Monitoring', status: 'Operational', uptime: '99.92%' },
-                  ].map((service) => (
-                    <div key={service.name} className="flex justify-between items-center">
+                    { name: t('dashboard.services.paymentGateways'), status: t('dashboard.status.operational'), uptime: '99.99%' },
+                    { name: t('dashboard.services.bankStatementApi'), status: t('dashboard.status.operational'), uptime: '99.95%' },
+                    { name: t('dashboard.services.verificationServices'), status: t('dashboard.status.degraded'), uptime: '98.76%' },
+                    { name: t('dashboard.services.walletServices'), status: t('dashboard.status.operational'), uptime: '99.98%' },
+                    { name: t('dashboard.services.fraudMonitoring'), status: t('dashboard.status.operational'), uptime: '99.92%' },
+                  ].map((service, index) => (
+                    <div key={index} className="flex justify-between items-center">
                       <div className="text-sm">{service.name}</div>
                       <div className="flex items-center gap-2">
                         <div className={`h-2 w-2 rounded-full ${
-                          service.status === 'Operational' ? 'bg-green-500' : 'bg-yellow-500'
+                          service.status === t('dashboard.status.operational') ? 'bg-green-500' : 'bg-yellow-500'
                         }`}></div>
                         <div className="text-xs text-muted-foreground">{service.uptime}</div>
                       </div>
@@ -202,28 +203,28 @@ export const ApiDashboard = () => {
               <CardHeader className="pb-2">
                 <CardTitle className="flex items-center">
                   <BarChart className="h-5 w-5 mr-2 text-primary" />
-                  Service Usage
+                  {t('dashboard.charts.serviceUsage')}
                 </CardTitle>
-                <CardDescription>Distribution by API service</CardDescription>
+                <CardDescription>{t('dashboard.charts.distributionByService')}</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
                   {[
-                    { name: 'Payment Gateways', percentage: 40 },
-                    { name: 'Bank Statement API', percentage: 25 },
-                    { name: 'Verification Services', percentage: 15 },
-                    { name: 'Wallet Services', percentage: 12 },
-                    { name: 'Fraud Monitoring', percentage: 8 },
-                  ].map((service) => (
-                    <div key={service.name} className="space-y-1">
+                    { name: t('dashboard.services.paymentGateways'), percentage: 40 },
+                    { name: t('dashboard.services.bankStatementApi'), percentage: 25 },
+                    { name: t('dashboard.services.verificationServices'), percentage: 15 },
+                    { name: t('dashboard.services.walletServices'), percentage: 12 },
+                    { name: t('dashboard.services.fraudMonitoring'), percentage: 8 },
+                  ].map((service, index) => (
+                    <div key={index} className="space-y-1">
                       <div className="flex justify-between text-xs">
                         <span>{service.name}</span>
                         <span>{service.percentage}%</span>
                       </div>
                       <div className="h-2 w-full bg-secondary rounded-full overflow-hidden">
                         <div 
-                          className="h-full bg-primary progress-bar" 
-                          style={{ '--progress-width': `${service.percentage}%` } as React.CSSProperties}
+                          className="h-full bg-primary transition-all duration-300" 
+                          style={{ width: `${service.percentage}%` }}
                         />
                       </div>
                     </div>
@@ -236,18 +237,18 @@ export const ApiDashboard = () => {
               <CardHeader className="pb-2">
                 <CardTitle className="flex items-center">
                   <Clock className="h-5 w-5 mr-2 text-primary" />
-                  Recent Activity
+                  {t('dashboard.charts.recentActivity')}
                 </CardTitle>
-                <CardDescription>Latest API interactions</CardDescription>
+                <CardDescription>{t('dashboard.charts.latestApiInteractions')}</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
                   {[
-                    { action: 'Bank Statement Retrieved', time: '10 minutes ago', status: 'success' },
-                    { action: 'Payment Processed', time: '25 minutes ago', status: 'success' },
-                    { action: 'ID Verification Failed', time: '1 hour ago', status: 'error' },
-                    { action: 'Wallet Balance Checked', time: '3 hours ago', status: 'success' },
-                    { action: 'New API Key Created', time: '1 day ago', status: 'success' },
+                    { action: t('dashboard.activities.bankStatementRetrieved'), time: t('dashboard.time.minutesAgo', { count: 10 }), status: 'success' },
+                    { action: t('dashboard.activities.paymentProcessed'), time: t('dashboard.time.minutesAgo', { count: 25 }), status: 'success' },
+                    { action: t('dashboard.activities.idVerificationFailed'), time: t('dashboard.time.hourAgo', { count: 1 }), status: 'error' },
+                    { action: t('dashboard.activities.walletBalanceChecked'), time: t('dashboard.time.hoursAgo', { count: 3 }), status: 'success' },
+                    { action: t('dashboard.activities.newApiKeyCreated'), time: t('dashboard.time.dayAgo', { count: 1 }), status: 'success' },
                   ].map((activity, index) => (
                     <div key={index} className="flex justify-between items-center text-xs">
                       <div className="flex items-center gap-2">
@@ -267,18 +268,18 @@ export const ApiDashboard = () => {
               <CardHeader className="pb-2">
                 <CardTitle className="flex items-center">
                   <PieChart className="h-5 w-5 mr-2 text-primary" />
-                  Quick Stats
+                  {t('dashboard.charts.quickStats')}
                 </CardTitle>
-                <CardDescription>Key metrics at a glance</CardDescription>
+                <CardDescription>{t('dashboard.charts.keyMetricsGlance')}</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
                   {[
-                    { label: 'Success Rate', value: '99.7%' },
-                    { label: 'Average Latency', value: '187ms' },
-                    { label: 'Error Rate', value: '0.3%' },
-                    { label: 'Throttled Requests', value: '2.1%' },
-                    { label: 'Total Transactions', value: '$1.42M' },
+                    { label: t('dashboard.stats.successRate'), value: '99.7%' },
+                    { label: t('dashboard.stats.averageLatency'), value: '187ms' },
+                    { label: t('dashboard.stats.errorRate'), value: '0.3%' },
+                    { label: t('dashboard.stats.throttledRequests'), value: '2.1%' },
+                    { label: t('dashboard.stats.totalTransactions'), value: '$1.42M' },
                   ].map((stat, index) => (
                     <div key={index} className="flex justify-between items-center">
                       <span className="text-xs text-muted-foreground">{stat.label}</span>

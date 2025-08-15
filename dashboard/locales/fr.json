@@ -72,17 +72,20 @@
     },
     "ariaLabels": {
       "selectLanguage": "Sélectionner la langue",
-      "pagination": "pagination",
+      "pagination": "Pagination",
+
       "goToPreviousPage": "Aller à la page précédente",
       "goToNextPage": "Aller à la page suivante",
-      "breadcrumb": "fil d'Ariane",
+      "breadcrumb": "Fil d'Ariane",
+
       "toggleSidebar": "Basculer la barre latérale",
       "themeSettings": "Paramètres du thème",
       "copyApiKey": "Copier la clé API",
       "github": "GitHub",
       "twitter": "Twitter",
       "linkedin": "LinkedIn",
-      "email": "Email"
+      "email": "E-mail"
+
     }
   },
   "dashboard": {
@@ -99,7 +102,7 @@
     "api_keys": "Clés API",
     "usage": "Utilisation de l'API",
     "documentation": "Documentation API",
-    "rate_limits": "Limites de taux",
+    "rate_limits": "Limites de débit",
     "webhooks": "Webhooks"
   },
   "banking": {
@@ -161,7 +164,7 @@
     }
   },
   "analytics": {
-    "title": "Analytique",
+    "title": "Analyses",
     "performance": "Indicateurs de performance",
     "user_activity": "Activité des utilisateurs",
     "revenue_analytics": "Analyse des revenus",
@@ -185,7 +188,7 @@
   "auth": {
     "login": "Se connecter",
     "register": "Créer un compte",
-    "forgotPassword": "Réinitialiser le mot de passe",
+    "forgotPassword": "Mot de passe oublié",
     "validation": {
       "emailRequired": "L'e-mail est requis",
       "emailInvalid": "L'e-mail est invalide",
