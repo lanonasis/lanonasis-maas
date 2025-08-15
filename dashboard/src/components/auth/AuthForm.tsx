@@ -48,30 +48,30 @@ export const AuthForm = ({ mode, onSubmit, isLoading = false }: AuthFormProps) =
     
     // Validate email
     if (!formData.email) {
-      newErrors.email = "Email is required";
+      newErrors.email = t("auth.validation.emailRequired");
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = "Email is invalid";
+      newErrors.email = t("auth.validation.emailInvalid");
     }
     
     // Validate password for login and register
     if (mode !== "forgot-password") {
       if (!formData.password) {
-        newErrors.password = "Password is required";
+        newErrors.password = t("auth.validation.passwordRequired");
       } else if (formData.password.length < 6) {
-        newErrors.password = "Password must be at least 6 characters";
+        newErrors.password = t("auth.validation.passwordMinLength");
       }
     }
     
     // Additional validations for register
     if (mode === "register") {
       if (!formData.name) {
-        newErrors.name = "Name is required";
+        newErrors.name = t("auth.validation.nameRequired");
       }
       
       if (!formData.confirmPassword) {
-        newErrors.confirmPassword = "Please confirm your password";
+        newErrors.confirmPassword = t("auth.validation.confirmPasswordRequired");
       } else if (formData.password !== formData.confirmPassword) {
-        newErrors.confirmPassword = "Passwords do not match";
+        newErrors.confirmPassword = t("auth.validation.passwordsMismatch");
       }
     }
     
@@ -87,35 +87,38 @@ export const AuthForm = ({ mode, onSubmit, isLoading = false }: AuthFormProps) =
     }
   };
 
-  // Form titles and button text based on mode
-  const formConfig = {
-    login: {
-      title: "Welcome back",
-      subtitle: "Sign in to your account",
-      buttonText: "Sign in",
-      footerText: "Don't have an account?",
-      footerLinkText: "Create account",
-      footerLinkPath: "/auth/register"
-    },
-    register: {
-      title: "Create an account",
-      subtitle: "Sign up for your account",
-      buttonText: "Create account",
-      footerText: "Already have an account?",
-      footerLinkText: "Sign in",
-      footerLinkPath: "/auth/login"
-    },
-    "forgot-password": {
-      title: "Reset your password",
-      subtitle: "We'll send you a reset link",
-      buttonText: "Send reset link",
-      footerText: "Remember your password?",
-      footerLinkText: "Back to login",
-      footerLinkPath: "/auth/login"
-    }
+  // Form titles and button text based on mode using translation keys
+  const getFormConfig = () => {
+    const configs = {
+      login: {
+        title: t("auth.titles.login"),
+        subtitle: t("auth.subtitles.login"),
+        buttonText: t("auth.buttons.signIn"),
+        footerText: t("auth.footer.login.text"),
+        footerLinkText: t("auth.footer.login.linkText"),
+        footerLinkPath: "/auth/register"
+      },
+      register: {
+        title: t("auth.titles.register"),
+        subtitle: t("auth.subtitles.register"),
+        buttonText: t("auth.buttons.createAccount"),
+        footerText: t("auth.footer.register.text"),
+        footerLinkText: t("auth.footer.register.linkText"),
+        footerLinkPath: "/auth/login"
+      },
+      "forgot-password": {
+        title: t("auth.titles.forgotPassword"),
+        subtitle: t("auth.subtitles.forgotPassword"),
+        buttonText: t("auth.buttons.sendResetLink"),
+        footerText: t("auth.footer.forgotPassword.text"),
+        footerLinkText: t("auth.footer.forgotPassword.linkText"),
+        footerLinkPath: "/auth/login"
+      }
+    };
+    return configs[mode];
   };
 
-  const { title, subtitle, buttonText, footerText, footerLinkText, footerLinkPath } = formConfig[mode];
+  const { title, subtitle, buttonText, footerText, footerLinkText, footerLinkPath } = getFormConfig();
 
   const handleSocialLogin = async (provider: 'google' | 'github' | 'linkedin' | 'discord' | 'apple') => {
     try {
@@ -130,9 +133,9 @@ export const AuthForm = ({ mode, onSubmit, isLoading = false }: AuthFormProps) =
       if (error) throw error;
       
     } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : `Failed to login with ${provider}`;
+      const errorMessage = error instanceof Error ? error.message : t("auth.toast.socialLoginError", { provider });
       toast({
-        title: "Login failed",
+        title: t("auth.toast.loginFailed"),
         description: errorMessage,
         variant: "destructive",
       });
@@ -152,7 +155,7 @@ export const AuthForm = ({ mode, onSubmit, isLoading = false }: AuthFormProps) =
           {mode === "register" && (
             <div className="space-y-2">
               <label htmlFor="name" className="text-sm font-medium">
-                Name
+                {t("auth.labels.name")}
               </label>
               <input
                 type="text"
@@ -164,7 +167,7 @@ export const AuthForm = ({ mode, onSubmit, isLoading = false }: AuthFormProps) =
                   "w-full px-3 py-2 border border-input rounded-md bg-transparent text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:border-input transition-all duration-300",
                   errors.name && "border-destructive focus:ring-destructive"
                 )}
-                placeholder="Full name"
+                placeholder={t("auth.placeholders.fullName")}
               />
               {errors.name && (
                 <p className="text-destructive text-xs mt-1">{errors.name}</p>
@@ -175,7 +178,7 @@ export const AuthForm = ({ mode, onSubmit, isLoading = false }: AuthFormProps) =
           {/* Email Field */}
           <div className="space-y-2">
             <label htmlFor="email" className="text-sm font-medium">
-              Email
+              {t("auth.labels.email")}
             </label>
             <input
               type="email"
@@ -187,7 +190,7 @@ export const AuthForm = ({ mode, onSubmit, isLoading = false }: AuthFormProps) =
                 "w-full px-3 py-2 border border-input rounded-md bg-transparent text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:border-input transition-all duration-300",
                 errors.email && "border-destructive focus:ring-destructive"
               )}
-              placeholder="name@example.com"
+              placeholder={t("auth.placeholders.email")}
             />
             {errors.email && (
               <p className="text-destructive text-xs mt-1">{errors.email}</p>
@@ -199,14 +202,14 @@ export const AuthForm = ({ mode, onSubmit, isLoading = false }: AuthFormProps) =
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <label htmlFor="password" className="text-sm font-medium">
-                  Password
+                  {t("auth.labels.password")}
                 </label>
                 {mode === "login" && (
                   <Link
                     to="/auth/forgot-password"
                     className="text-xs text-primary hover:underline"
                   >
-                    Forgot password?
+                    {t("auth.buttons.forgotPassword")}
                   </Link>
                 )}
               </div>
@@ -221,7 +224,7 @@ export const AuthForm = ({ mode, onSubmit, isLoading = false }: AuthFormProps) =
                     "w-full px-3 py-2 border border-input rounded-md bg-transparent text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:border-input transition-all duration-300",
                     errors.password && "border-destructive focus:ring-destructive"
                   )}
-                  placeholder="••••••••"
+                  placeholder={t("auth.placeholders.password")}
                 />
                 <button
                   type="button"
@@ -245,7 +248,7 @@ export const AuthForm = ({ mode, onSubmit, isLoading = false }: AuthFormProps) =
           {mode === "register" && (
             <div className="space-y-2">
               <label htmlFor="confirmPassword" className="text-sm font-medium">
-                Confirm Password
+                {t("auth.labels.confirmPassword")}
               </label>
               <div className="relative">
                 <input
@@ -258,7 +261,7 @@ export const AuthForm = ({ mode, onSubmit, isLoading = false }: AuthFormProps) =
                     "w-full px-3 py-2 border border-input rounded-md bg-transparent text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:border-input transition-all duration-300",
                     errors.confirmPassword && "border-destructive focus:ring-destructive"
                   )}
-                  placeholder="••••••••"
+                  placeholder={t("auth.placeholders.password")}
                 />
               </div>
               {errors.confirmPassword && (
@@ -286,7 +289,7 @@ export const AuthForm = ({ mode, onSubmit, isLoading = false }: AuthFormProps) =
                 <div className="w-full border-t border-gray-200 dark:border-gray-700"></div>
               </div>
               <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-card px-2 text-muted-foreground">Or continue with</span>
+                <span className="bg-card px-2 text-muted-foreground">{t("auth.social.orContinueWith")}</span>
               </div>
             </div>
 
@@ -300,7 +303,7 @@ export const AuthForm = ({ mode, onSubmit, isLoading = false }: AuthFormProps) =
                   className="flex items-center justify-center space-x-2 rounded-md border border-input bg-transparent px-3 py-2 text-sm hover:bg-secondary transition-colors duration-300 disabled:opacity-50"
                 >
                   <GoogleIcon />
-                  <span>Google</span>
+                  <span>{t("auth.social.google")}</span>
                 </button>
                 <button
                   type="button"
@@ -309,7 +312,7 @@ export const AuthForm = ({ mode, onSubmit, isLoading = false }: AuthFormProps) =
                   className="flex items-center justify-center space-x-2 rounded-md border border-input bg-transparent px-3 py-2 text-sm hover:bg-secondary transition-colors duration-300 disabled:opacity-50"
                 >
                   <GitHubIcon />
-                  <span>GitHub</span>
+                  <span>{t("auth.social.github")}</span>
                 </button>
               </div>
               
@@ -322,7 +325,7 @@ export const AuthForm = ({ mode, onSubmit, isLoading = false }: AuthFormProps) =
                   className="flex items-center justify-center space-x-2 rounded-md border border-input bg-transparent px-3 py-2 text-sm hover:bg-secondary transition-colors duration-300 disabled:opacity-50"
                 >
                   <LinkedInIcon />
-                  <span>LinkedIn</span>
+                  <span>{t("auth.social.linkedin")}</span>
                 </button>
                 <button
                   type="button"
@@ -331,7 +334,7 @@ export const AuthForm = ({ mode, onSubmit, isLoading = false }: AuthFormProps) =
                   className="flex items-center justify-center space-x-2 rounded-md border border-input bg-transparent px-3 py-2 text-sm hover:bg-secondary transition-colors duration-300 disabled:opacity-50"
                 >
                   <DiscordIcon />
-                  <span>Discord</span>
+                  <span>{t("auth.social.discord")}</span>
                 </button>
                 <button
                   type="button"
@@ -340,7 +343,7 @@ export const AuthForm = ({ mode, onSubmit, isLoading = false }: AuthFormProps) =
                   className="flex items-center justify-center space-x-2 rounded-md border border-input bg-transparent px-3 py-2 text-sm hover:bg-secondary transition-colors duration-300 disabled:opacity-50"
                 >
                   <AppleIcon />
-                  <span>Apple</span>
+                  <span>{t("auth.social.apple")}</span>
                 </button>
               </div>
             </div>
@@ -357,7 +360,7 @@ export const AuthForm = ({ mode, onSubmit, isLoading = false }: AuthFormProps) =
           </div>
           <div>
             <Link to="/landing" className="text-primary/70 hover:text-primary hover:underline">
-              Learn more about Lanonasis Platform
+              {t("auth.footer.learnMore")}
             </Link>
           </div>
         </div>

@@ -185,7 +185,7 @@
   "auth": {
     "login": "登录",
     "register": "创建账户",
-    "forgotPassword": "重置密码",
+    "forgotPassword": "忘记密码",
     "validation": {
       "emailRequired": "邮箱是必填项",
       "emailInvalid": "邮箱格式无效",

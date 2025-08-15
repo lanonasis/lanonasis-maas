@@ -42,7 +42,7 @@
       "pdfExport": "تصدير PDF",
       "amount": "المبلغ",
       "cardNumber": "رقم البطاقة",
-      "expiryDate": "الشهر/السنة",
+      "expiryDate": "تاريخ الانتهاء",
       "cvc": "رمز التحقق CVC"
     },
     "placeholders": {

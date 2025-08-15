@@ -92,5 +92,7 @@ coverage/
 # Package artifacts  
 *.vsix.backup
 *.tgz.backup
+
+# Deployment/i18n artifacts
 .vercel
 i18n.cache

@@ -115,21 +115,6 @@ echo "Testing Arabic (RTL)..."
 - [ ] Create component templates with useTranslation
 
 ### Pre-commit Hook (Prevent Hardcoded Text):
-```bash
-#!/bin/bash
-# .git/hooks/pre-commit
-
-echo "Checking for hardcoded text..."
-
-# Find hardcoded strings in new commits
-if git diff --cached --name-only | grep -E '\.(tsx|ts)$' | xargs grep -l ">[A-Z][a-zA-Z ]*<" 2>/dev/null; then
-    echo "❌ Hardcoded text found! Please use translation keys."
-    echo "Example: Replace 'Save Changes' with {t('common.buttons.saveChanges')}"
-    exit 1
-fi
-
-echo "✅ No hardcoded text detected"
-```
 
 ## CLI Commands Summary
 

@@ -42,7 +42,7 @@
       "pdfExport": "PDF Export",
       "amount": "Amount",
       "cardNumber": "Card Number",
-      "expiryDate": "MM/YY", 
+      "expiryDate": "Expiry date", 
       "cvc": "CVC"
     },
     "placeholders": {
@@ -58,7 +58,7 @@
       "select": "Select",
       "amount": "Amount",
       "cardNumber": "4242 4242 4242 4242",
-      "expiryDate": "MM/YY",
+      "expiryDate": "Expiry date",
       "cvc": "CVC"
     },
     "messages": {
@@ -92,7 +92,58 @@
     "revenue": "Revenue",
     "expenses": "Business Expenses", 
     "profit_margin": "Profit Margin",
-    "team_spending": "Team Spending"
+    "team_spending": "Team Spending",
+    "metrics": {
+      "totalApiCalls": "Total API Calls (Last 7 days)",
+      "activeApiKeys": "Active API Keys",
+      "averageResponseTime": "Average Response Time",
+      "fromPreviousPeriod": "from previous period",
+      "lastCreated": "Last created: {{days}} days ago"
+    },
+    "charts": {
+      "apiUsageTrend": "API Usage Trend",
+      "dailyApiRequests": "Daily API requests (last 7 days)",
+      "serviceHealth": "Service Health",
+      "currentStatus": "Current status of API services",
+      "serviceUsage": "Service Usage",
+      "distributionByService": "Distribution by API service",
+      "recentActivity": "Recent Activity",
+      "latestApiInteractions": "Latest API interactions",
+      "quickStats": "Quick Stats",
+      "keyMetricsGlance": "Key metrics at a glance"
+    },
+    "services": {
+      "paymentGateways": "Payment Gateways",
+      "bankStatementApi": "Bank Statement API",
+      "verificationServices": "Verification Services",
+      "walletServices": "Wallet Services",
+      "fraudMonitoring": "Fraud Monitoring"
+    },
+    "status": {
+      "operational": "Operational",
+      "degraded": "Degraded"
+    },
+    "activities": {
+      "bankStatementRetrieved": "Bank Statement Retrieved",
+      "paymentProcessed": "Payment Processed",
+      "idVerificationFailed": "ID Verification Failed",
+      "walletBalanceChecked": "Wallet Balance Checked",
+      "newApiKeyCreated": "New API Key Created"
+    },
+    "stats": {
+      "successRate": "Success Rate",
+      "averageLatency": "Average Latency",
+      "errorRate": "Error Rate",
+      "throttledRequests": "Throttled Requests",
+      "totalTransactions": "Total Transactions"
+    },
+    "time": {
+      "minutesAgo": "{{count}} minutes ago",
+      "hourAgo": "{{count}} hour ago",
+      "hoursAgo": "{{count}} hours ago",
+      "dayAgo": "{{count}} day ago",
+      "daysAgo": "{{count}} days ago"
+    }
   },
   "api": {
     "title": "API Management",
@@ -186,6 +237,60 @@
     "login": "Sign In",
     "register": "Create Account",
     "forgotPassword": "Reset Password",
+    "titles": {
+      "login": "Welcome back",
+      "register": "Create an account",
+      "forgotPassword": "Reset your password"
+    },
+    "subtitles": {
+      "login": "Sign in to your account",
+      "register": "Sign up for your account", 
+      "forgotPassword": "We'll send you a reset link"
+    },
+    "buttons": {
+      "signIn": "Sign in",
+      "createAccount": "Create account", 
+      "sendResetLink": "Send reset link",
+      "forgotPassword": "Forgot password?"
+    },
+    "labels": {
+      "name": "Name",
+      "email": "Email",
+      "password": "Password",
+      "confirmPassword": "Confirm Password"
+    },
+    "placeholders": {
+      "fullName": "Full name",
+      "email": "name@example.com",
+      "password": "••••••••"
+    },
+    "social": {
+      "orContinueWith": "Or continue with",
+      "google": "Google",
+      "github": "GitHub", 
+      "linkedin": "LinkedIn",
+      "discord": "Discord",
+      "apple": "Apple"
+    },
+    "footer": {
+      "login": {
+        "text": "Don't have an account?",
+        "linkText": "Create account"
+      },
+      "register": {
+        "text": "Already have an account?", 
+        "linkText": "Sign in"
+      },
+      "forgotPassword": {
+        "text": "Remember your password?",
+        "linkText": "Back to login"
+      },
+      "learnMore": "Learn more about Lanonasis Platform"
+    },
+    "toast": {
+      "loginFailed": "Login failed",
+      "socialLoginError": "Failed to login with {{provider}}"
+    },
     "validation": {
       "emailRequired": "Email is required",
       "emailInvalid": "Email is invalid",
