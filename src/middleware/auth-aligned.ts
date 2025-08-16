@@ -172,11 +172,8 @@ export async function authenticateApiKey(apiKey: string): Promise<AlignedUser | 
       .update({ last_used: new Date().toISOString() })
       .eq('key_hash', apiKey);
 
-    // Extract plan value to avoid TypeScript errors
-    let plan = 'free';
-    if (keyRecord && keyRecord.maas_service_config && Array.isArray(keyRecord.maas_service_config) && keyRecord.maas_service_config.length > 0 && keyRecord.maas_service_config[0]) {
-      plan = keyRecord.maas_service_config[0].plan;
-    }
+    // Extract plan value using optional chaining
+    const plan = keyRecord?.maas_service_config?.[0]?.plan || 'free';
 
     const unifiedUser: UnifiedUser = {
       // JWTPayload properties
