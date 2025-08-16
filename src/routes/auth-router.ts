@@ -124,7 +124,12 @@ router.get('/oauth/callback', async (req, res) => {
 
     if (error) {
       logger.warn('OAuth callback error', { error, error_description });
-      return res.redirect(`/auth/error?error=${error}&description=${error_description}`);
+      
+      // URL-encode parameters to prevent XSS
+      const safeError = encodeURIComponent(error || 'unknown_error');
+      const safeDescription = encodeURIComponent(error_description || 'An error occurred');
+      
+      return res.redirect(`/auth/error?error=${safeError}&description=${safeDescription}`);
     }
 
     if (!code) {

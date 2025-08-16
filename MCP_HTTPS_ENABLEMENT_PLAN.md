@@ -92,11 +92,37 @@ app.get('/mcp/sse', authenticateApiKey, (req, res) => {
   
   // Initialize MCP connection with user's API key
   const mcpConnection = initializeMCP(req.apiKey);
+  let isCleanedUp = false;
+  
+  // Message handler for MCP connection
+  const messageHandler = (data) => {
+    if (!isCleanedUp) {
+      res.write(`data: ${JSON.stringify(data)}\n\n`);
+    }
+  };
   
   // Stream MCP messages
-  mcpConnection.on('message', (data) => {
-    res.write(`data: ${JSON.stringify(data)}\n\n`);
-  });
+  mcpConnection.on('message', messageHandler);
+  
+  // Cleanup function to prevent leaks
+  const cleanup = () => {
+    if (isCleanedUp) return;
+    isCleanedUp = true;
+    
+    // Remove the message listener
+    mcpConnection.removeListener('message', messageHandler);
+    
+    // Safe close/shutdown of MCP connection
+    if (mcpConnection && typeof mcpConnection.close === 'function') {
+      mcpConnection.close();
+    }
+  };
+  
+  // Handle client disconnect and errors
+  req.on('close', cleanup);
+  req.on('error', cleanup);
+  res.on('finish', cleanup);
+  res.on('error', cleanup);
 });
 ```
 

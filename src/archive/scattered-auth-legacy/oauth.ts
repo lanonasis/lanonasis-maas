@@ -13,7 +13,7 @@ const router = Router();
 // OAuth configuration
 const OAUTH_CONFIG = {
   clientId: process.env.OAUTH_CLIENT_ID || 'lanonasis_mcp_client_2024',
-  clientSecret: process.env.OAUTH_CLIENT_SECRET || 'lmcp_secret_prod_a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6',
+  clientSecret: process.env.OAUTH_CLIENT_SECRET, // No fallback - must be provided
   redirectUri: process.env.OAUTH_REDIRECT_URI || 'https://dashboard.lanonasis.com/auth/oauth/callback',
   scope: process.env.OAUTH_SCOPE || 'memory:read memory:write api:access mcp:connect',
   authorizationEndpoint: '/oauth/authorize',
@@ -25,6 +25,11 @@ const OAUTH_CONFIG = {
     }
   } as Record<string, { redirectUris: string[] }>
 };
+
+// Validate required OAuth configuration on startup
+if (!OAUTH_CONFIG.clientSecret) {
+  throw new Error('OAUTH_CLIENT_SECRET environment variable is required but not set');
+}
 
 // In-memory store for authorization codes (use Redis in production)
 const authorizationCodes = new Map<string, {
@@ -110,10 +115,21 @@ router.get('/authorize', (req, res) => {
 
   try {
     res.redirect(`${redirect_uri}?${params.toString()}`);
-  } catch {
-    res.status(500).json({
-      error: 'server_error',
-      error_description: 'Internal server error'
+  } catch (error: any) {
+    console.error('OAuth redirect error:', {
+      message: error.message,
+      stack: error.stack,
+      redirect_uri,
+      params: params.toString()
+    });
+    
+    const statusCode = error.name === 'ValidationError' ? 400 : 
+                      error.name === 'UnauthorizedError' ? 401 : 500;
+    
+    res.status(statusCode).json({
+      error: statusCode === 400 ? 'invalid_request' : 
+             statusCode === 401 ? 'unauthorized' : 'server_error',
+      error_description: error.message || 'Internal server error'
     });
     return;
   }  
@@ -200,6 +216,14 @@ router.post('/token', async (req, res) => {
       });
     }
 
+    // Validate code_verifier format according to RFC 7636
+    if (!/^[A-Za-z0-9\-._~]{43,128}$/.test(code_verifier)) {
+      return res.status(400).json({
+        error: 'invalid_request',
+        error_description: 'Invalid code verifier format'
+      });
+    }
+
     let challenge = code_verifier;
     if (codeData.codeChallengeMethod === 'S256') {
       challenge = crypto.createHash('sha256').update(code_verifier).digest('base64url');
@@ -217,7 +241,11 @@ router.post('/token', async (req, res) => {
   authorizationCodes.delete(code);
 
   // Generate access token
-  const jwtSecret = process.env.JWT_SECRET || 'fallback-secret-key';
+  const jwtSecret = process.env.JWT_SECRET;
+  if (!jwtSecret) {
+    console.error('JWT_SECRET is not configured - cannot generate access token');
+    process.exit(1);
+  }
   const accessToken = jwt.sign(
     {
       client_id,
@@ -262,10 +290,21 @@ router.post('/token', async (req, res) => {
  * GET /oauth/client-info
  */
 router.get('/client-info', (req, res) => {
+  // Environment-driven base URL construction
+  const apiBaseUrl = process.env.API_BASE_URL || 'https://api.lanonasis.com';
+  const apiPrefix = process.env.API_PREFIX || '/api/v1';
+  
+  // Normalize slashes to avoid duplication
+  const normalizeUrl = (base: string, path: string) => {
+    const cleanBase = base.replace(/\/+$/, '');
+    const cleanPath = path.replace(/^\/+/, '');
+    return `${cleanBase}/${cleanPath}`;
+  };
+  
   res.json({
     client_id: OAUTH_CONFIG.clientId,
-    authorization_endpoint: `https://api.lanonasis.com/api/v1${OAUTH_CONFIG.authorizationEndpoint}`,
-    token_endpoint: `https://api.lanonasis.com/api/v1${OAUTH_CONFIG.tokenEndpoint}`,
+    authorization_endpoint: normalizeUrl(apiBaseUrl, `${apiPrefix}${OAUTH_CONFIG.authorizationEndpoint}`),
+    token_endpoint: normalizeUrl(apiBaseUrl, `${apiPrefix}${OAUTH_CONFIG.tokenEndpoint}`),
     redirect_uri: OAUTH_CONFIG.redirectUri,
     scope: OAUTH_CONFIG.scope,
     response_types_supported: ['code'],

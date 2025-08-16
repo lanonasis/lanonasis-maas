@@ -65,6 +65,19 @@ router.post('/login', async (req: Request, res: Response): Promise<void> => {
       .eq('id', data.user.id)
       .single();
 
+    // Check for user query errors
+    if (userError || !userData) {
+      logger.error('Failed to fetch user data:', {
+        userId: data.user.id,
+        error: userError?.message,
+        code: userError?.code
+      });
+      return res.status(404).json({
+        error: 'User not found',
+        message: 'Unable to retrieve user information'
+      });
+    }
+
     // Create JWT token for API access
     const token = jwt.sign(
       {
@@ -140,7 +153,8 @@ router.post('/register', async (req: Request, res: Response): Promise<void> => {
     if (error) {
       logger.warn('Registration failed', { email, error: error.message });
       
-      if (error.message.includes('already registered')) {
+      // Check for user already exists using Supabase error code
+      if (error.code === 'user_already_exists') {
         res.status(409).json({
           error: 'user_exists',
           message: 'User with this email already exists'
@@ -178,10 +192,30 @@ router.post('/register', async (req: Request, res: Response): Promise<void> => {
 
       if (!orgError && orgData) {
         // Update user with organization_id
-        await supabase
+        const { data: updateData, error: updateError } = await supabase
           .from('users')
           .update({ organization_id: orgData.id })
           .eq('id', data.user.id);
+
+        if (updateError) {
+          logger.error('Failed to update user with organization_id:', {
+            userId: data.user.id,
+            organizationId: orgData.id,
+            error: updateError.message,
+            code: updateError.code
+          });
+          
+          // Try to clean up the created organization
+          await supabase
+            .from('organizations')
+            .delete()
+            .eq('id', orgData.id);
+          
+          return res.status(500).json({
+            error: 'Registration failed',
+            message: 'Failed to associate user with organization'
+          });
+        }
       }
     }
 
