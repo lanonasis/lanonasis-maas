@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { metrics } from '@/utils/metrics';
 import { asyncHandler } from '@/middleware/errorHandler';
-import { requireRole } from '@/middleware/auth';
+import { requireRole } from '@/middleware/auth-aligned';
 import { config } from '@/config/environment';
 
 const router = Router();

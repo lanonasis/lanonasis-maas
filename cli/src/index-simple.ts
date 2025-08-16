@@ -105,7 +105,7 @@ const showWelcome = () => {
   console.log(`  ${colors.success('lanonasis health')}   ${colors.muted('# Check system health')}`);
   console.log(`  ${colors.success('lanonasis --help')}   ${colors.muted('# Show all available commands')}`);
   console.log();
-  console.log(colors.info('📚 Documentation: https://api.lanonasis.com/docs'));
+  console.log(colors.info('📚 Documentation: https://docs.lanonasis.com/memory-services'));
   console.log(colors.info('🌐 Dashboard: https://api.lanonasis.com/dashboard'));
   console.log();
 };
@@ -319,7 +319,7 @@ docsCmd
   .action(async () => {
     console.log(colors.primary('📚 Documentation Status Check'));
     console.log(colors.info('━'.repeat(40)));
-    console.log(`${colors.highlight('Docs URL:')} ${colors.success('https://api.lanonasis.com/docs')}`);
+    console.log(`${colors.highlight('Docs URL:')} ${colors.success('https://docs.lanonasis.com/memory-services')}`);
     console.log(`${colors.highlight('Status:')} ${colors.success('✅ Deployed')}`);
     console.log(`${colors.highlight('Framework:')} ${colors.info('VitePress')}`);
     console.log(`${colors.highlight('Hosting:')} ${colors.info('Netlify')}`);
@@ -419,7 +419,7 @@ deployCmd
     console.log(colors.highlight('🌐 Web Services:'));
     console.log(`  Landing Page: ${colors.success('✅ api.lanonasis.com')}`);
     console.log(`  Dashboard: ${colors.success('✅ api.lanonasis.com/dashboard')}`);
-    console.log(`  Documentation: ${colors.success('✅ api.lanonasis.com/docs')}`);
+    console.log(`  Documentation: ${colors.success('✅ docs.lanonasis.com/memory-services')}`);
     console.log();
     
     console.log(colors.highlight('🔧 API Services:'));
@@ -451,7 +451,7 @@ deployCmd
     const services = [
       { name: 'Landing Page', url: 'https://api.lanonasis.com', status: 'healthy' },
       { name: 'Dashboard', url: 'https://api.lanonasis.com/dashboard', status: 'healthy' },
-      { name: 'Documentation', url: 'https://api.lanonasis.com/docs', status: 'healthy' },
+      { name: 'Documentation', url: 'https://docs.lanonasis.com/memory-services', status: 'healthy' },
       { name: 'Memory API', url: 'https://api.lanonasis.com/memories', status: 'healthy' },
       { name: 'MCP Server', url: 'https://api.lanonasis.com/mcp/sse', status: 'healthy' },
       { name: 'Authentication', url: 'https://api.lanonasis.com/auth', status: 'healthy' }

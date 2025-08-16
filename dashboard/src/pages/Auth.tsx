@@ -1,85 +1,63 @@
 
 import { Layout } from "@/components/layout/Layout";
 import { AuthForm } from "@/components/auth/AuthForm";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import { supabase } from "@/integrations/supabase/client";
 
 const Auth = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { toast } = useToast();
-  const { signIn, signUp, resetPassword, isLoading, user } = useAuth();
+  const { signIn, signUp, resetPassword, isLoading, user, isProcessingCallback, handleOAuthCallback } = useAuth();
   const [mode, setMode] = useState<"login" | "register" | "forgot-password">("login");
-  const [isProcessingCallback, setIsProcessingCallback] = useState(false);
+  const hasRedirectedRef = useRef(false);
   
   // Handle OAuth callback
   useEffect(() => {
-    const handleOAuthCallback = async () => {
-      const path = location.pathname;
-      
-      // Check if this is an OAuth callback
-      if (path === '/auth/callback' || path === '/' && location.hash.includes('access_token')) {
-        console.log('OAuth callback detected, processing...');
-        setIsProcessingCallback(true);
-        
-        try {
-          const { data, error } = await supabase.auth.getSession();
-          
-          if (error) {
-            console.error('OAuth callback error:', error);
-            toast({
-              title: "Authentication Error",
-              description: error.message || "Failed to process login",
-              variant: "destructive",
-            });
-            navigate('/auth/login');
-            return;
-          }
-          
-          if (data.session) {
-            console.log('OAuth callback successful, redirecting to dashboard');
-            toast({
-              title: "Welcome!",
-              description: "Successfully signed in. Redirecting to dashboard...",
-            });
-            
-            // Get redirect path from localStorage or default to dashboard
-            const redirectPath = localStorage.getItem('redirectAfterLogin') || '/dashboard';
-            localStorage.removeItem('redirectAfterLogin');
-            navigate(redirectPath);
-            return;
-          }
-        } catch (error: any) {
-          console.error('OAuth processing error:', error);
-          toast({
-            title: "Authentication Error", 
-            description: "Failed to process login callback",
-            variant: "destructive",
-          });
-          navigate('/auth/login');
-          return;
-        } finally {
-          setIsProcessingCallback(false);
-        }
-      }
-    };
-    
-    handleOAuthCallback();
-  }, [location, navigate, toast]);
+    handleOAuthCallback(location.pathname, location.hash);
+  }, [location, handleOAuthCallback]);
   
   // Redirect if already logged in - but only if not on callback routes
   useEffect(() => {
     const path = location.pathname;
-    if (user && !path.includes('/auth/callback') && path !== '/') {
-      navigate('/dashboard');
-    } else if (user && path === '/' && !location.hash.includes('access_token')) {
-      // For root path without OAuth tokens, redirect to dashboard
-      navigate('/dashboard');
+    
+    // Prevent infinite redirect loops
+    if (hasRedirectedRef.current || !user) {
+      return;
+    }
+    
+    // Don't redirect if already on dashboard
+    if (path === '/dashboard') {
+      return;
+    }
+    
+    // Check if this might be an OAuth callback before redirecting
+    const isOAuthCallback = path === '/auth/callback' || 
+      (path === '/' && (
+        location.hash.includes('access_token') || 
+        location.hash.includes('id_token') || 
+        location.hash.includes('code') || 
+        location.hash.includes('state')
+      ));
+    
+    if (user && !isOAuthCallback) {
+      // Set redirect guard and use replace to avoid history stacking
+      hasRedirectedRef.current = true;
+      navigate('/dashboard', { replace: true });
+      
+      // Clear redirect guard after navigation
+      setTimeout(() => {
+        hasRedirectedRef.current = false;
+      }, 1000);
     }
   }, [user, navigate, location]);
+  
+  // Reset redirect guard on logout
+  useEffect(() => {
+    if (!user) {
+      hasRedirectedRef.current = false;
+    }
+  }, [user]);
 
   // Set mode based on URL
   useEffect(() => {
@@ -96,7 +74,7 @@ const Auth = () => {
     }
   }, [location.pathname]);
 
-  const handleSubmit = async (data: any) => {
+  const handleSubmit = async (data: { email: string; password: string; name?: string }) => {
     try {
       if (mode === "login") {
         await signIn(data.email, data.password);
