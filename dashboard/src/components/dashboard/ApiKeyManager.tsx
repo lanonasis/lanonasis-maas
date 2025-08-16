@@ -44,7 +44,7 @@ export const ApiKeyManager = () => {
       const { data, error } = await supabase
         .from("api_keys")
         .select("*")
-        .eq("user_id", user.id)
+        .eq("user_id", user.id as any)
         .order("created_at", { ascending: false });
       
       if (error) throw error;
@@ -98,13 +98,12 @@ export const ApiKeyManager = () => {
         
         // Save the API key to the database
         const { error } = await supabase.from("api_keys").insert({
-          name: keyName,
           key: formattedKey,
           service: keyService,
-          user_id: user.id,
+          user_id: user.id as any,
           expires_at: expirationDate,
           rate_limited: rateLimit,
-        });
+        } as any);
         
         if (error) throw error;
       }
@@ -126,7 +125,7 @@ export const ApiKeyManager = () => {
     }
   };
 
-  const revokeApiKey = async (keyId) => {
+  const revokeApiKey = async (keyId: string) => {
     if (!user) return;
     
     try {
@@ -134,7 +133,7 @@ export const ApiKeyManager = () => {
         .from("api_keys")
         .delete()
         .eq("id", keyId)
-        .eq("user_id", user.id);
+        .eq("user_id", user.id as any);
       
       if (error) throw error;
       
@@ -153,14 +152,14 @@ export const ApiKeyManager = () => {
     }
   };
 
-  const formatDate = (dateString) => {
+  const formatDate = (dateString: string | null) => {
     if (!dateString) return "Never";
     
     const date = new Date(dateString);
     return date.toLocaleDateString() + " " + date.toLocaleTimeString();
   };
 
-  const isExpired = (expiresAt) => {
+  const isExpired = (expiresAt: string | null) => {
     if (!expiresAt) return false;
     return new Date(expiresAt) < new Date();
   };

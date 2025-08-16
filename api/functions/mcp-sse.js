@@ -21,10 +21,18 @@ const authRateLimit = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 5, // 5 attempts per window
   keyGenerator: (req) => {
-    // Use IP and API key (if present) as identifier
-    const ip = req.get('x-forwarded-for') || req.get('x-real-ip') || req.ip;
-    const apiKey = req.headers['x-api-key'] || req.headers['authorization']?.replace('Bearer ', '') || req.query.api_key;
-    return apiKey ? `${ip}:${apiKey.slice(0, 8)}` : ip;
+    // Use IP and secure API key hash (if present) as identifier
+    const ip = (req.get('x-forwarded-for') || req.get('x-real-ip') || req.ip || '').trim();
+    const apiKey = (req.headers['x-api-key'] || req.headers['authorization']?.replace('Bearer ', '') || req.query.api_key || '').trim();
+    
+    if (apiKey) {
+      // Create secure hash of the full API key
+      const crypto = require('crypto');
+      const hash = crypto.createHash('sha256').update(apiKey).digest('hex');
+      return `${ip}:${hash}`;
+    }
+    
+    return ip;
   },
   standardHeaders: true,
   legacyHeaders: false,
@@ -151,9 +159,38 @@ app.get('/', authRateLimit, async (req, res) => {
     res.write(`data: ${JSON.stringify(connectionResponse)}\n\n`);
 
     // Keep connection alive with periodic heartbeat
-    const heartbeatInterval = setInterval(() => {
-      if (res.destroyed || res.finished) {
+    let heartbeatInterval = null;
+    let isCleanedUp = false;
+    
+    // Cleanup function to ensure interval is cleared
+    const cleanup = () => {
+      if (isCleanedUp) return;
+      isCleanedUp = true;
+      
+      if (heartbeatInterval) {
         clearInterval(heartbeatInterval);
+        heartbeatInterval = null;
+      }
+    };
+    
+    // Attach cleanup listeners for all connection end scenarios
+    const cleanupOnce = () => {
+      cleanup();
+      // Remove listeners to prevent memory leaks
+      req.removeListener('close', cleanupOnce);
+      req.removeListener('error', cleanupOnce);
+      res.removeListener('finish', cleanupOnce);
+      res.removeListener('error', cleanupOnce);
+    };
+    
+    req.on('close', cleanupOnce);
+    req.on('error', cleanupOnce);
+    res.on('finish', cleanupOnce);
+    res.on('error', cleanupOnce);
+    
+    heartbeatInterval = setInterval(() => {
+      if (res.destroyed || res.finished || isCleanedUp) {
+        cleanup();
         return;
       }
       
@@ -165,16 +202,6 @@ app.get('/', authRateLimit, async (req, res) => {
       
       res.write(`data: ${JSON.stringify(heartbeat)}\n\n`);
     }, 30000); // Send heartbeat every 30 seconds
-
-    // Handle client disconnect
-    req.on('close', () => {
-      console.log('🔌 MCP SSE client disconnected:', connectionId);
-      clearInterval(heartbeatInterval);
-    });
-
-    req.on('end', () => {
-      clearInterval(heartbeatInterval);
-    });
 
   } catch (error) {
     console.error('MCP SSE Error:', error);

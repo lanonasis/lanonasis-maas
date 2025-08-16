@@ -109,7 +109,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const { data: existingProfile } = await supabase
       .from('profiles')
       .select('*')
-      .eq('id', user.id)
+      .eq('id', user.id as any)
       .single();
     
     if (!existingProfile) {
@@ -144,7 +144,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       
       const { error } = await supabase
         .from('profiles')
-        .insert(profileData);
+        .insert(profileData as any);
       
       if (!error) {
         console.log(`Profile created successfully for ${provider} user`);
@@ -155,15 +155,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     } else {
       console.log(`Profile already exists for ${provider} user`);
       // Update avatar if missing and provider has one
-      if (!existingProfile.avatar_url && (user.user_metadata.avatar_url || user.user_metadata.picture)) {
+      if (!(existingProfile as any)?.avatar_url && (user.user_metadata.avatar_url || user.user_metadata.picture)) {
         const newAvatarUrl = user.user_metadata.avatar_url || user.user_metadata.picture;
         await supabase
           .from('profiles')
           .update({ 
             avatar_url: newAvatarUrl,
             updated_at: new Date().toISOString()
-          })
-          .eq('id', user.id);
+          } as any)
+          .eq('id', user.id as any);
         
         console.log(`Updated avatar for existing ${provider} user`);
       }
@@ -174,13 +174,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const { data, error } = await supabase
       .from('profiles')
       .select('*')
-      .eq('id', userId)
+      .eq('id', userId as any)
       .single();
 
     if (error) {
       console.error('Error fetching profile:', error);
       
-      // If profile doesn't exist, try to create one
+      // If profile doesn't exist, try to create one using upsert
       if (error.code === 'PGRST116') { // Row not found
         console.log('Profile not found, attempting to create one...');
         
@@ -188,27 +188,40 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         const currentUser = session.session?.user;
         
         if (currentUser) {
-          const { data: newProfile, error: createError } = await supabase
+          // Use upsert to handle race conditions atomically
+          const { data: upsertedProfile, error: upsertError } = await supabase
             .from('profiles')
-            .insert({
+            .upsert({
               id: userId,
               email: currentUser.email,
               full_name: currentUser.user_metadata?.full_name || currentUser.user_metadata?.name || null,
               role: currentUser.user_metadata?.role || 'user',
               avatar_url: currentUser.user_metadata?.avatar_url || currentUser.user_metadata?.picture || null,
-              created_at: new Date().toISOString(),
               updated_at: new Date().toISOString()
+            } as any, {
+              onConflict: 'id'
             })
             .select()
             .single();
           
-          if (createError) {
-            console.error('Error creating profile:', createError);
+          if (upsertError) {
+            console.error('Error upserting profile:', upsertError);
+            // If upsert fails due to constraint violation, try to fetch existing profile
+            const { data: existingProfile, error: fetchError } = await supabase
+              .from('profiles')
+              .select('*')
+              .eq('id', userId as any)
+              .single();
+            
+            if (!fetchError && existingProfile) {
+              console.log('Profile found after conflict, using existing:', existingProfile);
+              setProfile(existingProfile as any);
+            }
             return;
           }
           
-          console.log('Profile created successfully:', newProfile);
-          setProfile(newProfile);
+          console.log('Profile upserted successfully:', upsertedProfile);
+          setProfile(upsertedProfile as any);
           return;
         }
       }
@@ -216,7 +229,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       return;
     }
 
-    setProfile(data);
+    setProfile(data as any);
   };
 
   const signIn = async (email: string, password: string) => {

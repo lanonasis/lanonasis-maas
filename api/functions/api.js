@@ -740,5 +740,6 @@ app.use((err, req, res, next) => {
   });
 });
 
-// Export for Vercel serverless functions
-module.exports = serverless(app);
+// Export Vercel-compatible HTTP handler and preserve AWS/Netlify compatibility
+module.exports = (req, res) => app(req, res);
+module.exports.handler = serverless(app);

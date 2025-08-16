@@ -52,6 +52,15 @@ export const authMiddleware = async (
     }
 
     try {
+      // Validate JWT secret exists
+      if (!config.JWT_SECRET || typeof config.JWT_SECRET !== 'string' || config.JWT_SECRET.trim() === '') {
+        logger.error('JWT_SECRET is not configured or is empty');
+        res.status(500).json({
+          error: 'Server configuration error'
+        });
+        return;
+      }
+
       // Verify JWT token
       const decoded = jwt.verify(token, config.JWT_SECRET) as JWTPayload;
       
