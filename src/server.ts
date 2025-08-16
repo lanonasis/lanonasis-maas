@@ -267,7 +267,7 @@ app.use(`${config.API_PREFIX}/${config.API_VERSION}/services`, serviceRegistry);
 app.use(`${config.API_PREFIX}/${config.API_VERSION}/auth`, authRouter);
 
 // Basic authentication routes (for CLI and direct API access)
-app.use(`${config.API_PREFIX}/${config.API_VERSION}/auth`, authBasicRoutes);
+app.use(`${config.API_PREFIX}/${config.API_VERSION}/auth/basic`, authBasicRoutes);
 
 // Emergency admin route (TEMPORARY - REMOVE AFTER SETUP)
 if (process.env.EMERGENCY_BOOTSTRAP_TOKEN) {
@@ -275,8 +275,40 @@ if (process.env.EMERGENCY_BOOTSTRAP_TOKEN) {
   console.warn('⚠️  EMERGENCY ADMIN ROUTE ACTIVE - Remove after initial setup!');
 }
 
+// API Key authentication middleware wrapper
+const apiKeyMiddleware = async (req: any, res: any, next: any) => {
+  try {
+    const apiKey = req.headers['x-api-key'] || req.headers['authorization']?.replace('Bearer ', '');
+    
+    if (!apiKey) {
+      return res.status(401).json({
+        error: 'Missing API key',
+        message: 'API key required in X-API-Key header or Authorization Bearer token'
+      });
+    }
+
+    const user = await authenticateApiKey(apiKey);
+    
+    if (!user) {
+      return res.status(401).json({
+        error: 'Invalid API key',
+        message: 'API key is invalid or expired'
+      });
+    }
+
+    req.user = user;
+    next();
+  } catch (error: any) {
+    console.error('API key authentication error:', error);
+    return res.status(500).json({
+      error: 'Authentication failed',
+      message: 'Internal server error during authentication'
+    });
+  }
+};
+
 // Protected routes
-app.use(`${config.API_PREFIX}/${config.API_VERSION}/memory`, authenticateApiKey, memoryRoutes);
+app.use(`${config.API_PREFIX}/${config.API_VERSION}/memory`, apiKeyMiddleware, memoryRoutes);
 app.use(`${config.API_PREFIX}/${config.API_VERSION}/api-keys`, apiKeyRoutes);
 
 // MCP routes (for AI agents - different auth mechanism)

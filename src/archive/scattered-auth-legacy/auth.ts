@@ -52,6 +52,15 @@ export const authMiddleware = async (
     }
 
     try {
+      // Validate JWT secret exists
+      if (!config.JWT_SECRET=REDACTED_JWT_SECRET
+        logger.error('JWT_SECRET=REDACTED_JWT_SECRET
+        res.status(500).json({
+          error: 'Server configuration error'
+        });
+        return;
+      }
+
       // Verify JWT token
       const decoded = jwt.verify(token, config.JWT_SECRET=REDACTED_JWT_SECRET
       
