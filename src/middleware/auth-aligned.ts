@@ -5,11 +5,28 @@ import { logger } from '@/utils/logger';
 
 const supabase = createClient(config.SUPABASE_URL=https://<project-ref>.supabase.co
 
-import { UnifiedUser } from './auth';
+import { JWTPayload } from '@/types/auth';
+
+// Unified user type that works with both JWT and Supabase auth
+export interface UnifiedUser extends JWTPayload {
+  id?: string;
+  email?: string;
+  user_metadata?: Record<string, unknown>;
+  app_metadata?: Record<string, unknown>;
+}
 
 // Aligned user type for Supabase auth that extends JWTPayload
 // Type alias for backward compatibility
 export type AlignedUser = UnifiedUser;
+
+// Extend Express Request type to include user
+declare global {
+  namespace Express {
+    interface Request {
+      user?: UnifiedUser;
+    }
+  }
+}
 
 /**
  * Authentication middleware aligned with Supabase auth system
@@ -125,7 +142,7 @@ export const alignedAuthMiddleware = async (
 /**
  * Authenticate using API key from maas_api_keys table
  */
-async function authenticateApiKey(apiKey: string): Promise<AlignedUser | null> {
+export async function authenticateApiKey(apiKey: string): Promise<AlignedUser | null> {
   try {
     // Hash the API key for comparison (in production, store hashed keys)
     const { data: keyRecord, error } = await supabase
@@ -201,6 +218,34 @@ export const requirePlan = (allowedPlans: string[]) => {
         message: `This feature requires one of the following plans: ${allowedPlans.join(', ')}. Current plan: ${userPlan}`,
         current_plan: userPlan,
         required_plans: allowedPlans
+      });
+      return;
+    }
+
+    next();
+  };
+};
+
+/**
+ * Middleware to check role requirements
+ */
+export const requireRole = (allowedRoles: string[]) => {
+  return (req: Request, res: Response, next: NextFunction): void => {
+    if (!req.user) {
+      res.status(401).json({
+        error: 'Authentication required',
+        message: 'User not authenticated'
+      });
+      return;
+    }
+
+    const userRole = req.user.role || 'user';
+    if (!allowedRoles.includes(userRole)) {
+      res.status(403).json({
+        error: 'Insufficient permissions',
+        message: `This action requires one of the following roles: ${allowedRoles.join(', ')}. Current role: ${userRole}`,
+        current_role: userRole,
+        required_roles: allowedRoles
       });
       return;
     }

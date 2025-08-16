@@ -48,6 +48,9 @@ vercel logs https://developer.lanonasis.com
 ```
 
 #### Solution B: Update Vercel Configuration
+
+**Important**: Since functions are now wrapped with serverless-http, the Vercel configuration must point to the wrapped handler entry files (not raw module exports). The functions mapping must target the specific handler file that exports the serverless-http wrapped handler.
+
 ```json
 {
   "version": 2,
@@ -60,11 +63,17 @@ vercel logs https://developer.lanonasis.com
   "rewrites": [
     {
       "source": "/api/v1/(.*)",
-      "destination": "/api/functions/api"
+      "destination": "/api/functions/api.js"
     }
   ]
 }
 ```
+
+**Configuration Notes**:
+- The `destination` should reference the built handler path that exports the serverless-http handler (e.g., `/api/functions/api.js`)
+- The exported handler name should match what Vercel expects (typically the default export from serverless-http wrapper)
+- The `functions` mapping targets the pattern that matches your handler files
+- Runtime remains set to ensure proper Node.js environment
 
 ### Phase 2: Enable HTTPS MCP Transport
 

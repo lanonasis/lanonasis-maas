@@ -2,7 +2,7 @@ import { Router, Request, Response } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 
 import { asyncHandler } from '@/middleware/errorHandler';
-import { requireRole, requirePlan } from '@/middleware/auth';
+import { requirePlan, requireRole } from '@/middleware/auth-aligned';
 import { MemoryService, ListMemoryFilters } from '@/services/memoryService';
 import { 
   createMemorySchema, 

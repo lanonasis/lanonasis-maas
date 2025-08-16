@@ -64,7 +64,6 @@ router.get('/authorize', (req, res) => {
   const { 
     client_id, 
     redirect_uri, 
-    response_type, 
     scope = OAUTH_CONFIG.scope, 
     state,
     code_challenge,
@@ -111,7 +110,7 @@ router.get('/authorize', (req, res) => {
 
   try {
     res.redirect(`${redirect_uri}?${params.toString()}`);
-  } catch (err) {
+  } catch {
     res.status(500).json({
       error: 'server_error',
       error_description: 'Internal server error'

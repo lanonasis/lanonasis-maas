@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import { authMiddleware } from '@/middleware/auth';
+import { alignedAuthMiddleware } from '@/middleware/auth-aligned';
 import { logger } from '@/utils/logger';
 import { asyncHandler } from '@/middleware/errorHandler';
 
@@ -28,8 +28,8 @@ const sseConnections = new Map<string, Response>();
  *       401:
  *         description: Unauthorized
  */
-router.get('/', authMiddleware, asyncHandler(async (req: Request, res: Response): Promise<void> => {
-  const userId = (req as any).user?.id;
+router.get('/', alignedAuthMiddleware, asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  const userId = req.user?.userId || req.user?.id;
   
   if (!userId) {
     res.status(401).json({ error: 'User ID not found' });
