@@ -35,7 +35,7 @@ export class UIConnector {
   }
 
   private generateUrl(path: string, params?: Record<string, string>) {
-    const url = new URL(path, this.baseUrl);
+    const url = new globalThis.URL(path, this.baseUrl);
     if (params) {
       Object.entries(params).forEach(([key, value]) => {
         url.searchParams.append(key, value);

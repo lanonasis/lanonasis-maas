@@ -50,6 +50,12 @@ const envSchema = z.object({
   // API
   API_VERSION: z.string().default('v1'),
   API_PREFIX: z.string().default('/api'),
+  API_BASE_URL: z.string().url().optional(),
+  
+  // OAuth Configuration
+  AUTH_SERVER_URL: z.string().url().optional(),
+  OAUTH_CLIENT_ID: z.string().optional(),
+  OAUTH_REDIRECT_URI: z.string().url().optional(),
   
   // Security & Monitoring
   SECURITY_ALERT_ENABLED: z.string().transform(val => val === 'true').default('true'),

@@ -1,8 +1,8 @@
 import express from 'express';
 import { body, param, query, validationResult } from 'express-validator';
-import { authMiddleware } from '../middleware/auth.js';
-import { apiKeyService } from '../services/apiKeyService.js';
-import { logger } from '../utils/logger.js';
+import { alignedAuthMiddleware } from '@/middleware/auth-aligned';
+import { apiKeyService } from '@/services/apiKeyService';
+import { logger } from '@/utils/logger';
 
 const router = express.Router();
 
@@ -20,7 +20,7 @@ const validateRequest = (req: express.Request, res: express.Response, next: expr
 };
 
 // Apply auth middleware to all routes
-router.use(authMiddleware);
+router.use(alignedAuthMiddleware);
 
 /**
  * @swagger
