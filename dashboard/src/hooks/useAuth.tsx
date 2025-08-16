@@ -20,6 +20,7 @@ interface AuthContextType {
   profile: Profile | null;
   session: Session | null;
   isLoading: boolean;
+  isProcessingCallback: boolean;
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string, userData: {
     full_name: string;
@@ -27,6 +28,8 @@ interface AuthContextType {
   }) => Promise<void>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
+  handleOAuthCallback: (pathname: string, hash: string) => Promise<boolean>;
+  signInWithOAuth: (provider: 'google' | 'github' | 'linkedin' | 'discord') => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -36,6 +39,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isProcessingCallback, setIsProcessingCallback] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -69,40 +73,18 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         if (session?.user) {
           await fetchProfile(session.user.id);
           
-          // Handle OAuth callback - create profile if it doesn't exist
+          // Handle OAuth callback - create profile if it doesn't exist (as per OAUTH_SETUP_GUIDE.md)
           if (event === 'SIGNED_IN' && session.user.app_metadata.provider !== 'email') {
-            console.log('OAuth sign-in detected, provider:', session.user.app_metadata.provider);
+            const provider = session.user.app_metadata.provider;
+            console.log('OAuth sign-in detected, provider:', provider);
             
-            const { data: existingProfile } = await supabase
-              .from('profiles')
-              .select('*')
-              .eq('id', session.user.id)
-              .single();
-            
-            if (!existingProfile) {
-              console.log('Creating new profile for OAuth user');
-              // Create profile for OAuth users
-              const { error } = await supabase
-                .from('profiles')
-                .insert({
-                  id: session.user.id,
-                  email: session.user.email,
-                  full_name: session.user.user_metadata.full_name || session.user.user_metadata.name || null,
-                  avatar_url: session.user.user_metadata.avatar_url || session.user.user_metadata.picture || null,
-                  created_at: new Date().toISOString(),
-                  updated_at: new Date().toISOString()
-                });
-              
-              if (!error) {
-                await fetchProfile(session.user.id);
-              }
-            }
+            await createProfileForOAuthUser(session.user, provider);
             
             // Redirect to dashboard after OAuth login
             console.log('Redirecting to dashboard after OAuth login');
             toast({
               title: "Welcome!",
-              description: "Successfully signed in. Redirecting to dashboard...",
+              description: `Successfully signed in with ${provider}. Redirecting to dashboard...`,
             });
             
             // Use setTimeout to ensure state updates are complete
@@ -122,6 +104,71 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       subscription.unsubscribe();
     };
   }, []);
+
+  const createProfileForOAuthUser = async (user: User, provider: string) => {
+    const { data: existingProfile } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', user.id)
+      .single();
+    
+    if (!existingProfile) {
+      console.log(`Creating new profile for ${provider} OAuth user`);
+      
+      // Provider-specific metadata extraction (as per OAUTH_SETUP_GUIDE.md)
+      let profileData = {
+        id: user.id,
+        email: user.email,
+        full_name: user.user_metadata.full_name || user.user_metadata.name || null,
+        avatar_url: user.user_metadata.avatar_url || user.user_metadata.picture || null,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+
+      // Provider-specific enhancements
+      switch (provider) {
+        case 'github':
+          profileData.full_name = profileData.full_name || user.user_metadata.user_name;
+          profileData.avatar_url = user.user_metadata.avatar_url;
+          break;
+        case 'google':
+          profileData.avatar_url = user.user_metadata.picture;
+          break;
+        case 'linkedin':
+          profileData.avatar_url = user.user_metadata.picture;
+          break;
+        case 'discord':
+          profileData.avatar_url = user.user_metadata.avatar_url;
+          break;
+      }
+      
+      const { error } = await supabase
+        .from('profiles')
+        .insert(profileData);
+      
+      if (!error) {
+        console.log(`Profile created successfully for ${provider} user`);
+        await fetchProfile(user.id);
+      } else {
+        console.error(`Error creating profile for ${provider} user:`, error);
+      }
+    } else {
+      console.log(`Profile already exists for ${provider} user`);
+      // Update avatar if missing and provider has one
+      if (!existingProfile.avatar_url && (user.user_metadata.avatar_url || user.user_metadata.picture)) {
+        const newAvatarUrl = user.user_metadata.avatar_url || user.user_metadata.picture;
+        await supabase
+          .from('profiles')
+          .update({ 
+            avatar_url: newAvatarUrl,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', user.id);
+        
+        console.log(`Updated avatar for existing ${provider} user`);
+      }
+    }
+  };
 
   const fetchProfile = async (userId: string) => {
     const { data, error } = await supabase
@@ -254,6 +301,133 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
+  const handleOAuthCallback = async (pathname: string, hash: string): Promise<boolean> => {
+    // Check if this is an OAuth callback - prioritize /auth/callback route as per SUPABASE_OAUTH_CONFIG.md
+    const isOAuthCallback = pathname === '/auth/callback' || 
+      // Fallback: root path with OAuth parameters (for direct URL redirects)
+      (pathname === '/' && (
+        hash.includes('access_token') || 
+        hash.includes('id_token') || 
+        hash.includes('code') || 
+        hash.includes('state')
+      ));
+    
+    if (!isOAuthCallback) {
+      return false;
+    }
+
+    console.log('OAuth callback detected, processing...');
+    setIsProcessingCallback(true);
+    
+    try {
+      // Extract OAuth state parameter for validation (as per MCP_OAUTH_FLOW_DESIGN.md)
+      const urlParams = new URLSearchParams(hash.replace('#', ''));
+      const state = urlParams.get('state');
+      
+      // Validate OAuth state parameter if present (CSRF protection)
+      if (state) {
+        const storedState = sessionStorage.getItem('oauth_state');
+        if (storedState && storedState !== state) {
+          console.error('OAuth state mismatch - possible CSRF attack');
+          toast({
+            title: "Authentication Error",
+            description: "Invalid authentication state. Please try again.",
+            variant: "destructive",
+          });
+          navigate('/auth/login');
+          return true;
+        }
+        // Clear stored state after validation
+        sessionStorage.removeItem('oauth_state');
+      }
+      
+      const { data, error } = await supabase.auth.getSession();
+      
+      if (error) {
+        console.error('OAuth callback error:', error);
+        toast({
+          title: "Authentication Error",
+          description: error.message || "Failed to process login",
+          variant: "destructive",
+        });
+        navigate('/auth/login');
+        return true;
+      }
+      
+      if (data.session) {
+        console.log('OAuth callback successful, redirecting to dashboard');
+        toast({
+          title: "Welcome!",
+          description: "Successfully signed in. Redirecting to dashboard...",
+        });
+        
+        // Get redirect path from localStorage or default to dashboard
+        const redirectPath = localStorage.getItem('redirectAfterLogin') || '/dashboard';
+        localStorage.removeItem('redirectAfterLogin');
+        navigate(redirectPath);
+        return true;
+      }
+    } catch (error: any) {
+      console.error('OAuth processing error:', error);
+      toast({
+        title: "Authentication Error", 
+        description: "Failed to process login callback",
+        variant: "destructive",
+      });
+      navigate('/auth/login');
+      return true;
+    } finally {
+      setIsProcessingCallback(false);
+    }
+    
+    return true;
+  };
+
+  const signInWithOAuth = async (provider: 'google' | 'github' | 'linkedin' | 'discord') => {
+    try {
+      // Generate OAuth state parameter for CSRF protection (as per MCP_OAUTH_FLOW_DESIGN.md)
+      const state = crypto.randomUUID();
+      sessionStorage.setItem('oauth_state', state);
+      
+      // Environment-specific redirect URLs (as per OAUTH_SETUP_GUIDE.md)
+      const getRedirectUrl = () => {
+        const origin = window.location.origin;
+        // Production: dashboard.lanonasis.com
+        if (origin.includes('dashboard.lanonasis.com')) {
+          return 'https://dashboard.lanonasis.com/auth/callback';
+        }
+        // Development: localhost
+        if (origin.includes('localhost')) {
+          return `${origin}/auth/callback`;
+        }
+        // Fallback to current origin
+        return `${origin}/auth/callback`;
+      };
+      
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider,
+        options: {
+          redirectTo: getRedirectUrl(),
+          scopes: provider === 'github' ? 'read:user user:email' : undefined,
+          queryParams: {
+            state: state
+          }
+        }
+      });
+
+      if (error) {
+        sessionStorage.removeItem('oauth_state'); // Clean up on error
+        throw error;
+      }
+    } catch (error: any) {
+      toast({
+        title: "OAuth Error",
+        description: error.message || "Failed to initiate OAuth flow",
+        variant: "destructive",
+      });
+    }
+  };
+
   const resetPassword = async (email: string) => {
     setIsLoading(true);
     try {
@@ -286,10 +460,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         profile,
         session,
         isLoading,
+        isProcessingCallback,
         signIn,
         signUp,
         signOut,
         resetPassword,
+        handleOAuthCallback,
+        signInWithOAuth,
       }}
     >
       {children}

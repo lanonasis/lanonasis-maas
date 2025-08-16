@@ -1,6 +1,7 @@
 const express = require('express');
 const serverless = require('serverless-http');
 const cors = require('cors');
+const rateLimit = require('express-rate-limit');
 const { createClient } = require('@supabase/supabase-js');
 
 const app = express();
@@ -14,6 +15,35 @@ app.use(cors({
 }));
 
 app.use(express.json());
+
+// Rate limiting for authentication failures
+const authRateLimit = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5, // 5 attempts per window
+  keyGenerator: (req) => {
+    // Use IP and API key (if present) as identifier
+    const ip = req.get('x-forwarded-for') || req.get('x-real-ip') || req.ip;
+    const apiKey = req.headers['x-api-key'] || req.headers['authorization']?.replace('Bearer ', '') || req.query.api_key;
+    return apiKey ? `${ip}:${apiKey.slice(0, 8)}` : ip;
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+  handler: (req, res) => {
+    // Return SSE-formatted error response
+    res.writeHead(429, {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      'Connection': 'keep-alive',
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Headers': 'Cache-Control, Content-Type, Authorization, X-API-Key',
+      'X-Accel-Buffering': 'no'
+    });
+    res.write('data: {"error":"Too many authentication attempts, please try again later"}\n\n');
+    res.end();
+  },
+  skipSuccessfulRequests: true, // Don't count successful requests
+  skipFailedRequests: false // Count failed requests
+});
 
 // Environment variables
 const supabaseUrl = process.env.SUPABASE_URL=https://<project-ref>.supabase.co
@@ -32,7 +62,7 @@ const supabase = createClient(
 );
 
 // SSE endpoint for MCP communication
-app.get('/', async (req, res) => {
+app.get('/', authRateLimit, async (req, res) => {
   try {
     // Set SSE headers
     res.writeHead(200, {
