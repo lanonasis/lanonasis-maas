@@ -20,7 +20,7 @@ const serviceRateLimit = rateLimit({
   max: 100, // 100 requests per window
   keyGenerator: (req): string => {
     const apiKey = req.headers['x-api-key'] || req.headers['authorization']?.replace('Bearer ', '');
-    const ip = ipKeyGenerator(req);
+    const ip = ipKeyGenerator(req as any);
     return apiKey ? `${ip}:${String(apiKey).slice(0, 8)}` : ip;
   },
   message: {
@@ -143,7 +143,7 @@ router.get('/health', async (req: Request, res: Response): Promise<void> => {
 async function checkServiceHealth(serviceName: string, endpoint: string): Promise<void> {
   try {
     const baseUrl = config.API_BASE_URL || 'http://localhost:3000';
-    const controller = new AbortController();
+    const controller = new globalThis.AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 5000);
     
     const response = await fetch(`${baseUrl}${endpoint}`, {
