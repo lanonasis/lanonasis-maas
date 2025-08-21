@@ -42,12 +42,12 @@
 
 [[redirects]]
   from = "/api/v1/*"
-  to = "/.netlify/functions/api/:splat"
+  to = "/.netlify/functions/api-new/:splat"
   status = 200
 
 [[redirects]]  
   from = "/api/*"
-  to = "/.netlify/functions/api/:splat"
+  to = "/.netlify/functions/api-new/:splat"
   status = 200
 
 # Root endpoint handled by React dashboard (landing page integrated into SPA)
