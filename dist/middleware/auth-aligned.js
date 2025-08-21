@@ -104,7 +104,7 @@ export const alignedAuthMiddleware = async (req, res, next) => {
 /**
  * Authenticate using API key from maas_api_keys table
  */
-async function authenticateApiKey(apiKey) {
+export async function authenticateApiKey(apiKey) {
     try {
         // Hash the API key for comparison (in production, store hashed keys)
         const { data: keyRecord, error } = await supabase
@@ -130,11 +130,8 @@ async function authenticateApiKey(apiKey) {
             .from('maas_api_keys')
             .update({ last_used: new Date().toISOString() })
             .eq('key_hash', apiKey);
-        // Extract plan value to avoid TypeScript errors
-        let plan = 'free';
-        if (keyRecord && keyRecord.maas_service_config && Array.isArray(keyRecord.maas_service_config) && keyRecord.maas_service_config.length > 0 && keyRecord.maas_service_config[0]) {
-            plan = keyRecord.maas_service_config[0].plan;
-        }
+        // Extract plan value using optional chaining
+        const plan = keyRecord?.maas_service_config?.[0]?.plan || 'free';
         const unifiedUser = {
             // JWTPayload properties
             userId: keyRecord.user_id,
@@ -173,6 +170,31 @@ export const requirePlan = (allowedPlans) => {
                 message: `This feature requires one of the following plans: ${allowedPlans.join(', ')}. Current plan: ${userPlan}`,
                 current_plan: userPlan,
                 required_plans: allowedPlans
+            });
+            return;
+        }
+        next();
+    };
+};
+/**
+ * Middleware to check role requirements
+ */
+export const requireRole = (allowedRoles) => {
+    return (req, res, next) => {
+        if (!req.user) {
+            res.status(401).json({
+                error: 'Authentication required',
+                message: 'User not authenticated'
+            });
+            return;
+        }
+        const userRole = req.user.role || 'user';
+        if (!allowedRoles.includes(userRole)) {
+            res.status(403).json({
+                error: 'Insufficient permissions',
+                message: `This action requires one of the following roles: ${allowedRoles.join(', ')}. Current role: ${userRole}`,
+                current_role: userRole,
+                required_roles: allowedRoles
             });
             return;
         }

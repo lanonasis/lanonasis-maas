@@ -28,6 +28,10 @@ declare const envSchema: z.ZodObject<{
     RATE_LIMIT_MAX_REQUESTS: z.ZodDefault<z.ZodEffects<z.ZodString, number, string>>;
     API_VERSION: z.ZodDefault<z.ZodString>;
     API_PREFIX: z.ZodDefault<z.ZodString>;
+    API_BASE_URL: z.ZodOptional<z.ZodString>;
+    AUTH_SERVER_URL: z.ZodOptional<z.ZodString>;
+    OAUTH_CLIENT_ID: z.ZodOptional<z.ZodString>;
+    OAUTH_REDIRECT_URI: z.ZodOptional<z.ZodString>;
     SECURITY_ALERT_ENABLED: z.ZodDefault<z.ZodEffects<z.ZodString, boolean, string>>;
     SECURITY_ALERT_THRESHOLD_CRITICAL: z.ZodDefault<z.ZodEffects<z.ZodString, number, string>>;
     SECURITY_ALERT_THRESHOLD_HIGH: z.ZodDefault<z.ZodEffects<z.ZodString, number, string>>;
@@ -129,6 +133,10 @@ declare const envSchema: z.ZodObject<{
     CORS_ORIGIN: string;
     CORS_CREDENTIALS: boolean;
     REDIS_PASSWORD?: string | undefined;
+    API_BASE_URL?: string | undefined;
+    AUTH_SERVER_URL?: string | undefined;
+    OAUTH_CLIENT_ID?: string | undefined;
+    OAUTH_REDIRECT_URI?: string | undefined;
     HSM_MODULE_PATH?: string | undefined;
     HSM_SLOT_ID?: number | undefined;
     HSM_PIN?: string | undefined;
@@ -174,6 +182,10 @@ declare const envSchema: z.ZodObject<{
     RATE_LIMIT_MAX_REQUESTS?: string | undefined;
     API_VERSION?: string | undefined;
     API_PREFIX?: string | undefined;
+    API_BASE_URL?: string | undefined;
+    AUTH_SERVER_URL?: string | undefined;
+    OAUTH_CLIENT_ID?: string | undefined;
+    OAUTH_REDIRECT_URI?: string | undefined;
     SECURITY_ALERT_ENABLED?: string | undefined;
     SECURITY_ALERT_THRESHOLD_CRITICAL?: string | undefined;
     SECURITY_ALERT_THRESHOLD_HIGH?: string | undefined;
@@ -276,6 +288,10 @@ export declare const config: {
     CORS_ORIGIN: string;
     CORS_CREDENTIALS: boolean;
     REDIS_PASSWORD?: string | undefined;
+    API_BASE_URL?: string | undefined;
+    AUTH_SERVER_URL?: string | undefined;
+    OAUTH_CLIENT_ID?: string | undefined;
+    OAUTH_REDIRECT_URI?: string | undefined;
     HSM_MODULE_PATH?: string | undefined;
     HSM_SLOT_ID?: number | undefined;
     HSM_PIN?: string | undefined;

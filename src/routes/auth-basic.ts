@@ -7,7 +7,7 @@ import { Router, Request, Response } from 'express';
 import { supabase } from '@/integrations/supabase/client';
 import { config } from '@/config/environment';
 import { logger } from '@/utils/logger';
-import jwt from 'jsonwebtoken';
+import jwt, { SignOptions } from 'jsonwebtoken';
 import { z } from 'zod';
 
 const router = Router();
@@ -72,10 +72,11 @@ router.post('/login', async (req: Request, res: Response): Promise<void> => {
         error: userError?.message,
         code: userError?.code
       });
-      return res.status(404).json({
+      res.status(404).json({
         error: 'User not found',
         message: 'Unable to retrieve user information'
       });
+      return;
     }
 
     // Create JWT token for API access
@@ -88,7 +89,7 @@ router.post('/login', async (req: Request, res: Response): Promise<void> => {
         plan: userData?.plan || 'free'
       },
       config.JWT_SECRET=REDACTED_JWT_SECRET
-      { expiresIn: config.JWT_EXPIRES_IN }
+      { expiresIn: config.JWT_EXPIRES_IN as string } as SignOptions
     );
 
     logger.info('User logged in successfully', { 
@@ -192,7 +193,7 @@ router.post('/register', async (req: Request, res: Response): Promise<void> => {
 
       if (!orgError && orgData) {
         // Update user with organization_id
-        const { data: updateData, error: updateError } = await supabase
+        const { error: updateError } = await supabase
           .from('users')
           .update({ organization_id: orgData.id })
           .eq('id', data.user.id);
@@ -211,10 +212,11 @@ router.post('/register', async (req: Request, res: Response): Promise<void> => {
             .delete()
             .eq('id', orgData.id);
           
-          return res.status(500).json({
+          res.status(500).json({
             error: 'Registration failed',
             message: 'Failed to associate user with organization'
           });
+          return;
         }
       }
     }
@@ -228,7 +230,7 @@ router.post('/register', async (req: Request, res: Response): Promise<void> => {
         plan: 'free'
       },
       config.JWT_SECRET=REDACTED_JWT_SECRET
-      { expiresIn: config.JWT_EXPIRES_IN }
+      { expiresIn: config.JWT_EXPIRES_IN as string } as SignOptions
     );
 
     logger.info('User registered successfully', { 
@@ -302,14 +304,14 @@ router.post('/refresh', async (req: Request, res: Response): Promise<void> => {
           plan: decoded.plan
         },
         config.JWT_SECRET=REDACTED_JWT_SECRET
-        { expiresIn: config.JWT_EXPIRES_IN }
+        { expiresIn: config.JWT_EXPIRES_IN as string } as SignOptions
       );
 
       res.json({
         token: newToken,
         expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
       });
-    } catch (err) {
+    } catch {
       res.status(401).json({
         error: 'invalid_token',
         message: 'Invalid or expired token'
