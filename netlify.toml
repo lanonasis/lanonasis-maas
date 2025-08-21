@@ -56,12 +56,12 @@
 # Health and metrics endpoints
 [[redirects]]
   from = "/health"
-  to = "/.netlify/functions/api"
+  to = "/.netlify/functions/api-new"
   status = 200
 
 [[redirects]]
   from = "/metrics"
-  to = "/.netlify/functions/api"
+  to = "/.netlify/functions/api-new"
   status = 200
 
 # Domain-specific routing for api.lanonasis.com - Redirect auth/dashboard to dashboard domain
@@ -108,6 +108,6 @@
 # API domain routing - serve API function for api.lanonasis.com (MUST be LAST)
 [[redirects]]
   from = "/*"
-  to = "/.netlify/functions/api"
+  to = "/.netlify/functions/api-new"
   status = 200
   conditions = {Host = ["api.lanonasis.com"]}
