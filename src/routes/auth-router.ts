@@ -126,8 +126,8 @@ router.get('/oauth/callback', async (req, res) => {
       logger.warn('OAuth callback error', { error, error_description });
       
       // URL-encode parameters to prevent XSS
-      const safeError = encodeURIComponent(error || 'unknown_error');
-      const safeDescription = encodeURIComponent(error_description || 'An error occurred');
+      const safeError = encodeURIComponent(String(error || 'unknown_error'));
+      const safeDescription = encodeURIComponent(String(error_description || 'An error occurred'));
       
       return res.redirect(`/auth/error?error=${safeError}&description=${safeDescription}`);
     }

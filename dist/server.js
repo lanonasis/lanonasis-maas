@@ -11,18 +11,19 @@ import { config } from './config/environment';
 import { logger } from './utils/logger';
 import { errorHandler } from './middleware/errorHandler';
 import { requestLogger } from './middleware/requestLogger';
-import { authMiddleware } from './middleware/auth';
+import { authenticateApiKey } from './middleware/auth-aligned';
 import { metricsMiddleware, startMetricsCollection } from './utils/metrics';
 // Route imports
 import healthRoutes from './routes/health';
 import memoryRoutes from './routes/memory';
-import authRoutes from './routes/auth';
+import authRouter from './routes/auth-router';
+import authBasicRoutes from './routes/auth-basic';
+import serviceRegistry from './routes/service-registry';
 import metricsRoutes from './routes/metrics';
 import apiKeyRoutes from './routes/api-keys';
 import mcpApiKeyRoutes from './routes/mcp-api-keys';
 import mcpSseRoutes from './routes/mcp-sse';
 import emergencyRoutes from './routes/emergency-admin';
-import oauthRoutes from './routes/oauth';
 const app = express();
 // Enhanced Swagger configuration
 const swaggerOptions = {
@@ -238,17 +239,47 @@ const swaggerUiOptions = {
 app.use('/docs', swaggerUi.serve, swaggerUi.setup(specs, swaggerUiOptions));
 // Health check (no auth required)
 app.use(`${config.API_PREFIX}/${config.API_VERSION}/health`, healthRoutes);
-// Authentication routes (no auth required for login/register)
-app.use(`${config.API_PREFIX}/${config.API_VERSION}/auth`, authRoutes);
-// OAuth routes (no auth required for OAuth flow)
-app.use(`${config.API_PREFIX}/${config.API_VERSION}`, oauthRoutes);
+// Centralized service registry (lists all available services)
+app.use(`${config.API_PREFIX}/${config.API_VERSION}/services`, serviceRegistry);
+// Centralized authentication routes (proxy to oauth-client)
+app.use(`${config.API_PREFIX}/${config.API_VERSION}/auth`, authRouter);
+// Basic authentication routes (for CLI and direct API access)
+app.use(`${config.API_PREFIX}/${config.API_VERSION}/auth/basic`, authBasicRoutes);
 // Emergency admin route (TEMPORARY - REMOVE AFTER SETUP)
 if (process.env.EMERGENCY_BOOTSTRAP_TOKEN) {
     app.use(`${config.API_PREFIX}/${config.API_VERSION}`, emergencyRoutes);
     console.warn('⚠️  EMERGENCY ADMIN ROUTE ACTIVE - Remove after initial setup!');
 }
+// API Key authentication middleware wrapper
+const apiKeyMiddleware = async (req, res, next) => {
+    try {
+        const apiKey = req.headers['x-api-key'] || req.headers['authorization']?.replace('Bearer ', '');
+        if (!apiKey) {
+            return res.status(401).json({
+                error: 'Missing API key',
+                message: 'API key required in X-API-Key header or Authorization Bearer token'
+            });
+        }
+        const user = await authenticateApiKey(apiKey);
+        if (!user) {
+            return res.status(401).json({
+                error: 'Invalid API key',
+                message: 'API key is invalid or expired'
+            });
+        }
+        req.user = user;
+        next();
+    }
+    catch (error) {
+        console.error('API key authentication error:', error);
+        return res.status(500).json({
+            error: 'Authentication failed',
+            message: 'Internal server error during authentication'
+        });
+    }
+};
 // Protected routes
-app.use(`${config.API_PREFIX}/${config.API_VERSION}/memory`, authMiddleware, memoryRoutes);
+app.use(`${config.API_PREFIX}/${config.API_VERSION}/memory`, apiKeyMiddleware, memoryRoutes);
 app.use(`${config.API_PREFIX}/${config.API_VERSION}/api-keys`, apiKeyRoutes);
 // MCP routes (for AI agents - different auth mechanism)
 app.use(`${config.API_PREFIX}/${config.API_VERSION}/mcp/api-keys`, mcpApiKeyRoutes);
