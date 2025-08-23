@@ -1,8 +1,12 @@
 const express = require('express');
 const serverless = require('serverless-http');
 const cors = require('cors');
+const fetch = require('node-fetch');
 
 const app = express();
+
+// Onasis-Core configuration
+const ONASIS_CORE_BASE_URL = process.env.ONASIS_CORE_BASE_URL || 'http://localhost:3001';
 
 // CORS configuration
 app.use(cors({
@@ -646,69 +650,101 @@ app.get('/api/v1/health', (req, res) => {
   });
 });
 
-// Auth endpoints
-app.post('/api/v1/auth/login', (req, res) => {
-  res.json({
-    message: 'Authentication endpoint - implementation in progress',
-    endpoint: '/api/v1/auth/login',
-    status: 'placeholder'
-  });
+// Proxy function for onasis-core requests
+const proxyToOnasisCore = async (req, res, endpoint, method = 'GET') => {
+  try {
+    const url = `${ONASIS_CORE_BASE_URL}${endpoint}`;
+    const options = {
+      method,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': req.headers.authorization,
+        'X-API-Key': req.headers['x-api-key'],
+        'x-project-scope': 'maas'
+      }
+    };
+
+    if (method !== 'GET' && req.body) {
+      options.body = JSON.stringify(req.body);
+    }
+
+    const response = await fetch(url, options);
+    const data = await response.json();
+    
+    res.status(response.status).json(data);
+  } catch (error) {
+    console.error('Proxy error:', error);
+    res.status(500).json({
+      error: 'Internal server error',
+      message: 'Failed to connect to onasis-core service',
+      timestamp: new Date().toISOString()
+    });
+  }
+};
+
+// Auth endpoints - route to onasis-core
+app.post('/api/v1/auth/login', async (req, res) => {
+  await proxyToOnasisCore(req, res, '/v1/auth/login', 'POST');
 });
 
-app.post('/api/v1/auth/register', (req, res) => {
-  res.json({
-    message: 'Registration endpoint - implementation in progress',
-    endpoint: '/api/v1/auth/register',
-    status: 'placeholder'
-  });
+app.post('/api/v1/auth/register', async (req, res) => {
+  await proxyToOnasisCore(req, res, '/v1/auth/register', 'POST');
 });
 
-// Memory endpoints
-app.get('/api/v1/memory', (req, res) => {
-  res.json({
-    message: 'Memory list endpoint - requires authentication',
-    endpoint: '/api/v1/memory',
-    status: 'placeholder',
-    note: 'Full implementation requires database connection'
-  });
+// Memory endpoints - route to onasis-core MaaS API
+app.get('/api/v1/memory', async (req, res) => {
+  const queryString = Object.keys(req.query).length ? `?${new URLSearchParams(req.query)}` : '';
+  await proxyToOnasisCore(req, res, `/api/v1/maas/memory${queryString}`, 'GET');
 });
 
-app.post('/api/v1/memory', (req, res) => {
-  res.json({
-    message: 'Memory creation endpoint - requires authentication',
-    endpoint: '/api/v1/memory',
-    status: 'placeholder',
-    body: req.body
-  });
+app.post('/api/v1/memory', async (req, res) => {
+  await proxyToOnasisCore(req, res, '/api/v1/maas/memory', 'POST');
 });
 
-// API Key management endpoints
-app.get('/api/v1/api-keys', (req, res) => {
-  res.json({
-    message: 'API Keys management endpoint - requires authentication',
-    endpoint: '/api/v1/api-keys',
-    status: 'placeholder'
-  });
+app.get('/api/v1/memory/:id', async (req, res) => {
+  await proxyToOnasisCore(req, res, `/api/v1/maas/memory/${req.params.id}`, 'GET');
 });
 
-app.post('/api/v1/api-keys', (req, res) => {
-  res.json({
-    message: 'API Key creation endpoint - requires authentication',
-    endpoint: '/api/v1/api-keys',
-    status: 'placeholder',
-    body: req.body
-  });
+app.put('/api/v1/memory/:id', async (req, res) => {
+  await proxyToOnasisCore(req, res, `/api/v1/maas/memory/${req.params.id}`, 'PUT');
 });
 
-// MCP endpoints
-app.get('/api/v1/mcp/status', (req, res) => {
-  res.json({
-    message: 'MCP status endpoint',
-    endpoint: '/api/v1/mcp/status',
-    status: 'operational',
-    protocol: 'Model Context Protocol v1.0',
-    features: ['api-key-management', 'memory-service', 'proxy-tokens']
-  });
+app.delete('/api/v1/memory/:id', async (req, res) => {
+  await proxyToOnasisCore(req, res, `/api/v1/maas/memory/${req.params.id}`, 'DELETE');
+});
+
+// API Key management endpoints - route to onasis-core
+app.get('/api/v1/api-keys', async (req, res) => {
+  const queryString = Object.keys(req.query).length ? `?${new URLSearchParams(req.query)}` : '';
+  await proxyToOnasisCore(req, res, `/api/v1/maas/api-keys${queryString}`, 'GET');
+});
+
+app.post('/api/v1/api-keys', async (req, res) => {
+  await proxyToOnasisCore(req, res, '/api/v1/maas/api-keys', 'POST');
+});
+
+app.get('/api/v1/api-keys/:id', async (req, res) => {
+  await proxyToOnasisCore(req, res, `/api/v1/maas/api-keys/${req.params.id}`, 'GET');
+});
+
+app.put('/api/v1/api-keys/:id', async (req, res) => {
+  await proxyToOnasisCore(req, res, `/api/v1/maas/api-keys/${req.params.id}`, 'PUT');
+});
+
+app.delete('/api/v1/api-keys/:id', async (req, res) => {
+  await proxyToOnasisCore(req, res, `/api/v1/maas/api-keys/${req.params.id}`, 'DELETE');
+});
+
+// MCP endpoints - route to onasis-core
+app.get('/api/v1/mcp/status', async (req, res) => {
+  await proxyToOnasisCore(req, res, '/api/v1/maas/health', 'GET');
+});
+
+// Additional MCP endpoints for compatibility
+app.all('/api/v1/mcp/*', async (req, res) => {
+  const mcpPath = req.path.replace('/api/v1/mcp', '/api/v1/maas');
+  const queryString = Object.keys(req.query).length ? `?${new URLSearchParams(req.query)}` : '';
+  await proxyToOnasisCore(req, res, `${mcpPath}${queryString}`, req.method);
 });
 
 // 404 handler
@@ -724,8 +760,11 @@ app.use('*', (req, res) => {
       '/api/v1/auth/login',
       '/api/v1/auth/register',
       '/api/v1/memory',
+      '/api/v1/memory/:id',
       '/api/v1/api-keys',
-      '/api/v1/mcp/status'
+      '/api/v1/api-keys/:id',
+      '/api/v1/mcp/status',
+      '/api/v1/mcp/*'
     ]
   });
 });
