@@ -51,6 +51,7 @@
   "dependencies": {
     "@netlify/functions": "^2.8.2",
     "@supabase/supabase-js": "^2.53.0",
+    "bcrypt": "^6.0.0",
     "bcryptjs": "^3.0.2",
     "compression": "^1.7.5",
     "cors": "^2.8.5",
@@ -60,6 +61,7 @@
     "express-validator": "^7.2.0",
     "helmet": "^8.0.0",
     "jsonwebtoken": "^9.0.2",
+    "node-fetch": "^2.7.0",
     "openai": "^4.76.1",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
