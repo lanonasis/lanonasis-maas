@@ -1,8 +1,6 @@
-#!/usr/bin/env node
-
-/**
- * Test API Routing and JSON Response
  * Quick test to verify JSON formatting for AI clients
+ * 
+ * TEMPORARY TEST FILE: Not for production use. Uses CommonJS for quick testing.
  */
 
 const express = require('express');
