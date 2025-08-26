@@ -1,29 +1,27 @@
 import express from 'express';
-import cors from 'cors';
-import helmet from 'helmet';
 import compression from 'compression';
-import rateLimit from 'express-rate-limit';
 import swaggerUi from 'swagger-ui-express';
 import swaggerJsdoc from 'swagger-jsdoc';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { config } from './config/environment';
-import { logger } from './utils/logger';
-import { errorHandler } from './middleware/errorHandler';
-import { requestLogger } from './middleware/requestLogger';
-import { authenticateApiKey } from './middleware/auth-aligned';
-import { metricsMiddleware, startMetricsCollection } from './utils/metrics';
+import { config } from '@/config/environment';
+import { logger } from '@/utils/logger';
+import { metricsMiddleware, startMetricsCollection } from '@/utils/metrics';
+// CORE ALIGNMENT: Enhanced middleware imports
+import { attachRequestId, corsGuard, alignedAuthMiddleware, globalErrorHandler, notFoundHandler, createSuccessEnvelope, validateProjectScope, requirePlan, planBasedRateLimit } from '@/middleware/auth-aligned';
 // Route imports
-import healthRoutes from './routes/health';
-import memoryRoutes from './routes/memory';
-import authRouter from './routes/auth-router';
-import authBasicRoutes from './routes/auth-basic';
-import serviceRegistry from './routes/service-registry';
-import metricsRoutes from './routes/metrics';
-import apiKeyRoutes from './routes/api-keys';
-import mcpApiKeyRoutes from './routes/mcp-api-keys';
-import mcpSseRoutes from './routes/mcp-sse';
-import emergencyRoutes from './routes/emergency-admin';
+import healthRoutes from '@/routes/health';
+import memoryRoutes from '@/routes/memory';
+import authRouter from '@/routes/auth-router';
+import authBasicRoutes from '@/routes/auth-basic';
+import serviceRegistry from '@/routes/service-registry';
+import metricsRoutes from '@/routes/metrics';
+import apiKeyRoutes from '@/routes/api-keys';
+import mcpApiKeyRoutes from '@/routes/mcp-api-keys';
+import mcpSseRoutes from '@/routes/mcp-sse';
+import emergencyRoutes from '@/routes/emergency-admin';
+// AI Client middleware for JSON responses
+import { aiClientMiddleware } from '@/middleware/ai-client-json';
 const app = express();
 // Enhanced Swagger configuration
 const swaggerOptions = {
@@ -136,75 +134,21 @@ const swaggerOptions = {
     apis: ['./src/routes/*.ts', './src/types/*.ts']
 };
 const specs = swaggerJsdoc(swaggerOptions);
-// Security middleware
-app.use(helmet({
-    contentSecurityPolicy: {
-        directives: {
-            defaultSrc: ["'self'"],
-            styleSrc: ["'self'", "'unsafe-inline'"],
-            scriptSrc: ["'self'", "'unsafe-eval'", "'unsafe-inline'"],
-            imgSrc: ["'self'", "data:", "https:"],
-            fontSrc: ["'self'", "https:", "data:"],
-            connectSrc: ["'self'", "https:"],
-            workerSrc: ["'self'", "blob:"]
-        }
-    }
-}));
-// CORS configuration
-const allowedOrigins = process.env.NODE_ENV === 'production'
-    ? [
-        'https://api.lanonasis.com',
-        'https://dashboard.lanonasis.com',
-        'https://mcp.lanonasis.com',
-        'https://docs.lanonasis.com',
-        'https://api.vortexai.io',
-        'https://gateway.apiendpoint.net',
-        'https://onasis.io',
-        'https://connectionpoint.tech',
-        'https://vortexcore.app'
-    ]
-    : [
-        'http://localhost:3000',
-        'http://localhost:3001',
-        'http://localhost:5173',
-        'http://127.0.0.1:3000',
-        'http://127.0.0.1:5173'
-    ];
-app.use(cors({
-    origin: (origin, callback) => {
-        // Allow requests with no origin (like mobile apps or curl requests)
-        if (!origin)
-            return callback(null, true);
-        if (allowedOrigins.includes(origin)) {
-            return callback(null, true);
-        }
-        // Log blocked origin for debugging
-        console.warn(`CORS blocked origin: ${origin}`);
-        callback(new Error('Not allowed by CORS'));
-    },
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-API-Key', 'X-Session-ID'],
-    exposedHeaders: ['X-Total-Count', 'X-Rate-Limit-Remaining']
-}));
-// Compression and parsing
+// ============================================
+// CORE ALIGNMENT: Phase 0 Middleware Chain
+// Order is critical - DO NOT CHANGE
+// ============================================
+// 1. FIRST: Attach request ID to every request
+app.use(attachRequestId);
+// 2. AI Client Detection (BEFORE any routing)
+app.use(aiClientMiddleware);
+// 3. Compression and parsing
 app.use(compression());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
-// Rate limiting
-const limiter = rateLimit({
-    windowMs: config.RATE_LIMIT_WINDOW_MS,
-    max: config.RATE_LIMIT_MAX_REQUESTS,
-    message: {
-        error: 'Too many requests from this IP, please try again later.',
-        retryAfter: Math.ceil(config.RATE_LIMIT_WINDOW_MS / 1000)
-    },
-    standardHeaders: true,
-    legacyHeaders: false
-});
-app.use(limiter);
-// Request logging and metrics
-app.use(requestLogger);
+// 4. CORE ALIGNMENT: CORS and security headers (replaces old CORS/Helmet)
+app.use(corsGuard);
+// 5. Metrics collection
 app.use(metricsMiddleware);
 // Static file serving
 const __filename = fileURLToPath(import.meta.url);
@@ -237,6 +181,31 @@ const swaggerUiOptions = {
 };
 // Serve Swagger UI documentation
 app.use('/docs', swaggerUi.serve, swaggerUi.setup(specs, swaggerUiOptions));
+// ============================================
+// CORE ALIGNMENT: Service Discovery Endpoint
+// ============================================
+app.get('/.well-known/onasis.json', (req, res) => {
+    const manifest = {
+        auth_base: `${req.protocol}://${req.get('host')}${config.API_PREFIX}/${config.API_VERSION}`,
+        memory_base: `${req.protocol}://${req.get('host')}${config.API_PREFIX}/${config.API_VERSION}/memories`,
+        mcp_ws_base: `${req.protocol === 'https' ? 'wss' : 'ws'}://${req.get('host')}`,
+        mcp_sse: `${req.protocol}://${req.get('host')}/mcp/sse`,
+        mcp_message: `${req.protocol}://${req.get('host')}/mcp/message`,
+        keys_base: `${req.protocol}://${req.get('host')}${config.API_PREFIX}/${config.API_VERSION}/keys`,
+        project_scope: 'lanonasis-maas',
+        version: '1.2.0',
+        discovery_version: '0.1',
+        last_updated: new Date().toISOString(),
+        environment: process.env.NODE_ENV || 'development',
+        capabilities: {
+            auth: ['jwt', 'api_key'],
+            protocols: ['http', 'https', 'ws', 'wss', 'sse'],
+            formats: ['json', 'yaml', 'csv', 'markdown'],
+            features: ['bulk_operations', 'semantic_search', 'real_time']
+        }
+    };
+    res.json(createSuccessEnvelope(manifest, req, { cached: false }));
+});
 // Health check (no auth required)
 app.use(`${config.API_PREFIX}/${config.API_VERSION}/health`, healthRoutes);
 // Centralized service registry (lists all available services)
@@ -250,51 +219,24 @@ if (process.env.EMERGENCY_BOOTSTRAP_TOKEN) {
     app.use(`${config.API_PREFIX}/${config.API_VERSION}`, emergencyRoutes);
     console.warn('⚠️  EMERGENCY ADMIN ROUTE ACTIVE - Remove after initial setup!');
 }
-// API Key authentication middleware wrapper
-const apiKeyMiddleware = async (req, res, next) => {
-    try {
-        const apiKey = req.headers['x-api-key'] || req.headers['authorization']?.replace('Bearer ', '');
-        if (!apiKey) {
-            return res.status(401).json({
-                error: 'Missing API key',
-                message: 'API key required in X-API-Key header or Authorization Bearer token'
-            });
-        }
-        const user = await authenticateApiKey(apiKey);
-        if (!user) {
-            return res.status(401).json({
-                error: 'Invalid API key',
-                message: 'API key is invalid or expired'
-            });
-        }
-        req.user = user;
-        next();
-    }
-    catch (error) {
-        console.error('API key authentication error:', error);
-        return res.status(500).json({
-            error: 'Authentication failed',
-            message: 'Internal server error during authentication'
-        });
-    }
-};
-// Protected routes
-app.use(`${config.API_PREFIX}/${config.API_VERSION}/memory`, apiKeyMiddleware, memoryRoutes);
-app.use(`${config.API_PREFIX}/${config.API_VERSION}/api-keys`, apiKeyRoutes);
-// MCP routes (for AI agents - different auth mechanism)
-app.use(`${config.API_PREFIX}/${config.API_VERSION}/mcp/api-keys`, mcpApiKeyRoutes);
-app.use('/mcp', mcpSseRoutes);
-// Metrics endpoint (no auth required for Prometheus scraping)
-app.use('/metrics', metricsRoutes);
+// ============================================
+// CORE ALIGNMENT: Protected Routes with New Auth
+// ============================================
+// Memory routes (require auth + project scope)
+app.use(`${config.API_PREFIX}/${config.API_VERSION}/memory`, validateProjectScope, alignedAuthMiddleware, planBasedRateLimit(), memoryRoutes);
+app.use(`${config.API_PREFIX}/${config.API_VERSION}/memories`, validateProjectScope, alignedAuthMiddleware, planBasedRateLimit(), memoryRoutes);
+// API key management routes (require auth)  
+app.use(`${config.API_PREFIX}/${config.API_VERSION}/keys`, validateProjectScope, alignedAuthMiddleware, apiKeyRoutes);
+app.use(`${config.API_PREFIX}/${config.API_VERSION}/api-keys`, validateProjectScope, alignedAuthMiddleware, apiKeyRoutes);
+// Premium features (pro/enterprise only)
+app.use(`${config.API_PREFIX}/${config.API_VERSION}/metrics`, validateProjectScope, alignedAuthMiddleware, requirePlan(['pro', 'enterprise']), metricsRoutes);
+// MCP routes (with enhanced authentication)
+app.use(`${config.API_PREFIX}/${config.API_VERSION}/mcp/api-keys`, validateProjectScope, alignedAuthMiddleware, mcpApiKeyRoutes);
+app.use('/mcp', validateProjectScope, alignedAuthMiddleware, mcpSseRoutes);
 // Root endpoint - Enterprise Services Landing Page
 app.get('/', (req, res) => {
-    // Check if request prefers JSON (API clients) or HTML (browsers)
-    const acceptsJson = req.headers.accept && req.headers.accept.includes('application/json');
-    const isApiRequest = req.get('User-Agent')?.includes('curl') ||
-        req.get('User-Agent')?.includes('Postman') ||
-        req.get('User-Agent')?.includes('HTTPie') ||
-        acceptsJson;
-    if (isApiRequest || req.query.format === 'json') {
+    // Use AI client detection from middleware instead of manual checks
+    if (req.isAIClient || req.query.format === 'json') {
         // Return JSON for API clients
         res.json({
             platform: 'LanOnasis Enterprise Services',
@@ -365,8 +307,13 @@ app.use('*', (req, res) => {
         method: req.method
     });
 });
-// Global error handler
-app.use(errorHandler);
+// ============================================
+// CORE ALIGNMENT: Error Handling (MUST BE LAST)
+// ============================================
+// 404 handler for unmatched routes
+app.use(notFoundHandler);
+// Global error handler (replaces old errorHandler)
+app.use(globalErrorHandler);
 // Graceful shutdown
 process.on('SIGTERM', () => {
     logger.info('SIGTERM received, shutting down gracefully');
