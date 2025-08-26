@@ -1,5 +1,6 @@
 import axios from 'axios';
 import chalk from 'chalk';
+import { randomUUID } from 'crypto';
 import { CLIConfig } from './config.js';
 export class APIClient {
     client;
@@ -7,16 +8,32 @@ export class APIClient {
     constructor() {
         this.config = new CLIConfig();
         this.client = axios.create();
-        // Setup request interceptor to add auth token
+        // Setup request interceptor to add auth token and headers
         this.client.interceptors.request.use(async (config) => {
             await this.config.init();
+            // Service Discovery
+            await this.config.discoverServices();
+            config.baseURL = this.config.getDiscoveredApiUrl();
+            // Enhanced Authentication Support
             const token = this.config.getToken();
-            if (token) {
-                config.headers.Authorization = `Bearer ${token}`;
+            const vendorKey = this.config.getVendorKey();
+            if (vendorKey) {
+                // Vendor key authentication (pk_*.sk_* format)
+                config.headers['X-API-Key'] = vendorKey;
+                config.headers['X-Auth-Method'] = 'vendor_key';
             }
-            config.baseURL = this.config.getApiUrl();
+            else if (token) {
+                // JWT token authentication
+                config.headers.Authorization = `Bearer ${token}`;
+                config.headers['X-Auth-Method'] = 'jwt';
+            }
+            // Add request ID for correlation
+            const requestId = randomUUID();
+            config.headers['X-Request-ID'] = requestId;
+            // Add project scope for Golden Contract compliance
+            config.headers['X-Project-Scope'] = 'lanonasis-maas';
             if (process.env.CLI_VERBOSE === 'true') {
-                console.log(chalk.dim(`→ ${config.method?.toUpperCase()} ${config.url}`));
+                console.log(chalk.dim(`→ ${config.method?.toUpperCase()} ${config.url} [${requestId}]`));
             }
             return config;
         });

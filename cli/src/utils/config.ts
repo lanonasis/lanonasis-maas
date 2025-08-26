@@ -24,6 +24,16 @@ interface CLIConfigData {
   mcpServerUrl?: string;
   mcpUseRemote?: boolean;
   mcpPreference?: 'local' | 'remote' | 'auto';
+  // Service Discovery
+  discoveredServices?: {
+    auth_base: string;
+    memory_base: string;
+    mcp_ws_base: string;
+    project_scope: string;
+  };
+  // Enhanced Authentication
+  vendorKey?: string;
+  authMethod?: 'jwt' | 'vendor_key' | 'oauth';
   [key: string]: any; // Allow dynamic properties
 }
 
@@ -64,7 +74,46 @@ export class CLIConfig {
   getApiUrl(): string {
     return process.env.MEMORY_API_URL || 
            this.config.apiUrl || 
-           'https://dashboard.lanonasis.com/api/v1';
+           'https://api.lanonasis.com/api/v1';
+  }
+
+  // Service Discovery Integration
+  async discoverServices(): Promise<void> {
+    try {
+      // Use axios instead of fetch for consistency
+      const axios = (await import('axios')).default;
+      const discoveryUrl = 'https://api.lanonasis.com/.well-known/onasis.json';
+      const response = await axios.get(discoveryUrl);
+      this.config.discoveredServices = response.data;
+      await this.save();
+    } catch (error) {
+      // Service discovery failed, use defaults
+      if (process.env.CLI_VERBOSE === 'true') {
+        console.log('Service discovery failed, using defaults');
+      }
+    }
+  }
+
+  getDiscoveredApiUrl(): string {
+    return this.config.discoveredServices?.auth_base || this.getApiUrl();
+  }
+
+  // Enhanced authentication support
+  async setVendorKey(vendorKey: string): Promise<void> {
+    // Validate vendor key format (pk_*.sk_*)
+    if (!vendorKey.match(/^pk_[a-zA-Z0-9]+\.sk_[a-zA-Z0-9]+$/)) {
+      throw new Error('Invalid vendor key format. Expected: pk_xxx.sk_xxx');
+    }
+    this.config.vendorKey = vendorKey;
+    await this.save();
+  }
+
+  getVendorKey(): string | undefined {
+    return this.config.vendorKey;
+  }
+
+  hasVendorKey(): boolean {
+    return !!this.config.vendorKey;
   }
 
   async setApiUrl(url: string): Promise<void> {
@@ -158,7 +207,9 @@ export class CLIConfig {
   }
 
   getMCPServerUrl(): string {
-    return this.config.mcpServerUrl || 'https://dashboard.lanonasis.com';
+    return this.config.discoveredServices?.mcp_ws_base || 
+           this.config.mcpServerUrl || 
+           'https://api.lanonasis.com';
   }
 
   shouldUseRemoteMCP(): boolean {
