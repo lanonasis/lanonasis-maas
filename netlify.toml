@@ -23,7 +23,12 @@
     X-XSS-Protection = "1; mode=block"
     Referrer-Policy = "strict-origin-when-cross-origin"
 
-# MCP SSE endpoints MUST come first before API routes
+# CORE ALIGNMENT: MCP endpoints with proper WebSocket path support
+[[redirects]]
+  from = "/mcp/ws"
+  to = "/.netlify/functions/mcp-sse"
+  status = 200
+
 [[redirects]]
   from = "/mcp/sse"
   to = "/.netlify/functions/mcp-sse"
@@ -32,6 +37,18 @@
 [[redirects]]
   from = "/sse"
   to = "/.netlify/functions/mcp-sse"
+  status = 200
+
+# Legacy MCP path support (will be deprecated)
+[[redirects]]
+  from = "/mcp"
+  to = "/.netlify/functions/mcp-sse"
+  status = 200
+
+# CORE ALIGNMENT: Service discovery endpoint (MUST come first)
+[[redirects]]
+  from = "/.well-known/onasis.json"
+  to = "/.netlify/functions/api-new"
   status = 200
 
 # API routes handled by Netlify functions (MUST come before catch-all)

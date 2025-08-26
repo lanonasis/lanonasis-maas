@@ -2,53 +2,162 @@
 /* global require, process, console, exports, fetch */
 
 const { createClient } = require('@supabase/supabase-js');
+const crypto = require('crypto');
 
-// Environment variables
+// Environment variables validation
 const supabaseUrl = process.env.SUPABASE_URL=https://<project-ref>.supabase.co
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY=REDACTED_SUPABASE_SERVICE_ROLE_KEY
+
+if (!supabaseUrl || !supabaseServiceKey) {
+  console.error('CRITICAL: Missing required environment variables for MCP SSE');
+}
 
 // Initialize Supabase client
 const supabase = createClient(
   supabaseUrl,
   supabaseServiceKey
-)
+);
 
-// Netlify function handler
+// ============================================
+// CORE ALIGNMENT: Helper Functions
+// ============================================
+function generateRequestId() {
+  return crypto.randomUUID();
+}
+
+function createErrorEnvelope(requestId, message, type = 'Error', code = 'INTERNAL_ERROR') {
+  return {
+    error: { message, type, code },
+    request_id: requestId,
+    timestamp: new Date().toISOString()
+  };
+}
+
+function validateProjectScope(headers) {
+  const projectScope = headers['x-project-scope'];
+  return projectScope === 'lanonasis-maas';
+}
+
+// CORE ALIGNMENT: Enhanced Netlify function handler
 exports.handler = async (event) => {
+  const requestId = generateRequestId();
+  
+  console.log(`[${requestId}] MCP SSE request: ${event.httpMethod} ${event.path}`);
+  
+  // CORE ALIGNMENT: Enhanced CORS configuration
+  const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') || [
+    'https://dashboard.lanonasis.com',
+    'https://docs.lanonasis.com',
+    'https://api.lanonasis.com'
+  ];
+  
+  // Add development origins if not in production
+  if (process.env.NODE_ENV !== 'production') {
+    allowedOrigins.push(
+      'http://localhost:3000',
+      'http://localhost:3001',
+      'http://127.0.0.1:3000'
+    );
+  }
+  
+  const origin = event.headers.origin;
+  const corsAllowed = !origin || allowedOrigins.includes(origin);
+  
   // Handle CORS preflight
   if (event.httpMethod === 'OPTIONS') {
-    return {
-      statusCode: 200,
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-API-Key',
-        'Access-Control-Max-Age': '86400'
-      },
-      body: ''
+    if (corsAllowed) {
+      return {
+        statusCode: 204,
+        headers: {
+          'Access-Control-Allow-Origin': origin || allowedOrigins[0],
+          'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+          'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-API-Key, X-Project-Scope, X-Request-ID, X-Vendor',
+          'Access-Control-Allow-Credentials': 'true',
+          'Access-Control-Max-Age': '86400',
+          'X-Request-ID': requestId
+        },
+        body: ''
+      };
+    } else {
+      console.warn(`[${requestId}] CORS preflight blocked for origin: ${origin}`);
+      return {
+        statusCode: 403,
+        headers: { 'X-Request-ID': requestId },
+        body: JSON.stringify(createErrorEnvelope(requestId, 'CORS policy violation', 'CORSError', 'ORIGIN_NOT_ALLOWED'))
+      };
     }
   }
 
-  // Set SSE headers
+  // CORS check for actual requests
+  if (!corsAllowed) {
+    console.warn(`[${requestId}] CORS blocked for origin: ${origin}`);
+    return {
+      statusCode: 403,
+      headers: { 'X-Request-ID': requestId },
+      body: JSON.stringify(createErrorEnvelope(requestId, 'CORS policy violation', 'CORSError', 'ORIGIN_NOT_ALLOWED'))
+    };
+  }
+
+  // CORE ALIGNMENT: Enhanced SSE headers
   const headers = {
     'Content-Type': 'text/event-stream',
     'Cache-Control': 'no-cache',
     'Connection': 'keep-alive',
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': 'Cache-Control, Content-Type, Authorization, X-API-Key',
-    'X-Accel-Buffering': 'no' // Disable Nginx buffering for real-time streaming
-  }
+    'Access-Control-Allow-Origin': origin || allowedOrigins[0],
+    'Access-Control-Allow-Headers': 'Cache-Control, Content-Type, Authorization, X-API-Key, X-Project-Scope, X-Request-ID',
+    'Access-Control-Allow-Credentials': 'true',
+    'X-Accel-Buffering': 'no',
+    'X-Request-ID': requestId,
+    'X-Content-Type-Options': 'nosniff',
+    'X-Frame-Options': 'DENY',
+    'Referrer-Policy': 'strict-origin-when-cross-origin'
+  };
 
   try {
-    // Parse API key from headers
-    const apiKey = event.headers['x-api-key'] || event.headers['authorization']?.replace('Bearer ', '')
+    // CORE ALIGNMENT: Enhanced authentication
+    const apiKey = event.headers['x-api-key'];
+    const authHeader = event.headers['authorization'];
+    const projectScope = event.headers['x-project-scope'];
+    const vendor = event.headers['x-vendor'];
     
-    if (!apiKey) {
+    console.log(`[${requestId}] Authentication attempt`, {
+      hasApiKey: !!apiKey,
+      hasAuthHeader: !!authHeader,
+      projectScope,
+      vendor
+    });
+
+    // Validate project scope
+    if (!validateProjectScope(event.headers)) {
+      console.warn(`[${requestId}] Invalid project scope: ${projectScope}`);
+      return {
+        statusCode: 403,
+        headers,
+        body: `data: ${JSON.stringify(createErrorEnvelope(requestId, 'Invalid project scope', 'AuthError', 'INVALID_PROJECT_SCOPE'))}\n\n`
+      };
+    }
+
+    // Check authentication
+    let token = null;
+    let authType = null;
+    
+    if (apiKey) {
+      token = apiKey.trim();
+      authType = 'api_key';
+      console.log(`[${requestId}] Using X-API-Key authentication`);
+    } else if (authHeader && authHeader.startsWith('Bearer ')) {
+      token = authHeader.substring(7).trim();
+      authType = 'jwt';
+      console.log(`[${requestId}] Using JWT Bearer token authentication`);
+    }
+    
+    if (!token) {
+      console.warn(`[${requestId}] No authentication provided`);
       return {
         statusCode: 401,
         headers,
-        body: 'data: {"error":"Missing API key"}\n\n'
-      }
+        body: `data: ${JSON.stringify(createErrorEnvelope(requestId, 'Authentication required. Provide either X-API-Key header or Authorization: Bearer token', 'AuthError', 'MISSING_AUTH'))}\n\n`
+      };
     }
 
     // Validate API key - try direct database lookup first (more reliable in Netlify)
