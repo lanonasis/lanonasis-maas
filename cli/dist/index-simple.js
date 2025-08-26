@@ -10,8 +10,15 @@ import { configCommands } from './commands/config.js';
 import { orgCommands } from './commands/organization.js';
 import { mcpCommands } from './commands/mcp.js';
 import apiKeysCommand from './commands/api-keys.js';
+import { completionCommand, installCompletionsCommand } from './commands/completion.js';
+import { guideCommand, quickStartCommand } from './commands/guide.js';
 import { CLIConfig } from './utils/config.js';
 import { getMCPClient } from './utils/mcp-client.js';
+import * as fs from 'fs';
+import * as path from 'path';
+import { fileURLToPath } from 'url';
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 // Load environment variables
 config();
 // Enhanced color scheme (VPS-style)
@@ -28,16 +35,21 @@ const colors = {
 const program = new Command();
 // CLI Configuration
 const cliConfig = new CLIConfig();
+// Detect which command was used to invoke the CLI
+const invocationName = process.argv[1] ? path.basename(process.argv[1]) : 'lanonasis';
+const isOnasisInvocation = invocationName === 'onasis';
 program
-    .name('lanonasis')
-    .alias('memory')
-    .alias('maas')
-    .description(colors.info('🧠 LanOnasis Enterprise CLI - Memory as a Service, API Management & Infrastructure Orchestration'))
-    .version('1.4.2', '-v, --version', 'display version number')
+    .name(isOnasisInvocation ? 'onasis' : 'lanonasis')
+    .alias(isOnasisInvocation ? 'lanonasis' : 'memory')
+    .alias(isOnasisInvocation ? 'memory' : 'maas')
+    .description(colors.info(`🧠 ${isOnasisInvocation ? 'Onasis-Core Golden Contract CLI' : 'LanOnasis Enterprise CLI'} - Memory as a Service, API Management & Infrastructure Orchestration`))
+    .version('1.5.2', '-v, --version', 'display version number')
     .option('-V, --verbose', 'enable verbose logging')
     .option('--api-url <url>', 'override API URL')
     .option('--output <format>', 'output format (json, table, yaml)', 'table')
     .option('--no-mcp', 'disable MCP and use direct API')
+    .option('--completion [shell]', 'generate shell completion script')
+    .option('--completion-data', 'output completion data as JSON')
     .hook('preAction', async (thisCommand, actionCommand) => {
     const opts = thisCommand.opts();
     if (opts.verbose) {
@@ -84,18 +96,33 @@ process.on('unhandledRejection', (reason, promise) => {
 });
 // Enhanced welcome message
 const showWelcome = () => {
+    const cmdName = isOnasisInvocation ? 'onasis' : 'lanonasis';
+    const title = isOnasisInvocation ? 'Onasis-Core Golden Contract CLI' : 'LanOnasis Enterprise CLI';
     console.log();
-    console.log(colors.primary('🚀 LanOnasis Enterprise CLI v1.4.2'));
+    console.log(colors.primary(`🚀 ${title} v1.5.2`));
     console.log(colors.info('━'.repeat(50)));
     console.log(colors.highlight('Enterprise-grade Memory as a Service, API Management & Infrastructure Orchestration'));
+    if (isOnasisInvocation) {
+        console.log(colors.accent('✓ Golden Contract Compliant - Service Discovery Enabled'));
+    }
     console.log();
     console.log(colors.warning('🏁 Quick Start:'));
-    console.log(`  ${colors.success('lanonasis init')}     ${colors.muted('# Initialize CLI configuration')}`);
-    console.log(`  ${colors.success('lanonasis login')}    ${colors.muted('# Authenticate with your account')}`);
-    console.log(`  ${colors.success('lanonasis health')}   ${colors.muted('# Check system health')}`);
-    console.log(`  ${colors.success('lanonasis --help')}   ${colors.muted('# Show all available commands')}`);
+    console.log(`  ${colors.success(`${cmdName} init`)}     ${colors.muted('# Initialize CLI configuration')}`);
+    console.log(`  ${colors.success(`${cmdName} login`)}    ${colors.muted('# Authenticate with your account')}`);
+    console.log(`  ${colors.success(`${cmdName} health`)}   ${colors.muted('# Check system health')}`);
+    console.log(`  ${colors.success(`${cmdName} --help`)}   ${colors.muted('# Show all available commands')}`);
     console.log();
-    console.log(colors.info('📚 Documentation: https://api.lanonasis.com/docs'));
+    if (isOnasisInvocation) {
+        console.log(colors.info('🔑 Golden Contract Authentication:'));
+        console.log(`  ${colors.success(`${cmdName} login --vendor-key pk_xxx.sk_xxx`)}  ${colors.muted('# Vendor key auth')}`);
+        console.log(`  ${colors.success(`${cmdName} login --oauth`)}                    ${colors.muted('# Browser OAuth')}`);
+        console.log();
+    }
+    console.log(colors.info('🔧 Shell Completions:'));
+    console.log(`  ${colors.success(`${cmdName} completion`)}       ${colors.muted('# Installation guide')}`);
+    console.log(`  ${colors.success(`source <(${cmdName} --completion bash)`)}  ${colors.muted('# Bash completions')}`);
+    console.log();
+    console.log(colors.info('📚 Documentation: https://docs.lanonasis.com/memory-services'));
     console.log(colors.info('🌐 Dashboard: https://api.lanonasis.com/dashboard'));
     console.log();
 };
@@ -190,6 +217,8 @@ authCmd
     .description('Login to your MaaS account')
     .option('-e, --email <email>', 'email address')
     .option('-p, --password <password>', 'password')
+    .option('--vendor-key <key>', 'vendor key (pk_xxx.sk_xxx format)')
+    .option('--oauth', 'use OAuth browser flow')
     .action(loginCommand);
 authCmd
     .command('logout')
@@ -284,7 +313,7 @@ docsCmd
     .action(async () => {
     console.log(colors.primary('📚 Documentation Status Check'));
     console.log(colors.info('━'.repeat(40)));
-    console.log(`${colors.highlight('Docs URL:')} ${colors.success('https://api.lanonasis.com/docs')}`);
+    console.log(`${colors.highlight('Docs URL:')} ${colors.success('https://docs.lanonasis.com/memory-services')}`);
     console.log(`${colors.highlight('Status:')} ${colors.success('✅ Deployed')}`);
     console.log(`${colors.highlight('Framework:')} ${colors.info('VitePress')}`);
     console.log(`${colors.highlight('Hosting:')} ${colors.info('Netlify')}`);
@@ -371,7 +400,7 @@ deployCmd
     console.log(colors.highlight('🌐 Web Services:'));
     console.log(`  Landing Page: ${colors.success('✅ api.lanonasis.com')}`);
     console.log(`  Dashboard: ${colors.success('✅ api.lanonasis.com/dashboard')}`);
-    console.log(`  Documentation: ${colors.success('✅ api.lanonasis.com/docs')}`);
+    console.log(`  Documentation: ${colors.success('✅ docs.lanonasis.com/memory-services')}`);
     console.log();
     console.log(colors.highlight('🔧 API Services:'));
     console.log(`  Memory Service: ${colors.success('✅ https://api.lanonasis.com')}`);
@@ -398,7 +427,7 @@ deployCmd
     const services = [
         { name: 'Landing Page', url: 'https://api.lanonasis.com', status: 'healthy' },
         { name: 'Dashboard', url: 'https://api.lanonasis.com/dashboard', status: 'healthy' },
-        { name: 'Documentation', url: 'https://api.lanonasis.com/docs', status: 'healthy' },
+        { name: 'Documentation', url: 'https://docs.lanonasis.com/memory-services', status: 'healthy' },
         { name: 'Memory API', url: 'https://api.lanonasis.com/memories', status: 'healthy' },
         { name: 'MCP Server', url: 'https://api.lanonasis.com/mcp/sse', status: 'healthy' },
         { name: 'Authentication', url: 'https://api.lanonasis.com/auth', status: 'healthy' }
@@ -493,6 +522,53 @@ program
         console.log(chalk.white(`Please visit: ${url}`));
     });
 });
+// Completion commands
+program
+    .command('completion')
+    .description('Generate shell completion scripts')
+    .argument('[shell]', 'shell type (bash, zsh, fish)')
+    .action(async (shell) => {
+    if (!shell) {
+        await installCompletionsCommand();
+        return;
+    }
+    const completionsDir = path.join(__dirname, 'completions');
+    let scriptPath;
+    switch (shell.toLowerCase()) {
+        case 'bash':
+            scriptPath = path.join(completionsDir, 'bash-completion.sh');
+            break;
+        case 'zsh':
+            scriptPath = path.join(completionsDir, 'zsh-completion.zsh');
+            break;
+        case 'fish':
+            scriptPath = path.join(completionsDir, 'fish-completion.fish');
+            break;
+        default:
+            console.error(colors.error(`Unsupported shell: ${shell}`));
+            console.log(colors.info('Supported shells: bash, zsh, fish'));
+            process.exit(1);
+    }
+    try {
+        const script = fs.readFileSync(scriptPath, 'utf8');
+        console.log(script);
+    }
+    catch (error) {
+        console.error(colors.error('Failed to read completion script:'), error instanceof Error ? error.message : String(error));
+        process.exit(1);
+    }
+});
+// User guidance commands
+program
+    .command('guide')
+    .alias('setup')
+    .description('Interactive setup guide for new users')
+    .action(guideCommand);
+program
+    .command('quickstart')
+    .alias('quick')
+    .description('Show essential commands for quick start')
+    .action(quickStartCommand);
 // Help customization
 program.configureHelp({
     formatHelp: (cmd, helper) => {
@@ -520,13 +596,54 @@ program.configureHelp({
             });
             help += '\n';
         }
-        help += chalk.gray('For more help on a specific command, run: memory <command> --help\n');
+        const cmdName = isOnasisInvocation ? 'onasis' : program.name();
+        help += chalk.gray(`For more help on a specific command, run: ${cmdName} <command> --help\n`);
         help += chalk.gray('Documentation: https://api.lanonasis.com/docs\n');
+        if (isOnasisInvocation) {
+            help += chalk.gray('Golden Contract: Onasis-Core v0.1 Compliant\n');
+        }
         return help;
     }
 });
 // Parse CLI arguments
 async function main() {
+    // Check for special flags first
+    if (process.argv.includes('--completion-data')) {
+        await completionCommand();
+        return;
+    }
+    if (process.argv.includes('--completion')) {
+        const shellIndex = process.argv.indexOf('--completion');
+        const shell = process.argv[shellIndex + 1];
+        if (shell && !shell.startsWith('-')) {
+            // Shell completion script request
+            const completionsDir = path.join(__dirname, 'completions');
+            let scriptPath;
+            switch (shell.toLowerCase()) {
+                case 'bash':
+                    scriptPath = path.join(completionsDir, 'bash-completion.sh');
+                    break;
+                case 'zsh':
+                    scriptPath = path.join(completionsDir, 'zsh-completion.zsh');
+                    break;
+                case 'fish':
+                    scriptPath = path.join(completionsDir, 'fish-completion.fish');
+                    break;
+                default:
+                    console.error(colors.error(`Unsupported shell: ${shell}`));
+                    process.exit(1);
+            }
+            try {
+                const script = fs.readFileSync(scriptPath, 'utf8');
+                console.log(script);
+                return;
+            }
+            catch (error) {
+                console.error(colors.error('Failed to read completion script'));
+                process.exit(1);
+            }
+        }
+    }
     // Show welcome message if no arguments provided
     if (process.argv.length <= 2) {
         showWelcome();
