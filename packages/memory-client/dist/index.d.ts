@@ -331,13 +331,328 @@ declare class MemoryClient {
 declare function createMemoryClient(config: MemoryClientConfig): MemoryClient;
 
 /**
+ * CLI Integration Module for Memory Client SDK
+ *
+ * Provides intelligent CLI detection and MCP channel utilization
+ * when @lanonasis/cli v1.5.2+ is available in the environment
+ */
+
+interface CLIInfo {
+    available: boolean;
+    version?: string;
+    mcpAvailable?: boolean;
+    authenticated?: boolean;
+}
+interface CLIExecutionOptions {
+    timeout?: number;
+    verbose?: boolean;
+    outputFormat?: 'json' | 'table' | 'yaml';
+}
+interface CLICommand {
+    command: string;
+    args: string[];
+    options?: CLIExecutionOptions;
+}
+interface MCPChannel {
+    available: boolean;
+    version?: string;
+    capabilities?: string[];
+}
+interface CLICapabilities {
+    cliAvailable: boolean;
+    mcpSupport: boolean;
+    authenticated: boolean;
+    goldenContract: boolean;
+    version?: string;
+}
+type RoutingStrategy = 'cli-first' | 'api-first' | 'cli-only' | 'api-only' | 'auto';
+/**
+ * CLI Detection and Integration Service
+ */
+declare class CLIIntegration {
+    private cliInfo;
+    private detectionPromise;
+    /**
+     * Detect if CLI is available and get its capabilities
+     */
+    detectCLI(): Promise<CLIInfo>;
+    private performDetection;
+    /**
+     * Execute CLI command and return parsed JSON result
+     */
+    executeCLICommand<T = any>(command: string, options?: CLIExecutionOptions): Promise<ApiResponse<T>>;
+    /**
+     * Get preferred CLI command (onasis for Golden Contract, fallback to lanonasis)
+     */
+    private getPreferredCLICommand;
+    /**
+     * Memory operations via CLI
+     */
+    createMemoryViaCLI(title: string, content: string, options?: {
+        memoryType?: string;
+        tags?: string[];
+        topicId?: string;
+    }): Promise<ApiResponse<any>>;
+    listMemoriesViaCLI(options?: {
+        limit?: number;
+        memoryType?: string;
+        tags?: string[];
+        sortBy?: string;
+    }): Promise<ApiResponse<any>>;
+    searchMemoriesViaCLI(query: string, options?: {
+        limit?: number;
+        memoryTypes?: string[];
+    }): Promise<ApiResponse<any>>;
+    /**
+     * Health check via CLI
+     */
+    healthCheckViaCLI(): Promise<ApiResponse<any>>;
+    /**
+     * MCP-specific operations
+     */
+    getMCPStatus(): Promise<ApiResponse<any>>;
+    listMCPTools(): Promise<ApiResponse<any>>;
+    /**
+     * Authentication operations
+     */
+    getAuthStatus(): Promise<ApiResponse<any>>;
+    /**
+     * Check if specific CLI features are available
+     */
+    getCapabilities(): Promise<{
+        cliAvailable: boolean;
+        version?: string;
+        mcpSupport: boolean;
+        authenticated: boolean;
+        goldenContract: boolean;
+    }>;
+    private isGoldenContractCompliant;
+    /**
+     * Force refresh CLI detection
+     */
+    refresh(): Promise<CLIInfo>;
+    /**
+     * Get cached CLI info without re-detection
+     */
+    getCachedInfo(): CLIInfo | null;
+}
+
+/**
+ * Enhanced Memory Client with CLI Integration
+ *
+ * Intelligently routes requests through CLI v1.5.2+ when available,
+ * with fallback to direct API for maximum compatibility and performance
+ */
+
+interface EnhancedMemoryClientConfig extends MemoryClientConfig {
+    /** Prefer CLI when available (default: true) */
+    preferCLI?: boolean;
+    /** Enable MCP channels when available (default: true) */
+    enableMCP?: boolean;
+    /** CLI detection timeout in ms (default: 5000) */
+    cliDetectionTimeout?: number;
+    /** Fallback to direct API on CLI failure (default: true) */
+    fallbackToAPI?: boolean;
+    /** Minimum CLI version required for Golden Contract compliance (default: 1.5.2) */
+    minCLIVersion?: string;
+    /** Enable verbose logging for troubleshooting (default: false) */
+    verbose?: boolean;
+}
+interface OperationResult<T> {
+    data?: T;
+    error?: string;
+    source: 'cli' | 'api';
+    mcpUsed?: boolean;
+}
+/**
+ * Enhanced Memory Client with intelligent CLI/API routing
+ */
+declare class EnhancedMemoryClient {
+    private directClient;
+    private cliIntegration;
+    private config;
+    private capabilities;
+    constructor(config: EnhancedMemoryClientConfig);
+    /**
+     * Initialize the client and detect capabilities
+     */
+    initialize(): Promise<void>;
+    /**
+     * Get current capabilities
+     */
+    getCapabilities(): Promise<Awaited<ReturnType<CLIIntegration['getCapabilities']>>>;
+    /**
+     * Determine if operation should use CLI
+     */
+    private shouldUseCLI;
+    /**
+     * Execute operation with intelligent routing
+     */
+    private executeOperation;
+    /**
+     * Health check with intelligent routing
+     */
+    healthCheck(): Promise<OperationResult<{
+        status: string;
+        timestamp: string;
+    }>>;
+    /**
+     * Create memory with CLI/API routing
+     */
+    createMemory(memory: CreateMemoryRequest): Promise<OperationResult<MemoryEntry>>;
+    /**
+     * List memories with intelligent routing
+     */
+    listMemories(options?: {
+        page?: number;
+        limit?: number;
+        memory_type?: string;
+        topic_id?: string;
+        project_ref?: string;
+        status?: string;
+        tags?: string[];
+        sort?: string;
+        order?: 'asc' | 'desc';
+    }): Promise<OperationResult<any>>;
+    /**
+     * Search memories with MCP enhancement when available
+     */
+    searchMemories(request: SearchMemoryRequest): Promise<OperationResult<{
+        results: MemorySearchResult[];
+        total_results: number;
+        search_time_ms: number;
+    }>>;
+    /**
+     * Get memory by ID (API only for now)
+     */
+    getMemory(id: string): Promise<OperationResult<MemoryEntry>>;
+    /**
+     * Update memory (API only for now)
+     */
+    updateMemory(id: string, updates: UpdateMemoryRequest): Promise<OperationResult<MemoryEntry>>;
+    /**
+     * Delete memory (API only for now)
+     */
+    deleteMemory(id: string): Promise<OperationResult<void>>;
+    createTopic(topic: any): Promise<OperationResult<MemoryTopic>>;
+    getTopics(): Promise<OperationResult<MemoryTopic[]>>;
+    getTopic(id: string): Promise<OperationResult<MemoryTopic>>;
+    updateTopic(id: string, updates: any): Promise<OperationResult<MemoryTopic>>;
+    deleteTopic(id: string): Promise<OperationResult<void>>;
+    /**
+     * Get memory statistics
+     */
+    getMemoryStats(): Promise<OperationResult<UserMemoryStats>>;
+    /**
+     * Force CLI re-detection
+     */
+    refreshCLIDetection(): Promise<void>;
+    /**
+     * Get authentication status from CLI
+     */
+    getAuthStatus(): Promise<OperationResult<any>>;
+    /**
+     * Get MCP status when available
+     */
+    getMCPStatus(): Promise<OperationResult<any>>;
+    /**
+     * Update authentication for both CLI and API client
+     */
+    setAuthToken(token: string): void;
+    setApiKey(apiKey: string): void;
+    clearAuth(): void;
+    /**
+     * Update configuration
+     */
+    updateConfig(updates: Partial<EnhancedMemoryClientConfig>): void;
+    /**
+     * Get configuration summary
+     */
+    getConfigSummary(): {
+        apiUrl: string;
+        preferCLI: boolean;
+        enableMCP: boolean;
+        capabilities?: Awaited<ReturnType<CLIIntegration['getCapabilities']>>;
+    };
+}
+/**
+ * Factory function to create an enhanced memory client
+ */
+declare function createEnhancedMemoryClient(config: EnhancedMemoryClientConfig): Promise<EnhancedMemoryClient>;
+
+/**
+ * Configuration utilities for Memory Client SDK
+ * Provides smart defaults and environment detection for CLI/MCP integration
+ */
+
+interface SmartConfigOptions {
+    /** Prefer CLI integration when available (default: true in Node.js environments) */
+    preferCLI?: boolean;
+    /** Minimum CLI version required for Golden Contract compliance (default: 1.5.2) */
+    minCLIVersion?: string;
+    /** Enable MCP channel detection (default: true) */
+    enableMCP?: boolean;
+    /** API fallback configuration */
+    apiConfig?: Partial<MemoryClientConfig>;
+    /** Timeout for CLI detection in milliseconds (default: 3000) */
+    cliDetectionTimeout?: number;
+    /** Enable verbose logging for troubleshooting (default: false) */
+    verbose?: boolean;
+}
+/**
+ * Environment detection utilities
+ */
+declare const Environment: {
+    isNode: string | false;
+    isBrowser: boolean;
+    isVSCode: boolean;
+    isCursor: boolean;
+    isWindsurf: boolean;
+    readonly isIDE: boolean;
+    readonly supportsCLI: boolean;
+};
+/**
+ * Create smart configuration with environment-aware defaults
+ */
+declare function createSmartConfig(baseConfig: Partial<MemoryClientConfig>, options?: SmartConfigOptions): EnhancedMemoryClientConfig;
+/**
+ * Preset configurations for common scenarios
+ */
+declare const ConfigPresets: {
+    /**
+     * Development configuration with local API and CLI preference
+     */
+    development: (apiKey?: string) => EnhancedMemoryClientConfig;
+    /**
+     * Production configuration optimized for performance
+     */
+    production: (apiKey?: string) => EnhancedMemoryClientConfig;
+    /**
+     * IDE extension configuration with MCP prioritization
+     */
+    ideExtension: (apiKey?: string) => EnhancedMemoryClientConfig;
+    /**
+     * Browser-only configuration (no CLI support)
+     */
+    browserOnly: (apiKey?: string) => EnhancedMemoryClientConfig;
+    /**
+     * CLI-first configuration for server environments
+     */
+    serverCLI: (apiKey?: string) => EnhancedMemoryClientConfig;
+};
+/**
+ * Migration helper for existing MemoryClient users
+ */
+declare function migrateToEnhanced(existingConfig: MemoryClientConfig, enhancementOptions?: SmartConfigOptions): EnhancedMemoryClientConfig;
+
+/**
  * @lanonasis/memory-client
  *
  * Memory as a Service (MaaS) Client SDK for Lanonasis
  * Intelligent memory management with semantic search capabilities
  */
 
-declare const VERSION = "1.0.0";
+declare const VERSION = "1.3.0";
 declare const CLIENT_NAME = "@lanonasis/memory-client";
 declare const isBrowser: boolean;
 declare const isNode: string | false;
@@ -359,5 +674,5 @@ declare const defaultConfigs: {
     };
 };
 
-export { CLIENT_NAME, MEMORY_STATUSES, MEMORY_TYPES, MemoryClient, VERSION, createMemoryClient, createMemorySchema, createTopicSchema, defaultConfigs, isBrowser, isNode, searchMemorySchema, updateMemorySchema };
-export type { ApiResponse, CreateMemoryRequest, CreateTopicRequest, MemoryClientConfig, MemoryEntry, MemorySearchResult, MemoryStatus, MemoryTopic, MemoryType, PaginatedResponse, SearchMemoryRequest, UpdateMemoryRequest, UserMemoryStats };
+export { CLIENT_NAME, CLIIntegration, ConfigPresets, EnhancedMemoryClient, Environment, MEMORY_STATUSES, MEMORY_TYPES, MemoryClient, VERSION, createEnhancedMemoryClient, createMemoryClient, createMemorySchema, createSmartConfig, createTopicSchema, defaultConfigs, isBrowser, isNode, migrateToEnhanced, searchMemorySchema, updateMemorySchema };
+export type { ApiResponse, CLICapabilities, CLICommand, CLIInfo, CreateMemoryRequest, CreateTopicRequest, EnhancedMemoryClientConfig, MCPChannel, MemoryClientConfig, MemoryEntry, MemorySearchResult, MemoryStatus, MemoryTopic, MemoryType, OperationResult, PaginatedResponse, RoutingStrategy, SearchMemoryRequest, SmartConfigOptions, UpdateMemoryRequest, UserMemoryStats };

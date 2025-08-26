@@ -34,6 +34,9 @@ import mcpApiKeyRoutes from '@/routes/mcp-api-keys';
 import mcpSseRoutes from '@/routes/mcp-sse';
 import emergencyRoutes from '@/routes/emergency-admin';
 
+// AI Client middleware for JSON responses
+import { aiClientMiddleware, AIClientRequest } from '@/middleware/ai-client-json';
+
 const app = express();
 
 // Enhanced Swagger configuration
@@ -157,15 +160,18 @@ const specs = swaggerJsdoc(swaggerOptions);
 // 1. FIRST: Attach request ID to every request
 app.use(attachRequestId);
 
-// 2. Compression and parsing
+// 2. AI Client Detection (BEFORE any routing)
+app.use(aiClientMiddleware);
+
+// 3. Compression and parsing
 app.use(compression());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// 3. CORE ALIGNMENT: CORS and security headers (replaces old CORS/Helmet)
+// 4. CORE ALIGNMENT: CORS and security headers (replaces old CORS/Helmet)
 app.use(corsGuard);
 
-// 4. Metrics collection
+// 5. Metrics collection
 app.use(metricsMiddleware);
 
 // Static file serving
@@ -269,15 +275,9 @@ app.use(`${config.API_PREFIX}/${config.API_VERSION}/mcp/api-keys`, validateProje
 app.use('/mcp', validateProjectScope, alignedAuthMiddleware, mcpSseRoutes);
 
 // Root endpoint - Enterprise Services Landing Page
-app.get('/', (req, res) => {
-  // Check if request prefers JSON (API clients) or HTML (browsers)
-  const acceptsJson = req.headers.accept && req.headers.accept.includes('application/json');
-  const isApiRequest = req.get('User-Agent')?.includes('curl') || 
-                      req.get('User-Agent')?.includes('Postman') ||
-                      req.get('User-Agent')?.includes('HTTPie') ||
-                      acceptsJson;
-
-  if (isApiRequest || req.query.format === 'json') {
+app.get('/', (req: AIClientRequest, res) => {
+  // Use AI client detection from middleware instead of manual checks
+  if (req.isAIClient || req.query.format === 'json') {
     // Return JSON for API clients
     res.json({
       platform: 'LanOnasis Enterprise Services',

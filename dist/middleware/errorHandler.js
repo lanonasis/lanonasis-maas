@@ -1,5 +1,5 @@
 import { ZodError } from 'zod';
-import { logger } from '../utils/logger';
+import { logger } from '@/utils/logger';
 export class ValidationError extends Error {
     statusCode = 400;
     isOperational = true;

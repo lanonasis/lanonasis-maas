@@ -3,28 +3,39 @@ import { MemoryTreeProvider } from './providers/MemoryTreeProvider';
 import { MemoryCompletionProvider } from './providers/MemoryCompletionProvider';
 import { ApiKeyTreeProvider } from './providers/ApiKeyTreeProvider';
 import { MemoryService } from './services/MemoryService';
+import { EnhancedMemoryService } from './services/EnhancedMemoryService';
 import { ApiKeyService } from './services/ApiKeyService';
 import { AuthenticationService } from './auth/AuthenticationService';
 import { MemoryType, MemoryEntry } from './types/memory';
 
-export function activate(context: vscode.ExtensionContext) {
+export async function activate(context: vscode.ExtensionContext) {
     console.log('Lanonasis Memory Extension for Cursor is now active');
 
     // Initialize authentication service with auto-redirect capabilities
     const authService = new AuthenticationService(context);
     
-    // Initialize services
-    const memoryService = new MemoryService(authService);
+    // Initialize services - use Enhanced version when available
+    let memoryService: MemoryService | EnhancedMemoryService;
+    
+    try {
+        // Try enhanced service first
+        memoryService = new EnhancedMemoryService(authService);
+        console.log('Using Enhanced Memory Service with CLI+OAuth integration for Cursor');
+    } catch (error) {
+        // Fallback to basic service
+        console.warn('Enhanced Memory Service not available, using basic service:', error);
+        memoryService = new MemoryService(authService);
+    }
     const apiKeyService = new ApiKeyService();
     
     // Initialize tree providers
-    const memoryTreeProvider = new MemoryTreeProvider(memoryService, authService);
+    const memoryTreeProvider = new MemoryTreeProvider(memoryService as any, authService);
     const apiKeyTreeProvider = new ApiKeyTreeProvider(apiKeyService);
     vscode.window.registerTreeDataProvider('lanonasisMemories', memoryTreeProvider);
     vscode.window.registerTreeDataProvider('lanonasisApiKeys', apiKeyTreeProvider);
 
     // Initialize completion provider
-    const completionProvider = new MemoryCompletionProvider(memoryService);
+    const completionProvider = new MemoryCompletionProvider(memoryService as any);
     context.subscriptions.push(
         vscode.languages.registerCompletionItemProvider(
             { scheme: 'file' },
@@ -36,8 +47,12 @@ export function activate(context: vscode.ExtensionContext) {
     // Set context variables
     vscode.commands.executeCommand('setContext', 'lanonasis.enabled', true);
     
-    // Check authentication status with auto-refresh
-    checkAuthenticationStatusWithAutoRefresh(authService, memoryTreeProvider);
+    // Check authentication status with auto-refresh and CLI capabilities
+    if (memoryService instanceof EnhancedMemoryService) {
+        await checkEnhancedAuthenticationStatus(authService, memoryTreeProvider, memoryService);
+    } else {
+        checkAuthenticationStatusWithAutoRefresh(authService, memoryTreeProvider);
+    }
 
     // Register commands
     const commands = [
@@ -73,6 +88,15 @@ export function activate(context: vscode.ExtensionContext) {
             await switchConnectionMode(memoryService);
         }),
 
+        // Enhanced command for connection info (if available)
+        vscode.commands.registerCommand('lanonasis.showConnectionInfo', async () => {
+            if (memoryService instanceof EnhancedMemoryService) {
+                await memoryService.showConnectionInfo();
+            } else {
+                vscode.window.showInformationMessage('Connection info available in Enhanced Memory Service. Upgrade to CLI integration for more details.');
+            }
+        }),
+
         // API Key Management Commands
         vscode.commands.registerCommand('lanonasis.manageApiKeys', async () => {
             await manageApiKeys(apiKeyService);
@@ -92,6 +116,11 @@ export function activate(context: vscode.ExtensionContext) {
     ];
 
     context.subscriptions.push(...commands);
+    
+    // Add enhanced service to subscriptions for proper cleanup if it's enhanced
+    if (memoryService instanceof EnhancedMemoryService) {
+        context.subscriptions.push(memoryService);
+    }
 
     // Auto-refresh memories periodically
     const config = vscode.workspace.getConfiguration('lanonasis');
@@ -154,7 +183,71 @@ async function checkAuthenticationStatusWithAutoRefresh(
     }
 }
 
-async function searchMemories(memoryService: MemoryService, authService: AuthenticationService) {
+async function checkEnhancedAuthenticationStatus(
+    authService: AuthenticationService,
+    memoryTreeProvider: MemoryTreeProvider,
+    enhancedService: EnhancedMemoryService
+) {
+    const isAuthenticated = await authService.checkAuthenticationStatus();
+    vscode.commands.executeCommand('setContext', 'lanonasis.authenticated', isAuthenticated);
+    
+    if (!isAuthenticated) {
+        const config = vscode.workspace.getConfiguration('lanonasis');
+        const useAutoAuth = config.get<boolean>('useAutoAuth', true);
+        
+        if (useAutoAuth) {
+            const result = await vscode.window.showInformationMessage(
+                'Lanonasis Memory: Authentication required. Use auto-login with CLI integration?',
+                'Auto Login + CLI', 'Manual Setup', 'Later'
+            );
+            
+            if (result === 'Auto Login + CLI') {
+                await authenticate(authService, memoryTreeProvider);
+            } else if (result === 'Manual Setup') {
+                await authenticate(authService, memoryTreeProvider);
+            }
+        } else {
+            const result = await vscode.window.showInformationMessage(
+                'Lanonasis Memory: No authentication configured. Set up with CLI enhancement?',
+                'Configure + CLI', 'Later'
+            );
+            
+            if (result === 'Configure + CLI') {
+                await authenticate(authService, memoryTreeProvider);
+            }
+        }
+        return;
+    }
+
+    // Refresh memories when authenticated
+    memoryTreeProvider.refresh();
+
+    // Check CLI capabilities for enhanced features
+    const capabilities = enhancedService.getCapabilities();
+    if (capabilities?.cliAvailable && capabilities.goldenContract) {
+        vscode.window.showInformationMessage(
+            '🚀 Cursor Memory: CLI v1.5.2+ + OAuth detected! Maximum performance active.',
+            'Show Details'
+        ).then(selection => {
+            if (selection === 'Show Details') {
+                vscode.commands.executeCommand('lanonasis.showConnectionInfo');
+            }
+        });
+    } else if (capabilities?.authenticated) {
+        const installCLI = await vscode.window.showInformationMessage(
+            '💡 Cursor Memory: Install CLI v1.5.2+ for enhanced performance with OAuth.',
+            'Install CLI', 'Learn More', 'Later'
+        );
+        
+        if (installCLI === 'Install CLI') {
+            vscode.env.openExternal(vscode.Uri.parse('https://www.npmjs.com/package/@lanonasis/cli'));
+        } else if (installCLI === 'Learn More') {
+            vscode.env.openExternal(vscode.Uri.parse('https://docs.lanonasis.com/cli/cursor'));
+        }
+    }
+}
+
+async function searchMemories(memoryService: MemoryService | EnhancedMemoryService, authService: AuthenticationService) {
     if (!await ensureAuthenticated(authService)) return;
     
     const query = await vscode.window.showInputBox({
@@ -204,7 +297,7 @@ async function searchMemories(memoryService: MemoryService, authService: Authent
     }
 }
 
-async function createMemoryFromSelection(memoryService: MemoryService, authService: AuthenticationService) {
+async function createMemoryFromSelection(memoryService: MemoryService | EnhancedMemoryService, authService: AuthenticationService) {
     if (!await ensureAuthenticated(authService)) return;
     
     const editor = vscode.window.activeTextEditor;
@@ -261,7 +354,7 @@ async function createMemoryFromSelection(memoryService: MemoryService, authServi
     }
 }
 
-async function createMemoryFromFile(memoryService: MemoryService, authService: AuthenticationService) {
+async function createMemoryFromFile(memoryService: MemoryService | EnhancedMemoryService, authService: AuthenticationService) {
     if (!await ensureAuthenticated(authService)) return;
     
     const editor = vscode.window.activeTextEditor;
@@ -437,7 +530,7 @@ Authentication method: ${authMethod}`;
         });
 }
 
-async function switchConnectionMode(memoryService: MemoryService) {
+async function switchConnectionMode(memoryService: MemoryService | EnhancedMemoryService) {
     const config = vscode.workspace.getConfiguration('lanonasis');
     const currentUseGateway = config.get<boolean>('useGateway', true);
     

@@ -1,8 +1,9 @@
 import * as vscode from 'vscode';
 import { MaaSClient, createMaaSClient } from './memory-client-sdk';
 import { CreateMemoryRequest, SearchMemoryRequest, MemoryEntry, MemorySearchResult } from '../types/memory-aligned';
+import type { IMemoryService } from './IMemoryService';
 
-export class MemoryService {
+export class MemoryService implements IMemoryService {
     private client: MaaSClient | null = null;
     private config: vscode.WorkspaceConfiguration;
 
