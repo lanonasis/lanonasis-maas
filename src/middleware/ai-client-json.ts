@@ -101,19 +101,25 @@ export function detectAIClient(req: AIClientRequest, res: Response, next: NextFu
  */
 export function enforceJSONForAIClients(req: AIClientRequest, res: Response, next: NextFunction): void {
   if (req.isAIClient) {
-    // Override res.render to prevent HTML responses
+    // Only override res.render for specific paths to prevent HTML responses
     const originalRender = res.render;
-    res.render = function(view: string, options?: any, callback?: any) {
-      // Instead of rendering HTML, return JSON error
-      res.status(406).json({
-        error: 'Not Acceptable',
-        message: 'This endpoint only supports JSON responses for API clients',
-        clientType: req.clientType,
-        expectedFormat: 'application/json',
-        receivedAccept: req.get('Accept'),
-        suggestion: 'Add "Accept: application/json" header or use API endpoints under /api/'
-      });
-    };
+    if (
+      req.path === '/' ||
+      req.path === '/dashboard' ||
+      req.path.startsWith('/dashboard/')
+    ) {
+      res.render = function(view: string, options?: any, callback?: any) {
+        // Instead of rendering HTML, return JSON error
+        res.status(406).json({
+          error: 'Not Acceptable',
+          message: 'This endpoint only supports JSON responses for API clients',
+          clientType: req.clientType,
+          expectedFormat: 'application/json',
+          receivedAccept: req.get('Accept'),
+          suggestion: 'Add "Accept: application/json" header or use API endpoints under /api/'
+        });
+      };
+    }
     
     // Override res.sendFile for static files
     const originalSendFile = res.sendFile;
