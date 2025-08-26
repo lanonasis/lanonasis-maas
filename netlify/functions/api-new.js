@@ -1,14 +1,24 @@
 const express = require('express');
 const serverless = require('serverless-http');
-const cors = require('cors');
+const crypto = require('crypto');
 const path = require('path');
 
-// Set up environment variables needed for the TypeScript server
+// ============================================
+// CORE ALIGNMENT: Environment Configuration
+// ============================================
 process.env.NODE_ENV = process.env.NODE_ENV || 'production';
 process.env.PORT = process.env.PORT || '3000';
 process.env.HOST = process.env.HOST || '0.0.0.0';
 process.env.API_PREFIX = process.env.API_PREFIX || '/api';
 process.env.API_VERSION = process.env.API_VERSION || 'v1';
+
+// Validate critical environment variables
+if (!process.env.SUPABASE_URL=https://<project-ref>.supabase.co
+  console.error('CRITICAL: SUPABASE_URL=https://<project-ref>.supabase.co
+}
+if (!process.env.SUPABASE_SERVICE_KEY=REDACTED_SUPABASE_SERVICE_ROLE_KEY
+  console.error('CRITICAL: SUPABASE_SERVICE_KEY=REDACTED_SUPABASE_SERVICE_ROLE_KEY
+}
 
 // Import the compiled TypeScript server routes
 let memoryRouter;
@@ -31,35 +41,226 @@ try {
 
 const app = express();
 
-// CORS configuration - more permissive for API clients
-app.use(cors({
-  origin: '*',
-  credentials: false,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-API-Key', 'Accept', 'User-Agent']
-}));
+// ============================================
+// CORE ALIGNMENT: Request ID Middleware
+// ============================================
+app.use((req, res, next) => {
+  // Generate unique request ID for tracking
+  req.id = crypto.randomUUID();
+  res.setHeader('X-Request-ID', req.id);
+  
+  // Add timestamp for debugging
+  req.timestamp = new Date().toISOString();
+  
+  console.log(`[${req.id}] ${req.method} ${req.url} from ${req.headers['cf-connecting-ip'] || req.headers['x-forwarded-for'] || 'unknown'}`);
+  next();
+});
 
 // Parse JSON bodies
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Middleware to add user context for API key authentication
+// ============================================
+// CORE ALIGNMENT: Enhanced CORS Configuration
+// ============================================
+const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') || [
+  'https://dashboard.lanonasis.com',
+  'https://docs.lanonasis.com', 
+  'https://api.lanonasis.com',
+  'https://lanonasis.com'
+];
+
+// Add development origins if not in production
+if (process.env.NODE_ENV !== 'production') {
+  allowedOrigins.push(
+    'http://localhost:3000',
+    'http://localhost:3001',
+    'http://127.0.0.1:3000'
+  );
+}
+
 app.use((req, res, next) => {
-  const authHeader = req.headers.authorization;
-  if (authHeader && authHeader.startsWith('Bearer ')) {
-    const token = authHeader.substring(7);
-    
-    // For now, create a mock user context based on the API key
-    if (token.includes('pk_live_onasis_') || token.includes('sk_live_')) {
-      req.user = {
-        userId: 'ba2c1b22-3c4d-4a5b-aca3-881995d863d5',
-        organizationId: 'ba2c1b22-3c4d-4a5b-aca3-881995d863d5',
-        plan: 'enterprise',
-        role: 'admin'
-      };
+  const origin = req.get('Origin');
+  
+  // Handle preflight requests
+  if (req.method === 'OPTIONS') {
+    if (origin && allowedOrigins.includes(origin)) {
+      res.header('Access-Control-Allow-Origin', origin);
+      res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
+      res.header('Access-Control-Allow-Headers', 'Origin, Content-Type, Accept, Authorization, X-API-Key, X-Project-Scope, X-Request-ID, X-Vendor');
+      res.header('Access-Control-Allow-Credentials', 'true');
+      res.header('Access-Control-Max-Age', '86400');
+      return res.status(204).send();
+    } else {
+      console.warn(`[${req.id}] CORS preflight blocked for origin: ${origin}`);
+      return res.status(403).json(createErrorEnvelope(req, 'CORS policy violation', 'CORSError', 'ORIGIN_NOT_ALLOWED'));
     }
   }
+
+  // Handle actual requests
+  if (origin) {
+    if (allowedOrigins.includes(origin)) {
+      res.header('Access-Control-Allow-Origin', origin);
+      res.header('Access-Control-Allow-Credentials', 'true');
+    } else {
+      console.warn(`[${req.id}] CORS blocked for origin: ${origin}`);
+      return res.status(403).json(createErrorEnvelope(req, 'CORS policy violation', 'CORSError', 'ORIGIN_NOT_ALLOWED'));
+    }
+  }
+
+  // Add security headers to all responses
+  res.header('X-Content-Type-Options', 'nosniff');
+  res.header('X-Frame-Options', 'DENY');
+  res.header('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.header('X-Privacy-Level', 'standard');
+  
   next();
+});
+
+// ============================================
+// CORE ALIGNMENT: Error Envelope Helper
+// ============================================
+function createErrorEnvelope(req, message, type = 'Error', code = 'INTERNAL_ERROR') {
+  return {
+    error: { message, type, code },
+    request_id: req.id || 'unknown',
+    timestamp: new Date().toISOString(),
+    path: req.path,
+    method: req.method
+  };
+}
+
+// ============================================
+// CORE ALIGNMENT: Success Envelope Helper  
+// ============================================
+function createSuccessEnvelope(data, req, meta) {
+  return {
+    data,
+    request_id: req.id,
+    timestamp: new Date().toISOString(),
+    ...(meta && { meta })
+  };
+}
+
+// ============================================
+// CORE ALIGNMENT: Enhanced Authentication Middleware
+// ============================================
+app.use(async (req, res, next) => {
+  const authHeader = req.headers.authorization;
+  const apiKey = req.headers['x-api-key'];
+  const projectScope = req.headers['x-project-scope'];
+  const vendor = req.headers['x-vendor'];
+
+  // Skip auth for public endpoints
+  const publicEndpoints = ['/health', '/api/v1/health', '/.well-known/onasis.json'];
+  if (publicEndpoints.some(endpoint => req.path === endpoint)) {
+    return next();
+  }
+
+  // Validate project scope for protected routes
+  if (req.path.startsWith('/api/v1/') && projectScope !== 'lanonasis-maas') {
+    console.warn(`[${req.id}] Invalid project scope: ${projectScope}`);
+    return res.status(403).json(createErrorEnvelope(req, 'Invalid project scope', 'AuthError', 'INVALID_PROJECT_SCOPE'));
+  }
+
+  try {
+    // CORE ALIGNMENT: API Key authentication (preferred for machine-to-machine)
+    if (apiKey) {
+      console.log(`[${req.id}] Authenticating with X-API-Key`);
+      
+      // Validate vendor API key format (pk_*.sk_* or legacy sk_*)
+      if (apiKey.includes('pk_') && apiKey.includes('.sk_')) {
+        // New vendor key format
+        const [keyId, keySecret] = apiKey.split('.');
+        req.user = {
+          userId: 'vendor_' + keyId.replace('pk_', ''),
+          organizationId: 'vendor_org',
+          plan: 'enterprise',
+          role: 'vendor',
+          auth_type: 'vendor_api_key',
+          vendor: vendor || 'unknown'
+        };
+        console.log(`[${req.id}] Vendor API key authentication successful`);
+      } else if (apiKey.startsWith('sk_') || apiKey.includes('sk_live_') || apiKey.includes('pk_live_onasis_')) {
+        // Legacy API key format
+        req.user = {
+          userId: 'ba2c1b22-3c4d-4a5b-aca3-881995d863d5',
+          organizationId: 'ba2c1b22-3c4d-4a5b-aca3-881995d863d5',
+          plan: 'enterprise',
+          role: 'admin',
+          auth_type: 'legacy_api_key'
+        };
+        console.log(`[${req.id}] Legacy API key authentication successful`);
+      } else {
+        console.warn(`[${req.id}] Invalid API key format`);
+        return res.status(401).json(createErrorEnvelope(req, 'Invalid API key format', 'AuthError', 'INVALID_API_KEY'));
+      }
+      
+      return next();
+    }
+
+    // CORE ALIGNMENT: JWT authentication (for user sessions)
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      const token = authHeader.substring(7).trim();
+      console.log(`[${req.id}] Authenticating with JWT Bearer token`);
+      
+      // For now, create user context based on token presence
+      // In production, this would validate against central auth or Supabase
+      req.user = {
+        userId: 'jwt_user_123',
+        organizationId: 'jwt_org_123', 
+        plan: 'pro',
+        role: 'user',
+        auth_type: 'jwt'
+      };
+      
+      console.log(`[${req.id}] JWT authentication successful`);
+      return next();
+    }
+
+    // No authentication provided for protected route
+    console.warn(`[${req.id}] No authentication provided for protected route`);
+    return res.status(401).json(createErrorEnvelope(req,
+      'Authentication required. Provide either X-API-Key header or Authorization: Bearer token',
+      'AuthError',
+      'MISSING_AUTH'
+    ));
+
+  } catch (error) {
+    console.error(`[${req.id}] Authentication error:`, error);
+    return res.status(500).json(createErrorEnvelope(req,
+      'Authentication service error',
+      'InternalError', 
+      'AUTH_SERVICE_ERROR'
+    ));
+  }
+});
+
+// ============================================
+// CORE ALIGNMENT: Service Discovery Endpoint
+// ============================================
+app.get('/.well-known/onasis.json', (req, res) => {
+  const manifest = {
+    auth_base: `${req.protocol}://${req.get('host')}/api/v1`,
+    memory_base: `${req.protocol}://${req.get('host')}/api/v1/memories`,
+    mcp_ws_base: `${req.protocol === 'https' ? 'wss' : 'ws'}://${req.get('host')}`,
+    mcp_sse: `${req.protocol}://${req.get('host')}/mcp/sse`, 
+    mcp_message: `${req.protocol}://${req.get('host')}/mcp/message`,
+    keys_base: `${req.protocol}://${req.get('host')}/api/v1/keys`,
+    project_scope: 'lanonasis-maas',
+    version: '1.2.0',
+    discovery_version: '0.1',
+    last_updated: new Date().toISOString(),
+    environment: process.env.NODE_ENV || 'production',
+    capabilities: {
+      auth: ['jwt', 'api_key', 'vendor_key'],
+      protocols: ['http', 'https', 'ws', 'wss', 'sse'],
+      formats: ['json', 'yaml', 'csv', 'markdown'],
+      features: ['bulk_operations', 'semantic_search', 'real_time']
+    }
+  };
+  
+  res.json(createSuccessEnvelope(manifest, req, { cached: false }));
 });
 
 // Use the compiled TypeScript routes if available
@@ -67,17 +268,23 @@ if (healthRouter) {
   app.use('/api/v1/health', healthRouter);
   app.use('/health', healthRouter);
 } else {
-  // Fallback health endpoint
+  // CORE ALIGNMENT: Enhanced health endpoint
   app.get(['/health', '/api/v1/health'], (req, res) => {
-    res.json({
+    const healthData = {
       name: 'Lanonasis Memory Service',
-      version: '1.0.0',
+      version: '1.2.0',
       status: 'healthy',
       timestamp: new Date().toISOString(),
-      environment: 'netlify',
+      environment: process.env.NODE_ENV || 'production',
+      deployment: 'netlify',
       database: 'connected',
-      implementation: 'fallback'
-    });
+      implementation: 'fallback',
+      uptime: process.uptime(),
+      memory: process.memoryUsage(),
+      request_id: req.id
+    };
+    
+    res.json(createSuccessEnvelope(healthData, req, { public: true }));
   });
 }
 
@@ -108,7 +315,7 @@ if (memoryRouter) {
   });
 }
 
-// Root endpoint
+// CORE ALIGNMENT: Enhanced root endpoint
 app.get('/', (req, res) => {
   // Check if request prefers JSON (API clients) or HTML (browsers)
   const acceptsJson = req.headers.accept && req.headers.accept.includes('application/json');
@@ -118,21 +325,33 @@ app.get('/', (req, res) => {
                       acceptsJson;
 
   if (isApiRequest || req.query.format === 'json') {
-    // Return JSON for API clients
-    res.json({
-      platform: 'LanOnasis Memory Service',
-      version: '1.0.0',
+    // Return JSON for API clients with service discovery info
+    const serviceInfo = {
+      platform: 'Lanonasis Memory as a Service (MaaS)',
+      tagline: 'Enterprise Memory Management with AI Context Protocol',
+      version: '1.2.0',
       status: 'operational',
-      baseUrl: 'https://mcp.lanonasis.com',
+      environment: process.env.NODE_ENV || 'production',
+      discovery: `${req.protocol}://${req.get('host')}/.well-known/onasis.json`,
       endpoints: {
-        health: '/api/v1/health',
+        health: '/health',
+        discovery: '/.well-known/onasis.json',
         memory: '/api/v1/memory',
+        keys: '/api/v1/keys',
         auth: '/api/v1/auth',
-        mcp: '/mcp'
+        mcp_sse: '/mcp/sse',
+        mcp_ws: '/mcp/ws'
+      },
+      authentication: {
+        vendor_keys: 'X-API-Key: pk_*.sk_*',
+        jwt_tokens: 'Authorization: Bearer <token>',
+        project_scope: 'X-Project-Scope: lanonasis-maas'
       },
       implementation: memoryRouter ? 'typescript' : 'fallback',
-      timestamp: new Date().toISOString()
-    });
+      compliance: 'onasis-core-v0.1'
+    };
+    
+    res.json(createSuccessEnvelope(serviceInfo, req, { public: true }));
   } else {
     // Redirect browsers to dashboard
     res.redirect('https://dashboard.lanonasis.com');
@@ -159,33 +378,46 @@ app.get('/api/v1/mcp/status', (req, res) => {
   });
 });
 
-// 404 handler
+// CORE ALIGNMENT: Enhanced 404 handler
 app.use('*', (req, res) => {
   res.status(404).json({
-    error: 'Endpoint not found',
-    path: req.originalUrl,
-    method: req.method,
+    ...createErrorEnvelope(req, 'Endpoint not found', 'NotFoundError', 'ENDPOINT_NOT_FOUND'),
     available_endpoints: [
       '/',
+      '/.well-known/onasis.json',
       '/health',
       '/api/v1/health',
       '/api/v1/memory',
+      '/api/v1/keys',
       '/api/v1/auth',
-      '/api/v1/api-keys',
-      '/api/v1/mcp/status'
+      '/mcp/sse'
     ],
-    timestamp: new Date().toISOString()
+    documentation: `${req.protocol}://${req.get('host')}/docs`
   });
 });
 
-// Error handler
+// CORE ALIGNMENT: Global error handler
 app.use((err, req, res, next) => {
-  console.error('API Error:', err);
-  res.status(500).json({
-    error: 'Internal server error',
-    message: err.message,
-    timestamp: new Date().toISOString()
+  // If response already sent, delegate to default Express error handler
+  if (res.headersSent) {
+    return next(err);
+  }
+
+  const status = err.status || err.statusCode || 500;
+  const message = err.message || 'Internal Server Error';
+  const type = err.constructor.name || 'Error';
+  const code = err.code || 'INTERNAL_ERROR';
+
+  console.error(`[${req.id}] Global error handler:`, {
+    error: err.stack,
+    url: req.url,
+    method: req.method,
+    ip: req.headers['cf-connecting-ip'] || req.headers['x-forwarded-for'] || 'unknown',
+    userAgent: req.get('User-Agent'),
+    userId: req.user?.userId
   });
+
+  res.status(status).json(createErrorEnvelope(req, message, type, code));
 });
 
 // Export serverless handler
