@@ -307,8 +307,7 @@ export class EnhancedMemoryService implements IEnhancedMemoryService {
     return result.data;
   }
 
-  private showOperationFeedback(operation: string, result: OperationResult<any>): void {
-    if (!this.config.get<boolean>('showPerformanceFeedback', false)) return;
+    if (!this.showPerformanceFeedback) return;
 
     const source = result.source === 'cli' ? 
       (result.mcpUsed ? 'CLI+MCP' : 'CLI') : 
