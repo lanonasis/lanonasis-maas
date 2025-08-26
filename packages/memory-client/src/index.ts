@@ -9,11 +9,23 @@
 export { MemoryClient, createMemoryClient } from './client';
 export type { MemoryClientConfig, ApiResponse, PaginatedResponse } from './client';
 
+// Enhanced client with CLI integration
+export { EnhancedMemoryClient, createEnhancedMemoryClient } from './enhanced-client';
+export type { EnhancedMemoryClientConfig, OperationResult } from './enhanced-client';
+
+// CLI integration utilities
+export { CLIIntegration } from './cli-integration';
+export type { CLIInfo, CLICommand, MCPChannel, CLICapabilities, RoutingStrategy } from './cli-integration';
+
+// Configuration utilities
+export { createSmartConfig, ConfigPresets, migrateToEnhanced, Environment } from './config';
+export type { SmartConfigOptions } from './config';
+
 // Types and schemas
 export * from './types';
 
 // Constants
-export const VERSION = '1.0.0';
+export const VERSION = '1.3.0';
 export const CLIENT_NAME = '@lanonasis/memory-client';
 
 // Environment detection
