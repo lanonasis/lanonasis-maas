@@ -1,10 +1,10 @@
 import { Router } from 'express';
 import { v4 as uuidv4 } from 'uuid';
-import { asyncHandler } from '../middleware/errorHandler';
-import { requirePlan, requireRole } from '../middleware/auth-aligned';
-import { MemoryService } from '../services/memoryService';
-import { createMemorySchema, updateMemorySchema, searchMemorySchema } from '../types/memory';
-import { logMemoryOperation } from '../utils/logger';
+import { asyncHandler } from '@/middleware/errorHandler';
+import { requirePlan, requireRole } from '@/middleware/auth-aligned';
+import { MemoryService } from '@/services/memoryService';
+import { createMemorySchema, updateMemorySchema, searchMemorySchema } from '@/types/memory';
+import { logMemoryOperation } from '@/utils/logger';
 const router = Router();
 const memoryService = new MemoryService();
 /**

@@ -1,31 +1,105 @@
 import { createClient } from '@supabase/supabase-js';
-import { config } from '../config/environment';
-import { logger } from '../utils/logger';
+import { config } from '@/config/environment';
+import { logger } from '@/utils/logger';
+import crypto from 'crypto';
 const supabase = createClient(config.SUPABASE_URL, config.SUPABASE_SERVICE_KEY);
+// ============================================
+// CORE ALIGNMENT: Request ID Middleware  
+// ============================================
+export const attachRequestId = (req, res, next) => {
+    // Generate unique request ID if not present
+    req.id = req.id || crypto.randomUUID();
+    // Add to response headers for client tracking
+    res.setHeader('X-Request-ID', req.id);
+    // Log request with ID for debugging
+    logger.debug(`[${req.id}] ${req.method} ${req.url} from ${req.ip}`);
+    next();
+};
+// ============================================
+// CORE ALIGNMENT: Enhanced CORS Guard
+// ============================================
+export const corsGuard = (req, res, next) => {
+    const origin = req.get('Origin');
+    const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',').map(o => o.trim()) || [
+        'https://dashboard.lanonasis.com',
+        'https://docs.lanonasis.com',
+        'https://api.lanonasis.com'
+    ];
+    // Add development origins if not in production
+    if (process.env.NODE_ENV !== 'production') {
+        allowedOrigins.push('http://localhost:3000', 'http://localhost:3001', 'http://127.0.0.1:3000');
+    }
+    // Handle preflight requests
+    if (req.method === 'OPTIONS') {
+        if (origin && allowedOrigins.includes(origin)) {
+            res.header('Access-Control-Allow-Origin', origin);
+            res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
+            res.header('Access-Control-Allow-Headers', 'Origin, Content-Type, Accept, Authorization, X-API-Key, X-Project-Scope, X-Request-ID');
+            res.header('Access-Control-Allow-Credentials', 'true');
+            res.header('Access-Control-Max-Age', '86400');
+            return res.status(204).send();
+        }
+        else {
+            return res.status(403).json(createErrorEnvelope(req, 'CORS policy violation', 'CORSError', 'ORIGIN_NOT_ALLOWED'));
+        }
+    }
+    // Handle actual requests
+    if (origin && allowedOrigins.includes(origin)) {
+        res.header('Access-Control-Allow-Origin', origin);
+        res.header('Access-Control-Allow-Credentials', 'true');
+    }
+    else if (origin) {
+        return res.status(403).json(createErrorEnvelope(req, 'CORS policy violation', 'CORSError', 'ORIGIN_NOT_ALLOWED'));
+    }
+    // Add security headers to all responses
+    res.header('X-Content-Type-Options', 'nosniff');
+    res.header('X-Frame-Options', 'DENY');
+    res.header('Referrer-Policy', 'strict-origin-when-cross-origin');
+    res.header('X-Privacy-Level', 'standard');
+    next();
+};
+// ============================================
+// CORE ALIGNMENT: Error Envelope Helper
+// ============================================
+export const createErrorEnvelope = (req, message, type = 'Error', code = 'INTERNAL_ERROR') => {
+    return {
+        error: { message, type, code },
+        request_id: req.id || 'unknown',
+        timestamp: new Date().toISOString(),
+        path: req.path,
+        method: req.method
+    };
+};
 /**
- * Authentication middleware aligned with Supabase auth system
- * Supports both JWT tokens and API keys
+ * Enhanced authentication middleware aligned with Golden Contract v0.1
+ * Supports both JWT tokens and API keys with proper header semantics
  */
 export const alignedAuthMiddleware = async (req, res, next) => {
     try {
         const authHeader = req.headers.authorization;
         const apiKey = req.headers['x-api-key'];
+        const projectScope = req.headers['x-project-scope'];
+        // CORE ALIGNMENT: Validate project scope first
+        if (projectScope !== 'lanonasis-maas') {
+            logger.warn(`[${req.id}] Invalid project scope: ${projectScope}`);
+            res.status(403).json(createErrorEnvelope(req, 'Invalid project scope', 'AuthError', 'INVALID_PROJECT_SCOPE'));
+            return;
+        }
         let token;
         let isApiKey = false;
-        // Check for Bearer token
-        if (authHeader?.startsWith('Bearer ')) {
-            token = authHeader.substring(7);
-        }
-        // Check for API key
-        else if (apiKey) {
-            token = apiKey;
+        // CORE ALIGNMENT: API Key takes precedence (machine-to-machine preferred)
+        if (apiKey) {
+            token = apiKey.trim();
             isApiKey = true;
+            logger.debug(`[${req.id}] Using X-API-Key authentication`);
+        }
+        // CORE ALIGNMENT: JWT for user sessions only  
+        else if (authHeader?.startsWith('Bearer ')) {
+            token = authHeader.substring(7).trim();
+            logger.debug(`[${req.id}] Using JWT Bearer token authentication`);
         }
         if (!token) {
-            res.status(401).json({
-                error: 'Authentication required',
-                message: 'Please provide a valid Bearer token or API key'
-            });
+            res.status(401).json(createErrorEnvelope(req, 'Authentication required. Provide either X-API-Key header or Authorization: Bearer token', 'AuthError', 'MISSING_AUTH'));
             return;
         }
         try {
@@ -33,13 +107,11 @@ export const alignedAuthMiddleware = async (req, res, next) => {
                 // Handle API key authentication
                 const user = await authenticateApiKey(token);
                 if (!user) {
-                    res.status(401).json({
-                        error: 'Invalid API key',
-                        message: 'The provided API key is invalid or inactive'
-                    });
+                    res.status(401).json(createErrorEnvelope(req, 'The provided API key is invalid or inactive', 'AuthError', 'INVALID_API_KEY'));
                     return;
                 }
-                req.user = user;
+                req.user = { ...user, auth_type: 'api_key' };
+                logger.info(`[${req.id}] API key authentication successful for user ${user.id}`);
             }
             else {
                 // Handle JWT token authentication with Supabase
@@ -71,7 +143,8 @@ export const alignedAuthMiddleware = async (req, res, next) => {
                     user_metadata: user.user_metadata || {},
                     app_metadata: user.app_metadata || {}
                 };
-                req.user = alignedUser;
+                req.user = { ...alignedUser, auth_type: 'jwt' };
+                logger.info(`[${req.id}] JWT authentication successful for user ${alignedUser.id}`);
             }
             logger.debug('User authenticated', {
                 userId: req.user?.userId || req.user?.id,
@@ -82,22 +155,17 @@ export const alignedAuthMiddleware = async (req, res, next) => {
             next();
         }
         catch (authError) {
-            logger.warn('Authentication error', {
-                error: authError instanceof Error ? authError.message : 'Unknown error'
+            logger.warn(`[${req.id}] Authentication error`, {
+                error: authError instanceof Error ? authError.message : 'Unknown error',
+                authMethod: isApiKey ? 'api_key' : 'jwt'
             });
-            res.status(401).json({
-                error: 'Authentication failed',
-                message: 'Unable to verify authentication credentials'
-            });
+            res.status(401).json(createErrorEnvelope(req, 'Unable to verify authentication credentials', 'AuthError', 'AUTHENTICATION_FAILED'));
             return;
         }
     }
     catch (error) {
-        logger.error('Authentication middleware error', { error });
-        res.status(500).json({
-            error: 'Authentication error',
-            message: 'An error occurred during authentication'
-        });
+        logger.error(`[${req.id}] Authentication middleware error`, { error });
+        res.status(500).json(createErrorEnvelope(req, 'An error occurred during authentication', 'InternalError', 'AUTHENTICATION_ERROR'));
         return;
     }
 };
@@ -281,4 +349,62 @@ export async function ensureUserServiceConfig(userId) {
         logger.warn('Failed to ensure user service config', { error, userId });
     }
 }
+// ============================================
+// CORE ALIGNMENT: Global Error Handler
+// ============================================
+export const globalErrorHandler = (error, req, res, next) => {
+    // If response already sent, delegate to default Express error handler
+    if (res.headersSent) {
+        return next(error);
+    }
+    const status = error.status || error.statusCode || 500;
+    const message = error.message || 'Internal Server Error';
+    const type = error.constructor.name || 'Error';
+    const code = error.code || 'INTERNAL_ERROR';
+    logger.error(`[${req.id}] Global error handler`, {
+        error: error.stack,
+        url: req.url,
+        method: req.method,
+        ip: req.ip,
+        userAgent: req.get('User-Agent'),
+        userId: req.user?.id
+    });
+    res.status(status).json(createErrorEnvelope(req, message, type, code));
+};
+// ============================================
+// CORE ALIGNMENT: 404 Handler
+// ============================================
+export const notFoundHandler = (req, res) => {
+    res.status(404).json({
+        ...createErrorEnvelope(req, 'Endpoint not found', 'NotFoundError', 'ENDPOINT_NOT_FOUND'),
+        available_endpoints: [
+            '/health',
+            '/api/v1/*',
+            '/mcp/*',
+            '/.well-known/onasis.json'
+        ]
+    });
+};
+// ============================================
+// CORE ALIGNMENT: Success Response Helper
+// ============================================
+export const createSuccessEnvelope = (data, req, meta) => {
+    return {
+        data,
+        request_id: req.id,
+        timestamp: new Date().toISOString(),
+        ...(meta && { meta })
+    };
+};
+// ============================================
+// CORE ALIGNMENT: Project Scope Validation
+// ============================================
+export const validateProjectScope = (req, res, next) => {
+    const projectScope = req.headers['x-project-scope'];
+    if (projectScope !== 'lanonasis-maas') {
+        logger.warn(`[${req.id}] Invalid project scope: ${projectScope}`);
+        return res.status(403).json(createErrorEnvelope(req, 'Invalid project scope', 'AuthError', 'INVALID_PROJECT_SCOPE'));
+    }
+    next();
+};
 //# sourceMappingURL=auth-aligned.js.map
