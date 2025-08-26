@@ -16,9 +16,11 @@ export class EnhancedMemoryService implements IEnhancedMemoryService {
   private config: vscode.WorkspaceConfiguration;
   private statusBarItem: vscode.StatusBarItem;
   private cliCapabilities: CLICapabilities | null = null;
+  private showPerformanceFeedback: boolean;
 
   constructor() {
     this.config = vscode.workspace.getConfiguration('lanonasis');
+    this.showPerformanceFeedback = this.config.get<boolean>('showPerformanceFeedback', false);
     
     // Create status bar item to show CLI/MCP status
     this.statusBarItem = vscode.window.createStatusBarItem(
@@ -307,6 +309,7 @@ export class EnhancedMemoryService implements IEnhancedMemoryService {
     return result.data;
   }
 
+  private showOperationFeedback(operation: string, result: OperationResult<any>): void {
     if (!this.showPerformanceFeedback) return;
 
     const source = result.source === 'cli' ? 
@@ -340,11 +343,11 @@ export class EnhancedMemoryService implements IEnhancedMemoryService {
     
     if (caps.cliAvailable && caps.goldenContract) {
       vscode.window.showInformationMessage(
-        `${message}\n\n🚀 Enhanced performance with CLI v1.5.2+ integration!`
+        `${message}\n\nEnhanced performance with CLI v1.5.2+ integration!`
       );
     } else if (caps.authenticated) {
       vscode.window.showInformationMessage(
-        `${message}\n\n💡 Install @lanonasis/cli v1.5.2+ for enhanced performance.`
+        `${message}\n\nInstall @lanonasis/cli v1.5.2+ for enhanced performance.`
       );
     } else {
       vscode.window.showWarningMessage(message);
