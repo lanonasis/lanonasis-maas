@@ -55,6 +55,16 @@ export class EnhancedMemoryService implements IEnhancedMemoryService {
       clientConfig.preferCLI = Environment.supportsCLI;
       clientConfig.cliDetectionTimeout = 2000;
       clientConfig.verbose = this.config.get<boolean>('verboseLogging', false);
+      
+      // Performance warning: verbose logging in production
+      if (clientConfig.verbose && process.env.NODE_ENV === 'production') {
+        vscode.window.showWarningMessage(
+          'Verbose logging is enabled in production. This may impact performance and expose sensitive information in logs.'
+        );
+        console.warn(
+          '[EnhancedMemoryService] Warning: Verbose logging is enabled in production. This may impact performance and expose sensitive information in logs.'
+        );
+      }
 
       this.client = new EnhancedMemoryClient(clientConfig);
       
