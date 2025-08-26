@@ -1,403 +1,378 @@
-# Lanonasis CLI - Enterprise Infrastructure Management
+# @lanonasis/cli v1.5.2 - Onasis-Core Golden Contract CLI
 
-[![npm version](https://img.shields.io/npm/v/@lanonasis/cli)](https://www.npmjs.com/package/@lanonasis/cli)
+[![NPM Version](https://img.shields.io/npm/v/@lanonasis/cli)](https://www.npmjs.com/package/@lanonasis/cli)
+[![Downloads](https://img.shields.io/npm/dt/@lanonasis/cli)](https://www.npmjs.com/package/@lanonasis/cli)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![MCP Integration](https://img.shields.io/badge/MCP-Model%20Context%20Protocol-purple)](https://modelcontextprotocol.com)
+[![Golden Contract](https://img.shields.io/badge/Onasis--Core-v0.1%20Compliant-gold)](https://api.lanonasis.com/.well-known/onasis.json)
 
-🚀 **Professional CLI for Lanonasis Platform Services with MCP Integration**
+Professional command-line interface for LanOnasis Memory as a Service (MaaS) platform with **Golden Contract compliance**, comprehensive authentication, and enterprise-grade features.
 
-The Lanonasis CLI provides a powerful command-line interface for interacting with the entire Lanonasis ecosystem, including Memory as a Service (MaaS), infrastructure management, and multi-service orchestration. Now with **Model Context Protocol (MCP)** integration for unified AI-agent communication. Manage your memories, search through knowledge bases, organize your thoughts, and control your infrastructure - all from the terminal.
+## 🚀 Quick Start
 
-## 🆕 New in v1.2.0 - API Key Management Integration
-- **API Key Management**: Complete CLI commands for secure API key lifecycle management
-- **MCP Tool Registration**: Register and manage MCP tools with scoped API access
-- **Analytics & Security**: Track usage patterns and monitor security events
-- **Project-based Organization**: Group API keys by projects for better organization
-- **Zero-trust Security**: Encrypted key storage with proxy token generation
-- **MCP Server Mode**: Run as MCP server for AI assistants (Claude, Cursor, Windsurf)
-- **Hybrid Architecture**: Seamless switching between local MCP and remote API
-- **Real-time Updates**: SSE streaming for live memory synchronization
-
-## 🆕 New in v1.2.1 - Enhanced CLI Experience
-- **🎨 Colorful VPS-style Interface**: Beautiful terminal output with intuitive color coding
-- **📊 Enhanced System Status**: Comprehensive health checks and service monitoring
-- **🔍 Improved Version Management**: Better version tracking and update notifications
-- **⚡ Performance Optimizations**: Faster command execution and response times
-- **🛡️ Enhanced Security Checks**: Real-time API endpoint validation
-- **📈 Usage Statistics**: Track your CLI usage patterns and command history
-- **🌈 Color-coded Output**: Error states, success messages, and warnings in vibrant colors
-- **🔄 Auto-update Notifications**: Get notified when new versions are available
-
-## ⚡ Quick Start
-
+### Installation
 ```bash
-# Install globally
+# Global installation (recommended)
 npm install -g @lanonasis/cli
 
-# Or use with npx (no installation needed)
-npx -y @lanonasis/cli init
+# Verify installation
+lanonasis --version  # or onasis --version
+```
 
-# Initialize Lanonasis services
-lanonasis init
+### First Steps
+```bash
+# Interactive guided setup (recommended for new users)
+onasis guide
 
-# Configure your services
-lanonasis config set api-url https://your-lanonasis-service.com
+# Quick manual setup
+onasis init                                    # Initialize configuration
+onasis login --vendor-key pk_xxx.sk_xxx      # Authenticate with vendor key
+onasis health                                 # Verify system health
 
-# Authenticate
-lanonasis auth login
+# Create your first memory
+onasis memory create --title "Welcome" --content "My first memory"
+```
 
-# Memory operations (also available as 'memory' and 'maas' commands)
-lanonasis memory create -t "My First Memory" -c "This is the content of my memory"
-lanonasis memory search "search query"
+## 🎯 Command Aliases
+
+The CLI supports multiple command aliases for different use cases:
+
+| Command | Purpose | Golden Contract |
+|---------|---------|-----------------|
+| `onasis` | Golden Contract compliant interface | ✅ Yes |
+| `lanonasis` | Standard LanOnasis interface | ✅ Yes |
+| `memory` | Memory-focused operations | ✅ Yes |
+| `maas` | Memory as a Service operations | ✅ Yes |
+
+```bash
+# All of these are equivalent:
+onasis memory list
 lanonasis memory list
-
-# Infrastructure management (future services)
-lanonasis deploy status
-lanonasis services list
+memory list
+maas memory list
 ```
 
-## 🚀 Installation
+## 🔐 Authentication Methods
 
-### Global Installation (Recommended)
+### 1. Vendor Key Authentication (Recommended)
+Best for API integrations and automation:
 ```bash
-npm install -g @lanonasis/cli
+onasis login --vendor-key pk_xxxxx.sk_xxxxx
 ```
 
-### NPX Usage (No Installation)
+### 2. OAuth Browser Authentication
+Secure browser-based authentication:
 ```bash
-npx -y @lanonasis/cli --help
-npx -y @lanonasis/cli init
+onasis login --oauth
 ```
 
-### Local Installation
+### 3. Interactive Credentials
+Traditional username/password authentication:
 ```bash
-npm install @lanonasis/cli
-npx lanonasis --help
+onasis login  # Will prompt for email and password
 ```
 
-## 📋 Available Commands
-
-### 🔧 Setup & Configuration
-- `lanonasis init` - Initialize CLI and show setup instructions
-- `lanonasis config set <key> <value>` - Set configuration values
-- `lanonasis config get <key>` - Get configuration value
-- `lanonasis config list` - List all configuration options
-- `lanonasis status` - Show CLI status and configuration
-
-### 🔐 Authentication
-- `lanonasis auth login` - Authenticate with your services
-- `lanonasis auth logout` - Sign out
-- `lanonasis auth status` - Check authentication status
-
-### 📝 Memory Operations
-- `lanonasis create -t "Title" -c "Content" [--type <type>]` - Create new memory
-- `lanonasis search <query> [-l <limit>]` - Search memories
-- `lanonasis list [-l <limit>] [--type <type>]` - List memories
-- `lanonasis help` - Show detailed help
-
-### 🔑 API Key Management (NEW in v1.2.0)
-- `lanonasis api-keys create` - Create a new API key with secure encryption
-- `lanonasis api-keys list` - List all API keys with usage statistics
-- `lanonasis api-keys get <keyId>` - Get details of a specific API key
-- `lanonasis api-keys update <keyId>` - Update API key name, tags, or rotation policy
-- `lanonasis api-keys delete <keyId>` - Securely delete an API key
-- `lanonasis api-keys projects create` - Create a project for organizing keys
-- `lanonasis api-keys projects list` - List all API key projects
-- `lanonasis api-keys mcp register-tool` - Register MCP tools for API access
-- `lanonasis api-keys mcp list-tools` - List registered MCP tools
-- `lanonasis api-keys mcp request-access` - Request access to API keys via MCP
-- `lanonasis api-keys analytics usage` - View API key usage analytics
-- `lanonasis api-keys analytics security-events` - Monitor security events
-
-#### Alternative Commands (Backwards Compatibility)
-- `memory <command>` - Direct memory operations
-- `maas <command>` - Memory as a Service operations
-
-## 🧠 Memory Types
-
-The CLI supports the following memory types:
-- **conversation** - Chat and dialogue context
-- **knowledge** - Educational and reference content
-- **project** - Project-specific documentation
-- **context** - General contextual information
-- **reference** - Quick reference materials
-
-## ⚙️ Configuration
-
-Configure your CLI to connect to your Lanonasis services:
-
+### Authentication Status
 ```bash
-# Set your service endpoint
-lanonasis config set api-url https://your-lanonasis-service.com
-
-# View current configuration
-lanonasis config list
+onasis auth status    # Check current authentication
+onasis auth logout    # Logout from current session
 ```
 
-## 🔒 Authentication
+## 💻 Shell Completions
 
-Authenticate with your Lanonasis platform:
+### Installation Guide
+```bash
+onasis completion  # Shows installation instructions for all shells
+```
+
+### Direct Installation
+```bash
+# Bash
+echo 'source <(onasis --completion bash)' >> ~/.bashrc
+
+# Zsh
+echo 'source <(onasis --completion zsh)' >> ~/.zshrc
+
+# Fish
+echo 'onasis --completion fish | source' >> ~/.config/fish/config.fish
+```
+
+### Features
+- ✅ Command and subcommand completion
+- ✅ Option and flag completion  
+- ✅ Context-aware suggestions
+- ✅ Dynamic completion data via JSON API
+- ✅ Support for all command aliases
+
+## 📚 Core Commands
+
+### System Management
+```bash
+onasis health           # Comprehensive system health check
+onasis status          # Quick status overview  
+onasis init            # Initialize CLI configuration
+onasis guide           # Interactive setup guide
+onasis quickstart      # Essential commands reference
+```
+
+### Memory Management
+```bash
+# List memories
+onasis memory list
+onasis memory list --memory-type context --limit 20 --sort-by created_at
+
+# Create memories
+onasis memory create --title "Project Notes" --content "Important information"
+onasis memory create --title "Reference" --memory-type reference --tags "docs,api"
+
+# Search memories
+onasis memory search "api integration"
+onasis memory search "meeting notes" --memory-types context,reference
+
+# Memory operations
+onasis memory get <id>                    # Get specific memory
+onasis memory update <id> --title "New Title"
+onasis memory delete <id>                 # Delete memory
+onasis memory stats                       # Memory statistics
+```
+
+### Topic Management
+```bash
+onasis topic list                         # List all topics
+onasis topic create --name "Development" --color blue --icon "💻"
+onasis topic get <id>                     # Get specific topic
+onasis topic update <id> --description "New description"
+onasis topic delete <id>                  # Delete topic
+```
+
+### API Key Management
+```bash
+onasis api-keys list                      # List API keys
+onasis api-keys create --name "Integration Key" --scope "memory:read"
+onasis api-keys revoke <id>               # Revoke API key
+onasis api-keys rotate <id>               # Rotate API key
+```
+
+### MCP Integration
+```bash
+onasis mcp status                         # MCP server status
+onasis mcp connect --remote              # Connect to remote MCP server
+onasis mcp disconnect                     # Disconnect from MCP
+onasis mcp tools                          # List available MCP tools
+onasis mcp resources                      # List MCP resources
+```
+
+### Configuration Management  
+```bash
+onasis config list                        # List all configuration
+onasis config get <key>                   # Get configuration value
+onasis config set <key> <value>           # Set configuration value
+onasis config reset                       # Reset configuration
+```
+
+### Service Management
+```bash
+onasis service list                       # List all services
+onasis service status                     # Service status overview
+onasis service restart <service>          # Restart specific service
+onasis deploy status                      # Deployment status
+onasis deploy health                      # Deployment health check
+```
+
+## ⚙️ Global Options
 
 ```bash
-# Login to your service
-lanonasis auth login
+# Available for all commands
+--help              # Show command help
+--version           # Show version information
+--verbose           # Enable verbose logging
+--output <format>   # Output format: table, json, yaml, csv
+--api-url <url>     # Override API URL
+--no-mcp           # Disable MCP and use direct API
+```
 
+## 🎯 Advanced Usage
+
+### JSON Output for Automation
+```bash
+onasis memory list --output json | jq '.data[].title'
+onasis health --output json | jq '.status'
+```
+
+### Environment Variables
+```bash
+export MEMORY_API_URL="https://api.lanonasis.com/api/v1"
+export CLI_OUTPUT_FORMAT="json"
+export CLI_VERBOSE="true"
+```
+
+### Configuration File
+Location: `~/.maas/config.json`
+```json
+{
+  "apiUrl": "https://api.lanonasis.com/api/v1",
+  "defaultOutputFormat": "table",
+  "mcpPreference": "auto",
+  "vendorKey": "pk_xxxxx.sk_xxxxx"
+}
+```
+
+## 🔧 Development & Debugging
+
+### Verbose Mode
+```bash
+onasis --verbose memory list    # Detailed operation logs
+onasis -V health               # Short flag version
+```
+
+### Configuration Debugging
+```bash
+onasis config list             # Check current configuration
+onasis auth status            # Verify authentication
+onasis health --verbose       # Detailed health information
+```
+
+### MCP Debugging
+```bash
+onasis mcp status --verbose    # Detailed MCP diagnostics
+onasis --no-mcp memory list   # Bypass MCP, use direct API
+```
+
+## 🌐 Golden Contract Compliance
+
+### Onasis-Core v0.1 Standards
+- ✅ Service discovery via `/.well-known/onasis.json`
+- ✅ Vendor key authentication (`pk_*.sk_*` format)
+- ✅ Request correlation with UUID tracking
+- ✅ Enhanced CORS security compliance
+- ✅ Uniform error envelope standardization
+- ✅ WebSocket path alignment (`/mcp/ws`)
+
+### Service Discovery Integration
+The CLI automatically discovers service endpoints:
+```bash
+# Service discovery happens automatically
+onasis health  # Uses discovered endpoints for health checks
+```
+
+### Request Correlation
+Every API request includes correlation headers:
+- `X-Request-ID`: UUID for request tracking
+- `X-Project-Scope`: Project scope validation
+- `X-Auth-Method`: Authentication method used
+
+## 🧪 Testing & Quality
+
+### Command Validation
+```bash
+onasis --help                  # Validate CLI installation
+onasis completion              # Test completion system
+onasis guide                   # Test interactive guidance
+```
+
+### API Integration Testing
+```bash
+onasis health                  # Test API connectivity
+onasis memory list --limit 1  # Test memory service
+onasis mcp status             # Test MCP integration
+```
+
+## 🚨 Troubleshooting
+
+### Common Issues
+
+#### Authentication Failures
+```bash
 # Check authentication status
-lanonasis auth status
+onasis auth status
 
-# Logout
-lanonasis auth logout
+# Re-authenticate
+onasis auth logout
+onasis login --vendor-key pk_xxx.sk_xxx
 ```
 
-## 📖 Usage Examples
-
+#### Connection Issues
 ```bash
-# Create different types of memories
-lanonasis create -t "Meeting Notes" -c "Project kickoff discussion" --type project
-lanonasis create -t "API Reference" -c "POST /api/memories endpoint" --type reference
-lanonasis create -t "Learning Notes" -c "Vector embeddings concepts" --type knowledge
+# Check system health
+onasis health --verbose
 
-# Using npx (no installation)
-npx -y @lanonasis/cli create -t "Quick Note" -c "NPX usage example"
-
-# Search with different options
-lanonasis search "API endpoints" -l 5
-lanonasis search "project meeting"
-
-# List with filters
-lanonasis list --type project -l 10
-lanonasis list -l 20
-
-# Alternative command usage
-memory search "my query"  # Direct memory command
-maas list --type knowledge  # MaaS command
+# Test API connectivity
+onasis --api-url https://api.lanonasis.com/api/v1 health
 ```
 
-## 🤖 MCP Integration (Model Context Protocol)
-
-The CLI now includes full MCP support for AI agent integration:
-
-### Start MCP Server Mode
-
+#### MCP Connection Issues
 ```bash
-# Start as MCP server for AI assistants
-lanonasis mcp start                 # Default port 3002
-lanonasis mcp start --port 8080     # Custom port
-lanonasis mcp start --mode server   # Explicit server mode
+# Check MCP status
+onasis mcp status --verbose
 
-# Or use npx without installation
-npx -y @lanonasis/cli mcp start
+# Disable MCP temporarily
+onasis --no-mcp memory list
 ```
 
-### Configure AI Assistants
-
-**Claude Desktop** (`~/Library/Application Support/Claude/claude_desktop_config.json`):
-```json
-{
-  "mcpServers": {
-    "memory-service": {
-      "command": "npx",
-      "args": ["-y", "@lanonasis/cli", "mcp", "start"],
-      "env": {
-        "LANONASIS_API_KEY": "your-api-key-here"
-      }
-    }
-  }
-}
-```
-
-**Cursor/Windsurf** (Settings):
-```json
-{
-  "mcp.servers": {
-    "memory-service": {
-      "command": "lanonasis",
-      "args": ["mcp", "start"],
-      "env": {
-        "LANONASIS_API_KEY": "your-api-key-here"
-      }
-    }
-  }
-}
-```
-
-### MCP Commands
-
+### Debug Mode
 ```bash
-# Server operations
-lanonasis mcp start            # Start MCP server
-lanonasis mcp stop             # Stop MCP server
-lanonasis mcp status           # Check server status
-lanonasis mcp logs             # View server logs
-
-# Tool discovery
-lanonasis mcp tools            # List all available MCP tools
-lanonasis mcp tools --json     # Output as JSON
-
-# Test connectivity
-lanonasis mcp test             # Test MCP connection
-lanonasis mcp test --tool <name> # Test specific tool
+# Enable maximum verbosity
+CLI_VERBOSE=true onasis --verbose health
 ```
-
-### Available MCP Tools
-
-- `memory_create_memory` - Create new memories with embeddings
-- `memory_search_memories` - Semantic search across memories
-- `memory_list_memories` - List and filter memories
-- `memory_get_memory` - Retrieve specific memory
-- `memory_update_memory` - Update existing memories
-- `memory_delete_memory` - Delete memories
-- `memory_bulk_create` - Batch create multiple memories
-- `memory_bulk_delete` - Batch delete memories
-- `memory_get_stats` - Get memory statistics
-- `memory_export_data` - Export memories (JSON/CSV/YAML)
-- `memory_import_data` - Import memories from files
-
-### MCP Features:
-- **🔌 WebSocket Server**: Real-time bidirectional communication
-- **🔄 Hybrid Mode**: Automatic fallback between local/remote
-- **🔐 Secure Auth**: API key and JWT token support
-- **📊 Real-time SSE**: Live updates in remote mode
-- **🛠️ Tool Discovery**: Dynamic tool listing for AI agents
-- **🎯 Auto-detection**: Intelligently chooses best mode
-- **📝 Full Memory API**: All operations exposed as MCP tools
-
-## 🌐 MaaS Service Integration
-
-This CLI is designed to work with Memory as a Service platforms that provide:
-- RESTful API endpoints
-- JWT or API key authentication
-- Vector-based memory search
-- Multi-tenant memory storage
-
-### Setting up your MaaS Service
-
-1. **Deploy** a MaaS service using the provided backend
-2. **Configure** the CLI with your service endpoint
-3. **Authenticate** using your service credentials
-4. **Start** managing your memories!
-
-## 🛠️ Development
-
-### Prerequisites
-- Node.js 18+
-- npm or yarn
-
-### Local Development
-```bash
-git clone <repository-url>
-cd memory-cli
-npm install
-
-# Development mode
-npm run dev
-
-# Build
-npm run build
-
-# Test locally
-node dist/index-simple.js help
-```
-
-## 📦 What's Included
-
-- **Full CLI Interface** - Complete command-line tool
-- **Memory Management** - Create, search, list memories
-- **Type System** - Organized memory categorization
-- **Authentication** - Secure service integration
-- **Configuration** - Flexible service setup
-- **Help System** - Comprehensive documentation
-
-## 📦 SDK & Related Packages
-
-### Memory Client SDK
-Install the TypeScript/JavaScript SDK for application integration:
-
-```bash
-# Install SDK for your applications
-npm install @lanonasis/memory-client
-
-# Use in your code
-import { createMemoryClient } from '@lanonasis/memory-client';
-
-const client = createMemoryClient({
-  baseURL: 'https://api.lanonasis.com',
-  apiKey: 'your-api-key-here'
-});
-```
-
-### Complete Installation for Developers
-```bash
-# Install CLI globally for command-line usage
-npm install -g @lanonasis/cli
-
-# Install SDK locally for application development
-npm install @lanonasis/memory-client
-
-# Now you have both CLI and SDK available!
-lanonasis --help                    # CLI commands
-# SDK available for import in your code
-```
-
-## 🔗 Related Projects
-
-- **Memory Service Backend** - Full MaaS API server ([GitHub](https://github.com/thefixer3x/vibe-memory))
-- **Memory Client SDK** - JavaScript/TypeScript SDK (`@lanonasis/memory-client`)
-- **Memory Visualizer** - Interactive memory exploration (included in backend)
-- **VSCode Extension** - IDE integration (coming soon)
-
-## 📄 License
-
-MIT License - see LICENSE file for details
 
 ## 🤝 Contributing
 
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+### Development Setup
+```bash
+# Clone CLI source
+git clone https://github.com/lanonasis/lanonasis-maas.git
+cd lanonasis-maas/cli
 
-## 🐛 Support
+# Install dependencies
+npm install
 
-- **Issues**: [GitHub Issues](https://github.com/seyederick/memory-cli/issues)
-- **Documentation**: [CLI Documentation](https://github.com/seyederick/memory-cli)
+# Build CLI
+npm run build
 
-## 🎯 Use Cases
+# Link for local development
+npm link
+```
 
-- **Personal Knowledge Management** - Organize your thoughts and notes
-- **Team Knowledge Sharing** - Collaborative memory management
-- **Project Documentation** - Context-aware project memories
-- **Research Organization** - Academic and research note-taking
-- **API Integration** - Programmatic memory management
+### Testing Changes
+```bash
+# Test build
+npm run build
 
-## 🏆 Production Ready Features
+# Test CLI functionality
+onasis --help
+onasis health
+```
 
-### Enterprise Capabilities
-- **🔐 Secure Authentication** - API key and JWT token support
-- **🌐 Multi-tenant Support** - Isolated memory spaces per user/org
-- **📊 Rate Limiting** - Built-in request throttling
-- **🔄 Retry Logic** - Automatic retry with exponential backoff
-- **📝 Comprehensive Logging** - Debug and audit trails
-- **🚀 Performance Optimized** - Minimal overhead, fast responses
+## 📝 Version History
 
-### Commercial Use Cases
-- **💼 Enterprise Knowledge Management** - Company-wide memory system
-- **🤝 Team Collaboration** - Shared project memories
-- **🎓 Educational Platforms** - Student/teacher memory sharing
-- **🏥 Healthcare Systems** - Patient context management
-- **💰 Financial Services** - Transaction memory and audit trails
-- **🛒 E-commerce** - Customer interaction history
+### v1.5.2 (Current)
+- ✅ Golden Contract compliance (Onasis-Core v0.1)
+- ✅ Professional shell completions (bash/zsh/fish)
+- ✅ Enhanced authentication (vendor keys, OAuth, credentials)
+- ✅ Interactive user guidance system
+- ✅ Dual command support (lanonasis/onasis)
+- ✅ Service discovery integration
+- ✅ Request correlation and enhanced security
 
-### Integration Ready
-- **REST API** - Standard HTTP/JSON interface
-- **MCP Protocol** - AI assistant integration
-- **WebSocket** - Real-time updates
-- **SSE Streaming** - Live data synchronization
-- **SDK Available** - TypeScript/JavaScript client library
+### Previous Versions
+- v1.4.x: Basic CLI functionality
+- v1.3.x: MCP integration
+- v1.2.x: Memory management
+- v1.1.x: Initial authentication
+- v1.0.x: Core CLI framework
+
+## 📄 License
+
+MIT License - see [LICENSE](../LICENSE) for details.
+
+## 🔗 Related Links
+
+- **NPM Package**: [https://www.npmjs.com/package/@lanonasis/cli](https://www.npmjs.com/package/@lanonasis/cli)
+- **Main Repository**: [https://github.com/lanonasis/lanonasis-maas](https://github.com/lanonasis/lanonasis-maas)
+- **Documentation**: [https://docs.lanonasis.com/cli](https://docs.lanonasis.com/cli)
+- **API Documentation**: [https://api.lanonasis.com/docs](https://api.lanonasis.com/docs)
+- **Service Discovery**: [https://api.lanonasis.com/.well-known/onasis.json](https://api.lanonasis.com/.well-known/onasis.json)
+- **Dashboard**: [https://api.lanonasis.com/dashboard](https://api.lanonasis.com/dashboard)
 
 ---
 
-**Built with ❤️ for the Memory as a Service ecosystem**
-
-🚀 **Ready for Production** | 📚 [Documentation](https://docs.lanonasis.com) | 🌐 [Platform](https://api.lanonasis.com)
+*Professional CLI for Enterprise Memory as a Service - Golden Contract Compliant*
