@@ -223,22 +223,44 @@ CLI_OUTPUT_FORMAT=table
 - **API Reference**: [https://api.lanonasis.com/docs](https://api.lanonasis.com/docs)
 - **MCP Integration**: [MCP Configuration Guide](cli/MCP_INTEGRATION_README.md)
 
-## 🔒 Security
+## 🔒 Security & Compliance
 
-### Authentication
-- Vendor key format: `pk_xxxxx.sk_xxxxx`
-- JWT token authentication with project scope validation
-- OAuth browser-based authentication flows
-- Multi-factor authentication support
+### 🛡️ Enterprise-Grade Security
+Lanonasis MaaS implements comprehensive security controls and compliance frameworks:
 
-### Security Features
-- Request correlation tracking
-- Enhanced CORS policies
-- Environment-based security configuration
-- API key rotation and management
+- **🚫 No Training on Your Data**: Contractual agreements prohibit AI subprocessors from using customer data for model training
+- **🔐 Secure Encryption**: TLS 1.2+ encryption for all data in transit
+- **✅ Advanced Permissions**: Granular access control with role-based permissions
+- **🌍 GDPR & CCPA Compliant**: Full privacy regulation compliance with data subject rights
+- **🛡️ SOC 2 Type 2**: Continuous compliance with highest industry security standards
+- **📋 ISO 27001 Certified**: Information security management system certification
 
-### Security Reporting
-Report security vulnerabilities to: security@lanonasis.com
+### 🔧 Security Features
+- **CLI Security**: Golden Contract v1.5.2+ with secure local processing
+- **Zero Data Retention**: No persistent storage with LLM providers (30-day retention for non-Enterprise)
+- **Request Correlation**: Complete audit trails with UUID tracking
+- **Multi-Factor Authentication**: Enhanced authentication including CLI-based auth
+- **API Key Lifecycle**: Secure generation, rotation, and revocation
+- **Real-time Monitoring**: Security event detection and anomaly monitoring
+
+### 📋 Compliance Certifications
+- **SOC 2 (Type 2)**: Annual third-party security audits ✅
+- **ISO 27001**: Information security management certification ✅
+- **GDPR/CCPA**: Global privacy regulation compliance ✅
+- **Security Assessments**: Quarterly security reviews and penetration testing ✅
+
+### 🔍 Security Resources
+- **[📖 Complete Security Documentation](./SECURITY_COMPLIANCE.md)**: Comprehensive security and compliance guide
+- **🚨 Security Reporting**: security@lanonasis.com
+- **📋 Compliance Inquiries**: compliance@lanonasis.com
+- **🔍 Vulnerability Disclosure**: Responsible disclosure program available
+
+### 🎯 Developer Security Checklist
+- [ ] Use secure API key storage (environment variables)
+- [ ] Implement proper error handling
+- [ ] Use latest SDK versions for security updates
+- [ ] Enable audit logging in production
+- [ ] Follow [CLI Security Best Practices](./docs/security/cli-security.md)
 
 ## 🧪 Testing
 
