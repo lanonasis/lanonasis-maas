@@ -39,7 +39,42 @@ export class CLIConfig {
     getApiUrl() {
         return process.env.MEMORY_API_URL ||
             this.config.apiUrl ||
-            'https://dashboard.lanonasis.com/api/v1';
+            'https://api.lanonasis.com/api/v1';
+    }
+    // Service Discovery Integration
+    async discoverServices() {
+        try {
+            // Use axios instead of fetch for consistency
+            const axios = (await import('axios')).default;
+            const discoveryUrl = 'https://api.lanonasis.com/.well-known/onasis.json';
+            const response = await axios.get(discoveryUrl);
+            this.config.discoveredServices = response.data;
+            await this.save();
+        }
+        catch (error) {
+            // Service discovery failed, use defaults
+            if (process.env.CLI_VERBOSE === 'true') {
+                console.log('Service discovery failed, using defaults');
+            }
+        }
+    }
+    getDiscoveredApiUrl() {
+        return this.config.discoveredServices?.auth_base || this.getApiUrl();
+    }
+    // Enhanced authentication support
+    async setVendorKey(vendorKey) {
+        // Validate vendor key format (pk_*.sk_*)
+        if (!vendorKey.match(/^pk_[a-zA-Z0-9]+\.sk_[a-zA-Z0-9]+$/)) {
+            throw new Error('Invalid vendor key format. Expected: pk_xxx.sk_xxx');
+        }
+        this.config.vendorKey = vendorKey;
+        await this.save();
+    }
+    getVendorKey() {
+        return this.config.vendorKey;
+    }
+    hasVendorKey() {
+        return !!this.config.vendorKey;
     }
     async setApiUrl(url) {
         this.config.apiUrl = url;
@@ -120,7 +155,9 @@ export class CLIConfig {
         return this.config.mcpServerPath || path.join(__dirname, '../../../../onasis-gateway/mcp-server/server.js');
     }
     getMCPServerUrl() {
-        return this.config.mcpServerUrl || 'https://dashboard.lanonasis.com';
+        return this.config.discoveredServices?.mcp_ws_base ||
+            this.config.mcpServerUrl ||
+            'https://api.lanonasis.com';
     }
     shouldUseRemoteMCP() {
         const preference = this.config.mcpPreference || 'auto';

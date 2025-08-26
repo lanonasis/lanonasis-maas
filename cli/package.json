@@ -1,10 +1,11 @@
 {
   "name": "@lanonasis/cli",
-  "version": "1.4.2",
+  "version": "1.5.2",
   "description": "LanOnasis Enterprise CLI - Memory as a Service, API Key Management, and Infrastructure Orchestration",
   "main": "dist/index-simple.js",
   "bin": {
     "lanonasis": "dist/index-simple.js",
+    "onasis": "dist/index-simple.js",
     "lanonasis-mcp-server": "dist/mcp-server.js",
     "memory": "dist/index-simple.js",
     "maas": "dist/index-simple.js"

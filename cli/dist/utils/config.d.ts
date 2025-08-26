@@ -13,6 +13,11 @@ export declare class CLIConfig {
     load(): Promise<void>;
     save(): Promise<void>;
     getApiUrl(): string;
+    discoverServices(): Promise<void>;
+    getDiscoveredApiUrl(): string;
+    setVendorKey(vendorKey: string): Promise<void>;
+    getVendorKey(): string | undefined;
+    hasVendorKey(): boolean;
     setApiUrl(url: string): Promise<void>;
     setToken(token: string): Promise<void>;
     getToken(): string | undefined;
