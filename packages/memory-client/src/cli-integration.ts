@@ -76,9 +76,15 @@ export class CLIIntegration {
   private async performDetection(): Promise<CLIInfo> {
     try {
       // Check if onasis/lanonasis CLI is available
-      const { stdout: versionOutput } = await execAsync('onasis --version 2>/dev/null || lanonasis --version 2>/dev/null', {
-        timeout: 5000
-      });
+      let versionOutput = '';
+      try {
+        const { stdout } = await execAsync('onasis --version 2>/dev/null', { timeout: 5000 });
+        versionOutput = stdout;
+      } catch {
+        // Try lanonasis if onasis fails
+        const { stdout } = await execAsync('lanonasis --version 2>/dev/null', { timeout: 5000 });
+        versionOutput = stdout;
+      }
 
       const version = versionOutput.trim();
       
