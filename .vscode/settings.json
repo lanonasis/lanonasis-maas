@@ -1,4 +1,22 @@
 {
     "postman.settings.dotenv-detection-notification-visibility": false,
-    "lanonasis.defaultEnvironment": "production"
+    "lanonasis.defaultEnvironment": "production",
+    "editor.aiStats.enabled": true,
+    "git.ignoreLimitWarning": true,
+    "files.exclude": {
+        "**/node_modules": true,
+        "**/dist": true,
+        "**/.DS_Store": true,
+        "**/.cache": true,
+        "**/package-lock.json": true,
+        "**/bun.lock": true
+    },
+    "explorer.fileNesting.enabled": true,
+    "explorer.fileNesting.patterns": {
+        "package.json": "package-lock.json,bun.lock,yarn.lock,pnpm-lock.yaml",
+        "tsconfig.json": "tsconfig.*.json",
+        ".env": ".env.*",
+        "docker-compose.yml": "docker-compose.*.yml",
+        "README.md": "*.md"
+    }
 }
