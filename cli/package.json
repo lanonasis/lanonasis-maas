@@ -52,7 +52,7 @@
     "date-fns": "^4.1.0",
     "dotenv": "^17.2.1",
     "eventsource": "^4.0.0",
-    "inquirer": "^12.9.0",
+    "inquirer": "^12.9.1",
     "jwt-decode": "^4.0.0",
     "open": "^10.2.0",
     "ora": "^8.2.0",
