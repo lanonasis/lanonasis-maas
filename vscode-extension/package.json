@@ -179,6 +179,7 @@
         },
         "lanonasis.apiKey": {
           "type": "string",
+          "format": "password",
           "description": "Your Lanonasis API Key (get from api.lanonasis.com)"
         },
         "lanonasis.defaultMemoryType": {
