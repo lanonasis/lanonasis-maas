@@ -42,7 +42,7 @@
     "README.md"
   ],
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.17.1",
+    "@modelcontextprotocol/sdk": "^1.17.2",
     "@types/eventsource": "^1.1.15",
     "@types/ws": "^8.18.1",
     "axios": "^1.11.0",
