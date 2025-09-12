@@ -10,7 +10,7 @@ import chalk from 'chalk';
 export interface NavigationState {
   name: string;
   path: string;
-  context: Record<string, any>;
+  preferences: Record<string, unknown>;
   timestamp: Date;
 }
 
@@ -230,13 +230,13 @@ export class AdaptivePromptSystem {
     }
   }
 
-  private async expertPrompt(config: PromptConfig): Promise<any> {
+  private async expertPrompt(_config: PromptConfig): Promise<unknown> {
     // Minimal, streamlined prompt for expert users
     // Implementation would use minimal UI elements
     return null;
   }
 
-  private async guidedPrompt(config: PromptConfig): Promise<any> {
+  private async guidedPrompt(_config: PromptConfig): Promise<unknown> {
     // Rich, guided prompt with helpful hints
     // Implementation would use enhanced UI elements
     return null;
@@ -245,7 +245,7 @@ export class AdaptivePromptSystem {
 
 // Contextual Validator
 export class ContextualValidator {
-  validate(value: any, rules: ValidationRule[]): ValidationResult {
+  validate(value: unknown, rules: ValidationRule[]): ValidationResult {
     const errors: string[] = [];
     const warnings: string[] = [];
     const suggestions: string[] = [];
@@ -316,7 +316,7 @@ export class InlineHelpProvider {
     return this.generateHelpText(currentState, context);
   }
 
-  private generateHelpText(state: NavigationState | undefined, context: UserContext): string {
+  private generateHelpText(state: NavigationState | undefined, _context: UserContext): string {
     if (!state) {
       return 'Type "help" for available commands';
     }
@@ -353,8 +353,8 @@ export class PresentationLayer {
     this.layoutManager.render(content, layout);
   }
 
-  animate(element: any, animation: string): void {
-    this.animationController.animate(element, animation);
+  private animate(_element: string, _animation: string): void {
+    this.animationController.animate(_element, _animation);
   }
 }
 
@@ -400,14 +400,14 @@ export class AdaptiveThemeEngine {
 
 // Layout Manager
 export class ResponsiveLayoutManager {
-  render(content: any, layout: string): void {
+  render(content: unknown, layout: string): void {
     // Implement different layout strategies
     switch (layout) {
       case 'card':
-        this.renderCard(content);
+        this.renderContent(content);
         break;
       case 'table':
-        this.renderTable(content);
+        this.renderTitle(content);
         break;
       case 'dashboard':
         this.renderDashboard(content);
@@ -417,7 +417,7 @@ export class ResponsiveLayoutManager {
     }
   }
 
-  private renderCard(content: any): void {
+  private renderContent(content: { title?: string; body?: string }): void {
     // Render content in card layout
     console.log('╭─────────────────────────────────────────╮');
     console.log(`│ ${content.title || ''}`.padEnd(42) + '│');
@@ -426,12 +426,12 @@ export class ResponsiveLayoutManager {
     console.log('╰─────────────────────────────────────────╯');
   }
 
-  private renderTable(content: any): void {
+  private renderTitle(_content: unknown): void {
     // Render content in table layout
     // Implementation here
   }
 
-  private renderDashboard(content: any): void {
+  private renderDashboard(_content: unknown): void {
     // Render dashboard layout
     // Implementation here
   }
@@ -439,7 +439,7 @@ export class ResponsiveLayoutManager {
 
 // Animation Controller
 export class SubtleAnimationController {
-  animate(element: any, animation: string): void {
+  animate(_element: unknown, _animation: string): void {
     // Implement subtle animations for CLI
     // This would handle progress bars, spinners, etc.
   }
@@ -447,7 +447,7 @@ export class SubtleAnimationController {
 
 // Types for validation and prompts
 export interface ValidationRule {
-  validate(value: any): {
+  validate(value: unknown): {
     valid: boolean;
     message: string;
     severity: 'error' | 'warning';
