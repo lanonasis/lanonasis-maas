@@ -1,11 +1,11 @@
-# @lanonasis/cli v1.5.2 - Onasis-Core Golden Contract CLI
+# @lanonasis/cli v2.0.0 - Enhanced Interactive CLI Experience
 
 [![NPM Version](https://img.shields.io/npm/v/@lanonasis/cli)](https://www.npmjs.com/package/@lanonasis/cli)
 [![Downloads](https://img.shields.io/npm/dt/@lanonasis/cli)](https://www.npmjs.com/package/@lanonasis/cli)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Golden Contract](https://img.shields.io/badge/Onasis--Core-v0.1%20Compliant-gold)](https://api.lanonasis.com/.well-known/onasis.json)
 
-Professional command-line interface for LanOnasis Memory as a Service (MaaS) platform with **Golden Contract compliance**, comprehensive authentication, and enterprise-grade features.
+🚀 **NEW IN v2.0**: Revolutionary interactive CLI experience with guided workflows, smart suggestions, achievement system, and power user mode. Professional command-line interface for LanOnasis Memory as a Service (MaaS) platform with **Golden Contract compliance**.
 
 ## 🚀 Quick Start
 
@@ -344,7 +344,16 @@ onasis health
 
 ## 📝 Version History
 
-### v1.5.2 (Current)
+### v2.0.0 (Current)
+- 🎯 **Interactive Dashboard**: Central command center for all operations
+- 🎉 **Welcome Experience**: Guided onboarding for new users  
+- ⚡ **Power Mode**: Streamlined interface for expert users
+- 🤖 **Smart Suggestions**: Context-aware command recommendations
+- 🏆 **Achievement System**: Gamification to track progress
+- 🛡️ **Enhanced Error Handling**: Intelligent error messages with recovery
+- 📊 **Progress Indicators**: Visual feedback for operations
+
+### v1.5.2
 - ✅ Golden Contract compliance (Onasis-Core v0.1)
 - ✅ Professional shell completions (bash/zsh/fish)
 - ✅ Enhanced authentication (vendor keys, OAuth, credentials)

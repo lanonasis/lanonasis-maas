@@ -4,6 +4,9 @@ import { Command } from 'commander';
 import chalk from 'chalk';
 import { config } from 'dotenv';
 
+// Load environment variables silently
+config({ quiet: true });
+
 import { initCommand } from './commands/init.js';
 import { loginCommand } from './commands/auth.js';
 import { memoryCommands } from './commands/memory.js';
@@ -52,7 +55,7 @@ program
   .alias(isOnasisInvocation ? 'lanonasis' : 'memory')
   .alias(isOnasisInvocation ? 'memory' : 'maas')
   .description(colors.info(`🧠 ${isOnasisInvocation ? 'Onasis-Core Golden Contract CLI' : 'LanOnasis Enterprise CLI'} - Memory as a Service, API Management & Infrastructure Orchestration`))
-  .version('1.5.2', '-v, --version', 'display version number')
+  .version('2.0.1', '-v, --version', 'display version number')
   .option('-V, --verbose', 'enable verbose logging')
   .option('--api-url <url>', 'override API URL')
   .option('--output <format>', 'output format (json, table, yaml)', 'table')
@@ -112,7 +115,7 @@ const showWelcome = () => {
   const title = isOnasisInvocation ? 'Onasis-Core Golden Contract CLI' : 'LanOnasis Enterprise CLI';
   
   console.log();
-  console.log(colors.primary(`🚀 ${title} v1.5.2`));
+  console.log(colors.primary(`🚀 ${title} v2.0.1`));
   console.log(colors.info('━'.repeat(50)));
   console.log(colors.highlight('Enterprise-grade Memory as a Service, API Management & Infrastructure Orchestration'));
   
@@ -242,7 +245,13 @@ authCmd
   .option('-p, --password <password>', 'password')
   .option('--vendor-key <key>', 'vendor key (pk_xxx.sk_xxx format)')
   .option('--oauth', 'use OAuth browser flow')
-  .action(loginCommand);
+  .action(async (options) => {
+    // Handle oauth flag
+    if (options.oauth) {
+      options.useWebAuth = true;
+    }
+    await loginCommand(options);
+  });
 
 authCmd
   .command('logout')
