@@ -41,6 +41,19 @@
     "dist",
     "README.md"
   ],
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/lanonasis/lanonasis-maas.git",
+    "directory": "cli"
+  },
+  "bugs": {
+    "url": "https://github.com/lanonasis/lanonasis-maas/issues"
+  },
+  "homepage": "https://github.com/lanonasis/lanonasis-maas#readme",
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.17.2",
     "@types/eventsource": "^1.1.15",
