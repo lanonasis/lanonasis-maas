@@ -143,7 +143,7 @@ export class DashboardCommandCenter {
         }
         return input;
       }
-    } as any);
+    });
 
     await this.processInput(input);
   }
@@ -207,9 +207,9 @@ export class DashboardCommandCenter {
     await creator.create();
   }
 
-  private async searchMemories(query: string): Promise<void> {
+  private async searchMemories(_query: string): Promise<void> {
     const search = new InteractiveSearch(this.stateManager);
-    await search.search(query);
+    await search.search(_query);
   }
 
   private async browseTopics(): Promise<void> {
@@ -450,7 +450,7 @@ export class InteractiveMemoryCreator {
     console.log(chalk.green(`✓ Quick memory created: "${content}"`));
   }
 
-  private analyzeContent(content: string): any {
+  private analyzeContent(content: string): { contentType: string; topic: string | null; tags: string[] } {
     // Simple content analysis
     const suggestions = {
       contentType: 'a technical decision',
@@ -476,7 +476,7 @@ export class InteractiveMemoryCreator {
     return suggestions;
   }
 
-  private showPreview(memory: any): void {
+  private showPreview(memory: { type?: string; title?: string; content?: string; tags?: string[]; created_at?: string; topic?: string }): void {
     const typeIcon = {
       context: '🔍',
       knowledge: '📚',
@@ -571,7 +571,7 @@ export class InteractiveSearch {
     }
   }
 
-  private displayResults(query: string): void {
+  private displayResults(_query: string): void {
     const results = [
       { score: 94, title: 'Payment Gateway Integration Guide', age: '3 days ago', type: 'Knowledge', tags: 'api, payments, stripe' },
       { score: 87, title: 'Payment Error Handling Strategy', age: '1 week ago', type: 'Context', tags: 'error-handling, payments' },
