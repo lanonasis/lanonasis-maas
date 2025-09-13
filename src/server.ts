@@ -216,8 +216,8 @@ app.use('/docs', swaggerUi.serve, swaggerUi.setup(specs, swaggerUiOptions));
 // ============================================
 app.get('/.well-known/onasis.json', (req, res) => {
   const manifest = {
-    auth_base: `${req.protocol}://${req.get('host')}${config.API_PREFIX}/${config.API_VERSION}`,
-    memory_base: `${req.protocol}://${req.get('host')}${config.API_PREFIX}/${config.API_VERSION}/memories`,
+    auth_base: 'https://api.lanonasis.com', // Fixed: No trailing slash, central auth gateway
+    memory_base: 'https://api.lanonasis.com/api/v1/memories',
     mcp_ws_base: `${req.protocol === 'https' ? 'wss' : 'ws'}://${req.get('host')}`,
     mcp_sse: `${req.protocol}://${req.get('host')}/mcp/sse`,
     mcp_message: `${req.protocol}://${req.get('host')}/mcp/message`,
