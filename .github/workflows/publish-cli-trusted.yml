@@ -1,0 +1,112 @@
+name: Publish CLI Package (Trusted Publishing)
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'cli/**'
+      - 'cli/package.json'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to publish (e.g., 2.0.2)'
+        required: true
+        type: string
+
+permissions:
+  id-token: write  # Required for OIDC
+  contents: read
+
+jobs:
+  publish-cli:
+    name: Publish @lanonasis/cli to NPM (Trusted Publishing)
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Update version (if manual trigger)
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          cd cli
+          npm version ${{ github.event.inputs.version }} --no-git-tag-version
+
+      - name: Install dependencies
+        run: |
+          cd cli
+          bun install --frozen-lockfile
+
+      - name: Build CLI
+        run: |
+          cd cli
+          bun run build
+
+      - name: Test CLI
+        run: |
+          cd cli
+          bun link
+          lanonasis --version
+          lanonasis --help
+
+      - name: Setup Node.js for npm
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Update npm to latest version
+        run: npm install -g npm@latest
+
+      - name: Publish to NPM (Trusted Publishing)
+        run: |
+          cd cli
+          npm publish --access public --provenance
+
+      - name: Create Release Tag (if manual trigger)
+        if: github.event_name == 'workflow_dispatch' && success()
+        run: |
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          git add cli/package.json
+          git commit -m "chore: bump CLI version to ${{ github.event.inputs.version }}" || echo "No changes to commit"
+          git tag -a "cli-v${{ github.event.inputs.version }}" -m "CLI Release v${{ github.event.inputs.version }}"
+          git push origin "cli-v${{ github.event.inputs.version }}"
+
+      - name: Create GitHub Release (if manual trigger)
+        if: github.event_name == 'workflow_dispatch' && success()
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: cli-v${{ github.event.inputs.version }}
+          release_name: CLI Release v${{ github.event.inputs.version }}
+          body: |
+            ## @lanonasis/cli v${{ github.event.inputs.version }}
+            
+            ### Installation
+            ```bash
+            npm install -g @lanonasis/cli@${{ github.event.inputs.version }}
+            ```
+            
+            ### What's New
+            - Automated release via trusted publishing
+            - Enhanced security with OIDC authentication
+            - Improved build and deployment pipeline
+            
+            ### Verification
+            This package was published using npm's trusted publishing feature with provenance attestations for enhanced security.
+          draft: false
+          prerelease: false
+
+      - name: Auto-publish notification (if push trigger)
+        if: github.event_name == 'push' && success()
+        run: |
+          echo "🚀 CLI automatically published from main branch push"
+          echo "📦 Package: @lanonasis/cli"
+          echo "🔗 NPM: https://www.npmjs.com/package/@lanonasis/cli"
