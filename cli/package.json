@@ -55,7 +55,7 @@
   },
   "homepage": "https://github.com/lanonasis/lanonasis-maas#readme",
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.17.2",
+    "@modelcontextprotocol/sdk": "^1.17.3",
     "@types/eventsource": "^1.1.15",
     "@types/ws": "^8.18.1",
     "axios": "^1.12.0",
