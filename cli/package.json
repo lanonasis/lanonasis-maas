@@ -41,11 +41,24 @@
     "dist",
     "README.md"
   ],
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/lanonasis/lanonasis-maas.git",
+    "directory": "cli"
+  },
+  "bugs": {
+    "url": "https://github.com/lanonasis/lanonasis-maas/issues"
+  },
+  "homepage": "https://github.com/lanonasis/lanonasis-maas#readme",
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.17.2",
+    "@modelcontextprotocol/sdk": "^1.17.3",
     "@types/eventsource": "^1.1.15",
     "@types/ws": "^8.18.1",
-    "axios": "^1.11.0",
+    "axios": "^1.12.0",
     "boxen": "^7.1.1",
     "chalk": "^5.5.0",
     "cli-progress": "^3.12.0",
@@ -54,7 +67,7 @@
     "date-fns": "^4.1.0",
     "dotenv": "^17.2.1",
     "eventsource": "^4.0.0",
-    "inquirer": "^12.9.1",
+    "inquirer": "^12.9.2",
     "jwt-decode": "^4.0.0",
     "open": "^10.2.0",
     "ora": "^8.2.0",
