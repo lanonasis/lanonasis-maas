@@ -58,7 +58,7 @@
     "@modelcontextprotocol/sdk": "^1.17.2",
     "@types/eventsource": "^1.1.15",
     "@types/ws": "^8.18.1",
-    "axios": "^1.11.0",
+    "axios": "^1.12.0",
     "boxen": "^7.1.1",
     "chalk": "^5.5.0",
     "cli-progress": "^3.12.0",
