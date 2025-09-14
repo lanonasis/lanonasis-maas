@@ -2,7 +2,7 @@
 
 **Date**: 2025-08-26  
 **Status**: ✅ **COMPLETE - ALL ROUTING INTEGRATION ACHIEVED**  
-**Repository**: https://github.com/lanonasis/MaaS-dashboard.git  
+**Repository**: https://github.com/LanOnasis/MaaS-dashboard.git  
 **Commit**: `9a581f7` - Complete unified routing integration
 
 ---
@@ -24,7 +24,7 @@ The dashboard integration represents the **final piece** of our unified routing 
                                 │                     │
                        ┌────────▼─────────────────────▼────────┐
                        │           onasis-core               │
-                       │        api.lanonasis.com            │
+                       │        api.LanOnasis.com            │
                        │                                     │
                        │ ✅ Unified Backend & Database       │
                        │ ✅ Central Authentication (OAuth)   │
@@ -37,7 +37,7 @@ The dashboard integration represents the **final piece** of our unified routing 
 
 ### Pre-Integration Analysis
 - **Architecture**: Confirmed client-side React SPA (no backend conflicts)
-- **Authentication**: Already routing through `api.lanonasis.com/auth/login`
+- **Authentication**: Already routing through `api.LanOnasis.com/auth/login`
 - **API Calls**: All endpoints correctly configured to unified backend
 - **Environment**: Netlify deployment with proper variables set
 
@@ -50,7 +50,7 @@ The dashboard integration represents the **final piece** of our unified routing 
 ### No Breaking Changes Required
 ✅ **Dashboard was already correctly configured!**  
 The existing configuration was perfectly aligned with our unified system:
-- Environment variables pointed to `api.lanonasis.com`
+- Environment variables pointed to `api.LanOnasis.com`
 - Central auth enabled: `VITE_USE_CENTRAL_AUTH = "true"`
 - OAuth flow routing through onasis-core
 - Security headers allowing unified backend connections
@@ -59,7 +59,7 @@ The existing configuration was perfectly aligned with our unified system:
 
 ### Authentication Flow
 ```
-Dashboard Request → api.lanonasis.com/auth/login
+Dashboard Request → api.LanOnasis.com/auth/login
                  ↓
             OAuth Providers (GitHub, Google)  
                  ↓
@@ -67,12 +67,12 @@ Dashboard Request → api.lanonasis.com/auth/login
                  ↓
             Dashboard Callback → Token Validation
                  ↓
-            Authenticated API Requests → api.lanonasis.com/v1/*
+            Authenticated API Requests → api.LanOnasis.com/v1/*
 ```
 
 ### API Routing
-- **Endpoint Base**: `https://api.lanonasis.com/v1`
-- **Auth Gateway**: `https://api.lanonasis.com/auth`  
+- **Endpoint Base**: `https://api.LanOnasis.com/v1`
+- **Auth Gateway**: `https://api.LanOnasis.com/auth`  
 - **Project Scope**: `dashboard`
 - **Platform ID**: `dashboard`
 
@@ -114,11 +114,11 @@ All routing scenarios tested and validated:
 
 | Component | Endpoint | Auth Method | Status | Response Format |
 |-----------|----------|-------------|--------|----------------|
-| Dashboard | `api.lanonasis.com/v1/*` | OAuth JWT | ✅ Pass | JSON/HTML (SPA) |
-| CLI | `api.lanonasis.com/v1/*` | Vendor Keys | ✅ Pass | JSON |
-| MCP Server | Core Proxy → `api.lanonasis.com/v1/*` | Core Auth | ✅ Pass | JSON |
-| REST API | `api.lanonasis.com/v1/*` | Direct | ✅ Pass | JSON |
-| AI Clients | `api.lanonasis.com/v1/*` | Various | ✅ Pass | JSON (No SPA conflict) |
+| Dashboard | `api.LanOnasis.com/v1/*` | OAuth JWT | ✅ Pass | JSON/HTML (SPA) |
+| CLI | `api.LanOnasis.com/v1/*` | Vendor Keys | ✅ Pass | JSON |
+| MCP Server | Core Proxy → `api.LanOnasis.com/v1/*` | Core Auth | ✅ Pass | JSON |
+| REST API | `api.LanOnasis.com/v1/*` | Direct | ✅ Pass | JSON |
+| AI Clients | `api.LanOnasis.com/v1/*` | Various | ✅ Pass | JSON (No SPA conflict) |
 
 **Error Rate**: 0%  
 **Integration Success**: 100%
@@ -147,8 +147,8 @@ All routing scenarios tested and validated:
 
 ## 🔗 **Related Documentation**
 
-- **[Main Integration PR](https://github.com/lanonasis/lanonasis-maas/pull/5)**: Complete MCP-CLI unified integration
-- **[Dashboard Repository](https://github.com/lanonasis/MaaS-dashboard.git)**: Dashboard integration updates
+- **[Main Integration PR](https://github.com/LanOnasis/LanOnasis-maas/pull/5)**: Complete MCP-CLI unified integration
+- **[Dashboard Repository](https://github.com/LanOnasis/MaaS-dashboard.git)**: Dashboard integration updates
 - **[Integration Summary](/.devops/INTEGRATION_SUMMARY.md)**: Complete technical overview
 - **[Core Integration Guide](/.devops/CORE_INTEGRATION_GUIDE.md)**: Backend implementation requirements  
 - **[Routing Test Results](/.devops/2025-08-26_ROUTING_TEST_ANALYSIS.md)**: Comprehensive test validation

@@ -143,9 +143,9 @@ export class WelcomeExperience {
   private showDocumentation(): void {
     console.log(boxen(
       chalk.bold('📚 Documentation\n\n') +
-      'Online Docs: ' + chalk.cyan('https://docs.lanonasis.com/cli\n') +
-      'Quick Start: ' + chalk.cyan('https://docs.lanonasis.com/quickstart\n') +
-      'API Reference: ' + chalk.cyan('https://api.lanonasis.com/docs\n\n') +
+      'Online Docs: ' + chalk.cyan('https://docs.LanOnasis.com/cli\n') +
+      'Quick Start: ' + chalk.cyan('https://docs.LanOnasis.com/quickstart\n') +
+      'API Reference: ' + chalk.cyan('https://api.LanOnasis.com/docs\n\n') +
       chalk.dim('Press any key to continue...'),
       {
         padding: 1,
@@ -165,7 +165,7 @@ export class WelcomeExperience {
       '  • ' + chalk.yellow('Scales') + ' from personal to enterprise use\n\n' +
       'Built for developers, teams, and organizations who want to\n' +
       'transform information into actionable intelligence.\n\n' +
-      chalk.dim('Learn more at lanonasis.com'),
+      chalk.dim('Learn more at LanOnasis.com'),
       {
         padding: 1,
         borderStyle: 'double',
@@ -282,7 +282,7 @@ export class InteractiveSetup {
         message: 'Where is your Onasis service hosted?',
         choices: [
           {
-            name: '☁️  Cloud (api.lanonasis.com)' + chalk.gray('     ← Recommended for most users'),
+            name: '☁️  Cloud (api.LanOnasis.com)' + chalk.gray('     ← Recommended for most users'),
             value: 'cloud',
             short: 'Cloud'
           },
@@ -300,7 +300,7 @@ export class InteractiveSetup {
       }
     ]);
 
-    let serverUrl = 'https://api.lanonasis.com';
+    let serverUrl = 'https://api.LanOnasis.com';
     
     if (connectionType === 'self-hosted') {
       const { customUrl } = await inquirer.prompt([

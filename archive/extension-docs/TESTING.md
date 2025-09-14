@@ -1,11 +1,11 @@
 # VSCode Extension Testing Guide
 
-## 🧪 Testing the Lanonasis Memory Extension
+## 🧪 Testing the LanOnasis Memory Extension
 
 ### Prerequisites
 - VSCode 1.102.0 or higher
 - Node.js 16+ and npm
-- API key from [api.lanonasis.com](https://api.lanonasis.com)
+- API key from [api.LanOnasis.com](https://api.LanOnasis.com)
 
 ## 🚀 Method 1: Extension Development Host (Recommended)
 
@@ -39,24 +39,24 @@
 
 1. **Install Extension**:
    ```bash
-   code --install-extension lanonasis-memory-1.0.0.vsix
+   code --install-extension LanOnasis-memory-1.0.0.vsix
    ```
 
 2. **Reload VSCode**:
    - Command Palette → "Developer: Reload Window"
 
 3. **Verify Installation**:
-   - Extensions view → Search "Lanonasis"
-   - Should show "Lanonasis Memory Assistant"
+   - Extensions view → Search "LanOnasis"
+   - Should show "LanOnasis Memory Assistant"
 
 ## ⚙️ Configuration
 
 1. **Open Settings** (`Ctrl+,`)
-2. **Search for "lanonasis"**
+2. **Search for "LanOnasis"**
 3. **Configure**:
-   - `Lanonasis: Api Key` - Your API key
-   - `Lanonasis: Api Url` - Default: https://api.lanonasis.com
-   - `Lanonasis: Default Memory Type` - Default: context
+   - `LanOnasis: Api Key` - Your API key
+   - `LanOnasis: Api Url` - Default: https://api.LanOnasis.com
+   - `LanOnasis: Default Memory Type` - Default: context
 
 ## 🔍 Manual Test Cases
 
@@ -67,7 +67,7 @@
    - ✅ Tree view shows "not authenticated" state
 
 2. **Configure API Key**:
-   - ✅ Command "Lanonasis: Authenticate" works
+   - ✅ Command "LanOnasis: Authenticate" works
    - ✅ API key input dialog appears
    - ✅ Connection test validates key
    - ✅ Success message on valid key
@@ -131,7 +131,7 @@
 ### API Connection Fails
 - Verify API key is correct
 - Check network connectivity
-- Ensure api.lanonasis.com is accessible
+- Ensure api.LanOnasis.com is accessible
 - Try different API URL if self-hosted
 
 ### Commands Not Working
@@ -162,7 +162,7 @@ npm run watch
 echo "Testing VSCode Extension..."
 
 # Install extension
-code --install-extension lanonasis-memory-1.0.0.vsix --force
+code --install-extension LanOnasis-memory-1.0.0.vsix --force
 
 # Open test workspace
 code test-workspace/
@@ -189,4 +189,4 @@ Tester: ___________
 
 ---
 
-**Need Help?** Check [docs.lanonasis.com](https://docs.lanonasis.com) or create an issue on GitHub.
+**Need Help?** Check [docs.LanOnasis.com](https://docs.LanOnasis.com) or create an issue on GitHub.

@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "name": "lanonasis-developer",
+  "name": "LanOnasis-developer",
   "buildCommand": "cd dashboard && bun install && bun run build",
   "outputDirectory": "dashboard/dist",
   "installCommand": "bun install",

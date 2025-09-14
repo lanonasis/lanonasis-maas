@@ -64,10 +64,10 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 // CORE ALIGNMENT: Enhanced CORS Configuration
 // ============================================
 const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') || [
-  'https://dashboard.lanonasis.com',
-  'https://docs.lanonasis.com', 
-  'https://api.lanonasis.com',
-  'https://lanonasis.com'
+  'https://dashboard.LanOnasis.com',
+  'https://docs.LanOnasis.com', 
+  'https://api.LanOnasis.com',
+  'https://LanOnasis.com'
 ];
 
 // Add development origins if not in production
@@ -158,7 +158,7 @@ app.use(async (req, res, next) => {
   }
 
   // Validate project scope for protected routes
-  if (req.path.startsWith('/api/v1/') && projectScope !== 'lanonasis-maas') {
+  if (req.path.startsWith('/api/v1/') && projectScope !== 'LanOnasis-maas') {
     console.warn(`[${req.id}] Invalid project scope: ${projectScope}`);
     return res.status(403).json(createErrorEnvelope(req, 'Invalid project scope', 'AuthError', 'INVALID_PROJECT_SCOPE'));
   }
@@ -247,7 +247,7 @@ app.get('/.well-known/onasis.json', (req, res) => {
     mcp_sse: `${req.protocol}://${req.get('host')}/mcp/sse`, 
     mcp_message: `${req.protocol}://${req.get('host')}/mcp/message`,
     keys_base: `${req.protocol}://${req.get('host')}/api/v1/keys`,
-    project_scope: 'lanonasis-maas',
+    project_scope: 'LanOnasis-maas',
     version: '1.2.0',
     discovery_version: '0.1',
     last_updated: new Date().toISOString(),
@@ -271,7 +271,7 @@ if (healthRouter) {
   // CORE ALIGNMENT: Enhanced health endpoint
   app.get(['/health', '/api/v1/health'], (req, res) => {
     const healthData = {
-      name: 'Lanonasis Memory Service',
+      name: 'LanOnasis Memory Service',
       version: '1.2.0',
       status: 'healthy',
       timestamp: new Date().toISOString(),
@@ -327,7 +327,7 @@ app.get('/', (req, res) => {
   if (isApiRequest || req.query.format === 'json') {
     // Return JSON for API clients with service discovery info
     const serviceInfo = {
-      platform: 'Lanonasis Memory as a Service (MaaS)',
+      platform: 'LanOnasis Memory as a Service (MaaS)',
       tagline: 'Enterprise Memory Management with AI Context Protocol',
       version: '1.2.0',
       status: 'operational',
@@ -345,7 +345,7 @@ app.get('/', (req, res) => {
       authentication: {
         vendor_keys: 'X-API-Key: pk_*.sk_*',
         jwt_tokens: 'Authorization: Bearer <token>',
-        project_scope: 'X-Project-Scope: lanonasis-maas'
+        project_scope: 'X-Project-Scope: LanOnasis-maas'
       },
       implementation: memoryRouter ? 'typescript' : 'fallback',
       compliance: 'onasis-core-v0.1'
@@ -354,7 +354,7 @@ app.get('/', (req, res) => {
     res.json(createSuccessEnvelope(serviceInfo, req, { public: true }));
   } else {
     // Redirect browsers to dashboard
-    res.redirect('https://dashboard.lanonasis.com');
+    res.redirect('https://dashboard.LanOnasis.com');
   }
 });
 

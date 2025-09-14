@@ -10,7 +10,7 @@ Clean up stale documentation and scripts to establish CLI v1.5.2 as the single s
 - Service discovery integration
 - Professional tab completions
 - User guidance systems
-- Dual command support (lanonasis/onasis)
+- Dual command support (LanOnasis/onasis)
 
 ## Archive Structure
 
@@ -136,7 +136,7 @@ This migration establishes CLI v1.5.2 as the authoritative interface for:
 - ✅ Service discovery and health monitoring
 - ✅ Professional tab completions (bash/zsh/fish)
 - ✅ Interactive user guidance and onboarding
-- ✅ Dual command support (lanonasis/onasis)
+- ✅ Dual command support (LanOnasis/onasis)
 - ✅ Golden Contract compliance (Onasis-Core v0.1)
 
 All legacy methods are preserved in archive for historical reference.

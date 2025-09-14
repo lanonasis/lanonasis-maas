@@ -17,8 +17,8 @@ export class WindsurfAiAssistant {
         }
 
         this.panel = vscode.window.createWebviewPanel(
-            'lanonasisAiAssistant',
-            'Lanonasis AI Memory Assistant',
+            'LanOnasisAiAssistant',
+            'LanOnasis AI Memory Assistant',
             vscode.ViewColumn.Beside,
             {
                 enableScripts: true,
@@ -145,7 +145,7 @@ export class WindsurfAiAssistant {
                 message: `Memory "${data.title}" created successfully`
             });
 
-            vscode.commands.executeCommand('lanonasis.refreshMemories');
+            vscode.commands.executeCommand('LanOnasis.refreshMemories');
         } catch (error) {
             this.panel?.webview.postMessage({
                 command: 'error',
@@ -232,7 +232,7 @@ export class WindsurfAiAssistant {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lanonasis AI Assistant</title>
+    <title>LanOnasis AI Assistant</title>
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;

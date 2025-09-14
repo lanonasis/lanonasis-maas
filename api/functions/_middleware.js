@@ -2,7 +2,7 @@
  * Netlify Edge Functions Middleware
  * 
  * This middleware provides authentication and audit logging
- * for all Edge Functions in the lanonasis-maas project.
+ * for all Edge Functions in the LanOnasis-maas project.
  */
 
 /* eslint-env browser, node */
@@ -57,16 +57,16 @@ const createJWTMiddleware = (config) => {
     return {
       isValid: true,
       userId: 'placeholder-user',
-      projectScope: 'lanonasis-maas'
+      projectScope: 'LanOnasis-maas'
     };
   };
 };
 };
 
 // Configuration with fail-fast validation
-const SUPABASE_URL = (typeof process !== 'undefined' ? process.env.SUPABASE_URL : null) || 'https://lanonasis.supabase.co';
+const SUPABASE_URL = (typeof process !== 'undefined' ? process.env.SUPABASE_URL : null) || 'https://LanOnasis.supabase.co';
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY;
-const PROJECT_NAME = 'lanonasis-maas';
+const PROJECT_NAME = 'LanOnasis-maas';
 
 // Fail-fast validation for required environment variables
 if (!SUPABASE_SERVICE_KEY) {
@@ -81,7 +81,7 @@ const jwtMiddleware = createJWTMiddleware({
   supabaseUrl: SUPABASE_URL,
   supabaseServiceKey: SUPABASE_SERVICE_KEY,
   projectName: PROJECT_NAME,
-  allowedScopes: ['lanonasis-maas']
+  allowedScopes: ['LanOnasis-maas']
 });
 
 // Paths that don't require authentication

@@ -62,8 +62,8 @@ describe('Service Discovery Conformance', () => {
       });
     });
 
-    it('should have project_scope set to "lanonasis-maas"', () => {
-      expect(discoveryManifest.project_scope).toBe('lanonasis-maas');
+    it('should have project_scope set to "LanOnasis-maas"', () => {
+      expect(discoveryManifest.project_scope).toBe('LanOnasis-maas');
     });
 
     it('should have valid URL formats', () => {
@@ -145,9 +145,9 @@ describe('Service Discovery Conformance', () => {
   describe('CORS Compliance', () => {
     it('should handle CORS preflight for allowed origins', async () => {
       const allowedOrigins = [
-        'https://dashboard.lanonasis.com',
-        'https://docs.lanonasis.com',
-        'https://api.lanonasis.com'
+        'https://dashboard.LanOnasis.com',
+        'https://docs.LanOnasis.com',
+        'https://api.LanOnasis.com'
       ];
 
       for (const origin of allowedOrigins) {

@@ -51,12 +51,12 @@ export default function OAuthAuthorize() {
   const loadClientInfo = async (clientId: string) => {
     // Map client IDs to friendly names
     const clientMap: Record<string, string> = {
-      'lanonasis-mcp-cli': 'Lan Onasis CLI',
-      'lanonasis-mcp-desktop': 'Lan Onasis Desktop',
-      'lanonasis-mcp-mobile': 'Lan Onasis Mobile',
-      'lanonasis-vscode': 'Lan Onasis VSCode Extension',
-      'lanonasis-cursor': 'Lan Onasis Cursor Extension',
-      'lanonasis-windsurf': 'Lan Onasis Windsurf Extension'
+      'LanOnasis-mcp-cli': 'Lan Onasis CLI',
+      'LanOnasis-mcp-desktop': 'Lan Onasis Desktop',
+      'LanOnasis-mcp-mobile': 'Lan Onasis Mobile',
+      'LanOnasis-vscode': 'Lan Onasis VSCode Extension',
+      'LanOnasis-cursor': 'Lan Onasis Cursor Extension',
+      'LanOnasis-windsurf': 'Lan Onasis Windsurf Extension'
     };
 
     setClientInfo({

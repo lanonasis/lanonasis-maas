@@ -20,7 +20,7 @@ This folder contains the previous authentication implementation that was scatter
 
 ## Why this was changed:
 
-1. **Centralization**: All authentication now flows through the `@lanonasis/oauth-client` package
+1. **Centralization**: All authentication now flows through the `@LanOnasis/oauth-client` package
 2. **Consistency**: Same auth logic across CLI, SDK, REST API, IDE extensions, and MCP connector
 3. **Maintainability**: Single source of truth for authentication
 4. **Security**: Centralized token management and validation

@@ -1,14 +1,14 @@
 # VSCode Extension Gateway Update
 
 ## Overview
-Successfully updated the Lanonasis Memory VSCode extension to integrate with Onasis Gateway endpoints, providing enhanced performance and flexibility.
+Successfully updated the LanOnasis Memory VSCode extension to integrate with Onasis Gateway endpoints, providing enhanced performance and flexibility.
 
 ## Changes Made
 
 ### 1. Configuration Updates (`package.json`)
-- Added `lanonasis.useGateway` setting (default: true)
-- Added `lanonasis.gatewayUrl` setting (default: https://api.lanonasis.com)
-- Added `lanonasis.switchMode` command for runtime switching
+- Added `LanOnasis.useGateway` setting (default: true)
+- Added `LanOnasis.gatewayUrl` setting (default: https://api.LanOnasis.com)
+- Added `LanOnasis.switchMode` command for runtime switching
 
 ### 2. Service Layer Updates (`MemoryService.ts`)
 - Enhanced client initialization with gateway URL preference
@@ -52,16 +52,16 @@ Successfully updated the Lanonasis Memory VSCode extension to integrate with Ona
 
 ### Manual Switching
 1. Open Command Palette (`Ctrl+Shift+P`)
-2. Run "Lanonasis: Switch Gateway/Direct API Mode"
+2. Run "LanOnasis: Switch Gateway/Direct API Mode"
 3. Select preferred connection mode
 4. Extension tests connection automatically
 
 ### Configuration
 ```json
 {
-  "lanonasis.useGateway": true,
-  "lanonasis.gatewayUrl": "https://api.lanonasis.com",
-  "lanonasis.apiUrl": "https://api.lanonasis.com"
+  "LanOnasis.useGateway": true,
+  "LanOnasis.gatewayUrl": "https://api.LanOnasis.com",
+  "LanOnasis.apiUrl": "https://api.LanOnasis.com"
 }
 ```
 

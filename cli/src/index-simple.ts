@@ -47,12 +47,12 @@ const program = new Command();
 const cliConfig = new CLIConfig();
 
 // Detect which command was used to invoke the CLI
-const invocationName = process.argv[1] ? path.basename(process.argv[1]) : 'lanonasis';
+const invocationName = process.argv[1] ? path.basename(process.argv[1]) : 'LanOnasis';
 const isOnasisInvocation = invocationName === 'onasis';
 
 program
-  .name(isOnasisInvocation ? 'onasis' : 'lanonasis')
-  .alias(isOnasisInvocation ? 'lanonasis' : 'memory')
+  .name(isOnasisInvocation ? 'onasis' : 'LanOnasis')
+  .alias(isOnasisInvocation ? 'LanOnasis' : 'memory')
   .alias(isOnasisInvocation ? 'memory' : 'maas')
   .description(colors.info(`🧠 ${isOnasisInvocation ? 'Onasis-Core Golden Contract CLI' : 'LanOnasis Enterprise CLI'} - Memory as a Service, API Management & Infrastructure Orchestration`))
   .version('2.0.1', '-v, --version', 'display version number')
@@ -111,7 +111,7 @@ process.on('unhandledRejection', (reason, promise) => {
 
 // Enhanced welcome message
 const showWelcome = () => {
-  const cmdName = isOnasisInvocation ? 'onasis' : 'lanonasis';
+  const cmdName = isOnasisInvocation ? 'onasis' : 'LanOnasis';
   const title = isOnasisInvocation ? 'Onasis-Core Golden Contract CLI' : 'LanOnasis Enterprise CLI';
   
   console.log();
@@ -143,8 +143,8 @@ const showWelcome = () => {
   console.log(`  ${colors.success(`source <(${cmdName} --completion bash)`)}  ${colors.muted('# Bash completions')}`);
   console.log();
   
-  console.log(colors.info('📚 Documentation: https://docs.lanonasis.com/memory-services'));
-  console.log(colors.info('🌐 Dashboard: https://api.lanonasis.com/dashboard'));
+  console.log(colors.info('📚 Documentation: https://docs.LanOnasis.com/memory-services'));
+  console.log(colors.info('🌐 Dashboard: https://api.LanOnasis.com/dashboard'));
   console.log();
 };
 
@@ -167,7 +167,7 @@ const healthCheck = async () => {
     }
   } else {
     console.log(colors.error('❌ Not authenticated'));
-    console.log(colors.muted('  Run: lanonasis login'));
+    console.log(colors.muted('  Run: LanOnasis login'));
   }
 
   // API connectivity
@@ -206,11 +206,11 @@ const healthCheck = async () => {
     console.log(`  Location: ${colors.highlight(cliConfig.getConfigPath())}`);
   } else {
     console.log(colors.warning('⚠️  Not found'));
-    console.log(colors.muted('  Run: lanonasis init'));
+    console.log(colors.muted('  Run: LanOnasis init'));
   }
 
   console.log();
-  console.log(colors.info('💡 For detailed diagnostics, run: lanonasis status --verbose'));
+  console.log(colors.info('💡 For detailed diagnostics, run: LanOnasis status --verbose'));
 };
 
 // Check if user is authenticated for protected commands
@@ -337,7 +337,7 @@ dashboardCmd
   .action(async () => {
     console.log(colors.primary('🎛️  Dashboard Status Check'));
     console.log(colors.info('━'.repeat(40)));
-    console.log(`${colors.highlight('Dashboard URL:')} ${colors.success('https://api.lanonasis.com/dashboard')}`);
+    console.log(`${colors.highlight('Dashboard URL:')} ${colors.success('https://api.LanOnasis.com/dashboard')}`);
     console.log(`${colors.highlight('Status:')} ${colors.success('✅ Deployed')}`);
     console.log(`${colors.highlight('Framework:')} ${colors.info('React + Vite + TypeScript')}`);
     console.log(`${colors.highlight('Hosting:')} ${colors.info('Netlify')}`);
@@ -348,7 +348,7 @@ dashboardCmd
   .description('View dashboard deployment logs')
   .action(() => {
     console.log(colors.info('Opening dashboard logs...'));
-    console.log(colors.success('Dashboard logs: https://app.netlify.com/sites/lanonasis-dashboard/logs'));
+    console.log(colors.success('Dashboard logs: https://app.netlify.com/sites/LanOnasis-dashboard/logs'));
   });
 
 // Documentation management commands (require auth)
@@ -365,7 +365,7 @@ docsCmd
   .action(async () => {
     console.log(colors.primary('📚 Documentation Status Check'));
     console.log(colors.info('━'.repeat(40)));
-    console.log(`${colors.highlight('Docs URL:')} ${colors.success('https://docs.lanonasis.com/memory-services')}`);
+    console.log(`${colors.highlight('Docs URL:')} ${colors.success('https://docs.LanOnasis.com/memory-services')}`);
     console.log(`${colors.highlight('Status:')} ${colors.success('✅ Deployed')}`);
     console.log(`${colors.highlight('Framework:')} ${colors.info('VitePress')}`);
     console.log(`${colors.highlight('Hosting:')} ${colors.info('Netlify')}`);
@@ -392,8 +392,8 @@ sdkCmd
   .action(async () => {
     console.log(colors.primary('🔧 SDK Status Check'));
     console.log(colors.info('━'.repeat(40)));
-    console.log(`${colors.highlight('Memory Client SDK:')} ${colors.success('@lanonasis/memory-client@1.0.0')}`);
-    console.log(`${colors.highlight('CLI Package:')} ${colors.success('@lanonasis/cli@1.4.2')}`);
+    console.log(`${colors.highlight('Memory Client SDK:')} ${colors.success('@LanOnasis/memory-client@1.0.0')}`);
+    console.log(`${colors.highlight('CLI Package:')} ${colors.success('@LanOnasis/cli@1.4.2')}`);
     console.log(`${colors.highlight('NPM Registry:')} ${colors.success('✅ Published')}`);
     console.log(`${colors.highlight('GitHub Packages:')} ${colors.success('✅ Available')}`);
   });
@@ -404,9 +404,9 @@ sdkCmd
   .action(() => {
     console.log(colors.primary('📦 Available SDK Versions'));
     console.log(colors.info('━'.repeat(40)));
-    console.log(`${colors.accent('@lanonasis/memory-client:')} ${colors.success('1.0.0 (latest)')}`);
-    console.log(`${colors.accent('@lanonasis/cli:')} ${colors.success('1.2.0 (latest)')}`);
-    console.log(`${colors.accent('@lanonasis/memory-service:')} ${colors.success('1.0.0 (latest)')}`);
+    console.log(`${colors.accent('@LanOnasis/memory-client:')} ${colors.success('1.0.0 (latest)')}`);
+    console.log(`${colors.accent('@LanOnasis/cli:')} ${colors.success('1.2.0 (latest)')}`);
+    console.log(`${colors.accent('@LanOnasis/memory-service:')} ${colors.success('1.0.0 (latest)')}`);
   });
 
 // REST API management commands (require auth)
@@ -423,7 +423,7 @@ apiCmd
   .action(async () => {
     console.log(colors.primary('🌐 REST API Status Check'));
     console.log(colors.info('━'.repeat(40)));
-    console.log(`${colors.highlight('API Base URL:')} ${colors.success('https://api.lanonasis.com')}`);
+    console.log(`${colors.highlight('API Base URL:')} ${colors.success('https://api.LanOnasis.com')}`);
     console.log(`${colors.highlight('Memory Service:')} ${colors.success('✅ Active')}`);
     console.log(`${colors.highlight('Authentication:')} ${colors.success('✅ Supabase Auth')}`);
     console.log(`${colors.highlight('Database:')} ${colors.success('✅ Supabase PostgreSQL')}`);
@@ -463,21 +463,21 @@ deployCmd
     console.log();
     
     console.log(colors.highlight('🌐 Web Services:'));
-    console.log(`  Landing Page: ${colors.success('✅ api.lanonasis.com')}`);
-    console.log(`  Dashboard: ${colors.success('✅ api.lanonasis.com/dashboard')}`);
-    console.log(`  Documentation: ${colors.success('✅ docs.lanonasis.com/memory-services')}`);
+    console.log(`  Landing Page: ${colors.success('✅ api.LanOnasis.com')}`);
+    console.log(`  Dashboard: ${colors.success('✅ api.LanOnasis.com/dashboard')}`);
+    console.log(`  Documentation: ${colors.success('✅ docs.LanOnasis.com/memory-services')}`);
     console.log();
     
     console.log(colors.highlight('🔧 API Services:'));
-    console.log(`  Memory Service: ${colors.success('✅ https://api.lanonasis.com')}`);
+    console.log(`  Memory Service: ${colors.success('✅ https://api.LanOnasis.com')}`);
     console.log(`  MCP Server: ${colors.success('✅ /mcp/sse')}`);
     console.log(`  REST API: ${colors.success('✅ All endpoints active')}`);
     console.log();
     
     console.log(colors.highlight('📦 Package Distribution:'));
-    console.log(`  CLI Package: ${colors.success('✅ @lanonasis/cli@1.4.2')}`);
-    console.log(`  SDK Package: ${colors.success('✅ @lanonasis/memory-client@1.0.0')}`);
-    console.log(`  Memory Service: ${colors.success('✅ @lanonasis/memory-service@1.0.0')}`);
+    console.log(`  CLI Package: ${colors.success('✅ @LanOnasis/cli@1.4.2')}`);
+    console.log(`  SDK Package: ${colors.success('✅ @LanOnasis/memory-client@1.0.0')}`);
+    console.log(`  Memory Service: ${colors.success('✅ @LanOnasis/memory-service@1.0.0')}`);
     console.log();
     
     console.log(colors.highlight('🗄️  Infrastructure:'));
@@ -495,12 +495,12 @@ deployCmd
     console.log(colors.info('═'.repeat(50)));
     
     const services = [
-      { name: 'Landing Page', url: 'https://api.lanonasis.com', status: 'healthy' },
-      { name: 'Dashboard', url: 'https://api.lanonasis.com/dashboard', status: 'healthy' },
-      { name: 'Documentation', url: 'https://docs.lanonasis.com/memory-services', status: 'healthy' },
-      { name: 'Memory API', url: 'https://api.lanonasis.com/memories', status: 'healthy' },
-      { name: 'MCP Server', url: 'https://api.lanonasis.com/mcp/sse', status: 'healthy' },
-      { name: 'Authentication', url: 'https://api.lanonasis.com/auth', status: 'healthy' }
+      { name: 'Landing Page', url: 'https://api.LanOnasis.com', status: 'healthy' },
+      { name: 'Dashboard', url: 'https://api.LanOnasis.com/dashboard', status: 'healthy' },
+      { name: 'Documentation', url: 'https://docs.LanOnasis.com/memory-services', status: 'healthy' },
+      { name: 'Memory API', url: 'https://api.LanOnasis.com/memories', status: 'healthy' },
+      { name: 'MCP Server', url: 'https://api.LanOnasis.com/mcp/sse', status: 'healthy' },
+      { name: 'Authentication', url: 'https://api.LanOnasis.com/auth', status: 'healthy' }
     ];
     
     for (const service of services) {
@@ -589,7 +589,7 @@ program
   .command('docs')
   .description('Open documentation in browser')
   .action(() => {
-    const url = 'https://api.lanonasis.com/docs';
+    const url = 'https://api.LanOnasis.com/docs';
     console.log(chalk.blue(`Opening documentation: ${url}`));
     
     // Try to open in browser
@@ -689,7 +689,7 @@ program.configureHelp({
     
     const cmdName = isOnasisInvocation ? 'onasis' : program.name();
     help += chalk.gray(`For more help on a specific command, run: ${cmdName} <command> --help\n`);
-    help += chalk.gray('Documentation: https://api.lanonasis.com/docs\n');
+    help += chalk.gray('Documentation: https://api.LanOnasis.com/docs\n');
     
     if (isOnasisInvocation) {
       help += chalk.gray('Golden Contract: Onasis-Core v0.1 Compliant\n');

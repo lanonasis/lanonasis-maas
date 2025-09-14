@@ -53,7 +53,7 @@ class MemoryTreeProvider {
     async getChildren(element) {
         if (!await this.authService.checkAuthenticationStatus()) {
             return [new MemoryTreeItem('Not authenticated', '', vscode.TreeItemCollapsibleState.None, {
-                    command: 'lanonasis.authenticate',
+                    command: 'LanOnasis.authenticate',
                     title: 'Authenticate',
                     arguments: []
                 }, 'authentication-required')];
@@ -79,7 +79,7 @@ class MemoryTreeProvider {
             this.isLoading = false;
             if (this.memories.length === 0) {
                 return [new MemoryTreeItem('No memories found', 'Create your first memory by selecting text and pressing Ctrl+Shift+Alt+M', vscode.TreeItemCollapsibleState.None, {
-                        command: 'lanonasis.createMemory',
+                        command: 'LanOnasis.createMemory',
                         title: 'Create Memory',
                         arguments: []
                     }, 'empty-state')];
@@ -111,7 +111,7 @@ class MemoryTreeProvider {
             this.isLoading = false;
             console.error('Failed to load memories:', error);
             return [new MemoryTreeItem('Error loading memories', error instanceof Error ? error.message : 'Unknown error', vscode.TreeItemCollapsibleState.None, {
-                    command: 'lanonasis.refreshMemories',
+                    command: 'LanOnasis.refreshMemories',
                     title: 'Retry',
                     arguments: []
                 }, 'error')];
@@ -123,7 +123,7 @@ class MemoryTreeProvider {
         memoriesOfType.sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
         return memoriesOfType.map(memory => {
             const item = new MemoryTreeItem(memory.title, this.getMemoryDescription(memory), vscode.TreeItemCollapsibleState.None, {
-                command: 'lanonasis.openMemory',
+                command: 'LanOnasis.openMemory',
                 title: 'Open Memory',
                 arguments: [memory]
             }, 'memory');

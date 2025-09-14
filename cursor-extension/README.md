@@ -1,8 +1,8 @@
-# Lanonasis Memory Assistant for Cursor
+# LanOnasis Memory Assistant for Cursor
 
 🧠 **Intelligent Memory Management for Cursor IDE**
 
-The Lanonasis Memory Assistant brings powerful AI-powered memory management directly to your Cursor IDE, enabling you to store, search, and manage knowledge seamlessly while coding.
+The LanOnasis Memory Assistant brings powerful AI-powered memory management directly to your Cursor IDE, enabling you to store, search, and manage knowledge seamlessly while coding.
 
 ## ✨ Key Features
 
@@ -42,7 +42,7 @@ The Lanonasis Memory Assistant brings powerful AI-powered memory management dire
    ```
 
 2. **First Time Setup**
-   - Open Cursor and look for the Lanonasis Memory icon in the sidebar
+   - Open Cursor and look for the LanOnasis Memory icon in the sidebar
    - Click "Get Started" in the welcome message
    - Choose authentication method:
      - **Auto Login**: Browser-based OAuth2 (recommended)
@@ -91,32 +91,32 @@ The Lanonasis Memory Assistant brings powerful AI-powered memory management dire
 
 ## ⚙️ Configuration
 
-Access settings via `File > Preferences > Settings > Extensions > Lanonasis Memory`
+Access settings via `File > Preferences > Settings > Extensions > LanOnasis Memory`
 
 ### Authentication Settings
 ```json
 {
-  "lanonasis.useAutoAuth": true,          // Enable browser-based OAuth2
-  "lanonasis.authUrl": "https://auth.lanonasis.com",
-  "lanonasis.apiUrl": "https://api.lanonasis.com"
+  "LanOnasis.useAutoAuth": true,          // Enable browser-based OAuth2
+  "LanOnasis.authUrl": "https://auth.LanOnasis.com",
+  "LanOnasis.apiUrl": "https://api.LanOnasis.com"
 }
 ```
 
 ### Connection Settings
 ```json
 {
-  "lanonasis.useGateway": true,           // Use Onasis Gateway (recommended)
-  "lanonasis.gatewayUrl": "https://api.lanonasis.com"
+  "LanOnasis.useGateway": true,           // Use Onasis Gateway (recommended)
+  "LanOnasis.gatewayUrl": "https://api.LanOnasis.com"
 }
 ```
 
 ### Behavior Settings
 ```json
 {
-  "lanonasis.defaultMemoryType": "context",     // Default type for new memories
-  "lanonasis.searchLimit": 10,                  // Max search results
-  "lanonasis.enableAutoCompletion": true,       // Memory-based completions
-  "lanonasis.autoRefreshInterval": 300000       // Auto-refresh interval (5 min)
+  "LanOnasis.defaultMemoryType": "context",     // Default type for new memories
+  "LanOnasis.searchLimit": 10,                  // Max search results
+  "LanOnasis.enableAutoCompletion": true,       // Memory-based completions
+  "LanOnasis.autoRefreshInterval": 300000       // Auto-refresh interval (5 min)
 }
 ```
 
@@ -127,8 +127,8 @@ Access settings via `File > Preferences > Settings > Extensions > Lanonasis Memo
 | Search Memories | `Ctrl+Shift+M` | Open memory search |
 | Create Memory from Selection | `Ctrl+Shift+Alt+M` | Save selected code as memory |
 | Create Memory from File | - | Save entire file as memory |
-| Authenticate | - | Login to Lanonasis |
-| Logout | - | Sign out from Lanonasis |
+| Authenticate | - | Login to LanOnasis |
+| Logout | - | Sign out from LanOnasis |
 | Refresh Memories | - | Refresh memory list |
 | Switch Mode | - | Toggle Gateway/Direct mode |
 
@@ -152,8 +152,8 @@ Access settings via `File > Preferences > Settings > Extensions > Lanonasis Memo
 
 ```bash
 # Clone repository
-git clone https://github.com/lanonasis/lanonasis-maas
-cd lanonasis-maas/cursor-extension
+git clone https://github.com/LanOnasis/LanOnasis-maas
+cd LanOnasis-maas/cursor-extension
 
 # Install dependencies
 npm install
@@ -185,18 +185,18 @@ cursor-extension/
 
 ## 📚 API Reference
 
-The extension integrates with the Lanonasis Memory as a Service (MaaS) API. For detailed API documentation, visit:
+The extension integrates with the LanOnasis Memory as a Service (MaaS) API. For detailed API documentation, visit:
 
-- **API Documentation**: https://docs.lanonasis.com/api
-- **SDK Documentation**: https://docs.lanonasis.com/sdk
-- **OAuth2 Guide**: https://docs.lanonasis.com/auth
+- **API Documentation**: https://docs.LanOnasis.com/api
+- **SDK Documentation**: https://docs.LanOnasis.com/sdk
+- **OAuth2 Guide**: https://docs.LanOnasis.com/auth
 
 ## 🆘 Support & Feedback
 
 ### Getting Help
-- **Documentation**: https://docs.lanonasis.com
-- **Support Email**: support@lanonasis.com
-- **GitHub Issues**: https://github.com/lanonasis/lanonasis-maas/issues
+- **Documentation**: https://docs.LanOnasis.com
+- **Support Email**: support@LanOnasis.com
+- **GitHub Issues**: https://github.com/LanOnasis/LanOnasis-maas/issues
 
 ### Known Issues
 - OAuth2 flow requires system browser access
@@ -221,7 +221,7 @@ This extension is licensed under the MIT License. See the [LICENSE](LICENSE) fil
 
 ## 🙏 Acknowledgments
 
-Built with ❤️ by the Lanonasis team, powered by:
+Built with ❤️ by the LanOnasis team, powered by:
 - **Cursor IDE**: Next-generation code editor
 - **OpenAI**: Semantic search capabilities
 - **Supabase**: Scalable backend infrastructure
@@ -231,4 +231,4 @@ Built with ❤️ by the Lanonasis team, powered by:
 
 **Ready to supercharge your coding workflow with intelligent memory management?**
 
-[Get your API key](https://api.lanonasis.com) • [View Documentation](https://docs.lanonasis.com) • [Join Community](https://discord.gg/lanonasis)
+[Get your API key](https://api.LanOnasis.com) • [View Documentation](https://docs.LanOnasis.com) • [Join Community](https://discord.gg/LanOnasis)

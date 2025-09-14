@@ -74,7 +74,7 @@ export function createSmartConfig(
     apiUrl: baseConfig.apiUrl || (
       process?.env?.NODE_ENV === 'development' 
         ? 'http://localhost:3001'
-        : 'https://api.lanonasis.com'
+        : 'https://api.LanOnasis.com'
     ),
     
     // Default timeout based on environment
@@ -102,7 +102,7 @@ export const ConfigPresets = {
    * Production configuration optimized for performance
    */
   production: (apiKey?: string): EnhancedMemoryClientConfig => createSmartConfig({
-    apiUrl: 'https://api.lanonasis.com',
+    apiUrl: 'https://api.LanOnasis.com',
     apiKey,
     timeout: 15000
   }, {
@@ -114,7 +114,7 @@ export const ConfigPresets = {
    * IDE extension configuration with MCP prioritization
    */
   ideExtension: (apiKey?: string): EnhancedMemoryClientConfig => createSmartConfig({
-    apiUrl: 'https://api.lanonasis.com',
+    apiUrl: 'https://api.LanOnasis.com',
     apiKey,
     timeout: 10000
   }, {
@@ -127,7 +127,7 @@ export const ConfigPresets = {
    * Browser-only configuration (no CLI support)
    */
   browserOnly: (apiKey?: string): EnhancedMemoryClientConfig => createSmartConfig({
-    apiUrl: 'https://api.lanonasis.com',
+    apiUrl: 'https://api.LanOnasis.com',
     apiKey,
     timeout: 15000
   }, {
@@ -139,7 +139,7 @@ export const ConfigPresets = {
    * CLI-first configuration for server environments
    */
   serverCLI: (apiKey?: string): EnhancedMemoryClientConfig => createSmartConfig({
-    apiUrl: 'https://api.lanonasis.com',
+    apiUrl: 'https://api.LanOnasis.com',
     apiKey,
     timeout: 20000
   }, {

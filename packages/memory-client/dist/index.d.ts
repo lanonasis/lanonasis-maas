@@ -334,7 +334,7 @@ declare function createMemoryClient(config: MemoryClientConfig): MemoryClient;
  * CLI Integration Module for Memory Client SDK
  *
  * Provides intelligent CLI detection and MCP channel utilization
- * when @lanonasis/cli v1.5.2+ is available in the environment
+ * when @LanOnasis/cli v1.5.2+ is available in the environment
  */
 
 interface CLIInfo {
@@ -382,7 +382,7 @@ declare class CLIIntegration {
      */
     executeCLICommand<T = any>(command: string, options?: CLIExecutionOptions): Promise<ApiResponse<T>>;
     /**
-     * Get preferred CLI command (onasis for Golden Contract, fallback to lanonasis)
+     * Get preferred CLI command (onasis for Golden Contract, fallback to LanOnasis)
      */
     private getPreferredCLICommand;
     /**
@@ -646,14 +646,14 @@ declare const ConfigPresets: {
 declare function migrateToEnhanced(existingConfig: MemoryClientConfig, enhancementOptions?: SmartConfigOptions): EnhancedMemoryClientConfig;
 
 /**
- * @lanonasis/memory-client
+ * @LanOnasis/memory-client
  *
- * Memory as a Service (MaaS) Client SDK for Lanonasis
+ * Memory as a Service (MaaS) Client SDK for LanOnasis
  * Intelligent memory management with semantic search capabilities
  */
 
 declare const VERSION = "1.3.0";
-declare const CLIENT_NAME = "@lanonasis/memory-client";
+declare const CLIENT_NAME = "@LanOnasis/memory-client";
 declare const isBrowser: boolean;
 declare const isNode: string | false;
 declare const defaultConfigs: {
@@ -663,12 +663,12 @@ declare const defaultConfigs: {
         readonly useGateway: false;
     };
     readonly production: {
-        readonly apiUrl: "https://api.lanonasis.com";
+        readonly apiUrl: "https://api.LanOnasis.com";
         readonly timeout: 15000;
         readonly useGateway: true;
     };
     readonly gateway: {
-        readonly apiUrl: "https://api.lanonasis.com";
+        readonly apiUrl: "https://api.LanOnasis.com";
         readonly timeout: 10000;
         readonly useGateway: true;
     };

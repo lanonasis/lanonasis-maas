@@ -74,7 +74,7 @@ export class EnhancedMemoryClient {
   async initialize(): Promise<void> {
     try {
         // Determine CLI name for login suggestion
-        const cliName = (this.capabilities.cliName) ? this.capabilities.cliName : (this.capabilities.lanonasisAvailable ? 'lanonasis' : 'onasis');
+        const cliName = (this.capabilities.cliName) ? this.capabilities.cliName : (this.capabilities.LanOnasisAvailable ? 'LanOnasis' : 'onasis');
         console.warn(`CLI is available but not authenticated. Consider running: ${cliName} login`);
       }
     } catch (error) {

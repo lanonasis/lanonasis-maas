@@ -10,10 +10,10 @@ The Memory as a Service (MaaS) platform has been successfully deployed with comp
 
 ### Core Services
 - **✅ Memory Service API**: Fully deployed and operational
-- **✅ Onasis Gateway**: Integrated with MCP and SSE support (api.lanonasis.com)
+- **✅ Onasis Gateway**: Integrated with MCP and SSE support (api.LanOnasis.com)
 - **✅ Vibe Frontend**: Dashboard deployed with memory management UI
-- **✅ SDK Package**: Published to npm as @lanonasis/memory-client
-- **✅ CLI Tool**: Published to npm as @lanonasis/cli v1.1.0
+- **✅ SDK Package**: Published to npm as @LanOnasis/memory-client
+- **✅ CLI Tool**: Published to npm as @LanOnasis/cli v1.1.0
 
 ### Key Features Implemented
 1. **Vector Memory Storage**: OpenAI embeddings with pgvector
@@ -89,17 +89,17 @@ The Memory as a Service (MaaS) platform has been successfully deployed with comp
 
 ```bash
 # Gateway Health: ✅ OPERATIONAL
-curl https://api.lanonasis.com/health
+curl https://api.LanOnasis.com/health
 # Response: {"status":"healthy","adapters":7,"environment":"netlify"}
 
 # SDK Installation: ✅ AVAILABLE
-npm install @lanonasis/memory-client
+npm install @LanOnasis/memory-client
 
 # CLI Installation: ✅ AVAILABLE
-npm install -g @lanonasis/cli
+npm install -g @LanOnasis/cli
 
 # MCP Server Test: ✅ FUNCTIONAL
-npx -y @lanonasis/cli mcp start
+npx -y @LanOnasis/cli mcp start
 ```
 
 ## 📋 Remaining Tasks (Non-blocking)
@@ -115,17 +115,17 @@ npx -y @lanonasis/cli mcp start
 The Memory as a Service platform is **fully deployed and ready for commercial use**. All critical components are operational, security measures are in place, and the platform can scale to meet enterprise demands.
 
 ### Quick Start for New Users
-1. Sign up at [api.lanonasis.com](https://api.lanonasis.com)
+1. Sign up at [api.LanOnasis.com](https://api.LanOnasis.com)
 2. Generate API key from dashboard
-3. Install SDK: `npm install @lanonasis/memory-client`
-4. Install CLI: `npm install -g @lanonasis/cli`
+3. Install SDK: `npm install @LanOnasis/memory-client`
+4. Install CLI: `npm install -g @LanOnasis/cli`
 5. Start building with semantic memory capabilities!
 
 ### Support Channels
-- Documentation: [docs.lanonasis.com](https://docs.lanonasis.com)
-- API Explorer: [api.lanonasis.com/docs](https://api.lanonasis.com/docs)
+- Documentation: [docs.LanOnasis.com](https://docs.LanOnasis.com)
+- API Explorer: [api.LanOnasis.com/docs](https://api.LanOnasis.com/docs)
 - GitHub: [github.com/thefixer3x/vibe-memory](https://github.com/thefixer3x/vibe-memory)
-- Support: support@lanonasis.com
+- Support: support@LanOnasis.com
 
 ---
 

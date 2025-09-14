@@ -59,11 +59,11 @@ const swaggerOptions = {
         - **Pro**: Up to 10,000 memories per organization + bulk operations
         - **Enterprise**: Unlimited memories + advanced features
       `,
-            termsOfService: 'https://api.lanonasis.com/terms',
+            termsOfService: 'https://api.LanOnasis.com/terms',
             contact: {
-                name: 'Lanonasis Support',
-                email: 'support@lanonasis.com',
-                url: 'https://docs.lanonasis.com'
+                name: 'LanOnasis Support',
+                email: 'support@LanOnasis.com',
+                url: 'https://docs.LanOnasis.com'
             },
             license: {
                 name: 'MIT',
@@ -76,7 +76,7 @@ const swaggerOptions = {
                 description: 'Development server'
             },
             {
-                url: `https://api.lanonasis.com${config.API_PREFIX}/${config.API_VERSION}`,
+                url: `https://api.LanOnasis.com${config.API_PREFIX}/${config.API_VERSION}`,
                 description: 'Production server'
             }
         ],
@@ -128,7 +128,7 @@ const swaggerOptions = {
         ],
         externalDocs: {
             description: 'Full API Documentation',
-            url: 'https://docs.lanonasis.com/api'
+            url: 'https://docs.LanOnasis.com/api'
         }
     },
     apis: ['./src/routes/*.ts', './src/types/*.ts']
@@ -192,7 +192,7 @@ app.get('/.well-known/onasis.json', (req, res) => {
         mcp_sse: `${req.protocol}://${req.get('host')}/mcp/sse`,
         mcp_message: `${req.protocol}://${req.get('host')}/mcp/message`,
         keys_base: `${req.protocol}://${req.get('host')}${config.API_PREFIX}/${config.API_VERSION}/keys`,
-        project_scope: 'lanonasis-maas',
+        project_scope: 'LanOnasis-maas',
         version: '1.2.0',
         discovery_version: '0.1',
         last_updated: new Date().toISOString(),
@@ -243,7 +243,7 @@ app.get('/', (req, res) => {
             tagline: 'Unified API Gateway for Enterprise Solutions',
             version: '1.0.0',
             status: 'operational',
-            baseUrl: 'https://api.lanonasis.com',
+            baseUrl: 'https://api.LanOnasis.com',
             services: {
                 memory: {
                     name: 'Memory as a Service (MaaS)',
@@ -288,9 +288,9 @@ app.get('/', (req, res) => {
                 monitoring: 'Prometheus Metrics & Winston Logging'
             },
             support: {
-                documentation: 'https://docs.lanonasis.com',
-                contact: 'support@lanonasis.com',
-                github: 'https://github.com/lanonasis'
+                documentation: 'https://docs.LanOnasis.com',
+                contact: 'support@LanOnasis.com',
+                github: 'https://github.com/LanOnasis'
             }
         });
     }

@@ -18,7 +18,7 @@ export class MemoryTreeItem extends vscode.TreeItem {
         
         // Add command to open memory when clicked
         this.command = {
-            command: 'lanonasis.openMemory',
+            command: 'LanOnasis.openMemory',
             title: 'Open Memory',
             arguments: [memory]
         };

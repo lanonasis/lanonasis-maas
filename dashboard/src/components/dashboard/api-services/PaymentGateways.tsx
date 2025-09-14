@@ -120,7 +120,7 @@ export const PaymentGateways = () => {
                 <div className="space-y-4 bg-muted p-4 rounded-md">
                   <h5 className="font-medium">API Endpoint</h5>
                   <pre className="bg-background p-2 rounded overflow-x-auto">
-                    <code>POST https://api.lanonasis.com/v1/payments/charge</code>
+                    <code>POST https://api.LanOnasis.com/v1/payments/charge</code>
                   </pre>
                   
                   <h5 className="font-medium">Request Body</h5>

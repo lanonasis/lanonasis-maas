@@ -39,14 +39,14 @@ export class CLIConfig {
     getApiUrl() {
         return process.env.MEMORY_API_URL ||
             this.config.apiUrl ||
-            'https://api.lanonasis.com/api/v1';
+            'https://api.LanOnasis.com/api/v1';
     }
     // Service Discovery Integration
     async discoverServices() {
         try {
             // Use axios instead of fetch for consistency
             const axios = (await import('axios')).default;
-            const discoveryUrl = 'https://api.lanonasis.com/.well-known/onasis.json';
+            const discoveryUrl = 'https://api.LanOnasis.com/.well-known/onasis.json';
             const response = await axios.get(discoveryUrl);
             this.config.discoveredServices = response.data;
             await this.save();
@@ -157,7 +157,7 @@ export class CLIConfig {
     getMCPServerUrl() {
         return this.config.discoveredServices?.mcp_ws_base ||
             this.config.mcpServerUrl ||
-            'https://api.lanonasis.com';
+            'https://api.LanOnasis.com';
     }
     shouldUseRemoteMCP() {
         const preference = this.config.mcpPreference || 'auto';

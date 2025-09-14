@@ -7,7 +7,7 @@ import {
   type EnhancedMemoryClientConfig,
   type OperationResult,
   type CLICapabilities
-} from '@lanonasis/memory-client';
+} from '@LanOnasis/memory-client';
 import { CreateMemoryRequest, SearchMemoryRequest, MemoryEntry, MemorySearchResult, MemoryType } from '../types/memory-aligned';
 import { IEnhancedMemoryService } from './IMemoryService';
 
@@ -19,7 +19,7 @@ export class EnhancedMemoryService implements IEnhancedMemoryService {
   private showPerformanceFeedback: boolean;
 
   constructor() {
-    this.config = vscode.workspace.getConfiguration('lanonasis');
+    this.config = vscode.workspace.getConfiguration('LanOnasis');
     this.showPerformanceFeedback = this.config.get<boolean>('showPerformanceFeedback', false);
     
     // Create status bar item to show CLI/MCP status
@@ -27,7 +27,7 @@ export class EnhancedMemoryService implements IEnhancedMemoryService {
       vscode.StatusBarAlignment.Right, 
       100
     );
-    this.statusBarItem.command = 'lanonasis.showConnectionInfo';
+    this.statusBarItem.command = 'LanOnasis.showConnectionInfo';
     
     this.initializeClient();
   }
@@ -46,11 +46,11 @@ export class EnhancedMemoryService implements IEnhancedMemoryService {
       const clientConfig: EnhancedMemoryClientConfig = ConfigPresets.ideExtension(apiKey);
       
       // Override with VSCode-specific settings
-      const apiUrl = this.config.get<string>('apiUrl', 'https://api.lanonasis.com');
+      const apiUrl = this.config.get<string>('apiUrl', 'https://api.LanOnasis.com');
       const useGateway = this.config.get<boolean>('useGateway', true);
       
       clientConfig.apiUrl = useGateway ? 
-        this.config.get<string>('gatewayUrl', 'https://api.lanonasis.com') : 
+        this.config.get<string>('gatewayUrl', 'https://api.LanOnasis.com') : 
         apiUrl;
 
       // Enable CLI detection with shorter timeout for responsive UX
@@ -136,17 +136,17 @@ export class EnhancedMemoryService implements IEnhancedMemoryService {
     if (connected) {
       this.statusBarItem.text = `$(database) ${status}`;
       this.statusBarItem.backgroundColor = undefined;
-      this.statusBarItem.tooltip = `Lanonasis Memory: Connected via ${status}`;
+      this.statusBarItem.tooltip = `LanOnasis Memory: Connected via ${status}`;
     } else {
       this.statusBarItem.text = `$(alert) ${status}`;
       this.statusBarItem.backgroundColor = new vscode.ThemeColor('statusBarItem.errorBackground');
-      this.statusBarItem.tooltip = `Lanonasis Memory: ${status}`;
+      this.statusBarItem.tooltip = `LanOnasis Memory: ${status}`;
     }
     this.statusBarItem.show();
   }
 
   public async refreshClient(): Promise<void> {
-    this.config = vscode.workspace.getConfiguration('lanonasis');
+    this.config = vscode.workspace.getConfiguration('LanOnasis');
     await this.initializeClient();
   }
 
@@ -339,7 +339,7 @@ export class EnhancedMemoryService implements IEnhancedMemoryService {
       `Golden Contract: ${caps.goldenContract ? '✅' : '❌'}`
     ];
 
-    const message = `Lanonasis Memory Connection Status:\n\n${details.join('\n')}`;
+    const message = `LanOnasis Memory Connection Status:\n\n${details.join('\n')}`;
     
     if (caps.cliAvailable && caps.goldenContract) {
       vscode.window.showInformationMessage(
@@ -347,7 +347,7 @@ export class EnhancedMemoryService implements IEnhancedMemoryService {
       );
     } else if (caps.authenticated) {
       vscode.window.showInformationMessage(
-        `${message}\n\nInstall @lanonasis/cli v1.5.2+ for enhanced performance.`
+        `${message}\n\nInstall @LanOnasis/cli v1.5.2+ for enhanced performance.`
       );
     } else {
       vscode.window.showWarningMessage(message);
@@ -411,7 +411,7 @@ export class EnhancedMemoryService implements IEnhancedMemoryService {
       'Learn More'
     ).then(selection => {
       if (selection === 'Learn More') {
-        vscode.env.openExternal(vscode.Uri.parse('https://docs.lanonasis.com/cli/integration'));
+        vscode.env.openExternal(vscode.Uri.parse('https://docs.LanOnasis.com/cli/integration'));
       }
     });
 

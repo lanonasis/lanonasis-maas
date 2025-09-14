@@ -95,7 +95,7 @@ export class ErrorHandler {
       recoveryActions: [
         {
           label: 'Check internet connection',
-          command: 'ping api.lanonasis.com',
+          command: 'ping api.LanOnasis.com',
           description: 'Test network connectivity'
         },
         {
@@ -156,7 +156,7 @@ export class ErrorHandler {
       recoveryActions: [
         {
           label: 'Check DNS',
-          command: 'nslookup api.lanonasis.com',
+          command: 'nslookup api.LanOnasis.com',
           description: 'Verify DNS resolution'
         },
         {

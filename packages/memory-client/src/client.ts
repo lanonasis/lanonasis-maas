@@ -66,7 +66,7 @@ export class MemoryClient {
 
     this.baseHeaders = {
       'Content-Type': 'application/json',
-      'User-Agent': '@lanonasis/memory-client/1.0.0',
+      'User-Agent': '@LanOnasis/memory-client/1.0.0',
       ...config.headers
     };
 

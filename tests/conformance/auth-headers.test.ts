@@ -6,7 +6,7 @@ const API_BASE = process.env.TEST_API_BASE || 'http://localhost:3000';
 describe('Authentication Header Semantics Conformance', () => {
   const testApiKey = process.env.TEST_API_KEY || 'test_api_key_123';
   const testJwtToken = process.env.TEST_JWT_TOKEN || 'test_jwt_token_456';
-  const validProjectScope = 'lanonasis-maas';
+  const validProjectScope = 'LanOnasis-maas';
 
   describe('X-API-Key Authentication', () => {
     it('should accept valid X-API-Key header', async () => {
@@ -127,7 +127,7 @@ describe('Authentication Header Semantics Conformance', () => {
     it('should reject invalid project scope', async () => {
       const invalidScopes = [
         'wrong-project',
-        'lanonasis-core',
+        'LanOnasis-core',
         'malicious-project',
         ''
       ];

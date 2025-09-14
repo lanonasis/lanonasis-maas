@@ -8,14 +8,14 @@ export class MemoryService implements IMemoryService {
     private config: vscode.WorkspaceConfiguration;
 
     constructor() {
-        this.config = vscode.workspace.getConfiguration('lanonasis');
+        this.config = vscode.workspace.getConfiguration('LanOnasis');
         this.initializeClient();
     }
 
     private initializeClient(): void {
         const apiKey = this.config.get<string>('apiKey');
-        const apiUrl = this.config.get<string>('apiUrl', 'https://api.lanonasis.com');
-        const gatewayUrl = this.config.get<string>('gatewayUrl', 'https://api.lanonasis.com');
+        const apiUrl = this.config.get<string>('apiUrl', 'https://api.LanOnasis.com');
+        const gatewayUrl = this.config.get<string>('gatewayUrl', 'https://api.LanOnasis.com');
         const useGateway = this.config.get<boolean>('useGateway', true);
 
         // Use gateway URL if enabled, otherwise use direct API URL
@@ -31,7 +31,7 @@ export class MemoryService implements IMemoryService {
     }
 
     public refreshClient(): void {
-        this.config = vscode.workspace.getConfiguration('lanonasis');
+        this.config = vscode.workspace.getConfiguration('LanOnasis');
         this.initializeClient();
     }
 
@@ -40,8 +40,8 @@ export class MemoryService implements IMemoryService {
     }
 
     public async testConnection(apiKey?: string): Promise<void> {
-        const apiUrl = this.config.get<string>('apiUrl', 'https://api.lanonasis.com');
-        const gatewayUrl = this.config.get<string>('gatewayUrl', 'https://api.lanonasis.com');
+        const apiUrl = this.config.get<string>('apiUrl', 'https://api.LanOnasis.com');
+        const gatewayUrl = this.config.get<string>('gatewayUrl', 'https://api.LanOnasis.com');
         const useGateway = this.config.get<boolean>('useGateway', true);
         const effectiveUrl = useGateway ? gatewayUrl : apiUrl;
 

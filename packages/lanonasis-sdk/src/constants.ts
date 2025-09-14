@@ -8,7 +8,7 @@
 /**
  * Default API URL for LanOnasis services
  */
-export const DEFAULT_API_URL = 'https://api.lanonasis.com';
+export const DEFAULT_API_URL = 'https://api.LanOnasis.com';
 
 /**
  * Default request timeout in milliseconds
@@ -114,7 +114,7 @@ export const HTTP_STATUS = {
  * MCP (Model Context Protocol) constants
  */
 export const MCP_CONFIG = {
-  DEFAULT_SSE_URL: 'https://api.lanonasis.com/mcp/sse',
+  DEFAULT_SSE_URL: 'https://api.LanOnasis.com/mcp/sse',
   HEARTBEAT_INTERVAL: 30000,
   RECONNECT_DELAY: 5000,
   MAX_RECONNECT_ATTEMPTS: 10

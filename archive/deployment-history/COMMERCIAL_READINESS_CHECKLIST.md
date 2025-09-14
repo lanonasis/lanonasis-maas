@@ -33,9 +33,9 @@
 - [x] **Connection Pooling** - Optimized for scale
 
 ### SDK & Developer Tools
-- [x] **TypeScript SDK** - Published as @lanonasis/memory-client
+- [x] **TypeScript SDK** - Published as @LanOnasis/memory-client
 - [x] **React Hooks** - useMemories, useMemorySearch
-- [x] **CLI Tool** - Published as @lanonasis/cli v1.1.0
+- [x] **CLI Tool** - Published as @LanOnasis/cli v1.1.0
 - [x] **MCP Integration** - Model Context Protocol support
 - [x] **Auto-retry Logic** - Built-in resilience
 - [x] **Type Safety** - Full TypeScript definitions
@@ -122,9 +122,9 @@
 ## 🚦 Deployment Status
 
 ### Production Services
-- [x] **API Service** - api.lanonasis.com
+- [x] **API Service** - api.LanOnasis.com
 - [x] **Frontend** - Dashboard deployed
-- [x] **Documentation** - docs.lanonasis.com
+- [x] **Documentation** - docs.LanOnasis.com
 - [x] **npm Packages** - SDK & CLI published
 - [x] **SSL Certificates** - Auto-renewed
 - [x] **DNS Configuration** - Properly configured
@@ -141,31 +141,31 @@
 
 1. **API Health Check**
    ```bash
-   curl https://api.lanonasis.com/api/v1/health
+   curl https://api.LanOnasis.com/api/v1/health
    ```
 
 2. **SDK Installation Test**
    ```bash
-   npm install @lanonasis/memory-client
-   npm install -g @lanonasis/cli
+   npm install @LanOnasis/memory-client
+   npm install -g @LanOnasis/cli
    ```
 
 3. **MCP Server Test**
    ```bash
-   npx -y @lanonasis/cli mcp start
-   npx -y @lanonasis/cli mcp test
+   npx -y @LanOnasis/cli mcp start
+   npx -y @LanOnasis/cli mcp test
    ```
 
 4. **Memory Operations**
    ```bash
-   lanonasis auth login
-   lanonasis create -t "Test" -c "Commercial readiness test"
-   lanonasis search "test"
+   LanOnasis auth login
+   LanOnasis create -t "Test" -c "Commercial readiness test"
+   LanOnasis search "test"
    ```
 
 5. **Frontend Access**
    - Dashboard: https://your-frontend-url/dashboard/memory
-   - API Docs: https://api.lanonasis.com/docs
+   - API Docs: https://api.LanOnasis.com/docs
 
 ## 🎯 Launch Readiness: ✅ READY
 

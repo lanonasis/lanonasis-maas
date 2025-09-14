@@ -99,7 +99,7 @@ export class UserGuidanceSystem {
 
     if (!proceedWithGuide) {
       console.log(chalk.yellow('Setup cancelled. You can run this guide anytime with:'));
-      console.log(chalk.cyan('  lanonasis guide'));
+      console.log(chalk.cyan('  LanOnasis guide'));
       return;
     }
 
@@ -217,7 +217,7 @@ export class UserGuidanceSystem {
         type: 'input',
         name: 'apiUrl',
         message: 'API URL (press Enter for default):',
-        default: 'https://api.lanonasis.com/api/v1'
+        default: 'https://api.LanOnasis.com/api/v1'
       },
       {
         type: 'list',
@@ -329,14 +329,14 @@ export class UserGuidanceSystem {
         console.log(chalk.gray(`Memory ID: ${memory.id}`));
         console.log();
         console.log(colors.info('💡 Try these commands to explore:'));
-        console.log(chalk.cyan('  lanonasis memory list'));
-        console.log(chalk.cyan('  lanonasis memory search "welcome"'));
+        console.log(chalk.cyan('  LanOnasis memory list'));
+        console.log(chalk.cyan('  LanOnasis memory search "welcome"'));
       } catch (error) {
         throw new Error(`Failed to create sample memory: ${error instanceof Error ? error.message : 'Unknown error'}`);
       }
     } else {
       console.log(colors.info('💡 You can create memories anytime with:'));
-      console.log(chalk.cyan('  lanonasis memory create --title "My Title" --content "Content"'));
+      console.log(chalk.cyan('  LanOnasis memory create --title "My Title" --content "Content"'));
     }
   }
 
@@ -348,22 +348,22 @@ export class UserGuidanceSystem {
       {
         name: 'Topics',
         description: 'Organize memories into categories',
-        command: 'lanonasis topic create --name "My Project"'
+        command: 'LanOnasis topic create --name "My Project"'
       },
       {
         name: 'MCP Integration',
         description: 'Model Context Protocol for AI interactions',
-        command: 'lanonasis mcp status'
+        command: 'LanOnasis mcp status'
       },
       {
         name: 'API Key Management',
         description: 'Create and manage API keys for integrations',
-        command: 'lanonasis api-keys list'
+        command: 'LanOnasis api-keys list'
       },
       {
         name: 'Memory Search',
         description: 'Semantic search across all memories',
-        command: 'lanonasis memory search "your query"'
+        command: 'LanOnasis memory search "your query"'
       }
     ];
 
@@ -402,15 +402,15 @@ export class UserGuidanceSystem {
       switch (shell) {
         case 'bash':
           console.log(colors.info('Add to your ~/.bashrc:'));
-          console.log(chalk.cyan('  source <(lanonasis --completion bash)'));
+          console.log(chalk.cyan('  source <(LanOnasis --completion bash)'));
           break;
         case 'zsh':
           console.log(colors.info('Add to your ~/.zshrc:'));
-          console.log(chalk.cyan('  source <(lanonasis --completion zsh)'));
+          console.log(chalk.cyan('  source <(LanOnasis --completion zsh)'));
           break;
         case 'fish':
           console.log(colors.info('Add to your ~/.config/fish/config.fish:'));
-          console.log(chalk.cyan('  lanonasis --completion fish | source'));
+          console.log(chalk.cyan('  LanOnasis --completion fish | source'));
           break;
       }
       
@@ -421,7 +421,7 @@ export class UserGuidanceSystem {
     console.log();
     console.log(chalk.yellow('🔗 Useful Aliases:'));
     console.log(colors.info('You can also use these command aliases:'));
-    console.log(chalk.cyan('  onasis    # Same as lanonasis (Golden Contract compliant)'));
+    console.log(chalk.cyan('  onasis    # Same as LanOnasis (Golden Contract compliant)'));
     console.log(chalk.cyan('  memory    # Direct memory management'));
     console.log(chalk.cyan('  maas      # MaaS-focused interface'));
   }
@@ -445,13 +445,13 @@ export class UserGuidanceSystem {
     console.log();
 
     console.log(colors.info('Next steps:'));
-    console.log(chalk.cyan('  lanonasis health     # Check system status'));
-    console.log(chalk.cyan('  lanonasis memory list  # View your memories'));
-    console.log(chalk.cyan('  lanonasis --help     # Explore all commands'));
+    console.log(chalk.cyan('  LanOnasis health     # Check system status'));
+    console.log(chalk.cyan('  LanOnasis memory list  # View your memories'));
+    console.log(chalk.cyan('  LanOnasis --help     # Explore all commands'));
     console.log();
 
-    console.log(chalk.gray('💡 Need help? Visit: https://docs.lanonasis.com/cli'));
-    console.log(chalk.gray('🌐 Dashboard: https://api.lanonasis.com/dashboard'));
+    console.log(chalk.gray('💡 Need help? Visit: https://docs.LanOnasis.com/cli'));
+    console.log(chalk.gray('🌐 Dashboard: https://api.LanOnasis.com/dashboard'));
   }
 }
 
@@ -469,25 +469,25 @@ export async function quickStartCommand(): Promise<void> {
     {
       category: 'Setup',
       commands: [
-        { cmd: 'lanonasis init', desc: 'Initialize configuration' },
-        { cmd: 'lanonasis login --vendor-key pk_xxx.sk_xxx', desc: 'Authenticate with vendor key' },
-        { cmd: 'lanonasis health', desc: 'Verify system health' }
+        { cmd: 'LanOnasis init', desc: 'Initialize configuration' },
+        { cmd: 'LanOnasis login --vendor-key pk_xxx.sk_xxx', desc: 'Authenticate with vendor key' },
+        { cmd: 'LanOnasis health', desc: 'Verify system health' }
       ]
     },
     {
       category: 'Memory Management',
       commands: [
-        { cmd: 'lanonasis memory create --title "Title" --content "Content"', desc: 'Create memory' },
-        { cmd: 'lanonasis memory list', desc: 'List all memories' },
-        { cmd: 'lanonasis memory search "query"', desc: 'Search memories' }
+        { cmd: 'LanOnasis memory create --title "Title" --content "Content"', desc: 'Create memory' },
+        { cmd: 'LanOnasis memory list', desc: 'List all memories' },
+        { cmd: 'LanOnasis memory search "query"', desc: 'Search memories' }
       ]
     },
     {
       category: 'Advanced',
       commands: [
-        { cmd: 'lanonasis topic create --name "Project"', desc: 'Create topic' },
-        { cmd: 'lanonasis mcp status', desc: 'Check MCP server' },
-        { cmd: 'lanonasis api-keys list', desc: 'Manage API keys' }
+        { cmd: 'LanOnasis topic create --name "Project"', desc: 'Create topic' },
+        { cmd: 'LanOnasis mcp status', desc: 'Check MCP server' },
+        { cmd: 'LanOnasis api-keys list', desc: 'Manage API keys' }
       ]
     }
   ];
@@ -503,7 +503,7 @@ export async function quickStartCommand(): Promise<void> {
 
   console.log(colors.info('💡 Pro Tips:'));
   console.log(chalk.gray('  • Use --help with any command for detailed options'));
-  console.log(chalk.gray('  • Set up shell completions: lanonasis completion'));
+  console.log(chalk.gray('  • Set up shell completions: LanOnasis completion'));
   console.log(chalk.gray('  • Use --verbose for detailed operation logs'));
   console.log();
 }

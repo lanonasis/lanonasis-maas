@@ -19,7 +19,7 @@ node --version
 npm --version
 
 # Check current CLI version (if installed)
-lanonasis --version || echo "CLI not installed"
+LanOnasis --version || echo "CLI not installed"
 ```
 
 ### ✅ Backup Current Configuration
@@ -36,11 +36,11 @@ echo "Current auth method: $(grep -E 'token|apiKey' ~/.maas/config.json 2>/dev/n
 ### Step 1: Install CLI v1.5.2
 ```bash
 # Install globally
-npm install -g @lanonasis/cli@1.5.2
+npm install -g @LanOnasis/cli@1.5.2
 
 # Verify installation
 onasis --version  # Should show v1.5.2
-lanonasis --version  # Should show v1.5.2
+LanOnasis --version  # Should show v1.5.2
 ```
 
 ### Step 2: Initialize Configuration
@@ -134,7 +134,7 @@ onasis --completion fish | source     # Fish
 onasis config set defaultOutputFormat table  # or json, yaml, csv
 
 # Set API URL
-onasis config set apiUrl https://api.lanonasis.com/api/v1
+onasis config set apiUrl https://api.LanOnasis.com/api/v1
 ```
 
 ## 📊 Command Migration Reference
@@ -204,7 +204,7 @@ curl -H "Authorization: Bearer $API_TOKEN" api.company.com/health
 
 # New CI/CD (with CLI v1.5.2)
 #!/bin/bash
-npm install -g @lanonasis/cli@1.5.2
+npm install -g @LanOnasis/cli@1.5.2
 echo "$VENDOR_KEY" | onasis login --vendor-key
 onasis health --output json | jq '.status'
 onasis deploy status --output json
@@ -217,7 +217,7 @@ onasis deploy status --output json
 echo "Setting up Onasis CLI for development team..."
 
 # Install CLI
-npm install -g @lanonasis/cli@1.5.2
+npm install -g @LanOnasis/cli@1.5.2
 
 # Interactive setup
 onasis guide
@@ -249,10 +249,10 @@ onasis --verbose health
 onasis health --verbose
 
 # Override API URL temporarily
-onasis --api-url https://api.lanonasis.com/api/v1 health
+onasis --api-url https://api.LanOnasis.com/api/v1 health
 
 # Check service discovery
-curl https://api.lanonasis.com/.well-known/onasis.json
+curl https://api.LanOnasis.com/.well-known/onasis.json
 ```
 
 ### Configuration Issues
@@ -364,9 +364,9 @@ onasis <command> --help       # Command-specific help
 - Quick Reference: `onasis quickstart`
 
 ### External Support
-- GitHub Issues: [https://github.com/lanonasis/lanonasis-maas/issues](https://github.com/lanonasis/lanonasis-maas/issues)
-- Documentation: [https://docs.lanonasis.com/cli](https://docs.lanonasis.com/cli)
-- NPM Package: [https://www.npmjs.com/package/@lanonasis/cli](https://www.npmjs.com/package/@lanonasis/cli)
+- GitHub Issues: [https://github.com/LanOnasis/LanOnasis-maas/issues](https://github.com/LanOnasis/LanOnasis-maas/issues)
+- Documentation: [https://docs.LanOnasis.com/cli](https://docs.LanOnasis.com/cli)
+- NPM Package: [https://www.npmjs.com/package/@LanOnasis/cli](https://www.npmjs.com/package/@LanOnasis/cli)
 
 ---
 

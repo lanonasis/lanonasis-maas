@@ -64,9 +64,9 @@ Register MAAS as a service in onasis-core:
 ```typescript
 // /config/services.ts
 export const REGISTERED_SERVICES = {
-  'lanonasis-maas': {
+  'LanOnasis-maas': {
     name: 'Memory as a Service',
-    base_url: process.env.MAAS_API_URL || 'https://api.lanonasis.com',
+    base_url: process.env.MAAS_API_URL || 'https://api.LanOnasis.com',
     auth_required: true,
     supported_auth: ['jwt', 'vendor_key'],
     endpoints: {
@@ -208,18 +208,18 @@ Update MAAS `.env` to point to onasis-core:
 
 ```bash
 # Authentication Server (onasis-core)
-AUTH_SERVER_URL=https://api.lanonasis.com
-CORE_API_URL=https://api.lanonasis.com
+AUTH_SERVER_URL=https://api.LanOnasis.com
+CORE_API_URL=https://api.LanOnasis.com
 
 # Service Discovery
-SERVICE_DISCOVERY_URL=https://api.lanonasis.com/.well-known/onasis.json
+SERVICE_DISCOVERY_URL=https://api.LanOnasis.com/.well-known/onasis.json
 
 # OAuth Configuration  
-OAUTH_CLIENT_ID=lanonasis_mcp_client_2024
-OAUTH_REDIRECT_URI=https://api.lanonasis.com/auth/oauth/callback
+OAUTH_CLIENT_ID=LanOnasis_mcp_client_2024
+OAUTH_REDIRECT_URI=https://api.LanOnasis.com/auth/oauth/callback
 
 # API Configuration
-MEMORY_API_URL=https://api.lanonasis.com/api/v1
+MEMORY_API_URL=https://api.LanOnasis.com/api/v1
 ```
 
 ### **2. Authentication Middleware Update**
@@ -231,7 +231,7 @@ Update MAAS auth middleware to validate through core:
 import axios from 'axios';
 
 export async function validateWithCore(authHeader: string, vendorKey?: string) {
-  const coreUrl = process.env.CORE_API_URL || 'https://api.lanonasis.com';
+  const coreUrl = process.env.CORE_API_URL || 'https://api.LanOnasis.com';
   
   try {
     if (vendorKey) {
@@ -239,7 +239,7 @@ export async function validateWithCore(authHeader: string, vendorKey?: string) {
       const response = await axios.post(`${coreUrl}/api/v1/auth/validate-vendor-key`, {
         vendorKey
       }, {
-        headers: { 'X-Service': 'lanonasis-maas' },
+        headers: { 'X-Service': 'LanOnasis-maas' },
         timeout: 5000
       });
       
@@ -252,7 +252,7 @@ export async function validateWithCore(authHeader: string, vendorKey?: string) {
       const response = await axios.post(`${coreUrl}/api/v1/auth/validate-jwt`, {
         token
       }, {
-        headers: { 'X-Service': 'lanonasis-maas' },
+        headers: { 'X-Service': 'LanOnasis-maas' },
         timeout: 5000
       });
       
@@ -277,24 +277,24 @@ Update onasis-core service discovery to include MAAS:
   "version": "1.0.0",
   "services": {
     "auth": {
-      "base": "https://api.lanonasis.com/api/v1/auth",
+      "base": "https://api.LanOnasis.com/api/v1/auth",
       "endpoints": ["login", "register", "oauth", "validate-vendor-key", "validate-jwt"]
     },
     "memory": {
-      "base": "https://api.lanonasis.com/api/v1/memory", 
-      "service": "lanonasis-maas",
+      "base": "https://api.LanOnasis.com/api/v1/memory", 
+      "service": "LanOnasis-maas",
       "auth_required": true,
       "endpoints": ["search", "create", "update", "delete"]
     },
     "api_keys": {
-      "base": "https://api.lanonasis.com/api/v1/api-keys",
-      "service": "lanonasis-maas", 
+      "base": "https://api.LanOnasis.com/api/v1/api-keys",
+      "service": "LanOnasis-maas", 
       "auth_required": true,
       "endpoints": ["create", "list", "rotate", "delete"]
     },
     "mcp": {
-      "base": "https://api.lanonasis.com/api/v1/mcp",
-      "service": "lanonasis-maas",
+      "base": "https://api.LanOnasis.com/api/v1/mcp",
+      "service": "LanOnasis-maas",
       "protocols": ["stdio", "http", "ws", "sse"],
       "auth_required": true
     }
@@ -385,16 +385,16 @@ cp .env.production-ready .env
 ### **3. Testing Protocol**
 ```bash
 # Test vendor key validation
-curl -X POST https://api.lanonasis.com/api/v1/auth/validate-vendor-key \
+curl -X POST https://api.LanOnasis.com/api/v1/auth/validate-vendor-key \
   -H "Content-Type: application/json" \
   -d '{"vendorKey": "pk_test_key.sk_test_secret"}'
 
 # Test MAAS authentication  
 curl -H "X-Vendor-Key: pk_test_key.sk_test_secret" \
-  https://api.lanonasis.com/api/v1/memory/search
+  https://api.LanOnasis.com/api/v1/memory/search
 
 # Test service discovery
-curl https://api.lanonasis.com/.well-known/onasis.json
+curl https://api.LanOnasis.com/.well-known/onasis.json
 ```
 
 ## 📊 **Monitoring & Metrics**

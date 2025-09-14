@@ -1,8 +1,8 @@
-# Lanonasis Memory Assistant for Windsurf
+# LanOnasis Memory Assistant for Windsurf
 
 🚀 **Next-Generation AI Memory Management for Windsurf IDE**
 
-The Lanonasis Memory Assistant brings intelligent, AI-powered memory management directly to your Windsurf IDE, with enhanced context awareness and seamless authentication.
+The LanOnasis Memory Assistant brings intelligent, AI-powered memory management directly to your Windsurf IDE, with enhanced context awareness and seamless authentication.
 
 ## ✨ Key Features
 
@@ -37,7 +37,7 @@ The Lanonasis Memory Assistant brings intelligent, AI-powered memory management 
 ### Installation
 
 1. **Install Extension**
-   - Download `lanonasis-memory-windsurf-1.0.0.vsix`
+   - Download `LanOnasis-memory-windsurf-1.0.0.vsix`
    - In Windsurf: Extensions → Install from VSIX
    - Or drag and drop the .vsix file into Windsurf
 
@@ -48,7 +48,7 @@ The Lanonasis Memory Assistant brings intelligent, AI-powered memory management 
 
 3. **Authentication Setup**
    - **Auto Login** (Recommended): Browser-based OAuth2
-   - **Manual Setup**: Enter API key from api.lanonasis.com
+   - **Manual Setup**: Enter API key from api.LanOnasis.com
    - **Settings**: Configure via Windsurf preferences
 
 ## 🎯 Usage Guide
@@ -112,35 +112,35 @@ The AI Assistant provides an interactive interface for memory operations:
 ### Authentication Settings
 ```json
 {
-  "lanonasis.useAutoAuth": true,
-  "lanonasis.authUrl": "https://auth.lanonasis.com",
-  "lanonasis.apiUrl": "https://api.lanonasis.com"
+  "LanOnasis.useAutoAuth": true,
+  "LanOnasis.authUrl": "https://auth.LanOnasis.com",
+  "LanOnasis.apiUrl": "https://api.LanOnasis.com"
 }
 ```
 
 ### Memory Management
 ```json
 {
-  "lanonasis.defaultMemoryType": "context",
-  "lanonasis.searchLimit": 10,
-  "lanonasis.autoRefreshInterval": 300000
+  "LanOnasis.defaultMemoryType": "context",
+  "LanOnasis.searchLimit": 10,
+  "LanOnasis.autoRefreshInterval": 300000
 }
 ```
 
 ### Windsurf-Specific Features
 ```json
 {
-  "lanonasis.enableAiAssist": true,
-  "lanonasis.windsurf.enableContextAwareness": true,
-  "lanonasis.enableAutoCompletion": true
+  "LanOnasis.enableAiAssist": true,
+  "LanOnasis.windsurf.enableContextAwareness": true,
+  "LanOnasis.enableAutoCompletion": true
 }
 ```
 
 ### Connection Options
 ```json
 {
-  "lanonasis.useGateway": true,
-  "lanonasis.gatewayUrl": "https://api.lanonasis.com"
+  "LanOnasis.useGateway": true,
+  "LanOnasis.gatewayUrl": "https://api.LanOnasis.com"
 }
 ```
 
@@ -244,7 +244,7 @@ The AI Assistant provides an interactive interface for memory operations:
 
 ## 📚 API Integration
 
-The extension integrates with the Lanonasis Memory Service API:
+The extension integrates with the LanOnasis Memory Service API:
 
 - **Memory CRUD**: Full create, read, update, delete operations
 - **Semantic Search**: AI-powered vector similarity search
@@ -288,10 +288,10 @@ The extension integrates with the Lanonasis Memory Service API:
 - Use Gateway mode for better performance
 
 ### **Support Channels**
-- **Documentation**: https://docs.lanonasis.com
-- **Support Email**: support@lanonasis.com
-- **GitHub Issues**: https://github.com/lanonasis/lanonasis-maas/issues
-- **Community Discord**: https://discord.gg/lanonasis
+- **Documentation**: https://docs.LanOnasis.com
+- **Support Email**: support@LanOnasis.com
+- **GitHub Issues**: https://github.com/LanOnasis/LanOnasis-maas/issues
+- **Community Discord**: https://discord.gg/LanOnasis
 
 ## 🔮 Roadmap
 
@@ -316,7 +316,7 @@ This extension is licensed under the MIT License. See the [LICENSE](LICENSE) fil
 
 ## 🙏 Acknowledgments
 
-Built with ❤️ for the Windsurf community by the Lanonasis team.
+Built with ❤️ for the Windsurf community by the LanOnasis team.
 
 **Powered by:**
 - **Windsurf IDE**: Next-generation development environment
@@ -328,6 +328,6 @@ Built with ❤️ for the Windsurf community by the Lanonasis team.
 
 **Ready to supercharge your Windsurf workflow with AI-powered memory management?**
 
-[Get Started](https://api.lanonasis.com) • [Documentation](https://docs.lanonasis.com) • [Community](https://discord.gg/lanonasis)
+[Get Started](https://api.LanOnasis.com) • [Documentation](https://docs.LanOnasis.com) • [Community](https://discord.gg/LanOnasis)
 
-*Experience the future of intelligent coding with Lanonasis Memory Assistant for Windsurf!* 🚀
+*Experience the future of intelligent coding with LanOnasis Memory Assistant for Windsurf!* 🚀

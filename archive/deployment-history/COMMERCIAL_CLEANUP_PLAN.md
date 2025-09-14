@@ -1,7 +1,7 @@
 # 🏢 Commercial Readiness Cleanup Plan
 
 ## 📋 Overview
-Transform the Lanonasis MaaS repository into a commercial-grade codebase following industry best practices.
+Transform the LanOnasis MaaS repository into a commercial-grade codebase following industry best practices.
 
 ## 🎯 Phase 1: Repository Structure & Organization
 

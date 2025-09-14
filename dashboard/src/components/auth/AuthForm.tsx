@@ -355,7 +355,7 @@ export const AuthForm = ({ mode, onSubmit, isLoading = false }: AuthFormProps) =
           </div>
           <div>
             <Link to="/landing" className="text-primary/70 hover:text-primary hover:underline">
-              Learn more about Lanonasis Platform
+              Learn more about LanOnasis Platform
             </Link>
           </div>
         </div>

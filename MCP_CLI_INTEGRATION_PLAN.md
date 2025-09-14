@@ -90,14 +90,14 @@ const enhancedMCPTools = [
 #### **Install CLI Dependencies in MCP Server**
 ```bash
 cd mcp-server
-npm install @lanonasis/memory-client@1.3.0
-npm install @lanonasis/cli-auth  # New package for shared auth
+npm install @LanOnasis/memory-client@1.3.0
+npm install @LanOnasis/cli-auth  # New package for shared auth
 ```
 
 #### **Implement Vendor Key Validation**
 ```typescript
 // mcp-server/src/middleware/cli-auth.ts
-import { validateVendorKey, parseVendorKey } from '@lanonasis/cli-auth';
+import { validateVendorKey, parseVendorKey } from '@LanOnasis/cli-auth';
 
 export class MCPAuthMiddleware {
   async validateRequest(vendorKey: string): Promise<VendorContext> {
@@ -122,7 +122,7 @@ export class MCPAuthMiddleware {
 #### **Route MCP Through Authenticated Endpoints**
 ```typescript
 // mcp-server/src/services/core-integration.ts
-import { EnhancedMemoryClient } from '@lanonasis/memory-client';
+import { EnhancedMemoryClient } from '@LanOnasis/memory-client';
 
 export class CoreIntegrationService {
   async executeMemoryOperation(
@@ -132,7 +132,7 @@ export class CoreIntegrationService {
   ) {
     // Create authenticated client using our enhanced SDK
     const client = new EnhancedMemoryClient({
-      apiUrl: 'https://api.lanonasis.com',
+      apiUrl: 'https://api.LanOnasis.com',
       vendorKey,
       preferCLI: false,        // MCP server uses API mode
       enforceRLS: true,        // Ensure vendor isolation
@@ -215,7 +215,7 @@ export const enhancedMemoryTools = [
 ```bash
 # 1. Update MCP server with CLI integration
 cd mcp-server
-npm install @lanonasis/memory-client@1.3.0
+npm install @LanOnasis/memory-client@1.3.0
 
 # 2. Test local CLI ↔ MCP integration
 npm run dev:test-cli-integration
@@ -304,7 +304,7 @@ This integration creates a **unified, secure, high-performance ecosystem**:
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                    Lanonasis Unified Ecosystem                  │
+│                    LanOnasis Unified Ecosystem                  │
 ├─────────────────────────────────────────────────────────────────┤
 │  CLI v1.5.2+ (Local)     ←→    MCP Server (Remote VPS)         │
 │  ├── Golden Contract            ├── 17+ Enterprise Tools       │

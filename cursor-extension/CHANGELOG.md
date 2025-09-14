@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to the Lanonasis Memory Assistant for Cursor extension will be documented in this file.
+All notable changes to the LanOnasis Memory Assistant for Cursor extension will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
@@ -48,7 +48,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 #### Dependencies
 - **VSCode Engine**: ^1.102.0 (Cursor compatible)
-- **@lanonasis/memory-client**: ^1.0.0
+- **@LanOnasis/memory-client**: ^1.0.0
 - **TypeScript**: ^5.8.3
 - **Node.js**: ^16.0.0+
 
@@ -61,15 +61,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 #### Configuration Schema
 ```json
 {
-  "lanonasis.useAutoAuth": true,
-  "lanonasis.authUrl": "https://auth.lanonasis.com",
-  "lanonasis.apiUrl": "https://api.lanonasis.com",
-  "lanonasis.gatewayUrl": "https://api.lanonasis.com",
-  "lanonasis.useGateway": true,
-  "lanonasis.defaultMemoryType": "context",
-  "lanonasis.searchLimit": 10,
-  "lanonasis.enableAutoCompletion": true,
-  "lanonasis.autoRefreshInterval": 300000
+  "LanOnasis.useAutoAuth": true,
+  "LanOnasis.authUrl": "https://auth.LanOnasis.com",
+  "LanOnasis.apiUrl": "https://api.LanOnasis.com",
+  "LanOnasis.gatewayUrl": "https://api.LanOnasis.com",
+  "LanOnasis.useGateway": true,
+  "LanOnasis.defaultMemoryType": "context",
+  "LanOnasis.searchLimit": 10,
+  "LanOnasis.enableAutoCompletion": true,
+  "LanOnasis.autoRefreshInterval": 300000
 }
 ```
 
@@ -120,6 +120,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ---
 
 For support and feedback:
-- **Documentation**: https://docs.lanonasis.com
-- **Support**: support@lanonasis.com
-- **Issues**: https://github.com/lanonasis/lanonasis-maas/issues
+- **Documentation**: https://docs.LanOnasis.com
+- **Support**: support@LanOnasis.com
+- **Issues**: https://github.com/LanOnasis/LanOnasis-maas/issues

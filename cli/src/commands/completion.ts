@@ -399,23 +399,23 @@ export async function installCompletionsCommand(): Promise<void> {
   
   console.log(chalk.white('Bash:'));
   console.log(chalk.gray('  # Add to ~/.bashrc or ~/.bash_profile:'));
-  console.log(chalk.cyan('  source <(lanonasis --completion bash)'));
+  console.log(chalk.cyan('  source <(LanOnasis --completion bash)'));
   console.log();
   
   console.log(chalk.white('Zsh:'));
   console.log(chalk.gray('  # Add to ~/.zshrc:'));
-  console.log(chalk.cyan('  source <(lanonasis --completion zsh)'));
-  console.log(chalk.gray('  # Or for Oh My Zsh, create ~/.oh-my-zsh/completions/_lanonasis'));
+  console.log(chalk.cyan('  source <(LanOnasis --completion zsh)'));
+  console.log(chalk.gray('  # Or for Oh My Zsh, create ~/.oh-my-zsh/completions/_LanOnasis'));
   console.log();
   
   console.log(chalk.white('Fish:'));
   console.log(chalk.gray('  # Add to ~/.config/fish/config.fish:'));
-  console.log(chalk.cyan('  lanonasis --completion fish | source'));
-  console.log(chalk.gray('  # Or save to ~/.config/fish/completions/lanonasis.fish'));
+  console.log(chalk.cyan('  LanOnasis --completion fish | source'));
+  console.log(chalk.gray('  # Or save to ~/.config/fish/completions/LanOnasis.fish'));
   console.log();
   
   console.log(colors.info('💡 Completions support all command aliases:'));
-  console.log(chalk.gray('   • lanonasis, onasis, memory, maas'));
+  console.log(chalk.gray('   • LanOnasis, onasis, memory, maas'));
   console.log();
   
   console.log(colors.success('✅ Run the appropriate command above for your shell'));

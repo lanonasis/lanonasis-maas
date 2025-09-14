@@ -1,7 +1,7 @@
 /**
- * @lanonasis/memory-client
+ * @LanOnasis/memory-client
  * 
- * Memory as a Service (MaaS) Client SDK for Lanonasis
+ * Memory as a Service (MaaS) Client SDK for LanOnasis
  * Intelligent memory management with semantic search capabilities
  */
 
@@ -26,7 +26,7 @@ export * from './types';
 
 // Constants
 export const VERSION = '1.3.0';
-export const CLIENT_NAME = '@lanonasis/memory-client';
+export const CLIENT_NAME = '@LanOnasis/memory-client';
 
 // Environment detection
 export const isBrowser = typeof window !== 'undefined';
@@ -40,12 +40,12 @@ export const defaultConfigs = {
     useGateway: false
   },
   production: {
-    apiUrl: 'https://api.lanonasis.com',
+    apiUrl: 'https://api.LanOnasis.com',
     timeout: 15000,
     useGateway: true
   },
   gateway: {
-    apiUrl: 'https://api.lanonasis.com',
+    apiUrl: 'https://api.LanOnasis.com',
     timeout: 10000,
     useGateway: true
   }

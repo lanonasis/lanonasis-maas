@@ -75,8 +75,8 @@ class AuthenticationService {
     }
     async authenticateWithBrowser(cancellationToken) {
         return new Promise((resolve, reject) => {
-            const config = vscode.workspace.getConfiguration('lanonasis');
-            const authUrl = config.get('authUrl', 'https://auth.lanonasis.com');
+            const config = vscode.workspace.getConfiguration('LanOnasis');
+            const authUrl = config.get('authUrl', 'https://auth.LanOnasis.com');
             // Generate PKCE challenge
             const codeVerifier = this.generateCodeVerifier();
             const codeChallenge = this.generateCodeChallenge(codeVerifier);
@@ -130,7 +130,7 @@ class AuthenticationService {
         // Clear API key
         await this.context.secrets.delete(AuthenticationService.API_KEY_KEY);
         // Clear any stored configuration
-        const config = vscode.workspace.getConfiguration('lanonasis');
+        const config = vscode.workspace.getConfiguration('LanOnasis');
         await config.update('apiKey', undefined, vscode.ConfigurationTarget.Global);
         this.cleanup();
     }
@@ -232,8 +232,8 @@ class AuthenticationService {
         }
     }
     async exchangeCodeForToken(code, codeVerifier) {
-        const config = vscode.workspace.getConfiguration('lanonasis');
-        const authUrl = config.get('authUrl', 'https://auth.lanonasis.com');
+        const config = vscode.workspace.getConfiguration('LanOnasis');
+        const authUrl = config.get('authUrl', 'https://auth.LanOnasis.com');
         const tokenUrl = new url_1.URL('/oauth/token', authUrl);
         const body = new URLSearchParams({
             grant_type: 'authorization_code',
@@ -267,8 +267,8 @@ class AuthenticationService {
         if (!this.authToken?.refresh_token) {
             throw new Error('No refresh token available');
         }
-        const config = vscode.workspace.getConfiguration('lanonasis');
-        const authUrl = config.get('authUrl', 'https://auth.lanonasis.com');
+        const config = vscode.workspace.getConfiguration('LanOnasis');
+        const authUrl = config.get('authUrl', 'https://auth.LanOnasis.com');
         const tokenUrl = new url_1.URL('/oauth/token', authUrl);
         const body = new URLSearchParams({
             grant_type: 'refresh_token',
@@ -297,8 +297,8 @@ class AuthenticationService {
         await this.storeToken(this.authToken);
     }
     async validateApiKey(apiKey) {
-        const config = vscode.workspace.getConfiguration('lanonasis');
-        const apiUrl = config.get('apiUrl', 'https://api.lanonasis.com');
+        const config = vscode.workspace.getConfiguration('LanOnasis');
+        const apiUrl = config.get('apiUrl', 'https://api.LanOnasis.com');
         const useGateway = config.get('useGateway', true);
         const baseUrl = useGateway ? config.get('gatewayUrl', apiUrl) : apiUrl;
         const testUrl = new url_1.URL('/api/v1/health', baseUrl);
@@ -342,7 +342,7 @@ class AuthenticationService {
             return storedKey;
         }
         // Fallback to configuration (legacy)
-        const config = vscode.workspace.getConfiguration('lanonasis');
+        const config = vscode.workspace.getConfiguration('LanOnasis');
         return config.get('apiKey') || null;
     }
     async storeApiKey(apiKey) {
@@ -356,8 +356,8 @@ class AuthenticationService {
     }
 }
 exports.AuthenticationService = AuthenticationService;
-AuthenticationService.AUTH_TOKEN_KEY = 'lanonasis.authToken';
-AuthenticationService.API_KEY_KEY = 'lanonasis.apiKey';
+AuthenticationService.AUTH_TOKEN_KEY = 'LanOnasis.authToken';
+AuthenticationService.API_KEY_KEY = 'LanOnasis.apiKey';
 AuthenticationService.CALLBACK_PORT = 8080;
 AuthenticationService.CALLBACK_PATH = '/callback';
 //# sourceMappingURL=AuthenticationService.js.map

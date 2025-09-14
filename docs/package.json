@@ -1,7 +1,7 @@
 {
-  "name": "@lanonasis/docs",
+  "name": "@LanOnasis/docs",
   "version": "1.0.0",
-  "description": "Lanonasis Memory Service Documentation Site",
+  "description": "LanOnasis Memory Service Documentation Site",
   "type": "module",
   "private": true,
   "scripts": {

@@ -1,16 +1,16 @@
 # 🎉 Extension Successfully Uploaded!
 
 ## ✅ What You've Accomplished
-- ✅ Publisher "lanonasis" created
+- ✅ Publisher "LanOnasis" created
 - ✅ Extension uploaded via marketplace interface
 - ✅ Extension package processed
 
 ## 🔍 Next Steps & Verification
 
 ### 1. **Check Extension Status**
-- **Publisher Dashboard**: https://marketplace.visualstudio.com/manage/publishers/lanonasis
-- **Extension URL**: https://marketplace.visualstudio.com/items?itemName=lanonasis.lanonasis-memory
-- **Search Test**: Go to VS Code → Extensions → Search "Lanonasis Memory"
+- **Publisher Dashboard**: https://marketplace.visualstudio.com/manage/publishers/LanOnasis
+- **Extension URL**: https://marketplace.visualstudio.com/items?itemName=LanOnasis.LanOnasis-memory
+- **Search Test**: Go to VS Code → Extensions → Search "LanOnasis Memory"
 
 ### 2. **Marketplace Propagation Time**
 - **Initial availability**: 5-15 minutes
@@ -20,13 +20,13 @@
 ### 3. **Verification Checklist**
 
 #### A. Via Marketplace Website
-- [ ] Extension appears at: https://marketplace.visualstudio.com/items?itemName=lanonasis.lanonasis-memory
+- [ ] Extension appears at: https://marketplace.visualstudio.com/items?itemName=LanOnasis.LanOnasis-memory
 - [ ] Download count shows (starts at 0)
 - [ ] Rating section visible
 - [ ] README content displays correctly
 
 #### B. Via VS Code
-- [ ] Search "lanonasis" in Extensions tab
+- [ ] Search "LanOnasis" in Extensions tab
 - [ ] Search "memory assistant" in Extensions tab
 - [ ] Can install directly from marketplace
 - [ ] Extension activates correctly after install
@@ -34,8 +34,8 @@
 #### C. Via Command Line (after propagation)
 ```bash
 # These should work once fully propagated
-vsce show lanonasis.lanonasis-memory
-vsce ls lanonasis
+vsce show LanOnasis.LanOnasis-memory
+vsce ls LanOnasis
 ```
 
 ### 4. **Immediate Actions You Can Take**
@@ -43,7 +43,7 @@ vsce ls lanonasis
 #### A. Test Installation
 1. Open VS Code
 2. Go to Extensions (Cmd+Shift+X)
-3. Search for "lanonasis"
+3. Search for "LanOnasis"
 4. Install your extension
 5. Test all features work
 
@@ -79,13 +79,13 @@ vsce publish
 export AZURE_DEVOPS_EXT_PAT='your-token'
 
 # Login to publisher
-vsce login lanonasis
+vsce login LanOnasis
 
 # List your extensions
-vsce ls lanonasis
+vsce ls LanOnasis
 
 # Show extension details
-vsce show lanonasis.lanonasis-memory
+vsce show LanOnasis.LanOnasis-memory
 
 # Publish updates
 vsce publish
@@ -101,12 +101,12 @@ vsce publish --pre-release
 
 #### Extension Not Found in Search
 - Wait 30-60 minutes for search indexing
-- Try exact name: "Lanonasis Memory Assistant"
-- Try publisher name: "lanonasis"
+- Try exact name: "LanOnasis Memory Assistant"
+- Try publisher name: "LanOnasis"
 
 #### CLI Commands Failing
 - Workspace conflicts (as seen earlier)
-- Try from clean directory: `cd /tmp && vsce show lanonasis.lanonasis-memory`
+- Try from clean directory: `cd /tmp && vsce show LanOnasis.LanOnasis-memory`
 
 #### Update Not Appearing
 - Clear VS Code extension cache
@@ -140,8 +140,8 @@ vsce publish
 
 ## 🔗 Quick Links
 
-- **Your Extension**: https://marketplace.visualstudio.com/items?itemName=lanonasis.lanonasis-memory
-- **Publisher Dashboard**: https://marketplace.visualstudio.com/manage/publishers/lanonasis
+- **Your Extension**: https://marketplace.visualstudio.com/items?itemName=LanOnasis.LanOnasis-memory
+- **Publisher Dashboard**: https://marketplace.visualstudio.com/manage/publishers/LanOnasis
 - **VS Code Extensions**: https://code.visualstudio.com/docs/editor/extension-marketplace
 
 ## 🚀 Congratulations!

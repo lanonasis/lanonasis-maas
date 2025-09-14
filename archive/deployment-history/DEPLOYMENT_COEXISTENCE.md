@@ -7,12 +7,12 @@ This repository supports **dual deployment** strategy allowing both Netlify and 
 ## Domain Architecture
 
 ### Netlify Deployment
-- **api.lanonasis.com** - API endpoints and functions
-- **dashboard.lanonasis.com** - Dashboard SPA 
-- **docs.lanonasis.com** - Documentation site
+- **api.LanOnasis.com** - API endpoints and functions
+- **dashboard.LanOnasis.com** - Dashboard SPA 
+- **docs.LanOnasis.com** - Documentation site
 
 ### Vercel Deployment  
-- **developer.lanonasis.com** - Single domain with path-based routing
+- **developer.LanOnasis.com** - Single domain with path-based routing
   - `/` - Landing page
   - `/dashboard` - Dashboard SPA
   - `/api/v1/*` - API endpoints
@@ -60,7 +60,7 @@ This repository supports **dual deployment** strategy allowing both Netlify and 
 ### Vercel Configuration (`vercel.json`)
 ```json
 {
-  "name": "lanonasis-developer",
+  "name": "LanOnasis-developer",
   "builds": [
     {
       "src": "dashboard/package.json",
@@ -102,16 +102,16 @@ vercel --prod
 
 ### Netlify Endpoints
 ```bash
-curl https://api.lanonasis.com/health
-curl https://dashboard.lanonasis.com
-curl https://docs.lanonasis.com
+curl https://api.LanOnasis.com/health
+curl https://dashboard.LanOnasis.com
+curl https://docs.LanOnasis.com
 ```
 
 ### Vercel Endpoints  
 ```bash
-curl https://developer.lanonasis.com/health
-curl https://developer.lanonasis.com/dashboard
-curl https://developer.lanonasis.com/docs
+curl https://developer.LanOnasis.com/health
+curl https://developer.LanOnasis.com/dashboard
+curl https://developer.LanOnasis.com/docs
 ```
 
 ## Environment Variables

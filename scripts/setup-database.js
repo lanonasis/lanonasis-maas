@@ -165,7 +165,7 @@ INSERT INTO api_keys (
     
     // Test the SSE endpoint
     console.log('🧪 Testing SSE endpoint with API key...');
-    const testResponse = await fetch('https://api.lanonasis.com/sse', {
+    const testResponse = await fetch('https://api.LanOnasis.com/sse', {
       headers: {
         'X-API-Key': apiKey,
         'Accept': 'text/event-stream'

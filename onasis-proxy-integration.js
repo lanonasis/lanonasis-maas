@@ -5,7 +5,7 @@ const { createProxyMiddleware } = require('http-proxy-middleware');
 
 // Memory Service Integration (non-disruptive)
 function setupMemoryServiceProxy(app) {
-  const memoryServiceUrl = process.env.MEMORY_SERVICE_URL || 'https://api.lanonasis.com';
+  const memoryServiceUrl = process.env.MEMORY_SERVICE_URL || 'https://api.LanOnasis.com';
   
   console.log(`Setting up Memory Service proxy to: ${memoryServiceUrl}`);
 

@@ -40,7 +40,7 @@ const serverIcons: Record<string, React.ComponentType<any>> = {
   'brave-search': Search,
   'puppeteer': Monitor,
   'picsart': Paintbrush,
-  'lanonasis': Brain
+  'LanOnasis': Brain
 };
 
 const MCPServerManager: React.FC = () => {
@@ -110,7 +110,7 @@ const MCPServerManager: React.FC = () => {
       'brave-search': 'Brave Search API for web search results',
       'puppeteer': 'Puppeteer browser automation and PDF generation',
       'picsart': 'Picsart image generation and editing API',
-      'lanonasis': 'Your Lanonasis Memory as a Service platform'
+      'LanOnasis': 'Your LanOnasis Memory as a Service platform'
     };
     return descriptions[serverName] || 'MCP server for extended functionality';
   };

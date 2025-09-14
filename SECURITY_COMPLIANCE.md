@@ -1,10 +1,10 @@
 # 🔐 Security & Compliance Documentation
 
-## Lanonasis Memory as a Service (MaaS) - Security Framework
+## LanOnasis Memory as a Service (MaaS) - Security Framework
 
 ### 📋 **Security Overview**
 
-Lanonasis MaaS implements enterprise-grade security controls and compliance frameworks to protect your data and ensure privacy. Our security architecture follows industry best practices and maintains the highest standards of data protection.
+LanOnasis MaaS implements enterprise-grade security controls and compliance frameworks to protect your data and ensure privacy. Our security architecture follows industry best practices and maintains the highest standards of data protection.
 
 ---
 
@@ -143,12 +143,12 @@ Lanonasis MaaS implements enterprise-grade security controls and compliance fram
 ## 📞 **Security Contact & Reporting**
 
 ### **Security Team Contact** 🚨
-- **Security Email**: security@lanonasis.com
+- **Security Email**: security@LanOnasis.com
 - **Vulnerability Reporting**: Responsible disclosure program for security researchers
 - **24/7 Incident Response**: Round-the-clock security incident response team
 
 ### **Compliance Inquiries** 📋
-- **Compliance Team**: compliance@lanonasis.com
+- **Compliance Team**: compliance@LanOnasis.com
 - **Documentation Requests**: Complete compliance documentation available on request
 - **Certification Verification**: Third-party verification of all security certifications
 
@@ -173,9 +173,9 @@ Lanonasis MaaS implements enterprise-grade security controls and compliance fram
 ### **Documentation** 📖
 - **[📖 API Security Guide](./docs/security/api-security.md)** - Comprehensive API security best practices and implementation
 - **[⚡ CLI Security Best Practices](./docs/security/cli-security.md)** - CLI v1.5.2+ security guide and Golden Contract compliance
-- **[🔒 Privacy Policy](https://lanonasis.com/privacy)** - Complete privacy policy and data handling practices
-- **[📋 Terms of Service](https://lanonasis.com/terms)** - Service terms and conditions
-- **[🛡️ Security Center](https://lanonasis.com/security)** - Real-time security status and updates
+- **[🔒 Privacy Policy](https://LanOnasis.com/privacy)** - Complete privacy policy and data handling practices
+- **[📋 Terms of Service](https://LanOnasis.com/terms)** - Service terms and conditions
+- **[🛡️ Security Center](https://LanOnasis.com/security)** - Real-time security status and updates
 
 ### **Compliance Reports** 📊
 - SOC 2 Type II Report (Available on request)
@@ -206,4 +206,4 @@ Lanonasis MaaS implements enterprise-grade security controls and compliance fram
 *Security Framework Version: 2.1*  
 *Compliance Status: Active*
 
-For the most current security information and compliance status, please visit our [Security Center](https://lanonasis.com/security) or contact our security team directly.
+For the most current security information and compliance status, please visit our [Security Center](https://LanOnasis.com/security) or contact our security team directly.

@@ -10,7 +10,7 @@ import { parseJWT } from '../utils/index.js';
 export interface LanOnasisClientConfig extends ClientConfig {
   /**
    * Base URL for the LanOnasis API
-   * @default "https://api.lanonasis.com"
+   * @default "https://api.LanOnasis.com"
    */
   apiUrl?: string;
   
@@ -61,7 +61,7 @@ export interface LanOnasisClientConfig extends ClientConfig {
  * @example
  * ```typescript
  * const client = new LanOnasisClient({
- *   apiUrl: 'https://api.lanonasis.com',
+ *   apiUrl: 'https://api.LanOnasis.com',
  *   apiKey: 'your-api-key',
  *   organizationId: 'your-org-id'
  * });

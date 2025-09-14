@@ -59,9 +59,9 @@ export class MemoryConnector {
 
     // Add unified router headers if using unified routing
     if (this.useUnifiedRouter) {
-      headers['X-Service'] = 'lanonasis-maas';
+      headers['X-Service'] = 'LanOnasis-maas';
       headers['X-Client'] = 'orchestrator';
-      headers['User-Agent'] = 'Lanonasis-Orchestrator/1.0';
+      headers['User-Agent'] = 'LanOnasis-Orchestrator/1.0';
     }
 
     if (this.authToken) {

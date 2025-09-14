@@ -1,13 +1,13 @@
 {
-  "name": "@lanonasis/cli",
+  "name": "@LanOnasis/cli",
   "version": "2.0.1",
   "description": "LanOnasis Enterprise CLI - Memory as a Service, API Key Management, and Infrastructure Orchestration",
   "main": "dist/index-simple.js",
   "bin": {
-    "lanonasis": "dist/index-simple.js",
+    "LanOnasis": "dist/index-simple.js",
     "onasis": "dist/index-simple.js",
-    "lanonasis-mcp-server": "dist/mcp-server.js",
-    "lanonasis-mcp-cli-aligned": "dist/mcp-server.js",
+    "LanOnasis-mcp-server": "dist/mcp-server.js",
+    "LanOnasis-mcp-cli-aligned": "dist/mcp-server.js",
     "memory": "dist/index-simple.js",
     "maas": "dist/index-simple.js"
   },
@@ -22,7 +22,7 @@
     "prepare": "npm run build"
   },
   "keywords": [
-    "lanonasis",
+    "LanOnasis",
     "cli",
     "memory",
     "ai",
@@ -35,7 +35,7 @@
     "mcp",
     "security"
   ],
-  "author": "Lanonasis (Seye Derick)",
+  "author": "LanOnasis (Seye Derick)",
   "license": "MIT",
   "files": [
     "dist",
@@ -47,13 +47,13 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/lanonasis/lanonasis-maas.git",
+    "url": "https://github.com/LanOnasis/LanOnasis-maas.git",
     "directory": "cli"
   },
   "bugs": {
-    "url": "https://github.com/lanonasis/lanonasis-maas/issues"
+    "url": "https://github.com/LanOnasis/LanOnasis-maas/issues"
   },
-  "homepage": "https://github.com/lanonasis/lanonasis-maas#readme",
+  "homepage": "https://github.com/LanOnasis/LanOnasis-maas#readme",
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.17.2",
     "@types/eventsource": "^1.1.15",

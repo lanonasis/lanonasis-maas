@@ -1,20 +1,20 @@
-# 🚀 Lanonasis Platform Deployment Status
+# 🚀 LanOnasis Platform Deployment Status
 
 ## 📅 Date: August 1, 2025
 
 ## ✅ Completed Deployments
 
-### 1. **Dashboard** - dashboard.lanonasis.com
+### 1. **Dashboard** - dashboard.LanOnasis.com
 - **Status**: ✅ Deployed to Vercel
 - **URL**: https://dashboard-jqktcocih-thefixers-team.vercel.app
-- **Custom Domain**: dashboard.lanonasis.com (DNS configuration required)
-- **DNS Record Needed**: `A dashboard.lanonasis.com 76.76.21.21`
+- **Custom Domain**: dashboard.LanOnasis.com (DNS configuration required)
+- **DNS Record Needed**: `A dashboard.LanOnasis.com 76.76.21.21`
 
-### 2. **Documentation** - docs.lanonasis.com
+### 2. **Documentation** - docs.LanOnasis.com
 - **Status**: ✅ Deployed to Vercel (placeholder page)
 - **URL**: https://docs-46g9v48fh-thefixers-team.vercel.app
-- **Custom Domain**: docs.lanonasis.com (DNS configuration required)
-- **DNS Record Needed**: `A docs.lanonasis.com 76.76.21.21`
+- **Custom Domain**: docs.LanOnasis.com (DNS configuration required)
+- **DNS Record Needed**: `A docs.LanOnasis.com 76.76.21.21`
 
 ### 3. **Index Page Updates**
 - **Status**: ✅ Completed
@@ -28,16 +28,16 @@
 
 ## 🔄 Pending Deployments
 
-### 1. **NPM Package - @lanonasis/cli v1.2.0**
+### 1. **NPM Package - @LanOnasis/cli v1.2.0**
 - **Status**: ⚠️ Blocked by npm workspace conflicts
-- **Package Location**: /Users/seyederick/DevOps/_project_folders/lanonasis-maas/cli
+- **Package Location**: /Users/seyederick/DevOps/_project_folders/LanOnasis-maas/cli
 - **Version**: 1.2.0 (with API key management features)
 
 **Manual Publishing Steps**:
 ```bash
 # Option 1: Use a clean environment
-cd /Users/seyederick/DevOps/_project_folders/lanonasis-maas/cli
-npm pack  # Creates @lanonasis-cli-1.2.0.tgz
+cd /Users/seyederick/DevOps/_project_folders/LanOnasis-maas/cli
+npm pack  # Creates @LanOnasis-cli-1.2.0.tgz
 # Then publish from a different location without workspace conflicts
 
 # Option 2: Use bun to publish
@@ -47,14 +47,14 @@ bun publish
 # Push to main branch with version bump to trigger automated publish
 ```
 
-### 2. **MCP Endpoint - mcp.lanonasis.com**
+### 2. **MCP Endpoint - mcp.LanOnasis.com**
 - **Status**: 📋 Not yet configured
 - **Requirements**:
   - Deploy MCP server/proxy
   - Configure SSE endpoint
   - Set up custom domain
 
-### 3. **Main Index Site - lanonasis.com**
+### 3. **Main Index Site - LanOnasis.com**
 - **Status**: 📋 Ready for deployment
 - **Location**: /Users/seyederick/LanOnasisIndex
 - **Deployment**: Via Netlify (remove Flutter plugin first)
@@ -64,7 +64,7 @@ bun publish
 ### NPM Workspace Conflicts
 The following packages have naming conflicts preventing npm operations:
 - `subscription-manager` (2 locations)
-- `@lanonasis/memory-service` (2 locations)
+- `@LanOnasis/memory-service` (2 locations)
 - `vite_react_shadcn_ts` (3 locations)
 
 **Solutions**:
@@ -73,7 +73,7 @@ The following packages have naming conflicts preventing npm operations:
 3. Use alternative package managers (bun, yarn)
 
 ### Netlify Flutter Plugin
-The lanonasis.com site has a Flutter plugin that needs removal:
+The LanOnasis.com site has a Flutter plugin that needs removal:
 1. Go to Netlify Dashboard → Site Settings → Build & Deploy → Build Plugins
 2. Remove "netlify-plugin-flutter"
 3. Save changes
@@ -82,9 +82,9 @@ The lanonasis.com site has a Flutter plugin that needs removal:
 
 Add these A records to your DNS provider:
 ```
-dashboard.lanonasis.com  A  76.76.21.21
-docs.lanonasis.com       A  76.76.21.21
-mcp.lanonasis.com        A  [TBD after deployment]
+dashboard.LanOnasis.com  A  76.76.21.21
+docs.LanOnasis.com       A  76.76.21.21
+mcp.LanOnasis.com        A  [TBD after deployment]
 ```
 
 ## 🎯 Next Steps

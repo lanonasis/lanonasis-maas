@@ -1,12 +1,12 @@
 {
-  "name": "lanonasis-memory-windsurf",
-  "displayName": "Lanonasis Memory Assistant for Windsurf",
+  "name": "LanOnasis-memory-windsurf",
+  "displayName": "LanOnasis Memory Assistant for Windsurf",
   "description": "Memory as a Service integration for Windsurf - AI-powered memory management with auto-redirect authentication",
   "version": "1.2.0",
-  "publisher": "lanonasis",
+  "publisher": "LanOnasis",
   "repository": {
     "type": "git",
-    "url": "https://github.com/lanonasis/lanonasis-maas"
+    "url": "https://github.com/LanOnasis/LanOnasis-maas"
   },
   "engines": {
     "vscode": "^1.102.0"
@@ -35,80 +35,80 @@
   "contributes": {
     "commands": [
       {
-        "command": "lanonasis.searchMemory",
+        "command": "LanOnasis.searchMemory",
         "title": "Search Memories",
-        "category": "Lanonasis",
+        "category": "LanOnasis",
         "icon": "$(search)"
       },
       {
-        "command": "lanonasis.createMemory",
+        "command": "LanOnasis.createMemory",
         "title": "Create Memory from Selection",
-        "category": "Lanonasis",
+        "category": "LanOnasis",
         "icon": "$(add)"
       },
       {
-        "command": "lanonasis.createMemoryFromFile",
+        "command": "LanOnasis.createMemoryFromFile",
         "title": "Create Memory from Current File",
-        "category": "Lanonasis",
+        "category": "LanOnasis",
         "icon": "$(file-add)"
       },
       {
-        "command": "lanonasis.createMemoryFromWorkspace",
+        "command": "LanOnasis.createMemoryFromWorkspace",
         "title": "Create Memory from Workspace Context",
-        "category": "Lanonasis",
+        "category": "LanOnasis",
         "icon": "$(folder-library)"
       },
       {
-        "command": "lanonasis.authenticate",
-        "title": "Authenticate with Lanonasis",
-        "category": "Lanonasis",
+        "command": "LanOnasis.authenticate",
+        "title": "Authenticate with LanOnasis",
+        "category": "LanOnasis",
         "icon": "$(key)"
       },
       {
-        "command": "lanonasis.logout",
-        "title": "Logout from Lanonasis",
-        "category": "Lanonasis",
+        "command": "LanOnasis.logout",
+        "title": "Logout from LanOnasis",
+        "category": "LanOnasis",
         "icon": "$(sign-out)"
       },
       {
-        "command": "lanonasis.refreshMemories",
+        "command": "LanOnasis.refreshMemories",
         "title": "Refresh Memories",
-        "category": "Lanonasis",
+        "category": "LanOnasis",
         "icon": "$(refresh)"
       },
       {
-        "command": "lanonasis.openMemory",
+        "command": "LanOnasis.openMemory",
         "title": "Open Memory",
-        "category": "Lanonasis"
+        "category": "LanOnasis"
       },
       {
-        "command": "lanonasis.switchMode",
+        "command": "LanOnasis.switchMode",
         "title": "Switch Gateway/Direct API Mode",
-        "category": "Lanonasis",
+        "category": "LanOnasis",
         "icon": "$(settings-gear)"
       },
       {
-        "command": "lanonasis.aiAssist",
+        "command": "LanOnasis.aiAssist",
         "title": "AI Memory Assistant",
-        "category": "Lanonasis",
+        "category": "LanOnasis",
         "icon": "$(sparkle)"
       }
     ],
     "keybindings": [
       {
-        "command": "lanonasis.searchMemory",
+        "command": "LanOnasis.searchMemory",
         "key": "ctrl+shift+m",
         "mac": "cmd+shift+m",
         "when": "editorTextFocus"
       },
       {
-        "command": "lanonasis.createMemory",
+        "command": "LanOnasis.createMemory",
         "key": "ctrl+shift+alt+m",
         "mac": "cmd+shift+alt+m",
         "when": "editorHasSelection"
       },
       {
-        "command": "lanonasis.aiAssist",
+        "command": "LanOnasis.aiAssist",
         "key": "ctrl+shift+alt+a",
         "mac": "cmd+shift+alt+a",
         "when": "editorTextFocus"
@@ -117,87 +117,87 @@
     "menus": {
       "editor/context": [
         {
-          "command": "lanonasis.createMemory",
+          "command": "LanOnasis.createMemory",
           "when": "editorHasSelection",
-          "group": "lanonasis"
+          "group": "LanOnasis"
         },
         {
-          "command": "lanonasis.aiAssist",
+          "command": "LanOnasis.aiAssist",
           "when": "editorTextFocus",
-          "group": "lanonasis"
+          "group": "LanOnasis"
         }
       ],
       "view/title": [
         {
-          "command": "lanonasis.refreshMemories",
-          "when": "view == lanonasisMemories",
+          "command": "LanOnasis.refreshMemories",
+          "when": "view == LanOnasisMemories",
           "group": "navigation"
         },
         {
-          "command": "lanonasis.authenticate",
-          "when": "view == lanonasisMemories && !lanonasis.authenticated",
+          "command": "LanOnasis.authenticate",
+          "when": "view == LanOnasisMemories && !LanOnasis.authenticated",
           "group": "navigation"
         },
         {
-          "command": "lanonasis.logout",
-          "when": "view == lanonasisMemories && lanonasis.authenticated",
+          "command": "LanOnasis.logout",
+          "when": "view == LanOnasisMemories && LanOnasis.authenticated",
           "group": "navigation"
         }
       ],
       "explorer/context": [
         {
-          "command": "lanonasis.createMemoryFromWorkspace",
-          "group": "lanonasis"
+          "command": "LanOnasis.createMemoryFromWorkspace",
+          "group": "LanOnasis"
         }
       ]
     },
     "views": {
       "explorer": [
         {
-          "id": "lanonasisMemories",
+          "id": "LanOnasisMemories",
           "name": "Memories",
-          "when": "lanonasis.enabled"
+          "when": "LanOnasis.enabled"
         }
       ]
     },
     "viewsContainers": {
       "activitybar": [
         {
-          "id": "lanonasis",
-          "title": "Lanonasis Memory",
+          "id": "LanOnasis",
+          "title": "LanOnasis Memory",
           "icon": "$(database)"
         }
       ]
     },
     "configuration": {
-      "title": "Lanonasis Memory",
+      "title": "LanOnasis Memory",
       "properties": {
-        "lanonasis.apiUrl": {
+        "LanOnasis.apiUrl": {
           "type": "string",
-          "default": "https://api.lanonasis.com",
-          "description": "Lanonasis Memory Service API URL"
+          "default": "https://api.LanOnasis.com",
+          "description": "LanOnasis Memory Service API URL"
         },
-        "lanonasis.gatewayUrl": {
+        "LanOnasis.gatewayUrl": {
           "type": "string",
-          "default": "https://api.lanonasis.com",
+          "default": "https://api.LanOnasis.com",
           "description": "Onasis Gateway URL (if using gateway mode)"
         },
-        "lanonasis.authUrl": {
+        "LanOnasis.authUrl": {
           "type": "string",
-          "default": "https://auth.lanonasis.com",
-          "description": "Lanonasis Authentication Service URL"
+          "default": "https://auth.LanOnasis.com",
+          "description": "LanOnasis Authentication Service URL"
         },
-        "lanonasis.useGateway": {
+        "LanOnasis.useGateway": {
           "type": "boolean",
           "default": true,
           "description": "Use Onasis Gateway for API requests (recommended)"
         },
-        "lanonasis.useAutoAuth": {
+        "LanOnasis.useAutoAuth": {
           "type": "boolean",
           "default": true,
           "description": "Enable automatic OAuth2 authentication with browser redirect"
         },
-        "lanonasis.defaultMemoryType": {
+        "LanOnasis.defaultMemoryType": {
           "type": "string",
           "enum": [
             "context",
@@ -210,29 +210,29 @@
           "default": "context",
           "description": "Default memory type for new memories"
         },
-        "lanonasis.searchLimit": {
+        "LanOnasis.searchLimit": {
           "type": "number",
           "default": 10,
           "minimum": 1,
           "maximum": 50,
           "description": "Maximum number of search results to show"
         },
-        "lanonasis.enableAutoCompletion": {
+        "LanOnasis.enableAutoCompletion": {
           "type": "boolean",
           "default": true,
           "description": "Enable memory-based code completion suggestions"
         },
-        "lanonasis.autoRefreshInterval": {
+        "LanOnasis.autoRefreshInterval": {
           "type": "number",
           "default": 300000,
           "description": "Auto-refresh memories interval in milliseconds (default: 5 minutes)"
         },
-        "lanonasis.enableAiAssist": {
+        "LanOnasis.enableAiAssist": {
           "type": "boolean",
           "default": true,
           "description": "Enable AI-powered memory assistance and suggestions"
         },
-        "lanonasis.windsurf.enableContextAwareness": {
+        "LanOnasis.windsurf.enableContextAwareness": {
           "type": "boolean",
           "default": true,
           "description": "Enable Windsurf-specific context awareness features"
@@ -264,6 +264,6 @@
     "webpack-cli": "^6.0.1"
   },
   "dependencies": {},
-  "author": "Lanonasis Team",
+  "author": "LanOnasis Team",
   "license": "MIT"
 }
