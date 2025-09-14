@@ -95,7 +95,12 @@ export class CLIConfig {
   }
 
   getDiscoveredApiUrl(): string {
-    return this.config.discoveredServices?.auth_base || this.getApiUrl();
+    const baseUrl = this.config.discoveredServices?.auth_base || this.getApiUrl();
+    return this.normalizeUrl(baseUrl);
+  }
+
+  private normalizeUrl(url: string): string {
+    return url.replace(/\/$/, '');
   }
 
   // Enhanced authentication support

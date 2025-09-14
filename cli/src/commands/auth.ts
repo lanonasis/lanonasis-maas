@@ -159,7 +159,8 @@ async function handleOAuthFlow(config: CLIConfig): Promise<void> {
     return;
   }
   
-  const authUrl = `${config.getDiscoveredApiUrl()}/auth/cli-login`;
+  const baseUrl = config.getDiscoveredApiUrl().replace(/\/$/, '');
+  const authUrl = `${baseUrl}/auth/cli-login`;
   
   try {
     console.log(colors.info('Opening browser...'));
