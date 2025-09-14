@@ -56,7 +56,7 @@ export const Header = () => {
           to="/"
           className="flex items-center gap-2 text-2xl font-semibold tracking-tight"
         >
-          <span className="text-primary">Lanonasis</span>
+          <span className="text-primary">LanOnasis</span>
           <span className="text-foreground">Platform</span>
         </Link>
 

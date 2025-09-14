@@ -37,8 +37,8 @@ async function updateAuthConfig() {
   // Update auth configuration
   const newConfig = {
     ...currentConfig,
-    SITE_URL: 'https://lanonasis.com',
-    URI_ALLOW_LIST: 'https://lanonasis.com/**,https://dashboard.lanonasis.com/**,https://api.lanonasis.com/**'
+    SITE_URL: 'https://LanOnasis.com',
+    URI_ALLOW_LIST: 'https://LanOnasis.com/**,https://dashboard.LanOnasis.com/**,https://api.LanOnasis.com/**'
   };
 
   console.log('\n🔄 Updating configuration...');
@@ -63,16 +63,16 @@ async function updateAuthConfig() {
   console.log('\n📋 OAuth Provider Settings Summary:');
   console.log('================================');
   console.log('✅ Google OAuth:');
-  console.log('   - Authorized JavaScript origins: https://api.lanonasis.com, https://dashboard.lanonasis.com');
-  console.log('   - Authorized redirect URIs: https://dashboard.lanonasis.com/auth/callback');
+  console.log('   - Authorized JavaScript origins: https://api.LanOnasis.com, https://dashboard.LanOnasis.com');
+  console.log('   - Authorized redirect URIs: https://dashboard.LanOnasis.com/auth/callback');
   console.log('✅ Supabase Auth:');
-  console.log('   - Site URL: https://lanonasis.com');
-  console.log('   - Additional redirect URLs: https://lanonasis.com/**, https://dashboard.lanonasis.com/**, https://api.lanonasis.com/**');
+  console.log('   - Site URL: https://LanOnasis.com');
+  console.log('   - Additional redirect URLs: https://LanOnasis.com/**, https://dashboard.LanOnasis.com/**, https://api.LanOnasis.com/**');
   
   console.log('\n🧪 Next Steps:');
-  console.log('1. Test Google OAuth from https://dashboard.lanonasis.com/auth/login');
-  console.log('2. Test GitHub OAuth from https://dashboard.lanonasis.com/auth/login');
-  console.log('3. Verify redirect goes to https://dashboard.lanonasis.com/dashboard');
+  console.log('1. Test Google OAuth from https://dashboard.LanOnasis.com/auth/login');
+  console.log('2. Test GitHub OAuth from https://dashboard.LanOnasis.com/auth/login');
+  console.log('3. Verify redirect goes to https://dashboard.LanOnasis.com/dashboard');
 }
 
 updateAuthConfig().catch(console.error);

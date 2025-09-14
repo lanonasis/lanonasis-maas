@@ -9,7 +9,7 @@ import { MemoryType } from './types/memory-aligned';
 let enhancedMemoryService: EnhancedMemoryService;
 
 export async function activate(context: vscode.ExtensionContext) {
-    console.log('Lanonasis Memory Extension (Enhanced) is now active');
+    console.log('LanOnasis Memory Extension (Enhanced) is now active');
 
     // Initialize enhanced memory service
     enhancedMemoryService = new EnhancedMemoryService();
@@ -21,8 +21,8 @@ export async function activate(context: vscode.ExtensionContext) {
     const memoryTreeProvider = new MemoryTreeProvider(enhancedMemoryService as any);
     const apiKeyTreeProvider = new ApiKeyTreeProvider(apiKeyService);
     
-    vscode.window.registerTreeDataProvider('lanonasisMemories', memoryTreeProvider);
-    vscode.window.registerTreeDataProvider('lanonasisApiKeys', apiKeyTreeProvider);
+    vscode.window.registerTreeDataProvider('LanOnasisMemories', memoryTreeProvider);
+    vscode.window.registerTreeDataProvider('LanOnasisApiKeys', apiKeyTreeProvider);
 
     // Initialize completion provider
     const completionProvider = new MemoryCompletionProvider(enhancedMemoryService as any);
@@ -35,60 +35,60 @@ export async function activate(context: vscode.ExtensionContext) {
     );
 
     // Set context variables
-    vscode.commands.executeCommand('setContext', 'lanonasis.enabled', true);
+    vscode.commands.executeCommand('setContext', 'LanOnasis.enabled', true);
     
     // Check authentication status and CLI capabilities
     await checkEnhancedAuthenticationStatus();
 
     // Register commands
     const commands = [
-        vscode.commands.registerCommand('lanonasis.searchMemory', async () => {
+        vscode.commands.registerCommand('LanOnasis.searchMemory', async () => {
             await searchMemories();
         }),
 
-        vscode.commands.registerCommand('lanonasis.createMemory', async () => {
+        vscode.commands.registerCommand('LanOnasis.createMemory', async () => {
             await createMemoryFromSelection();
         }),
 
-        vscode.commands.registerCommand('lanonasis.createMemoryFromFile', async () => {
+        vscode.commands.registerCommand('LanOnasis.createMemoryFromFile', async () => {
             await createMemoryFromFile();
         }),
 
-        vscode.commands.registerCommand('lanonasis.authenticate', async () => {
+        vscode.commands.registerCommand('LanOnasis.authenticate', async () => {
             await authenticate();
         }),
 
-        vscode.commands.registerCommand('lanonasis.refreshMemories', async () => {
+        vscode.commands.registerCommand('LanOnasis.refreshMemories', async () => {
             memoryTreeProvider.refresh();
         }),
 
-        vscode.commands.registerCommand('lanonasis.openMemory', (memory: any) => {
+        vscode.commands.registerCommand('LanOnasis.openMemory', (memory: any) => {
             openMemoryInEditor(memory);
         }),
 
-        vscode.commands.registerCommand('lanonasis.switchMode', async () => {
+        vscode.commands.registerCommand('LanOnasis.switchMode', async () => {
             await switchConnectionMode();
         }),
 
         // Enhanced command for connection info
-        vscode.commands.registerCommand('lanonasis.showConnectionInfo', async () => {
+        vscode.commands.registerCommand('LanOnasis.showConnectionInfo', async () => {
             await enhancedMemoryService.showConnectionInfo();
         }),
 
         // API Key Management Commands
-        vscode.commands.registerCommand('lanonasis.manageApiKeys', async () => {
+        vscode.commands.registerCommand('LanOnasis.manageApiKeys', async () => {
             await manageApiKeys(apiKeyService);
         }),
 
-        vscode.commands.registerCommand('lanonasis.createProject', async () => {
+        vscode.commands.registerCommand('LanOnasis.createProject', async () => {
             await createProject(apiKeyService, apiKeyTreeProvider);
         }),
 
-        vscode.commands.registerCommand('lanonasis.viewProjects', async () => {
+        vscode.commands.registerCommand('LanOnasis.viewProjects', async () => {
             await viewProjects(apiKeyService);
         }),
 
-        vscode.commands.registerCommand('lanonasis.refreshApiKeys', async () => {
+        vscode.commands.registerCommand('LanOnasis.refreshApiKeys', async () => {
             apiKeyTreeProvider.refresh();
         })
     ];
@@ -99,35 +99,35 @@ export async function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(enhancedMemoryService);
 
     // Show welcome message with CLI information if first time
-    const isFirstTime = context.globalState.get('lanonasis.firstTime', true);
+    const isFirstTime = context.globalState.get('LanOnasis.firstTime', true);
     if (isFirstTime) {
         await showEnhancedWelcomeMessage();
-        context.globalState.update('lanonasis.firstTime', false);
+        context.globalState.update('LanOnasis.firstTime', false);
     }
 
     // Show upgrade message if migrating from basic service
-    const hasSeenUpgrade = context.globalState.get('lanonasis.seenCliUpgrade', false);
+    const hasSeenUpgrade = context.globalState.get('LanOnasis.seenCliUpgrade', false);
     if (!hasSeenUpgrade) {
         await showCliUpgradeMessage();
-        context.globalState.update('lanonasis.seenCliUpgrade', true);
+        context.globalState.update('LanOnasis.seenCliUpgrade', true);
     }
 }
 
 async function checkEnhancedAuthenticationStatus() {
-    const config = vscode.workspace.getConfiguration('lanonasis');
+    const config = vscode.workspace.getConfiguration('LanOnasis');
     const apiKey = config.get<string>('apiKey');
     const authenticated = !!apiKey && apiKey.trim().length > 0;
     
-    vscode.commands.executeCommand('setContext', 'lanonasis.authenticated', authenticated);
+    vscode.commands.executeCommand('setContext', 'LanOnasis.authenticated', authenticated);
     
     if (!authenticated) {
         const result = await vscode.window.showInformationMessage(
-            'Lanonasis Memory: No API key configured. Would you like to set it up now?',
+            'LanOnasis Memory: No API key configured. Would you like to set it up now?',
             'Configure', 'Later'
         );
         
         if (result === 'Configure') {
-            vscode.commands.executeCommand('lanonasis.authenticate');
+            vscode.commands.executeCommand('LanOnasis.authenticate');
         }
         return;
     }
@@ -136,23 +136,23 @@ async function checkEnhancedAuthenticationStatus() {
     const capabilities = enhancedMemoryService.getCapabilities();
     if (capabilities?.cliAvailable && capabilities.goldenContract) {
         vscode.window.showInformationMessage(
-            '🚀 Lanonasis Memory: CLI v1.5.2+ detected! Enhanced performance active.',
+            '🚀 LanOnasis Memory: CLI v1.5.2+ detected! Enhanced performance active.',
             'Show Details'
         ).then(selection => {
             if (selection === 'Show Details') {
-                vscode.commands.executeCommand('lanonasis.showConnectionInfo');
+                vscode.commands.executeCommand('LanOnasis.showConnectionInfo');
             }
         });
     } else if (capabilities?.authenticated) {
         const installCLI = await vscode.window.showInformationMessage(
-            '💡 Lanonasis Memory: Install CLI v1.5.2+ for enhanced performance.',
+            '💡 LanOnasis Memory: Install CLI v1.5.2+ for enhanced performance.',
             'Install CLI', 'Learn More', 'Later'
         );
         
         if (installCLI === 'Install CLI') {
-            vscode.env.openExternal(vscode.Uri.parse('https://www.npmjs.com/package/@lanonasis/cli'));
+            vscode.env.openExternal(vscode.Uri.parse('https://www.npmjs.com/package/@LanOnasis/cli'));
         } else if (installCLI === 'Learn More') {
-            vscode.env.openExternal(vscode.Uri.parse('https://docs.lanonasis.com/cli'));
+            vscode.env.openExternal(vscode.Uri.parse('https://docs.LanOnasis.com/cli'));
         }
     }
 }
@@ -219,7 +219,7 @@ async function createMemoryFromSelection() {
 
     if (!title) return;
 
-    const config = vscode.workspace.getConfiguration('lanonasis');
+    const config = vscode.workspace.getConfiguration('LanOnasis');
     const defaultType = config.get<string>('defaultMemoryType', 'context');
 
     try {
@@ -243,7 +243,7 @@ async function createMemoryFromSelection() {
         });
 
         vscode.window.showInformationMessage(`Memory "${title}" created successfully`);
-        vscode.commands.executeCommand('lanonasis.refreshMemories');
+        vscode.commands.executeCommand('LanOnasis.refreshMemories');
     } catch (error) {
         vscode.window.showErrorMessage(`Failed to create memory: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
@@ -266,7 +266,7 @@ async function createMemoryFromFile() {
 
     if (!title) return;
 
-    const config = vscode.workspace.getConfiguration('lanonasis');
+    const config = vscode.workspace.getConfiguration('LanOnasis');
     const defaultType = config.get<string>('defaultMemoryType', 'context');
 
     try {
@@ -290,7 +290,7 @@ async function createMemoryFromFile() {
         });
 
         vscode.window.showInformationMessage(`Memory "${title}" created from file`);
-        vscode.commands.executeCommand('lanonasis.refreshMemories');
+        vscode.commands.executeCommand('LanOnasis.refreshMemories');
     } catch (error) {
         vscode.window.showErrorMessage(`Failed to create memory: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
@@ -298,8 +298,8 @@ async function createMemoryFromFile() {
 
 async function authenticate() {
     const apiKey = await vscode.window.showInputBox({
-        prompt: 'Enter your Lanonasis API Key',
-        placeHolder: 'Get your API key from api.lanonasis.com',
+        prompt: 'Enter your LanOnasis API Key',
+        placeHolder: 'Get your API key from api.LanOnasis.com',
         password: true,
         ignoreFocusOut: true
     });
@@ -311,15 +311,15 @@ async function authenticate() {
         await enhancedMemoryService.testConnection(apiKey);
         
         // Save to configuration
-        const config = vscode.workspace.getConfiguration('lanonasis');
+        const config = vscode.workspace.getConfiguration('LanOnasis');
         await config.update('apiKey', apiKey, vscode.ConfigurationTarget.Global);
         
         // Refresh the client to pick up new configuration
         await enhancedMemoryService.refreshClient();
         
-        vscode.commands.executeCommand('setContext', 'lanonasis.authenticated', true);
-        vscode.window.showInformationMessage('Successfully authenticated with Lanonasis Memory Service');
-        vscode.commands.executeCommand('lanonasis.refreshMemories');
+        vscode.commands.executeCommand('setContext', 'LanOnasis.authenticated', true);
+        vscode.window.showInformationMessage('Successfully authenticated with LanOnasis Memory Service');
+        vscode.commands.executeCommand('LanOnasis.refreshMemories');
         
         // Check CLI capabilities after authentication
         setTimeout(async () => {
@@ -348,7 +348,7 @@ function openMemoryInEditor(memory: any) {
 }
 
 async function showEnhancedWelcomeMessage() {
-    const message = `Welcome to Lanonasis Memory Assistant v1.3! 
+    const message = `Welcome to LanOnasis Memory Assistant v1.3! 
 
 🧠 Enhanced with CLI v1.5.2+ integration for better performance
 🔍 Press Ctrl+Shift+M to search memories  
@@ -356,7 +356,7 @@ async function showEnhancedWelcomeMessage() {
 🌐 Intelligent routing via CLI/MCP when available
 🚀 Automatic fallback to direct API when needed
 
-Get your API key from api.lanonasis.com to get started.`;
+Get your API key from api.LanOnasis.com to get started.`;
 
     const selection = await vscode.window.showInformationMessage(
         message, 
@@ -366,31 +366,31 @@ Get your API key from api.lanonasis.com to get started.`;
     );
 
     if (selection === 'Get API Key') {
-        vscode.env.openExternal(vscode.Uri.parse('https://api.lanonasis.com'));
+        vscode.env.openExternal(vscode.Uri.parse('https://api.LanOnasis.com'));
     } else if (selection === 'Install CLI') {
-        vscode.env.openExternal(vscode.Uri.parse('https://www.npmjs.com/package/@lanonasis/cli'));
+        vscode.env.openExternal(vscode.Uri.parse('https://www.npmjs.com/package/@LanOnasis/cli'));
     } else if (selection === 'Configure') {
-        vscode.commands.executeCommand('lanonasis.authenticate');
+        vscode.commands.executeCommand('LanOnasis.authenticate');
     }
 }
 
 async function showCliUpgradeMessage() {
     const selection = await vscode.window.showInformationMessage(
-        '🚀 Lanonasis Memory v1.3 now supports CLI integration for enhanced performance!\n\nInstall @lanonasis/cli v1.5.2+ to unlock faster operations and MCP support.',
+        '🚀 LanOnasis Memory v1.3 now supports CLI integration for enhanced performance!\n\nInstall @LanOnasis/cli v1.5.2+ to unlock faster operations and MCP support.',
         'Install CLI',
         'Learn More',
         'Later'
     );
 
     if (selection === 'Install CLI') {
-        vscode.env.openExternal(vscode.Uri.parse('https://www.npmjs.com/package/@lanonasis/cli'));
+        vscode.env.openExternal(vscode.Uri.parse('https://www.npmjs.com/package/@LanOnasis/cli'));
     } else if (selection === 'Learn More') {
-        vscode.env.openExternal(vscode.Uri.parse('https://docs.lanonasis.com/cli/vscode'));
+        vscode.env.openExternal(vscode.Uri.parse('https://docs.LanOnasis.com/cli/vscode'));
     }
 }
 
 async function switchConnectionMode() {
-    const config = vscode.workspace.getConfiguration('lanonasis');
+    const config = vscode.workspace.getConfiguration('LanOnasis');
     const currentUseGateway = config.get<boolean>('useGateway', true);
     const currentPreferCLI = config.get<boolean>('preferCLI', true);
     
@@ -440,11 +440,11 @@ async function switchConnectionMode() {
         await enhancedMemoryService.testConnection();
         vscode.window.showInformationMessage(`✅ Connection mode updated successfully`);
         
-        vscode.commands.executeCommand('lanonasis.refreshMemories');
+        vscode.commands.executeCommand('LanOnasis.refreshMemories');
         
         // Show updated connection info
         setTimeout(() => {
-            vscode.commands.executeCommand('lanonasis.showConnectionInfo');
+            vscode.commands.executeCommand('LanOnasis.showConnectionInfo');
         }, 1000);
         
     } catch (error) {

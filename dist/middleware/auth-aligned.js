@@ -21,9 +21,9 @@ export const attachRequestId = (req, res, next) => {
 export const corsGuard = (req, res, next) => {
     const origin = req.get('Origin');
     const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',').map(o => o.trim()) || [
-        'https://dashboard.lanonasis.com',
-        'https://docs.lanonasis.com',
-        'https://api.lanonasis.com'
+        'https://dashboard.LanOnasis.com',
+        'https://docs.LanOnasis.com',
+        'https://api.LanOnasis.com'
     ];
     // Add development origins if not in production
     if (process.env.NODE_ENV !== 'production') {
@@ -80,7 +80,7 @@ export const alignedAuthMiddleware = async (req, res, next) => {
         const apiKey = req.headers['x-api-key'];
         const projectScope = req.headers['x-project-scope'];
         // CORE ALIGNMENT: Validate project scope first
-        if (projectScope !== 'lanonasis-maas') {
+        if (projectScope !== 'LanOnasis-maas') {
             logger.warn(`[${req.id}] Invalid project scope: ${projectScope}`);
             res.status(403).json(createErrorEnvelope(req, 'Invalid project scope', 'AuthError', 'INVALID_PROJECT_SCOPE'));
             return;
@@ -401,7 +401,7 @@ export const createSuccessEnvelope = (data, req, meta) => {
 // ============================================
 export const validateProjectScope = (req, res, next) => {
     const projectScope = req.headers['x-project-scope'];
-    if (projectScope !== 'lanonasis-maas') {
+    if (projectScope !== 'LanOnasis-maas') {
         logger.warn(`[${req.id}] Invalid project scope: ${projectScope}`);
         return res.status(403).json(createErrorEnvelope(req, 'Invalid project scope', 'AuthError', 'INVALID_PROJECT_SCOPE'));
     }

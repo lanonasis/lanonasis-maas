@@ -1,8 +1,8 @@
 # Development Workspace Configuration
 
 ## Overview
-This is the **vibe-memory** prototype/development workspace for the Lanonasis Memory Service. 
-All code developed here will be migrated to the official `lanonasis-maas` repository for production deployment.
+This is the **vibe-memory** prototype/development workspace for the LanOnasis Memory Service. 
+All code developed here will be migrated to the official `LanOnasis-maas` repository for production deployment.
 
 ## Purpose
 - **Prototype Development**: Test new features and architectural changes
@@ -14,14 +14,14 @@ All code developed here will be migrated to the official `lanonasis-maas` reposi
 
 ```
 vibe-memory/                    # DEVELOPMENT/PROTOTYPE
-  ├── Development code with @lanonasis packages
+  ├── Development code with @LanOnasis packages
   ├── Experimental features
   └── Not for npm publication
 
-lanonasis-maas/                # OFFICIAL/PRODUCTION
+LanOnasis-maas/                # OFFICIAL/PRODUCTION
   ├── Production-ready code
-  ├── Published to npm as @lanonasis/*
-  └── Deployed to api.lanonasis.com
+  ├── Published to npm as @LanOnasis/*
+  └── Deployed to api.LanOnasis.com
 
 vortex-api-key-manager/        # SEPARATE SERVICE
   ├── API key management system
@@ -43,11 +43,11 @@ npm run test
 ### 2. Migration to Production
 When features are ready:
 ```bash
-# Copy tested code to lanonasis-maas
-cp -r src/* ../lanonasis-maas/src/
+# Copy tested code to LanOnasis-maas
+cp -r src/* ../LanOnasis-maas/src/
 
 # Switch to production repo
-cd ../lanonasis-maas
+cd ../LanOnasis-maas
 
 # Test in production environment
 npm run test
@@ -61,7 +61,7 @@ npm publish
 ### Package.json Configuration
 ```json
 {
-  "name": "@lanonasis/memory-service",
+  "name": "@LanOnasis/memory-service",
   "version": "1.2.0-dev",  // Dev version
   "private": true,         // Prevent accidental publishing
   "description": "DEVELOPMENT VERSION - DO NOT PUBLISH"
@@ -85,7 +85,7 @@ Add to all package.json files in vibe-memory:
 echo '#!/bin/bash
 if [[ "$PWD" == *"vibe-memory"* ]]; then
   echo "ERROR: Cannot publish from vibe-memory development workspace"
-  echo "Please use lanonasis-maas for production publishing"
+  echo "Please use LanOnasis-maas for production publishing"
   exit 1
 fi' > .git/hooks/pre-push
 
@@ -113,7 +113,7 @@ Add these scripts to vibe-memory package.json files:
 - [ ] README indicates development status
 - [ ] Git hooks prevent npm publish
 
-### ✅ lanonasis-maas (Production)
+### ✅ LanOnasis-maas (Production)
 - [ ] Packages ready for public use
 - [ ] Proper versioning (1.2.0)
 - [ ] CI/CD configured for npm
@@ -126,7 +126,7 @@ Create `scripts/migrate-to-production.sh`:
 ```bash
 #!/bin/bash
 
-PROD_DIR="../lanonasis-maas"
+PROD_DIR="../LanOnasis-maas"
 
 echo "Migrating code to production repository..."
 
@@ -139,7 +139,7 @@ fi
 # Copy source files
 cp -r src/* "$PROD_DIR/src/"
 cp -r cli/src/* "$PROD_DIR/cli/src/"
-cp -r packages/*/src/* "$PROD_DIR/packages/lanonasis-sdk/src/"
+cp -r packages/*/src/* "$PROD_DIR/packages/LanOnasis-sdk/src/"
 
 echo "Code migrated. Please review and test in production repository."
 echo "Remember to:"
@@ -166,10 +166,10 @@ API_URL=http://localhost:3000
 ENABLE_EXPERIMENTAL=true
 ```
 
-### Production (lanonasis-maas/.env)
+### Production (LanOnasis-maas/.env)
 ```
 NODE_ENV=production
-API_URL=https://api.lanonasis.com
+API_URL=https://api.LanOnasis.com
 ENABLE_EXPERIMENTAL=false
 ```
 
@@ -181,4 +181,4 @@ The vibe-memory workspace is for:
 - 🚫 NOT for npm publishing
 - 🚫 NOT for production deployment
 
-All production releases must go through the official lanonasis-maas repository.
+All production releases must go through the official LanOnasis-maas repository.

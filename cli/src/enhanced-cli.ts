@@ -271,7 +271,7 @@ program
     console.log(chalk.green('✓ Service: Online'));
     console.log(chalk.green('✓ API: Connected'));
     console.log(chalk.green('✓ Auth: Valid'));
-    console.log(chalk.cyan('  Endpoint: api.lanonasis.com'));
+    console.log(chalk.cyan('  Endpoint: api.LanOnasis.com'));
     console.log(chalk.cyan('  Version: 2.0.0'));
   }));
 

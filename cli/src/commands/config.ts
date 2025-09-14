@@ -45,7 +45,7 @@ export function configCommands(program: Command): void {
             config.set('aiIntegration', 'claude-mcp');
             console.log(chalk.green('✓ AI integration set to Claude MCP'));
             console.log(chalk.cyan('  MCP will be automatically initialized for memory operations'));
-            console.log(chalk.cyan('  Run "lanonasis mcp-server init" to test the connection'));
+            console.log(chalk.cyan('  Run "LanOnasis mcp-server init" to test the connection'));
           } else {
             console.log(chalk.yellow('⚠️  Unknown AI integration:'), value);
             console.log(chalk.gray('  Currently supported: claude-mcp'));
@@ -133,7 +133,7 @@ export function configCommands(program: Command): void {
         { key: 'ai-integration', description: 'AI integration mode', current: config.get('aiIntegration') || 'none' },
         { key: 'mcp-use-remote', description: 'Use remote MCP server', current: config.get('mcpUseRemote') || false },
         { key: 'mcp-server-path', description: 'Local MCP server path', current: config.get('mcpServerPath') || 'default' },
-        { key: 'mcp-server-url', description: 'Remote MCP server URL', current: config.get('mcpServerUrl') || 'https://api.lanonasis.com' },
+        { key: 'mcp-server-url', description: 'Remote MCP server URL', current: config.get('mcpServerUrl') || 'https://api.LanOnasis.com' },
         { key: 'mcpEnabled', description: 'MCP integration enabled', current: config.get('mcpEnabled') || false }
       ];
 
@@ -142,7 +142,7 @@ export function configCommands(program: Command): void {
       });
 
       console.log();
-      console.log(chalk.gray('Use "lanonasis config set <key> <value>" to update any option'));
+      console.log(chalk.gray('Use "LanOnasis config set <key> <value>" to update any option'));
     });
 
   // Set API URL

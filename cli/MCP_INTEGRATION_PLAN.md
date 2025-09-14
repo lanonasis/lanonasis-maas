@@ -1,4 +1,4 @@
-# MCP Integration Plan for @lanonasis/cli
+# MCP Integration Plan for @LanOnasis/cli
 
 ## Current Architecture
 The CLI currently uses direct REST API communication with the Memory Service.
@@ -26,7 +26,7 @@ export class MCPClient {
     });
     
     this.client = new Client({
-      name: 'lanonasis-cli',
+      name: 'LanOnasis-cli',
       version: '1.0.0'
     }, {
       capabilities: {}

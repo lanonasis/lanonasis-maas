@@ -1,7 +1,7 @@
-# 🚀 Lanonasis MaaS - Multi-Entry Point Service Architecture
+# 🚀 LanOnasis MaaS - Multi-Entry Point Service Architecture
 
 ## Overview
-Lanonasis Memory as a Service (MaaS) provides multiple access points to accommodate different user workflows and integration patterns. All services are **INTACT** and fully functional.
+LanOnasis Memory as a Service (MaaS) provides multiple access points to accommodate different user workflows and integration patterns. All services are **INTACT** and fully functional.
 
 ## 🎯 Service Entry Points
 
@@ -25,10 +25,10 @@ Lanonasis Memory as a Service (MaaS) provides multiple access points to accommod
 #### Usage
 ```bash
 # Initialize MCP server
-npx lanonasis mcp-server init
+npx LanOnasis mcp-server init
 
 # Connect MCP client
-npx lanonasis mcp connect --server memory-service
+npx LanOnasis mcp connect --server memory-service
 ```
 
 ---
@@ -47,17 +47,17 @@ npx lanonasis mcp connect --server memory-service
 #### Features
 ```bash
 # Memory operations
-lanonasis memory create "Important note"
-lanonasis memory search "keyword"
-lanonasis memory list --project myapp
+LanOnasis memory create "Important note"
+LanOnasis memory search "keyword"
+LanOnasis memory list --project myapp
 
 # API key management
-lanonasis api-keys create --name "dev-key"
-lanonasis api-keys list
+LanOnasis api-keys create --name "dev-key"
+LanOnasis api-keys list
 
 # MCP integration
-lanonasis mcp init
-lanonasis mcp status
+LanOnasis mcp init
+LanOnasis mcp status
 ```
 
 ---
@@ -67,8 +67,8 @@ lanonasis mcp status
 
 #### VS Code Extension ✅ PUBLISHED
 - **📁 Location**: `/vscode-extension/`
-- **🏪 Marketplace**: `lanonasis.lanonasis-memory`
-- **📦 Package**: `lanonasis-memory-1.2.0.vsix`
+- **🏪 Marketplace**: `LanOnasis.LanOnasis-memory`
+- **📦 Package**: `LanOnasis-memory-1.2.0.vsix`
 
 #### Cursor Extension
 - **📁 Location**: `/cursor-extension/`
@@ -128,7 +128,7 @@ POST   /api/mcp/api-keys      // MCP-specific keys
 **For programmatic access in applications**
 
 #### Available SDKs
-- **📁 Core SDK**: `/packages/lanonasis-sdk/`
+- **📁 Core SDK**: `/packages/LanOnasis-sdk/`
 - **📁 Memory Client**: `/packages/memory-client/`
 - **📁 Memory Engine**: `/packages/memory-engine/`
 - **📁 Internal SDK**: `/src/sdk/`
@@ -136,11 +136,11 @@ POST   /api/mcp/api-keys      // MCP-specific keys
 #### Usage Examples
 ```typescript
 // TypeScript/JavaScript SDK
-import { LanonasisSDK } from '@lanonasis/sdk';
+import { LanOnasisSDK } from '@LanOnasis/sdk';
 
-const client = new LanonasisSDK({
+const client = new LanOnasisSDK({
   apiKey: 'your-api-key',
-  baseUrl: 'https://api.lanonasis.com'
+  baseUrl: 'https://api.LanOnasis.com'
 });
 
 // Create memory
@@ -216,15 +216,15 @@ Backend → Direct DB → Memory Service
 ## 🚀 Getting Started by Workflow
 
 ### For VS Code Users
-1. Install extension: `lanonasis.lanonasis-memory`
+1. Install extension: `LanOnasis.LanOnasis-memory`
 2. Configure API key in extension settings
 3. Start creating and searching memories
 
 ### For CLI Users
 ```bash
-npm install -g @lanonasis/cli
-lanonasis auth login
-lanonasis memory create "My first memory"
+npm install -g @LanOnasis/cli
+LanOnasis auth login
+LanOnasis memory create "My first memory"
 ```
 
 ### For MCP Integration
@@ -236,7 +236,7 @@ npm run mcp-server:init
 
 ### For API Integration
 ```bash
-curl -X POST https://api.lanonasis.com/api/memories \
+curl -X POST https://api.LanOnasis.com/api/memories \
   -H "Authorization: Bearer your-api-key" \
   -H "Content-Type: application/json" \
   -d '{"content": "API memory", "type": "note"}'

@@ -33,7 +33,7 @@ const Index = () => {
             <div className="animate-slide-down">
               <div className="inline-flex items-center rounded-full border border-gray-200/60 dark:border-gray-700/60 bg-background/80 backdrop-blur-sm px-3 py-1 text-sm font-medium text-foreground mb-6">
                 <span className="flex h-2 w-2 rounded-full bg-accent mr-2"></span>
-                <span>Introducing Lanonasis</span>
+                <span>Introducing LanOnasis</span>
               </div>
             </div>
             
@@ -67,12 +67,12 @@ const Index = () => {
                   <div className="h-3 w-3 rounded-full bg-primary/80"></div>
                 </div>
                 <div className="mx-auto flex items-center h-6 w-64 rounded-full bg-background/70 text-xs px-3">
-                  dashboard.lanonasis.com
+                  dashboard.LanOnasis.com
                 </div>
               </div>
               <div className="p-4 bg-gradient-to-b from-transparent to-background/5">
                 <img
-                  src="https://placehold.co/1200x800/f5f5f5/cccccc?text=Lanonasis+Dashboard"
+                  src="https://placehold.co/1200x800/f5f5f5/cccccc?text=LanOnasis+Dashboard"
                   alt="Dashboard Preview"
                   className="w-full h-auto rounded-md shadow-subtle"
                 />
@@ -162,7 +162,7 @@ const Index = () => {
                 Complete developer toolkit with TypeScript SDK, CLI commands, and npm packages for seamless integration.
               </p>
               <ul className="space-y-2">
-                {["@lanonasis/cli (npx ready)", "@lanonasis/sdk package", "TypeScript definitions", "React hooks included"].map((item) => (
+                {["@LanOnasis/cli (npx ready)", "@LanOnasis/sdk package", "TypeScript definitions", "React hooks included"].map((item) => (
                   <li key={item} className="flex items-start">
                     <CheckCircle className="h-5 w-5 text-accent mr-2 flex-shrink-0" />
                     <span className="text-sm">{item}</span>
@@ -232,7 +232,7 @@ const Index = () => {
                   <h3 className="text-xl font-semibold">NPM Packages</h3>
                 </div>
                 <p className="text-muted-foreground">
-                  Ready-to-use packages: @lanonasis/cli (global install), @lanonasis/sdk (TypeScript support), and npx commands.
+                  Ready-to-use packages: @LanOnasis/cli (global install), @LanOnasis/sdk (TypeScript support), and npx commands.
                 </p>
               </div>
               
@@ -262,7 +262,7 @@ const Index = () => {
                     API Documentation
                   </Button>
                 </Link>
-                <Button variant="outline" size="lg" onClick={() => window.open('https://docs.lanonasis.com', '_blank')}>
+                <Button variant="outline" size="lg" onClick={() => window.open('https://docs.LanOnasis.com', '_blank')}>
                   Platform Docs
                 </Button>
               </div>
@@ -273,10 +273,10 @@ const Index = () => {
                 <pre className="text-muted-foreground">
                   <code>
 {`// Example: Memory-as-a-Service with API key management
-const lanonasis = require('@lanonasis/sdk');
+const LanOnasis = require('@LanOnasis/sdk');
 
 // Initialize with your API key
-const client = new lanonasis.Client({
+const client = new LanOnasis.Client({
   apiKey: 'your_api_key_here'
 });
 
@@ -324,7 +324,7 @@ async function useMemoryService() {
               <div className="text-center md:text-left">
                 <h2 className="text-2xl md:text-3xl font-bold text-white mb-3">Ready to get started?</h2>
                 <p className="text-white/80 max-w-md">
-                  Join thousands of developers using Lanonasis Memory-as-a-Service and API Key Management to build intelligent applications.
+                  Join thousands of developers using LanOnasis Memory-as-a-Service and API Key Management to build intelligent applications.
                 </p>
               </div>
               

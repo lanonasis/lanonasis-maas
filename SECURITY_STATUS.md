@@ -59,10 +59,10 @@
 
 | Certification | Status | Last Audit | Next Review | Contact |
 |--------------|---------|-----------|-------------|---------|
-| **SOC 2 Type 2** | ✅ Active | Q3 2024 | Q3 2025 | compliance@lanonasis.com |
-| **ISO 27001** | ✅ Certified | Q2 2024 | Q2 2025 | compliance@lanonasis.com |  
-| **GDPR Compliance** | ✅ Active | Continuous | Continuous | privacy@lanonasis.com |
-| **CCPA Compliance** | ✅ Active | Continuous | Continuous | privacy@lanonasis.com |
+| **SOC 2 Type 2** | ✅ Active | Q3 2024 | Q3 2025 | compliance@LanOnasis.com |
+| **ISO 27001** | ✅ Certified | Q2 2024 | Q2 2025 | compliance@LanOnasis.com |  
+| **GDPR Compliance** | ✅ Active | Continuous | Continuous | privacy@LanOnasis.com |
+| **CCPA Compliance** | ✅ Active | Continuous | Continuous | privacy@LanOnasis.com |
 
 ---
 
@@ -136,20 +136,20 @@ graph TD
 ## 📞 **Security Contacts**
 
 ### **Immediate Response (24/7)**
-- 🚨 **Critical Security Issues**: security@lanonasis.com
+- 🚨 **Critical Security Issues**: security@LanOnasis.com
 - 📱 **Emergency Hotline**: +1-XXX-XXX-XXXX (Enterprise customers)
 - 💬 **Secure Chat**: Available in Enterprise dashboard
 
 ### **General Security**
-- 📧 **Security Team**: security@lanonasis.com
-- 📋 **Compliance Team**: compliance@lanonasis.com  
-- 🔍 **Vulnerability Reports**: vulnerabilities@lanonasis.com
-- 📖 **Documentation**: docs@lanonasis.com
+- 📧 **Security Team**: security@LanOnasis.com
+- 📋 **Compliance Team**: compliance@LanOnasis.com  
+- 🔍 **Vulnerability Reports**: vulnerabilities@LanOnasis.com
+- 📖 **Documentation**: docs@LanOnasis.com
 
 ### **Legal & Privacy**
-- ⚖️ **Legal Team**: legal@lanonasis.com
-- 🔒 **Privacy Officer**: privacy@lanonasis.com
-- 📄 **Data Protection**: dpo@lanonasis.com
+- ⚖️ **Legal Team**: legal@LanOnasis.com
+- 🔒 **Privacy Officer**: privacy@LanOnasis.com
+- 📄 **Data Protection**: dpo@LanOnasis.com
 
 ---
 
@@ -162,4 +162,4 @@ graph TD
 
 ---
 
-*For the most current security status and real-time monitoring, visit our [Security Dashboard](https://security.lanonasis.com) or contact our security team directly.*
+*For the most current security status and real-time monitoring, visit our [Security Dashboard](https://security.LanOnasis.com) or contact our security team directly.*

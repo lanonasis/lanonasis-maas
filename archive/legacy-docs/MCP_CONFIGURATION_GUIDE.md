@@ -1,4 +1,4 @@
-# MCP Configuration Guide - lanonasis-maas
+# MCP Configuration Guide - LanOnasis-maas
 
 **Created:** August 21, 2025  
 **Version:** 1.0  
@@ -6,7 +6,7 @@
 
 ## Overview
 
-lanonasis-maas (Memory as a Service) is the backend implementation providing vector-based memory storage, semantic search, and AI context management. It integrates with Onasis-CORE to provide MCP (Model Context Protocol) functionality through a comprehensive API layer.
+LanOnasis-maas (Memory as a Service) is the backend implementation providing vector-based memory storage, semantic search, and AI context management. It integrates with Onasis-CORE to provide MCP (Model Context Protocol) functionality through a comprehensive API layer.
 
 ## Architecture Overview
 
@@ -145,13 +145,13 @@ POST   /api/v1/projects            - Create project
 
 ```javascript
 // Install SDK
-npm install @lanonasis/maas-sdk
+npm install @LanOnasis/maas-sdk
 
 // Basic usage
-import { LanonasisMaaS } from '@lanonasis/maas-sdk';
+import { LanOnasisMaaS } from '@LanOnasis/maas-sdk';
 
-const client = new LanonasisMaaS({
-  baseUrl: 'https://mcp.lanonasis.com',
+const client = new LanOnasisMaaS({
+  baseUrl: 'https://mcp.LanOnasis.com',
   apiKey: 'your-api-key',
   organizationId: 'your-org-id'
 });
@@ -214,13 +214,13 @@ async function useMemoryService() {
 
 ```python
 # Install SDK
-pip install lanonasis-maas
+pip install LanOnasis-maas
 
 # Basic usage
-from lanonasis_maas import LanonasisMaaS
+from LanOnasis_maas import LanOnasisMaaS
 
-client = LanonasisMaaS(
-    base_url='https://mcp.lanonasis.com',
+client = LanOnasisMaaS(
+    base_url='https://mcp.LanOnasis.com',
     api_key='your-api-key',
     organization_id='your-org-id'
 )
@@ -262,48 +262,48 @@ async def use_memory_service():
 
 ### Method 2: Onasis-CORE MCP Integration
 
-When integrated through Onasis-CORE, lanonasis-maas provides the backend implementation for all MCP tools:
+When integrated through Onasis-CORE, LanOnasis-maas provides the backend implementation for all MCP tools:
 
 ```javascript
 // Onasis-CORE handles MCP protocol
-// lanonasis-maas provides memory implementation
+// LanOnasis-maas provides memory implementation
 
 // Connection flow:
-// Client -> Onasis-CORE MCP Server -> lanonasis-maas API -> Database
+// Client -> Onasis-CORE MCP Server -> LanOnasis-maas API -> Database
 
 // Configuration in Onasis-CORE .env:
-MEMORY_SERVICE_URL=https://mcp.lanonasis.com
-MEMORY_SERVICE_API_KEY=your_lanonasis_maas_api_key
+MEMORY_SERVICE_URL=https://mcp.LanOnasis.com
+MEMORY_SERVICE_API_KEY=your_LanOnasis_maas_api_key
 ```
 
 ### Method 3: CLI Integration
 
 ```bash
 # Install CLI
-npm install -g @lanonasis/cli
+npm install -g @LanOnasis/cli
 
 # Configure
-lanonasis config set-url https://mcp.lanonasis.com
-lanonasis config set-key your-api-key
-lanonasis config set-org your-org-id
+LanOnasis config set-url https://mcp.LanOnasis.com
+LanOnasis config set-key your-api-key
+LanOnasis config set-org your-org-id
 
 # Memory operations
-lanonasis memory create "Project Notes" "Important project information..."
-lanonasis memory search "project information"
-lanonasis memory list --type project --limit 10
-lanonasis memory get mem_12345
-lanonasis memory update mem_12345 --tags "updated,reviewed"
-lanonasis memory delete mem_12345
+LanOnasis memory create "Project Notes" "Important project information..."
+LanOnasis memory search "project information"
+LanOnasis memory list --type project --limit 10
+LanOnasis memory get mem_12345
+LanOnasis memory update mem_12345 --tags "updated,reviewed"
+LanOnasis memory delete mem_12345
 
 # API key management
-lanonasis keys create "Development Key" --access-level authenticated
-lanonasis keys list
-lanonasis keys rotate key_67890
+LanOnasis keys create "Development Key" --access-level authenticated
+LanOnasis keys list
+LanOnasis keys rotate key_67890
 
 # Organization management
-lanonasis org info
-lanonasis org projects
-lanonasis org create-project "New Project" "Project description"
+LanOnasis org info
+LanOnasis org projects
+LanOnasis org create-project "New Project" "Project description"
 ```
 
 ## Configuration Reference
@@ -419,7 +419,7 @@ CREATE INDEX memories_metadata_gin_idx ON memories USING gin (metadata);
 
 #### Create Memory with Custom Embedding
 ```javascript
-const response = await fetch('https://mcp.lanonasis.com/api/v1/memory', {
+const response = await fetch('https://mcp.LanOnasis.com/api/v1/memory', {
   method: 'POST',
   headers: {
     'Content-Type': 'application/json',
@@ -446,7 +446,7 @@ console.log('Created memory:', memory.id);
 
 #### Advanced Semantic Search
 ```javascript
-const searchResponse = await fetch('https://mcp.lanonasis.com/api/v1/memory/search', {
+const searchResponse = await fetch('https://mcp.LanOnasis.com/api/v1/memory/search', {
   method: 'POST',
   headers: {
     'Content-Type': 'application/json',
@@ -483,7 +483,7 @@ results.memories.forEach(memory => {
 
 #### Bulk Memory Operations
 ```javascript
-const bulkResponse = await fetch('https://mcp.lanonasis.com/api/v1/memory/bulk', {
+const bulkResponse = await fetch('https://mcp.LanOnasis.com/api/v1/memory/bulk', {
   method: 'POST',
   headers: {
     'Content-Type': 'application/json',
@@ -522,7 +522,7 @@ console.log(`Created ${bulkResult.success_count} memories`);
 
 #### Create Scoped API Key
 ```javascript
-const keyResponse = await fetch('https://mcp.lanonasis.com/api/v1/keys', {
+const keyResponse = await fetch('https://mcp.LanOnasis.com/api/v1/keys', {
   method: 'POST',
   headers: {
     'Content-Type': 'application/json',
@@ -554,7 +554,7 @@ console.log('Key ID:', apiKey.id);
 
 #### Monitor API Key Usage
 ```javascript
-const usageResponse = await fetch(`https://mcp.lanonasis.com/api/v1/keys/${keyId}/usage`, {
+const usageResponse = await fetch(`https://mcp.LanOnasis.com/api/v1/keys/${keyId}/usage`, {
   headers: {
     'X-API-Key': 'your-admin-api-key',
     'X-Organization-ID': 'org_123'
@@ -1074,9 +1074,9 @@ COPY migrations/ ./migrations/
 
 # Create non-root user
 RUN addgroup -g 1001 -S nodejs && \
-    adduser -S lanonasis -u 1001
+    adduser -S LanOnasis -u 1001
 
-USER lanonasis
+USER LanOnasis
 
 EXPOSE 8080
 
@@ -1089,7 +1089,7 @@ CMD ["node", "src/app.js"]
 # docker-compose.prod.yml
 version: '3.8'
 services:
-  lanonasis-maas:
+  LanOnasis-maas:
     build: .
     ports:
       - "8080:8080"
@@ -1117,7 +1117,7 @@ services:
   postgres:
     image: pgvector/pgvector:pg16
     environment:
-      POSTGRES_DB: lanonasis_maas
+      POSTGRES_DB: LanOnasis_maas
       POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
     volumes:
@@ -1143,7 +1143,7 @@ volumes:
 // ecosystem.config.js - PM2 configuration
 module.exports = {
   apps: [{
-    name: 'lanonasis-maas',
+    name: 'LanOnasis-maas',
     script: 'src/app.js',
     instances: 'max',
     exec_mode: 'cluster',
@@ -1163,9 +1163,9 @@ module.exports = {
 
 ## Support and Updates
 
-- **Issues:** Report to lanonasis-maas repository issues
+- **Issues:** Report to LanOnasis-maas repository issues
 - **Documentation:** Updated with new features and API changes
-- **SDK Updates:** Available via npm (@lanonasis/maas-sdk)
+- **SDK Updates:** Available via npm (@LanOnasis/maas-sdk)
 - **Migration Guides:** Provided for breaking changes
 
 ---

@@ -46,23 +46,23 @@ export interface CreateProjectRequest {
 
 export class ApiKeyService {
     private config: vscode.WorkspaceConfiguration;
-    private baseUrl: string = 'https://api.lanonasis.com';
+    private baseUrl: string = 'https://api.LanOnasis.com';
 
     constructor() {
-        this.config = vscode.workspace.getConfiguration('lanonasis');
+        this.config = vscode.workspace.getConfiguration('LanOnasis');
         this.updateConfig();
     }
 
     private updateConfig(): void {
         const useGateway = this.config.get<boolean>('useGateway', true);
-        const apiUrl = this.config.get<string>('apiUrl', 'https://api.lanonasis.com');
-        const gatewayUrl = this.config.get<string>('gatewayUrl', 'https://api.lanonasis.com');
+        const apiUrl = this.config.get<string>('apiUrl', 'https://api.LanOnasis.com');
+        const gatewayUrl = this.config.get<string>('gatewayUrl', 'https://api.LanOnasis.com');
         
         this.baseUrl = useGateway ? gatewayUrl : apiUrl;
     }
 
     refreshConfig(): void {
-        this.config = vscode.workspace.getConfiguration('lanonasis');
+        this.config = vscode.workspace.getConfiguration('LanOnasis');
         this.updateConfig();
     }
 

@@ -1,8 +1,8 @@
-# MCP Integration in @lanonasis/cli
+# MCP Integration in @LanOnasis/cli
 
 ## Overview
 
-The @lanonasis/cli now includes full MCP (Model Context Protocol) integration, providing a unified interface for memory operations whether using local MCP server or remote API.
+The @LanOnasis/cli now includes full MCP (Model Context Protocol) integration, providing a unified interface for memory operations whether using local MCP server or remote API.
 
 ## Architecture
 
@@ -35,52 +35,52 @@ The @lanonasis/cli now includes full MCP (Model Context Protocol) integration, p
 
 ```bash
 # Connect to MCP (auto-detects best mode)
-lanonasis mcp connect
+LanOnasis mcp connect
 
 # Connect to remote MCP (uses API)
-lanonasis mcp connect --remote
+LanOnasis mcp connect --remote
 
 # Connect to local MCP server
-lanonasis mcp connect --local
+LanOnasis mcp connect --local
 
 # Check connection status
-lanonasis mcp status
+LanOnasis mcp status
 
 # List available tools
-lanonasis mcp tools
+LanOnasis mcp tools
 
 # Create memory via MCP
-lanonasis mcp memory create -t "Title" -c "Content"
+LanOnasis mcp memory create -t "Title" -c "Content"
 
 # Search memories via MCP
-lanonasis mcp memory search "query"
+LanOnasis mcp memory search "query"
 ```
 
 ### Configuration
 
 ```bash
 # Set MCP preferences
-lanonasis mcp config --prefer-remote  # Always use remote
-lanonasis mcp config --prefer-local   # Always use local
-lanonasis mcp config --auto           # Auto-detect (default)
+LanOnasis mcp config --prefer-remote  # Always use remote
+LanOnasis mcp config --prefer-local   # Always use local
+LanOnasis mcp config --auto           # Auto-detect (default)
 ```
 
 ### Advanced Features
 
 ```bash
 # Stream real-time updates (remote only)
-lanonasis memory-mcp stream
+LanOnasis memory-mcp stream
 
 # Batch operations
-lanonasis memory-mcp batch-create -f memories.json
+LanOnasis memory-mcp batch-create -f memories.json
 
 # Export memories
-lanonasis memory-mcp export -o backup.json
+LanOnasis memory-mcp export -o backup.json
 ```
 
 ## Authentication
 
-- **Remote Mode**: Requires authentication via `lanonasis auth login`
+- **Remote Mode**: Requires authentication via `LanOnasis auth login`
 - **Local Mode**: No authentication needed for local MCP server
 - **Auto Mode**: Uses remote if authenticated, local otherwise
 
@@ -90,10 +90,10 @@ When using remote mode, the CLI automatically connects to the SSE endpoint for r
 
 ```bash
 # Stream live updates
-lanonasis memory-mcp stream
+LanOnasis memory-mcp stream
 
 # Filter by type
-lanonasis memory-mcp stream -f project
+LanOnasis memory-mcp stream -f project
 ```
 
 ## Environment Variables
@@ -115,12 +115,12 @@ All existing memory commands now use MCP transparently when available:
 
 ```bash
 # These commands auto-use MCP when connected
-lanonasis create -t "Title" -c "Content"
-lanonasis search "query"
-lanonasis list
+LanOnasis create -t "Title" -c "Content"
+LanOnasis search "query"
+LanOnasis list
 
 # Disable MCP for specific command
-lanonasis --no-mcp create -t "Title" -c "Content"
+LanOnasis --no-mcp create -t "Title" -c "Content"
 ```
 
 ## Tool Mapping
@@ -163,20 +163,20 @@ npm test:mcp:fallback
 
 ```bash
 # Check MCP status
-lanonasis mcp status
+LanOnasis mcp status
 
 # Force reconnect
-lanonasis mcp disconnect
-lanonasis mcp connect --remote
+LanOnasis mcp disconnect
+LanOnasis mcp connect --remote
 
 # Verbose logging
-lanonasis -v mcp connect
+LanOnasis -v mcp connect
 ```
 
 ### Common Errors
 
 1. **"Cannot find module"**: Check MCP_SERVER_PATH environment variable
-2. **"Authentication required"**: Run `lanonasis auth login` for remote mode
+2. **"Authentication required"**: Run `LanOnasis auth login` for remote mode
 3. **"Connection refused"**: Ensure MCP server is running for local mode
 
 ## Benefits

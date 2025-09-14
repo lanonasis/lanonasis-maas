@@ -1,10 +1,10 @@
-// Example usage of @lanonasis/memory-client
+// Example usage of @LanOnasis/memory-client
 import { createMemoryClient } from './dist/index.esm.js';
 
 async function example() {
   // Create a client
   const client = createMemoryClient({
-    apiUrl: 'https://api.lanonasis.com',
+    apiUrl: 'https://api.LanOnasis.com',
     apiKey: 'your-api-key-here',
     useGateway: true
   });

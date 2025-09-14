@@ -1,15 +1,15 @@
-# Vercel Deployment Guide - Lanonasis MaaS
+# Vercel Deployment Guide - LanOnasis MaaS
 
-This guide covers deploying the entire Lanonasis Memory as a Service platform to Vercel with multi-domain support.
+This guide covers deploying the entire LanOnasis Memory as a Service platform to Vercel with multi-domain support.
 
 ## Architecture Overview
 
 The deployment serves multiple domains from a single Vercel project:
 
-- **api.lanonasis.com** - API endpoints and serverless functions
-- **dashboard.lanonasis.com** - React dashboard SPA
-- **docs.lanonasis.com** - Documentation static site
-- **mcp.lanonasis.com/sse** - MCP SSE endpoint (no separate interface, just endpoint)
+- **api.LanOnasis.com** - API endpoints and serverless functions
+- **dashboard.LanOnasis.com** - React dashboard SPA
+- **docs.LanOnasis.com** - Documentation static site
+- **mcp.LanOnasis.com/sse** - MCP SSE endpoint (no separate interface, just endpoint)
 
 ## Deployment Configuration
 
@@ -30,15 +30,15 @@ The `vercel.json` configuration handles:
     "/health" → Health check
   ],
   "rewrites": [
-    "dashboard.lanonasis.com/*" → "/dashboard/*"
-    "docs.lanonasis.com/*" → "/docs/*"
+    "dashboard.LanOnasis.com/*" → "/dashboard/*"
+    "docs.LanOnasis.com/*" → "/docs/*"
   ]
 }
 ```
 
 ### 2. Domain Routing
 
-#### API Domain (api.lanonasis.com)
+#### API Domain (api.LanOnasis.com)
 - All `/api/v1/*` routes → `api/functions/api.js`
 - `/mcp/sse` → `api/functions/mcp-sse.js` 
 - `/sse` → `api/functions/mcp-sse.js`
@@ -46,16 +46,16 @@ The `vercel.json` configuration handles:
 - `/metrics` → `api/functions/api.js`
 - `/api/v1/orchestrate` → `api/functions/orchestrate.js`
 
-#### Dashboard Domain (dashboard.lanonasis.com)
+#### Dashboard Domain (dashboard.LanOnasis.com)
 - All routes → `dashboard/dist/index.html` (SPA routing)
-- OAuth callback: `https://dashboard.lanonasis.com/auth/callback`
-- Dashboard access: `https://dashboard.lanonasis.com/dashboard`
+- OAuth callback: `https://dashboard.LanOnasis.com/auth/callback`
+- Dashboard access: `https://dashboard.LanOnasis.com/dashboard`
 
-#### Docs Domain (docs.lanonasis.com)  
+#### Docs Domain (docs.LanOnasis.com)  
 - All routes → `docs/dist/index.html` (Static site)
 
 #### MCP SSE Endpoint
-- **mcp.lanonasis.com/sse** - This is NOT a separate interface
+- **mcp.LanOnasis.com/sse** - This is NOT a separate interface
 - It's just an endpoint that returns SSE connection data
 - Used by MCP clients for real-time communication
 - No UI - pure API endpoint
@@ -88,8 +88,8 @@ SUPABASE_ANON_KEY=REDACTED_SUPABASE_ANON_KEY
 OPENAI_API_KEY=REDACTED_OPENAI_API_KEY
 
 # Production URLs
-MEMORY_API_URL=https://api.lanonasis.com/api/v1
-LANONASIS_API_URL=https://api.lanonasis.com
+MEMORY_API_URL=https://api.LanOnasis.com/api/v1
+LANONASIS_API_URL=https://api.LanOnasis.com
 
 # Node Configuration
 NODE_ENV=production
@@ -116,15 +116,15 @@ vercel --prod
 In Vercel Dashboard → Project Settings → Domains:
 
 1. Add domains:
-   - `api.lanonasis.com`
-   - `dashboard.lanonasis.com` 
-   - `docs.lanonasis.com`
+   - `api.LanOnasis.com`
+   - `dashboard.LanOnasis.com` 
+   - `docs.LanOnasis.com`
 
 2. Configure DNS records:
    ```
-   CNAME api.lanonasis.com → cname.vercel-dns.com
-   CNAME dashboard.lanonasis.com → cname.vercel-dns.com
-   CNAME docs.lanonasis.com → cname.vercel-dns.com
+   CNAME api.LanOnasis.com → cname.vercel-dns.com
+   CNAME dashboard.LanOnasis.com → cname.vercel-dns.com
+   CNAME docs.LanOnasis.com → cname.vercel-dns.com
    ```
 
 ### 5. OAuth Configuration
@@ -133,8 +133,8 @@ Update Supabase Auth settings:
 
 ```sql
 -- In Supabase Dashboard → Authentication → URL Configuration
-Site URL: https://dashboard.lanonasis.com
-Redirect URLs: https://dashboard.lanonasis.com/auth/callback
+Site URL: https://dashboard.LanOnasis.com
+Redirect URLs: https://dashboard.LanOnasis.com/auth/callback
 ```
 
 ## Testing Deployment
@@ -142,28 +142,28 @@ Redirect URLs: https://dashboard.lanonasis.com/auth/callback
 ### 1. API Endpoints
 ```bash
 # Health check
-curl https://api.lanonasis.com/health
+curl https://api.LanOnasis.com/health
 
 # API endpoints  
-curl https://api.lanonasis.com/api/v1/health
+curl https://api.LanOnasis.com/api/v1/health
 
 # MCP SSE endpoint
-curl https://api.lanonasis.com/mcp/sse
+curl https://api.LanOnasis.com/mcp/sse
 ```
 
 ### 2. Dashboard
-- Visit: https://dashboard.lanonasis.com
+- Visit: https://dashboard.LanOnasis.com
 - Test login flow
 - Verify OAuth callback works
 
 ### 3. Documentation
-- Visit: https://docs.lanonasis.com
+- Visit: https://docs.LanOnasis.com
 - Ensure all pages load correctly
 
 ### 4. MCP Integration
 ```bash
 # Test MCP server connection
-curl -H "X-API-Key: your_api_key" https://api.lanonasis.com/mcp/sse
+curl -H "X-API-Key: your_api_key" https://api.LanOnasis.com/mcp/sse
 ```
 
 ## CLI Configuration Update
@@ -175,11 +175,11 @@ Update CLI to use new endpoints:
 getApiUrl(): string {
   return process.env.MEMORY_API_URL || 
          this.config.apiUrl || 
-         'https://api.lanonasis.com/api/v1';  // ✅ Updated
+         'https://api.LanOnasis.com/api/v1';  // ✅ Updated
 }
 
 getMCPServerUrl(): string {
-  return this.config.mcpServerUrl || 'https://api.lanonasis.com';  // ✅ Updated
+  return this.config.mcpServerUrl || 'https://api.LanOnasis.com';  // ✅ Updated
 }
 ```
 
@@ -187,7 +187,7 @@ getMCPServerUrl(): string {
 
 ```typescript
 // cli/src/mcp-server.ts
-const apiUrl = process.env.LANONASIS_API_URL || 'https://api.lanonasis.com';  // ✅ Updated
+const apiUrl = process.env.LANONASIS_API_URL || 'https://api.LanOnasis.com';  // ✅ Updated
 ```
 
 ## Troubleshooting
@@ -286,4 +286,4 @@ console.log('Function execution time:', Date.now() - startTime);
 - Minimal dependencies
 - Tree shaking enabled
 
-This deployment setup provides a robust, scalable foundation for the Lanonasis MaaS platform with proper domain separation and optimal performance.
+This deployment setup provides a robust, scalable foundation for the LanOnasis MaaS platform with proper domain separation and optimal performance.

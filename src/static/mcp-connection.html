@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lanonasis MCP Remote Connection</title>
+    <title>LanOnasis MCP Remote Connection</title>
     <style>
         * {
             margin: 0;
@@ -170,7 +170,7 @@
     <div class="container">
         <div class="header">
             <h1>🔗 MCP Remote Connection</h1>
-            <p>Connect external MCP clients to your Lanonasis Memory Service</p>
+            <p>Connect external MCP clients to your LanOnasis Memory Service</p>
         </div>
         
         <div class="content">
@@ -182,7 +182,7 @@
                         <strong>SSE Endpoint Active</strong>
                     </div>
                     <div class="endpoint-url">
-                        https://mcp.lanonasis.com/sse
+                        https://mcp.LanOnasis.com/sse
                     </div>
                     <p>This endpoint provides real-time MCP protocol communication via Server-Sent Events.</p>
                 </div>
@@ -193,21 +193,21 @@
                 <p>Add this configuration to your Claude Desktop MCP settings:</p>
                 <div class="config-box">{
   "mcpServers": {
-    "lanonasis-memory": {
+    "LanOnasis-memory": {
       "command": "npx",
       "args": [
         "@modelcontextprotocol/server-sse",
-        "https://mcp.lanonasis.com/sse"
+        "https://mcp.LanOnasis.com/sse"
       ],
       "env": {
-        "MCP_API_KEY": "your-lanonasis-api-key-here"
+        "MCP_API_KEY": "your-LanOnasis-api-key-here"
       }
     }
   }
 }</div>
                 
                 <div class="warning">
-                    <strong>⚠️ Important:</strong> Replace "your-lanonasis-api-key-here" with your actual API key from the dashboard.
+                    <strong>⚠️ Important:</strong> Replace "your-LanOnasis-api-key-here" with your actual API key from the dashboard.
                 </div>
             </div>
             
@@ -241,11 +241,11 @@
             <div class="links">
                 <a href="/dashboard">📊 Dashboard</a>
                 <a href="/docs">📚 API Documentation</a>
-                <a href="https://docs.lanonasis.com">🔗 Full Documentation</a>
+                <a href="https://docs.LanOnasis.com">🔗 Full Documentation</a>
                 <a href="/api/v1/health">💚 Health Check</a>
             </div>
             <p style="margin-top: 1rem;">
-                Lanonasis Memory as a Service - MCP Remote Connection Interface
+                LanOnasis Memory as a Service - MCP Remote Connection Interface
             </p>
         </div>
     </div>

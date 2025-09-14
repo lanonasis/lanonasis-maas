@@ -6,7 +6,7 @@
 
 ### ✅ **1. Unified Backend Integration** 
 **Problem**: CLI, MCP server, and REST API were using different backends  
-**Solution**: All components now point to `https://api.lanonasis.com`  
+**Solution**: All components now point to `https://api.LanOnasis.com`  
 **Status**: ✅ **COMPLETE** - Tested and validated  
 
 ### ✅ **2. Fixed SPA Routing Conflicts**
@@ -16,7 +16,7 @@
 
 ### ✅ **3. Authentication Routing Fixed**  
 **Problem**: Authentication was routing through dashboard instead of onasis-core  
-**Solution**: All auth routes now go through `api.lanonasis.com` (onasis-core)  
+**Solution**: All auth routes now go through `api.LanOnasis.com` (onasis-core)  
 **Status**: ✅ **COMPLETE** - Verified in test results  
 
 ### ✅ **4. CLI-MCP Alignment**
@@ -46,7 +46,7 @@ graph TB
     I -.-> J[/.well-known/onasis.json]
 ```
 
-**✅ All components point to**: `https://api.lanonasis.com`  
+**✅ All components point to**: `https://api.LanOnasis.com`  
 **✅ Authentication through**: `onasis-core` (NOT dashboard)  
 **✅ Database**: Single Supabase instance with RLS  
 **✅ JSON responses**: All AI clients receive proper formatting  
@@ -56,7 +56,7 @@ graph TB
 | Test Category | Status | Details |
 |---------------|--------|---------|
 | **AI Client Detection** | ✅ PASS | Claude Desktop gets JSON, browsers get HTML |
-| **Authentication Routing** | ✅ PASS | Routes through onasis-core at api.lanonasis.com |  
+| **Authentication Routing** | ✅ PASS | Routes through onasis-core at api.LanOnasis.com |  
 | **Service Discovery** | ✅ PASS | `.well-known/onasis.json` provides unified config |
 | **MCP Integration** | ✅ PASS | CLI-aligned server with vendor key auth |
 | **Memory API** | ✅ PASS | Organization-isolated operations |
@@ -111,7 +111,7 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIs...
 - **Configuration**: Points to unified backend
 - **Authentication**: Vendor key and JWT support
 - **MCP Integration**: Can start MCP server with shared config
-- **Command**: `lanonasis-mcp-server --stdio`
+- **Command**: `LanOnasis-mcp-server --stdio`
 
 ### ✅ **MCP Server (CLI-Aligned)**  
 - **Security**: All operations route through Core endpoints

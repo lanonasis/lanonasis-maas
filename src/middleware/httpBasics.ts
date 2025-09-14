@@ -32,9 +32,9 @@ export const attachRequestId = (req: Request, res: Response, next: NextFunction)
 export const corsGuard = (req: Request, res: Response, next: NextFunction) => {
   const origin = req.get('Origin');
   const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',').map(o => o.trim()) || [
-    'https://dashboard.lanonasis.com',
-    'https://docs.lanonasis.com',
-    'https://api.lanonasis.com'
+    'https://dashboard.LanOnasis.com',
+    'https://docs.LanOnasis.com',
+    'https://api.LanOnasis.com'
   ];
 
   // Add development origins if not in production

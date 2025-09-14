@@ -19,9 +19,9 @@ This guide helps you transition from the traditional CLI to the new enhanced int
 
 ### Update the CLI
 ```bash
-npm update -g @lanonasis/cli
+npm update -g @LanOnasis/cli
 # or
-npm install -g @lanonasis/cli@latest
+npm install -g @LanOnasis/cli@latest
 ```
 
 ### Verify Installation
@@ -152,29 +152,29 @@ onasis stats
 | `CLI_VERBOSE` | Enable verbose logging | `false` |
 | `CLI_OUTPUT_FORMAT` | Default output format | `table` |
 | `CLI_OFFLINE` | Offline mode | `false` |
-| `MEMORY_API_URL` | API endpoint | `https://api.lanonasis.com` |
+| `MEMORY_API_URL` | API endpoint | `https://api.LanOnasis.com` |
 
 ## 📚 Additional Resources
 
 - **Interactive Help**: Type `?` anywhere in the CLI
 - **Documentation**: `onasis help [command]`
-- **Online Docs**: https://docs.lanonasis.com/cli/v2
-- **Support**: support@lanonasis.com
+- **Online Docs**: https://docs.LanOnasis.com/cli/v2
+- **Support**: support@LanOnasis.com
 
 ## 🔄 Rollback Instructions
 
 If you need to rollback to v1.x:
 ```bash
 # Uninstall v2.0
-npm uninstall -g @lanonasis/cli
+npm uninstall -g @LanOnasis/cli
 
 # Install specific v1.x version
-npm install -g @lanonasis/cli@1.5.2
+npm install -g @LanOnasis/cli@1.5.2
 ```
 
 ## 📝 Feedback
 
 We'd love to hear your feedback on the new CLI experience:
-- GitHub Issues: https://github.com/lanonasis/cli/issues
-- Feature Requests: https://feedback.lanonasis.com
-- Discord: https://discord.gg/lanonasis
+- GitHub Issues: https://github.com/LanOnasis/cli/issues
+- Feature Requests: https://feedback.LanOnasis.com
+- Discord: https://discord.gg/LanOnasis

@@ -39,13 +39,13 @@ const memory_client_sdk_1 = require("./memory-client-sdk");
 class MemoryService {
     constructor() {
         this.client = null;
-        this.config = vscode.workspace.getConfiguration('lanonasis');
+        this.config = vscode.workspace.getConfiguration('LanOnasis');
         this.initializeClient();
     }
     initializeClient() {
         const apiKey = this.config.get('apiKey');
-        const apiUrl = this.config.get('apiUrl', 'https://api.lanonasis.com');
-        const gatewayUrl = this.config.get('gatewayUrl', 'https://api.lanonasis.com');
+        const apiUrl = this.config.get('apiUrl', 'https://api.LanOnasis.com');
+        const gatewayUrl = this.config.get('gatewayUrl', 'https://api.LanOnasis.com');
         const useGateway = this.config.get('useGateway', true);
         // Use gateway URL if enabled, otherwise use direct API URL
         const effectiveUrl = useGateway ? gatewayUrl : apiUrl;
@@ -58,15 +58,15 @@ class MemoryService {
         }
     }
     refreshClient() {
-        this.config = vscode.workspace.getConfiguration('lanonasis');
+        this.config = vscode.workspace.getConfiguration('LanOnasis');
         this.initializeClient();
     }
     isAuthenticated() {
         return this.client !== null;
     }
     async testConnection(apiKey) {
-        const apiUrl = this.config.get('apiUrl', 'https://api.lanonasis.com');
-        const gatewayUrl = this.config.get('gatewayUrl', 'https://api.lanonasis.com');
+        const apiUrl = this.config.get('apiUrl', 'https://api.LanOnasis.com');
+        const gatewayUrl = this.config.get('gatewayUrl', 'https://api.LanOnasis.com');
         const useGateway = this.config.get('useGateway', true);
         const effectiveUrl = useGateway ? gatewayUrl : apiUrl;
         const testClient = apiKey ? (0, memory_client_sdk_1.createMaaSClient)({

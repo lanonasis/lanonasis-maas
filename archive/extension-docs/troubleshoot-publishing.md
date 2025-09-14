@@ -1,7 +1,7 @@
 # VS Code Extension Publishing Troubleshooting
 
 ## Current Issue
-Extension "lanonasis.lanonasis-memory" not found in marketplace after deployment.
+Extension "LanOnasis.LanOnasis-memory" not found in marketplace after deployment.
 
 ## Root Cause
 Personal Access Token lacks required permissions: `Marketplace (manage)`
@@ -19,7 +19,7 @@ Personal Access Token lacks required permissions: `Marketplace (manage)`
 ### 2. Re-authenticate
 ```bash
 cd vscode-extension
-vsce login lanonasis
+vsce login LanOnasis
 # Enter your new PAT token when prompted
 ```
 
@@ -29,7 +29,7 @@ vsce login lanonasis
 vsce ls-publishers
 
 # If publisher doesn't exist, create it
-vsce create-publisher lanonasis
+vsce create-publisher LanOnasis
 ```
 
 ### 4. Publish Extension
@@ -44,24 +44,24 @@ vsce publish
 ### 5. Verify Publication
 ```bash
 # Check if extension is published
-vsce show lanonasis.lanonasis-memory
+vsce show LanOnasis.LanOnasis-memory
 
 # List your published extensions
-vsce ls lanonasis
+vsce ls LanOnasis
 ```
 
 ## Alternative: Manual Publishing
 
 If CLI continues to fail, use the web interface:
 
-1. Go to: https://marketplace.visualstudio.com/manage/publishers/lanonasis
+1. Go to: https://marketplace.visualstudio.com/manage/publishers/LanOnasis
 2. Upload your .vsix file manually
 3. Fill in the required metadata
 
 ## Verification Checklist
 
 - [ ] PAT token has `Marketplace (manage)` permission
-- [ ] Publisher "lanonasis" exists and you have access
+- [ ] Publisher "LanOnasis" exists and you have access
 - [ ] Extension package is valid (.vsix file)
 - [ ] Extension metadata is complete in package.json
 - [ ] No naming conflicts with existing extensions
@@ -70,12 +70,12 @@ If CLI continues to fail, use the web interface:
 
 ### Publisher Not Found
 ```bash
-vsce create-publisher lanonasis
+vsce create-publisher LanOnasis
 ```
 
 ### Authentication Failed
 - Regenerate PAT token with correct permissions
-- Use `vsce logout` then `vsce login lanonasis`
+- Use `vsce logout` then `vsce login LanOnasis`
 
 ### Extension Already Exists
 - Check if you own the extension
@@ -85,6 +85,6 @@ vsce create-publisher lanonasis
 ## Marketplace Search Tips
 
 Extensions may take 5-15 minutes to appear in search after publishing:
-- Search by exact name: "Lanonasis Memory Assistant"
-- Search by publisher: "lanonasis"
-- Check directly: https://marketplace.visualstudio.com/items?itemName=lanonasis.lanonasis-memory
+- Search by exact name: "LanOnasis Memory Assistant"
+- Search by publisher: "LanOnasis"
+- Check directly: https://marketplace.visualstudio.com/items?itemName=LanOnasis.LanOnasis-memory

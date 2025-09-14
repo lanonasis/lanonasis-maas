@@ -1,5 +1,5 @@
 {
-  "name": "@lanonasis/sdk",
+  "name": "@LanOnasis/sdk",
   "version": "1.2.0",
   "description": "LanOnasis Enterprise SDK - Memory as a Service and API Key Management",
   "main": "dist/index.js",
@@ -23,7 +23,7 @@
     "CHANGELOG.md"
   ],
   "keywords": [
-    "lanonasis",
+    "LanOnasis",
     "memory",
     "api-keys",
     "secrets",
@@ -39,11 +39,11 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/lanonasis/lanonasis-maas"
+    "url": "https://github.com/LanOnasis/LanOnasis-maas"
   },
-  "homepage": "https://lanonasis.com",
+  "homepage": "https://LanOnasis.com",
   "bugs": {
-    "url": "https://github.com/lanonasis/lanonasis-maas/issues"
+    "url": "https://github.com/LanOnasis/LanOnasis-maas/issues"
   },
   "publishConfig": {
     "registry": "https://registry.npmjs.org/",

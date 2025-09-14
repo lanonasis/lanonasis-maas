@@ -29,7 +29,7 @@ export const BankStatementsInsights = () => {
               <pre className="text-xs text-muted-foreground">
                 <code>
 {`// Request example
-fetch('https://api.lanonasis.com/v1/insights/generate', {
+fetch('https://api.LanOnasis.com/v1/insights/generate', {
   method: 'POST',
   headers: {
     'Content-Type': 'application/json',

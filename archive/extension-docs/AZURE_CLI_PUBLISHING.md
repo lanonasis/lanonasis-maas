@@ -20,8 +20,8 @@ Once you have your PAT token, run these commands:
 
 ```bash
 # Method 1: Direct publish with token
-cd /Users/seyederick/DevOps/_project_folders/lanonasis-maas/vscode-extension
-vsce login lanonasis
+cd /Users/seyederick/DevOps/_project_folders/LanOnasis-maas/vscode-extension
+vsce login LanOnasis
 # Enter your PAT token when prompted
 vsce publish
 
@@ -37,30 +37,30 @@ vsce publish --pat $VSCE_PAT
 
 ```bash
 # Check if published
-vsce show lanonasis.lanonasis-memory
+vsce show LanOnasis.LanOnasis-memory
 
 # List your extensions
-vsce ls lanonasis
+vsce ls LanOnasis
 ```
 
 ## 🌐 Direct Marketplace Links
 
-- **Your Extension**: https://marketplace.visualstudio.com/items?itemName=lanonasis.lanonasis-memory
-- **Publisher Management**: https://marketplace.visualstudio.com/manage/publishers/lanonasis
+- **Your Extension**: https://marketplace.visualstudio.com/items?itemName=LanOnasis.LanOnasis-memory
+- **Publisher Management**: https://marketplace.visualstudio.com/manage/publishers/LanOnasis
 - **Azure DevOps**: https://dev.azure.com
 
 ## 🔧 Troubleshooting
 
 If you get authentication errors:
 1. Make sure PAT token has `Marketplace (manage)` permission
-2. Try `vsce logout` then `vsce login lanonasis` again
+2. Try `vsce logout` then `vsce login LanOnasis` again
 3. Verify your publisher exists at marketplace.visualstudio.com
 
 ## 📋 Alternative: Manual Upload
 
 If CLI fails, you can always upload the `.vsix` file manually:
-1. Go to: https://marketplace.visualstudio.com/manage/publishers/lanonasis
+1. Go to: https://marketplace.visualstudio.com/manage/publishers/LanOnasis
 2. Click "New extension" → "Visual Studio Code"
-3. Upload your `lanonasis-memory-1.2.0.vsix` file
+3. Upload your `LanOnasis-memory-1.2.0.vsix` file
 
 The CLI method is usually more reliable than the web interface!

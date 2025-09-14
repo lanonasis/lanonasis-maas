@@ -10,7 +10,7 @@ const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY=REDACTED
 
 // Determine correct redirect URL based on environment
 export const getRedirectUrl = () => {
-  if (typeof window === 'undefined') return 'https://dashboard.lanonasis.com/';
+  if (typeof window === 'undefined') return 'https://dashboard.LanOnasis.com/';
   
   const isLocalhost = window.location.hostname === '127.0.0.1' || window.location.hostname === 'localhost';
   
@@ -18,13 +18,13 @@ export const getRedirectUrl = () => {
     return `${window.location.origin}/`;
   }
   
-  // Always redirect to dashboard.lanonasis.com root for OAuth (auth component will handle dashboard redirect)
-  return 'https://dashboard.lanonasis.com/';
+  // Always redirect to dashboard.LanOnasis.com root for OAuth (auth component will handle dashboard redirect)
+  return 'https://dashboard.LanOnasis.com/';
 };
 
 // OAuth callback URL for provider configurations
 export const getOAuthCallbackUrl = () => {
-  if (typeof window === 'undefined') return 'https://dashboard.lanonasis.com/auth/callback';
+  if (typeof window === 'undefined') return 'https://dashboard.LanOnasis.com/auth/callback';
   
   const isLocalhost = window.location.hostname === '127.0.0.1' || window.location.hostname === 'localhost';
   
@@ -32,8 +32,8 @@ export const getOAuthCallbackUrl = () => {
     return `${window.location.origin}/auth/callback`;
   }
   
-  // Always use dashboard.lanonasis.com for OAuth callbacks
-  return 'https://dashboard.lanonasis.com/auth/callback';
+  // Always use dashboard.LanOnasis.com for OAuth callbacks
+  return 'https://dashboard.LanOnasis.com/auth/callback';
 };
 
 export const supabase = createClient<Database>(

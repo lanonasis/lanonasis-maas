@@ -1,6 +1,6 @@
 # ⚡ CLI Security Best Practices
 
-## Lanonasis CLI v1.5.2+ Security Guide
+## LanOnasis CLI v1.5.2+ Security Guide
 
 ### 🛡️ Golden Contract Security Features
 
@@ -33,7 +33,7 @@ onasis memory list
 #### Secure Config Storage
 ```bash
 # CLI stores configuration securely in user directory
-# Location: ~/.lanonasis/config.json
+# Location: ~/.LanOnasis/config.json
 # Permissions: 600 (user read/write only)
 
 # Check configuration security
@@ -44,7 +44,7 @@ onasis config show --security
 ```bash
 # Recommended environment variables for CLI
 export LANONASIS_VENDOR_KEY="pk_xxxxx.sk_xxxxx"
-export LANONASIS_API_URL="https://api.lanonasis.com"
+export LANONASIS_API_URL="https://api.LanOnasis.com"
 export LANONASIS_ENVIRONMENT="production"
 export LANONASIS_LOG_LEVEL="info"  # Don't use "debug" in production
 ```
@@ -55,11 +55,11 @@ export LANONASIS_LOG_LEVEL="info"  # Don't use "debug" in production
 ```json
 // settings.json - Secure configuration
 {
-  "lanonasis.preferCLI": true,
-  "lanonasis.enableMCP": true,
-  "lanonasis.verboseLogging": false,  // Disable in production
-  "lanonasis.cliDetectionTimeout": 2000,
-  "lanonasis.showPerformanceFeedback": false
+  "LanOnasis.preferCLI": true,
+  "LanOnasis.enableMCP": true,
+  "LanOnasis.verboseLogging": false,  // Disable in production
+  "LanOnasis.cliDetectionTimeout": 2000,
+  "LanOnasis.showPerformanceFeedback": false
 }
 ```
 
@@ -67,10 +67,10 @@ export LANONASIS_LOG_LEVEL="info"  # Don't use "debug" in production
 ```json
 // Cursor configuration with OAuth + CLI
 {
-  "lanonasis.useAutoAuth": true,
-  "lanonasis.preferCLI": true,
-  "lanonasis.enableMCP": true,
-  "lanonasis.verboseLogging": false
+  "LanOnasis.useAutoAuth": true,
+  "LanOnasis.preferCLI": true,
+  "LanOnasis.enableMCP": true,
+  "LanOnasis.verboseLogging": false
 }
 ```
 
@@ -109,7 +109,7 @@ onasis update check
 onasis health --verify-ssl
 
 # Use specific API endpoint
-onasis config set api.url "https://api.lanonasis.com"
+onasis config set api.url "https://api.LanOnasis.com"
 onasis config set api.verify_ssl true
 ```
 
@@ -149,7 +149,7 @@ onasis config set audit.enabled true
 #### Command Line Security
 ```bash
 # ✅ GOOD: Use configuration files
-onasis login --config-file ~/.lanonasis/prod.json
+onasis login --config-file ~/.LanOnasis/prod.json
 
 # ❌ BAD: Credentials in command history
 onasis login --vendor-key pk_xxxxx.sk_xxxxx  # Visible in shell history
@@ -166,8 +166,8 @@ history -d $(history 1)
 set -euo pipefail  # Exit on error, undefined vars, pipe failures
 
 # Load credentials from secure location
-if [ -f ~/.lanonasis/credentials ]; then
-  source ~/.lanonasis/credentials
+if [ -f ~/.LanOnasis/credentials ]; then
+  source ~/.LanOnasis/credentials
 else
   echo "Credentials file not found!" >&2
   exit 1
@@ -232,11 +232,11 @@ onasis update --security-only
 ### 📞 Security Contacts
 
 #### Immediate Security Issues
-- **Security Team**: security@lanonasis.com
-- **CLI Security**: cli-security@lanonasis.com
+- **Security Team**: security@LanOnasis.com
+- **CLI Security**: cli-security@LanOnasis.com
 - **24/7 Response**: Available for Enterprise customers
 
 #### Security Resources
-- **Documentation**: https://docs.lanonasis.com/security/cli
-- **Security Blog**: https://blog.lanonasis.com/security
-- **CVE Database**: https://security.lanonasis.com/cve
+- **Documentation**: https://docs.LanOnasis.com/security/cli
+- **Security Blog**: https://blog.LanOnasis.com/security
+- **CVE Database**: https://security.LanOnasis.com/cve

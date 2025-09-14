@@ -99,7 +99,7 @@ curl -X DELETE \
 
 ## 🔄 **MCP (Model Context Protocol) Access**
 
-### **Option 1: Through Lanonasis Memory Service API**
+### **Option 1: Through LanOnasis Memory Service API**
 ```
 Endpoint: http://localhost:3000/api/v1/memory
 MCP SSE: http://localhost:3000/sse
@@ -115,9 +115,9 @@ MCP Handler: https://api.vortexai.io/api/mcp-handler
 ```json
 {
   "mcpServers": {
-    "lanonasis-memory": {
+    "LanOnasis-memory": {
       "command": "npx",
-      "args": ["@lanonasis/cli", "mcp", "start"],
+      "args": ["@LanOnasis/cli", "mcp", "start"],
       "env": {
         "MEMORY_API_URL": "http://localhost:3000",
         "SUPABASE_URL=https://<project-ref>.supabase.co
@@ -179,10 +179,10 @@ curl -H "apikey: [ANON_KEY]" \
 - **GraphQL**: `https://mxtsdgkwzjzlttpotole.supabase.co/graphql/v1`
 - **Realtime**: `wss://mxtsdgkwzjzlttpotole.supabase.co/realtime/v1/websocket`
 
-### **Through Lanonasis API (when deployed):**
-- **Memory API**: `https://api.lanonasis.com/api/v1/memory`
-- **MCP SSE**: `https://mcp.lanonasis.com/sse`
-- **Dashboard**: `https://dashboard.lanonasis.com`
+### **Through LanOnasis API (when deployed):**
+- **Memory API**: `https://api.LanOnasis.com/api/v1/memory`
+- **MCP SSE**: `https://mcp.LanOnasis.com/sse`
+- **Dashboard**: `https://dashboard.LanOnasis.com`
 
 ### **Through VPS Unified Router:**
 - **Privacy-Protected**: `https://api.vortexai.io/api/memory`

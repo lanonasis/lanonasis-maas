@@ -6,7 +6,7 @@
 
 ### ✅ **Working Components**
 - **Memory Service REST API**: ✅ Running on localhost:3000 with npm
-- **Remote MCP Connection**: ✅ Connected to api.lanonasis.com
+- **Remote MCP Connection**: ✅ Connected to api.LanOnasis.com
 - **CLI Tool**: ✅ MCP commands available in local build
 - **Authentication**: ✅ API key system functioning
 
@@ -19,8 +19,8 @@
 
 | Component | Local Dev | Production | Status | Action Required |
 |-----------|-----------|------------|--------|-----------------|
-| **REST API** | ✅ localhost:3000 | ✅ api.lanonasis.com | ✅ SYNCED | None |
-| **MCP Server** | ❌ Missing deps | ✅ api.lanonasis.com | ⚠️ PARTIAL | Fix local setup |
+| **REST API** | ✅ localhost:3000 | ✅ api.LanOnasis.com | ✅ SYNCED | None |
+| **MCP Server** | ❌ Missing deps | ✅ api.LanOnasis.com | ⚠️ PARTIAL | Fix local setup |
 | **CLI Tools** | ✅ Working | ❌ Incomplete | ❌ OUT OF SYNC | Republish npm |
 | **Authentication** | ✅ API Keys | ✅ API Keys | ✅ SYNCED | None |
 | **Memory Operations** | ✅ Direct API | ✅ Hybrid API/MCP | ⚠️ PARTIAL | Test parity |
@@ -64,15 +64,15 @@ npm version patch  # Increment to v1.1.1
 npm publish
 
 # Verify MCP commands are included:
-npx -y @lanonasis/cli mcp --help
+npx -y @LanOnasis/cli mcp --help
 ```
 
 #### 2.2 Production MCP Server Validation
 ```bash
 # Test all MCP endpoints are accessible
-curl -H "Upgrade: websocket" https://api.lanonasis.com/mcp
-curl https://api.lanonasis.com/api/v1/mcp/tools
-curl https://api.lanonasis.com/api/v1/mcp/status
+curl -H "Upgrade: websocket" https://api.LanOnasis.com/mcp
+curl https://api.LanOnasis.com/api/v1/mcp/tools
+curl https://api.LanOnasis.com/api/v1/mcp/status
 ```
 
 ### Phase 3: Feature Parity Validation (Priority: MEDIUM)
@@ -90,7 +90,7 @@ curl https://api.lanonasis.com/api/v1/mcp/status
 #### 3.2 Authentication Parity Test
 ```bash
 # Test 1: REST API with API Key
-curl -H "X-API-Key: test-key" https://api.lanonasis.com/api/v1/memory
+curl -H "X-API-Key: test-key" https://api.LanOnasis.com/api/v1/memory
 
 # Test 2: MCP with API Key
 node dist/index.js mcp call memory_list_memories
@@ -159,15 +159,15 @@ npm publish            # Push to npm registry
 ### Step 4: Validate Synchronization (30 minutes)
 ```bash
 # Test Suite 1: Local Environment
-npm install -g @lanonasis/cli@latest
-lanonasis mcp connect --local    # Should work
-lanonasis mcp connect --remote   # Should work
-lanonasis memory list            # Should work via hybrid mode
+npm install -g @LanOnasis/cli@latest
+LanOnasis mcp connect --local    # Should work
+LanOnasis mcp connect --remote   # Should work
+LanOnasis memory list            # Should work via hybrid mode
 
 # Test Suite 2: Production Environment
-curl https://api.lanonasis.com/api/v1/health
-lanonasis mcp status            # Should show connected
-lanonasis mcp tools             # Should list all available tools
+curl https://api.LanOnasis.com/api/v1/health
+LanOnasis mcp status            # Should show connected
+LanOnasis mcp tools             # Should list all available tools
 ```
 
 ## 📊 Success Metrics
@@ -214,7 +214,7 @@ jobs:
 
 ### 3. **Documentation Sync**
 - Update README.md with unified deployment instructions
-- Sync api.lanonasis.com documentation with MCP tool descriptions
+- Sync api.LanOnasis.com documentation with MCP tool descriptions
 - Maintain feature parity matrix in documentation
 
 ## ⚠️ Critical Dependencies

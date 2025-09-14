@@ -8,7 +8,7 @@ import {
   type EnhancedMemoryClientConfig,
   type OperationResult,
   type CLICapabilities
-} from '@lanonasis/memory-client';
+} from '@LanOnasis/memory-client';
 import { 
     MemoryEntry, 
     CreateMemoryRequest, 
@@ -34,15 +34,15 @@ export class EnhancedMemoryService {
       vscode.StatusBarAlignment.Right, 
       100
     );
-    this.statusBarItem.command = 'lanonasis.showConnectionInfo';
+    this.statusBarItem.command = 'LanOnasis.showConnectionInfo';
     
     this.updateConfiguration();
     this.initializeEnhancedClient();
   }
 
   updateConfiguration(): void {
-    const config = vscode.workspace.getConfiguration('lanonasis');
-    const apiUrl = config.get<string>('apiUrl', 'https://api.lanonasis.com');
+    const config = vscode.workspace.getConfiguration('LanOnasis');
+    const apiUrl = config.get<string>('apiUrl', 'https://api.LanOnasis.com');
     const useGateway = config.get<boolean>('useGateway', true);
     
     this.baseUrl = useGateway ? 
@@ -70,10 +70,10 @@ export class EnhancedMemoryService {
         apiUrl: this.baseUrl,
         
         // Cursor-specific optimizations
-        preferCLI: Environment.supportsCLI && vscode.workspace.getConfiguration('lanonasis').get<boolean>('preferCLI', true),
-        enableMCP: vscode.workspace.getConfiguration('lanonasis').get<boolean>('enableMCP', true),
-        cliDetectionTimeout: vscode.workspace.getConfiguration('lanonasis').get<number>('cliDetectionTimeout', 2000),
-        verbose: vscode.workspace.getConfiguration('lanonasis').get<boolean>('verboseLogging', false),
+        preferCLI: Environment.supportsCLI && vscode.workspace.getConfiguration('LanOnasis').get<boolean>('preferCLI', true),
+        enableMCP: vscode.workspace.getConfiguration('LanOnasis').get<boolean>('enableMCP', true),
+        cliDetectionTimeout: vscode.workspace.getConfiguration('LanOnasis').get<number>('cliDetectionTimeout', 2000),
+        verbose: vscode.workspace.getConfiguration('LanOnasis').get<boolean>('verboseLogging', false),
         
         // OAuth token for API fallback
         authToken: token
@@ -146,11 +146,11 @@ export class EnhancedMemoryService {
     if (connected) {
       this.statusBarItem.text = `$(database) ${status}`;
       this.statusBarItem.backgroundColor = undefined;
-      this.statusBarItem.tooltip = `Lanonasis Memory (Cursor): Connected via ${status}`;
+      this.statusBarItem.tooltip = `LanOnasis Memory (Cursor): Connected via ${status}`;
     } else {
       this.statusBarItem.text = `$(alert) ${status}`;
       this.statusBarItem.backgroundColor = new vscode.ThemeColor('statusBarItem.errorBackground');
-      this.statusBarItem.tooltip = `Lanonasis Memory (Cursor): ${status}`;
+      this.statusBarItem.tooltip = `LanOnasis Memory (Cursor): ${status}`;
     }
     this.statusBarItem.show();
   }
@@ -173,7 +173,7 @@ export class EnhancedMemoryService {
       `Golden Contract: ${caps.goldenContract ? '✅' : '❌'}`
     ];
 
-    const message = `Lanonasis Memory (Cursor) Status:\n\n${details.join('\n')}`;
+    const message = `LanOnasis Memory (Cursor) Status:\n\n${details.join('\n')}`;
     
     if (caps.cliAvailable && caps.goldenContract) {
       vscode.window.showInformationMessage(
@@ -181,7 +181,7 @@ export class EnhancedMemoryService {
       );
     } else if (caps.authenticated) {
       vscode.window.showInformationMessage(
-        `${message}\n\n💡 Install @lanonasis/cli v1.5.2+ for enhanced performance.`
+        `${message}\n\n💡 Install @LanOnasis/cli v1.5.2+ for enhanced performance.`
       );
     } else {
       vscode.window.showWarningMessage(message);
@@ -278,7 +278,7 @@ export class EnhancedMemoryService {
       }
       
       // Show search performance info in verbose mode
-      if (vscode.workspace.getConfiguration('lanonasis').get<boolean>('verboseLogging', false)) {
+      if (vscode.workspace.getConfiguration('LanOnasis').get<boolean>('verboseLogging', false)) {
         this.showOperationFeedback('search', result);
       }
       
@@ -409,7 +409,7 @@ export class EnhancedMemoryService {
   }
 
   private showOperationFeedback(operation: string, result: OperationResult<any>): void {
-    if (!vscode.workspace.getConfiguration('lanonasis').get<boolean>('showPerformanceFeedback', false)) return;
+    if (!vscode.workspace.getConfiguration('LanOnasis').get<boolean>('showPerformanceFeedback', false)) return;
 
     const source = result.source === 'cli' ? 
       (result.mcpUsed ? 'CLI+MCP+OAuth' : 'CLI+OAuth') : 
@@ -577,7 +577,7 @@ export class EnhancedMemoryService {
     const headers = {
       'Content-Type': 'application/json',
       'Authorization': authHeader,
-      'User-Agent': 'Lanonasis-Cursor-Extension/1.3.0',
+      'User-Agent': 'LanOnasis-Cursor-Extension/1.3.0',
       ...options.headers
     };
 
@@ -622,7 +622,7 @@ export class EnhancedMemoryService {
       'Learn More'
     ).then(selection => {
       if (selection === 'Learn More') {
-        vscode.env.openExternal(vscode.Uri.parse('https://docs.lanonasis.com/cli/cursor'));
+        vscode.env.openExternal(vscode.Uri.parse('https://docs.LanOnasis.com/cli/cursor'));
       }
     });
 

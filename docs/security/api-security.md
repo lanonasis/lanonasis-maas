@@ -1,6 +1,6 @@
 # 🔐 API Security Guide
 
-## Lanonasis MaaS API Security Best Practices
+## LanOnasis MaaS API Security Best Practices
 
 ### 🔑 Authentication Security
 
@@ -19,13 +19,13 @@ const apiKey = "pk_xxxxx.sk_xxxxx" // DON'T DO THIS
 // ✅ GOOD: Environment-based configuration
 const config = {
   apiKey: process.env.LANONASIS_API_KEY,
-  apiUrl: process.env.LANONASIS_API_URL || 'https://api.lanonasis.com'
+  apiUrl: process.env.LANONASIS_API_URL || 'https://api.LanOnasis.com'
 };
 
 // ❌ BAD: Hardcoded sensitive data
 const config = {
   apiKey: "pk_xxxxx.sk_xxxxx",  // DON'T DO THIS
-  apiUrl: "https://api.lanonasis.com"
+  apiUrl: "https://api.LanOnasis.com"
 };
 ```
 
@@ -87,7 +87,7 @@ try {
 ```bash
 # Production environment variables
 LANONASIS_API_KEY=pk_prod_xxxxx.sk_xxxxx
-LANONASIS_API_URL=https://api.lanonasis.com
+LANONASIS_API_URL=https://api.LanOnasis.com
 LANONASIS_ENVIRONMENT=production
 NODE_ENV=production
 ```
@@ -124,14 +124,14 @@ app.use((req, res, next) => {
 ### 🚨 Incident Response
 
 #### Security Incident Contacts
-- **Security Team**: security@lanonasis.com
+- **Security Team**: security@LanOnasis.com
 - **24/7 Incident Response**: Available for Enterprise customers
-- **Vulnerability Disclosure**: security@lanonasis.com
+- **Vulnerability Disclosure**: security@LanOnasis.com
 
 #### Immediate Steps for Security Incidents
 1. **Identify**: Determine the scope of the incident
 2. **Contain**: Revoke compromised API keys immediately
 3. **Investigate**: Review audit logs and access patterns
-4. **Report**: Contact security@lanonasis.com
+4. **Report**: Contact security@LanOnasis.com
 5. **Recover**: Implement fixes and new API keys
 6. **Review**: Post-incident review and improvements

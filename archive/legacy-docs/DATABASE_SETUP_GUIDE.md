@@ -1,4 +1,4 @@
-# 🗄️ Database Setup Guide - Lanonasis Memory Service
+# 🗄️ Database Setup Guide - LanOnasis Memory Service
 
 Complete setup guide for the Supabase database schema and configuration.
 
@@ -13,7 +13,7 @@ Complete setup guide for the Supabase database schema and configuration.
 ### **Method 1: Using Supabase CLI (Recommended)**
 ```bash
 # Navigate to project directory
-cd /Users/seyederick/DevOps/_project_folders/lan-onasis-monorepo/apps/lanonasis-maas
+cd /Users/seyederick/DevOps/_project_folders/lan-onasis-monorepo/apps/LanOnasis-maas
 
 # Apply migrations
 supabase db push
@@ -45,10 +45,10 @@ supabase db push --db-url "postgresql://<user>:<password>@<host>:<port>/<db>"
    http://127.0.0.1:3000
    
    Production:
-   https://api.lanonasis.com
-   https://dashboard.lanonasis.com
-   https://mcp.lanonasis.com
-   https://docs.lanonasis.com
+   https://api.LanOnasis.com
+   https://dashboard.LanOnasis.com
+   https://mcp.LanOnasis.com
+   https://docs.LanOnasis.com
    https://api.vortexai.io
    https://gateway.apiendpoint.net
    https://onasis.io
@@ -82,7 +82,7 @@ curl -H "apikey: [SUPABASE_ANON_KEY=REDACTED_SUPABASE_ANON_KEY
      "https://mxtsdgkwzjzlttpotole.supabase.co/rest/v1/organizations"
 
 # Test via unified router (production)
-curl -H "X-Service: lanonasis-maas" \
+curl -H "X-Service: LanOnasis-maas" \
      -H "Content-Type: application/json" \
      "https://api.vortexai.io/health"
 ```
@@ -184,10 +184,10 @@ npx tsx test-orchestrator.ts
 4. **Test end-to-end routing**
 
 ### **Domain Configuration**:
-- **Primary**: api.lanonasis.com → Memory Service API
-- **Dashboard**: dashboard.lanonasis.com → React Dashboard  
-- **Docs**: docs.lanonasis.com → API Documentation
-- **MCP**: mcp.lanonasis.com → External MCP connections
+- **Primary**: api.LanOnasis.com → Memory Service API
+- **Dashboard**: dashboard.LanOnasis.com → React Dashboard  
+- **Docs**: docs.LanOnasis.com → API Documentation
+- **MCP**: mcp.LanOnasis.com → External MCP connections
 
 ## ✅ **Success Indicators**
 

@@ -6,21 +6,21 @@ This guide covers the deployment of the LanOnasis Memory as a Service (MaaS) pla
 
 ## Architecture Components
 
-### 1. **Core Service** (`@lanonasis/memory-service`)
+### 1. **Core Service** (`@LanOnasis/memory-service`)
 - Express.js REST API with TypeScript
 - Memory management with vector search
 - API key management with encryption
 - MCP integration for AI agents
 - Multi-tenant architecture with organization isolation
 
-### 2. **CLI Tool** (`@lanonasis/cli`)
+### 2. **CLI Tool** (`@LanOnasis/cli`)
 - Command-line interface for all operations
 - Memory management commands
 - API key storage and rotation
 - MCP tool registration and access
 - Interactive and batch modes
 
-### 3. **SDK Package** (`@lanonasis/sdk`)
+### 3. **SDK Package** (`@LanOnasis/sdk`)
 - TypeScript SDK for developers
 - Memory operations client
 - API key management client
@@ -44,8 +44,8 @@ pip install docker-compose
 #### Quick Start
 ```bash
 # Clone the repository
-git clone https://github.com/lanonasis/lanonasis-maas.git
-cd lanonasis-maas
+git clone https://github.com/LanOnasis/LanOnasis-maas.git
+cd LanOnasis-maas
 
 # Set up environment variables
 cp .env.example .env
@@ -85,7 +85,7 @@ curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
 #### Deployment Steps
 ```bash
 # Create namespace
-kubectl create namespace lanonasis
+kubectl create namespace LanOnasis
 
 # Apply configurations
 kubectl apply -f k8s/namespace.yaml
@@ -101,8 +101,8 @@ kubectl apply -f k8s/ingress.yaml
 kubectl apply -f k8s/hpa.yaml
 
 # Check deployment status
-kubectl get pods -n lanonasis
-kubectl rollout status deployment/lanonasis-maas -n lanonasis
+kubectl get pods -n LanOnasis
+kubectl rollout status deployment/LanOnasis-maas -n LanOnasis
 ```
 
 ### Method 3: Manual/VM Deployment
@@ -123,17 +123,17 @@ sudo apt-get install postgresql postgresql-contrib redis-server
 #### Deployment Steps
 ```bash
 # Clone and build
-git clone https://github.com/lanonasis/lanonasis-maas.git
-cd lanonasis-maas
+git clone https://github.com/LanOnasis/LanOnasis-maas.git
+cd LanOnasis-maas
 
 # Install dependencies and build
 npm run workspace:install
 npm run workspace:build
 
 # Set up database
-sudo -u postgres createdb lanonasis_maas
-psql -U postgres -d lanonasis_maas -f src/db/schema.sql
-psql -U postgres -d lanonasis_maas -f src/db/schema-api-keys.sql
+sudo -u postgres createdb LanOnasis_maas
+psql -U postgres -d LanOnasis_maas -f src/db/schema.sql
+psql -U postgres -d LanOnasis_maas -f src/db/schema-api-keys.sql
 
 # Configure environment
 cp .env.example .env
@@ -163,7 +163,7 @@ git push origin main
 #### Manual Deployment
 ```bash
 # Build and publish SDK
-cd packages/lanonasis-sdk
+cd packages/LanOnasis-sdk
 npm run build
 npm version patch
 npm publish --access public
@@ -175,13 +175,13 @@ npm publish --access public
 #### Installation and Usage
 ```bash
 # Install SDK
-npm install @lanonasis/sdk
+npm install @LanOnasis/sdk
 
 # Usage example
-import LanOnasis from '@lanonasis/sdk';
+import LanOnasis from '@LanOnasis/sdk';
 
 const client = new LanOnasis({
-  apiUrl: 'https://api.lanonasis.com',
+  apiUrl: 'https://api.LanOnasis.com',
   apiKey: 'your-api-key'
 });
 
@@ -236,11 +236,11 @@ npm publish --access public
 #### Installation and Usage
 ```bash
 # Install CLI globally
-npm install -g @lanonasis/cli
+npm install -g @LanOnasis/cli
 
 # Initialize and authenticate
-lanonasis init
-lanonasis login
+LanOnasis init
+LanOnasis login
 
 # Memory operations
 memory create --title "Project Notes" --content "Important information"
@@ -248,12 +248,12 @@ memory search "AI development"
 memory list --type context
 
 # API Key operations
-lanonasis api-keys create --name "stripe_key" --type "api_key"
-lanonasis api-keys list --environment production
-lanonasis api-keys mcp register-tool --tool-id "payment-processor"
+LanOnasis api-keys create --name "stripe_key" --type "api_key"
+LanOnasis api-keys list --environment production
+LanOnasis api-keys mcp register-tool --tool-id "payment-processor"
 
 # Get help
-lanonasis --help
+LanOnasis --help
 memory --help
 ```
 
@@ -416,13 +416,13 @@ git push origin main
 
 ```bash
 # Basic health check
-curl https://api.lanonasis.com/api/v1/health
+curl https://api.LanOnasis.com/api/v1/health
 
 # Detailed health with dependencies
-curl https://api.lanonasis.com/api/v1/health/detailed
+curl https://api.LanOnasis.com/api/v1/health/detailed
 
 # Metrics endpoint (Prometheus format)
-curl https://api.lanonasis.com/metrics
+curl https://api.LanOnasis.com/metrics
 ```
 
 ### Monitoring Stack
@@ -438,13 +438,13 @@ The deployment includes a monitoring stack with:
 
 ```bash
 # Check response times
-curl -w "@curl-format.txt" -s -o /dev/null https://api.lanonasis.com/api/v1/health
+curl -w "@curl-format.txt" -s -o /dev/null https://api.LanOnasis.com/api/v1/health
 
 # Monitor database performance
-curl https://api.lanonasis.com/api/v1/health/database
+curl https://api.LanOnasis.com/api/v1/health/database
 
 # Check memory usage
-curl https://api.lanonasis.com/api/v1/health/memory
+curl https://api.LanOnasis.com/api/v1/health/memory
 ```
 
 ## Troubleshooting
@@ -476,12 +476,12 @@ curl https://api.lanonasis.com/api/v1/health/memory
 4. **CLI Installation Issues**
    ```bash
    # Reinstall CLI
-   npm uninstall -g @lanonasis/cli
-   npm install -g @lanonasis/cli
+   npm uninstall -g @LanOnasis/cli
+   npm install -g @LanOnasis/cli
    
    # Check installation
-   which lanonasis
-   lanonasis --version
+   which LanOnasis
+   LanOnasis --version
    ```
 
 ### Logs and Debugging
@@ -495,7 +495,7 @@ export LOG_LEVEL=debug
 npm start
 
 # CLI debug mode
-lanonasis --verbose memory search "test"
+LanOnasis --verbose memory search "test"
 
 # SDK debug mode
 const client = new LanOnasis({ debug: true, ... });
@@ -512,7 +512,7 @@ REINDEX INDEX idx_memory_entries_embedding;
 redis-cli FLUSHDB  # Clear cache if needed
 
 # Memory cleanup
-pm2 restart lanonasis-maas
+pm2 restart LanOnasis-maas
 ```
 
 ## Security Considerations
@@ -543,11 +543,11 @@ pm2 restart lanonasis-maas
 
 ## Support and Documentation
 
-- **API Documentation**: https://api.lanonasis.com/docs
-- **CLI Documentation**: `lanonasis --help` or https://docs.lanonasis.com/cli
-- **SDK Documentation**: https://docs.lanonasis.com/sdk
-- **GitHub Issues**: https://github.com/lanonasis/lanonasis-maas/issues
-- **Community Discord**: https://discord.gg/lanonasis
+- **API Documentation**: https://api.LanOnasis.com/docs
+- **CLI Documentation**: `LanOnasis --help` or https://docs.LanOnasis.com/cli
+- **SDK Documentation**: https://docs.LanOnasis.com/sdk
+- **GitHub Issues**: https://github.com/LanOnasis/LanOnasis-maas/issues
+- **Community Discord**: https://discord.gg/LanOnasis
 
 ## License
 

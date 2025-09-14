@@ -146,7 +146,7 @@ INSERT INTO organizations (
 ) VALUES (
   '${superadminOrgId}',
   'LanOnasis Superadmin',
-  'lanonasis-superadmin',
+  'LanOnasis-superadmin',
   'Superadmin organization for MCP integration',
   'enterprise',
   true
@@ -157,7 +157,7 @@ INSERT INTO users (
   id, email, name, organization_id, role, is_active
 ) VALUES (
   '${superadminUserId}',
-  'superadmin@example.com',
+  'superadmin@LanOnasis.com',
   'LanOnasis Superadmin',
   '${superadminOrgId}',
   'superadmin',
@@ -287,7 +287,7 @@ async function testSSEEndpoint(apiKey) {
   console.log('🧪 Testing SSE endpoint with API key...');
   
   try {
-    const response = await fetch('https://api.lanonasis.com/sse', {
+    const response = await fetch('https://api.LanOnasis.com/sse', {
       headers: {
         'X-API-Key': apiKey,
         'Accept': 'text/event-stream'

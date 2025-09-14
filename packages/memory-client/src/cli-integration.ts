@@ -2,7 +2,7 @@
  * CLI Integration Module for Memory Client SDK
  * 
  * Provides intelligent CLI detection and MCP channel utilization
- * when @lanonasis/cli v1.5.2+ is available in the environment
+ * when @LanOnasis/cli v1.5.2+ is available in the environment
  */
 
 import { exec, execSync } from 'child_process';
@@ -75,14 +75,14 @@ export class CLIIntegration {
 
   private async performDetection(): Promise<CLIInfo> {
     try {
-      // Check if onasis/lanonasis CLI is available
+      // Check if onasis/LanOnasis CLI is available
       let versionOutput = '';
       try {
         const { stdout } = await execAsync('onasis --version 2>/dev/null', { timeout: 5000 });
         versionOutput = stdout;
       } catch {
-        // Try lanonasis if onasis fails
-        const { stdout } = await execAsync('lanonasis --version 2>/dev/null', { timeout: 5000 });
+        // Try LanOnasis if onasis fails
+        const { stdout } = await execAsync('LanOnasis --version 2>/dev/null', { timeout: 5000 });
         versionOutput = stdout;
       }
 
@@ -109,7 +109,7 @@ export class CLIIntegration {
       // Check MCP availability
       let mcpAvailable = false;
       try {
-        await execAsync('onasis mcp status --output json 2>/dev/null || lanonasis mcp status --output json 2>/dev/null', {
+        await execAsync('onasis mcp status --output json 2>/dev/null || LanOnasis mcp status --output json 2>/dev/null', {
           timeout: 3000
         });
         mcpAvailable = true;
@@ -120,7 +120,7 @@ export class CLIIntegration {
       // Check authentication status
       let authenticated = false;
       try {
-        const { stdout: authOutput } = await execAsync('onasis auth status --output json 2>/dev/null || lanonasis auth status --output json 2>/dev/null', {
+        const { stdout: authOutput } = await execAsync('onasis auth status --output json 2>/dev/null || LanOnasis auth status --output json 2>/dev/null', {
           timeout: 3000
         });
         
@@ -198,14 +198,14 @@ export class CLIIntegration {
   }
 
   /**
-   * Get preferred CLI command (onasis for Golden Contract, fallback to lanonasis)
+   * Get preferred CLI command (onasis for Golden Contract, fallback to LanOnasis)
    */
   private async getPreferredCLICommand(): Promise<string> {
     try {
       execSync('which onasis', { stdio: 'ignore', timeout: 1000 });
       return 'onasis';
     } catch {
-      return 'lanonasis';
+      return 'LanOnasis';
     }
   }
 

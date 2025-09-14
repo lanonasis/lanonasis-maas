@@ -18,7 +18,7 @@ Your orchestrator and database setup is **COMPLETE** and ready for use!
 
 3. **CORS & Routing**: ✅ Configured for all domains
    - **Development**: localhost ports configured
-   - **Production**: All lanonasis.com, vortexai.io domains whitelisted
+   - **Production**: All LanOnasis.com, vortexai.io domains whitelisted
    - **Unified Router**: Ready for privacy-protected routing
 
 ### 🗄️ **Database Tables Found:**

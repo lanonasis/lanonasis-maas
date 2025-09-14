@@ -140,8 +140,8 @@ export function enforceJSONForAIClients(req: AIClientRequest, res: Response, nex
             mcp: '/api/v1/mcp'
           },
           examples: {
-            curl: 'curl -H "Accept: application/json" https://api.lanonasis.com/api/v1/health',
-            javascript: 'fetch("https://api.lanonasis.com/api/v1/health", { headers: { "Accept": "application/json" } })'
+            curl: 'curl -H "Accept: application/json" https://api.LanOnasis.com/api/v1/health',
+            javascript: 'fetch("https://api.LanOnasis.com/api/v1/health", { headers: { "Accept": "application/json" } })'
           }
         });
       } else {

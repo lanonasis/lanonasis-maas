@@ -12,7 +12,7 @@ app.use('/api/memory', [
   authMiddleware,
   privacyMiddleware,
   createProxyMiddleware({
-    target: process.env.MEMORY_SERVICE_URL || 'https://api.lanonasis.com',
+    target: process.env.MEMORY_SERVICE_URL || 'https://api.LanOnasis.com',
     changeOrigin: true,
     pathRewrite: {'^/api/memory': '/api/v1'},
     onProxyReq: (proxyReq, req) => {
@@ -92,7 +92,7 @@ Only after validating the integration works well:
 ### Environment Variables
 ```env
 # Onasis-CORE .env
-MEMORY_SERVICE_URL=https://api.lanonasis.com
+MEMORY_SERVICE_URL=https://api.LanOnasis.com
 MEMORY_SERVICE_INTERNAL=http://memory-service:3000
 ENABLE_MEMORY_PROXY=true
 ```
@@ -110,7 +110,7 @@ services:
       - memory-service
   
   memory-service:
-    image: lanonasis/memory-service:latest
+    image: LanOnasis/memory-service:latest
     environment:
       - NODE_ENV=production
     volumes:

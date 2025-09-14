@@ -9,7 +9,7 @@ import { WindsurfAiAssistant } from './utils/WindsurfAiAssistant';
 import { MemoryType } from './types/memory';
 
 export function activate(context: vscode.ExtensionContext) {
-    console.log('Lanonasis Memory Extension for Windsurf is now active');
+    console.log('LanOnasis Memory Extension for Windsurf is now active');
 
     // Initialize authentication service with Windsurf-optimized settings
     const authService = new AuthenticationService(context);
@@ -24,8 +24,8 @@ export function activate(context: vscode.ExtensionContext) {
     // Initialize tree providers
     const memoryTreeProvider = new MemoryTreeProvider(memoryService, authService);
     const apiKeyTreeProvider = new ApiKeyTreeProvider(apiKeyService);
-    vscode.window.registerTreeDataProvider('lanonasisMemories', memoryTreeProvider);
-    vscode.window.registerTreeDataProvider('lanonasisApiKeys', apiKeyTreeProvider);
+    vscode.window.registerTreeDataProvider('LanOnasisMemories', memoryTreeProvider);
+    vscode.window.registerTreeDataProvider('LanOnasisApiKeys', apiKeyTreeProvider);
 
     // Initialize completion provider with Windsurf context awareness
     const completionProvider = new MemoryCompletionProvider(memoryService);
@@ -38,67 +38,67 @@ export function activate(context: vscode.ExtensionContext) {
     );
 
     // Set context variables
-    vscode.commands.executeCommand('setContext', 'lanonasis.enabled', true);
+    vscode.commands.executeCommand('setContext', 'LanOnasis.enabled', true);
     
     // Check authentication status with auto-refresh
     checkAuthenticationStatusWithAutoRefresh(authService, memoryTreeProvider);
 
     // Register commands
     const commands = [
-        vscode.commands.registerCommand('lanonasis.searchMemory', async () => {
+        vscode.commands.registerCommand('LanOnasis.searchMemory', async () => {
             await searchMemories(memoryService, authService);
         }),
 
-        vscode.commands.registerCommand('lanonasis.createMemory', async () => {
+        vscode.commands.registerCommand('LanOnasis.createMemory', async () => {
             await createMemoryFromSelection(memoryService, authService);
         }),
 
-        vscode.commands.registerCommand('lanonasis.createMemoryFromFile', async () => {
+        vscode.commands.registerCommand('LanOnasis.createMemoryFromFile', async () => {
             await createMemoryFromFile(memoryService, authService);
         }),
 
-        vscode.commands.registerCommand('lanonasis.createMemoryFromWorkspace', async () => {
+        vscode.commands.registerCommand('LanOnasis.createMemoryFromWorkspace', async () => {
             await createMemoryFromWorkspace(memoryService, authService);
         }),
 
-        vscode.commands.registerCommand('lanonasis.authenticate', async () => {
+        vscode.commands.registerCommand('LanOnasis.authenticate', async () => {
             await authenticate(authService, memoryTreeProvider);
         }),
 
-        vscode.commands.registerCommand('lanonasis.logout', async () => {
+        vscode.commands.registerCommand('LanOnasis.logout', async () => {
             await logout(authService, memoryTreeProvider);
         }),
 
-        vscode.commands.registerCommand('lanonasis.refreshMemories', async () => {
+        vscode.commands.registerCommand('LanOnasis.refreshMemories', async () => {
             memoryTreeProvider.refresh();
         }),
 
-        vscode.commands.registerCommand('lanonasis.openMemory', (memory: any) => {
+        vscode.commands.registerCommand('LanOnasis.openMemory', (memory: any) => {
             openMemoryInEditor(memory);
         }),
 
-        vscode.commands.registerCommand('lanonasis.switchMode', async () => {
+        vscode.commands.registerCommand('LanOnasis.switchMode', async () => {
             await switchConnectionMode(memoryService);
         }),
 
-        vscode.commands.registerCommand('lanonasis.aiAssist', async () => {
+        vscode.commands.registerCommand('LanOnasis.aiAssist', async () => {
             await aiAssist(aiAssistant, authService);
         }),
 
         // API Key Management Commands
-        vscode.commands.registerCommand('lanonasis.manageApiKeys', async () => {
+        vscode.commands.registerCommand('LanOnasis.manageApiKeys', async () => {
             await manageApiKeys(apiKeyService);
         }),
 
-        vscode.commands.registerCommand('lanonasis.createProject', async () => {
+        vscode.commands.registerCommand('LanOnasis.createProject', async () => {
             await createProject(apiKeyService, apiKeyTreeProvider);
         }),
 
-        vscode.commands.registerCommand('lanonasis.viewProjects', async () => {
+        vscode.commands.registerCommand('LanOnasis.viewProjects', async () => {
             await viewProjects(apiKeyService);
         }),
 
-        vscode.commands.registerCommand('lanonasis.refreshApiKeys', async () => {
+        vscode.commands.registerCommand('LanOnasis.refreshApiKeys', async () => {
             apiKeyTreeProvider.refresh();
         })
     ];
@@ -106,7 +106,7 @@ export function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(...commands);
 
     // Auto-refresh memories periodically
-    const config = vscode.workspace.getConfiguration('lanonasis');
+    const config = vscode.workspace.getConfiguration('LanOnasis');
     const refreshInterval = config.get<number>('autoRefreshInterval', 300000); // 5 minutes default
     
     const refreshTimer = setInterval(() => {
@@ -123,10 +123,10 @@ export function activate(context: vscode.ExtensionContext) {
     }
 
     // Show welcome message if first time
-    const isFirstTime = context.globalState.get('lanonasis.firstTime', true);
+    const isFirstTime = context.globalState.get('LanOnasis.firstTime', true);
     if (isFirstTime) {
         showWelcomeMessage(authService);
-        context.globalState.update('lanonasis.firstTime', false);
+        context.globalState.update('LanOnasis.firstTime', false);
     }
 }
 
@@ -135,26 +135,26 @@ async function checkAuthenticationStatusWithAutoRefresh(
     memoryTreeProvider: MemoryTreeProvider
 ) {
     const isAuthenticated = await authService.checkAuthenticationStatus();
-    vscode.commands.executeCommand('setContext', 'lanonasis.authenticated', isAuthenticated);
+    vscode.commands.executeCommand('setContext', 'LanOnasis.authenticated', isAuthenticated);
     
     if (!isAuthenticated) {
-        const config = vscode.workspace.getConfiguration('lanonasis');
+        const config = vscode.workspace.getConfiguration('LanOnasis');
         const useAutoAuth = config.get<boolean>('useAutoAuth', true);
         
         if (useAutoAuth) {
             const result = await vscode.window.showInformationMessage(
-                'Lanonasis Memory: Authentication required. Use auto-login with browser?',
+                'LanOnasis Memory: Authentication required. Use auto-login with browser?',
                 'Auto Login', 'Manual Setup', 'Later'
             );
             
             if (result === 'Auto Login') {
                 await authenticate(authService, memoryTreeProvider);
             } else if (result === 'Manual Setup') {
-                vscode.commands.executeCommand('workbench.action.openSettings', 'lanonasis');
+                vscode.commands.executeCommand('workbench.action.openSettings', 'LanOnasis');
             }
         } else {
             const result = await vscode.window.showInformationMessage(
-                'Lanonasis Memory: No authentication configured. Set up now?',
+                'LanOnasis Memory: No authentication configured. Set up now?',
                 'Configure', 'Later'
             );
             
@@ -185,7 +185,7 @@ async function searchMemories(memoryService: MemoryService, authService: Authent
         }, async () => {
             const results = await memoryService.searchMemories({
                 query,
-                limit: vscode.workspace.getConfiguration('lanonasis').get<number>('searchLimit', 10),
+                limit: vscode.workspace.getConfiguration('LanOnasis').get<number>('searchLimit', 10),
                 threshold: 0.7
             });
 
@@ -244,7 +244,7 @@ async function createMemoryFromSelection(memoryService: MemoryService, authServi
 
     if (!title) return;
 
-    const config = vscode.workspace.getConfiguration('lanonasis');
+    const config = vscode.workspace.getConfiguration('LanOnasis');
     const defaultType = config.get<string>('defaultMemoryType', 'context');
 
     try {
@@ -269,7 +269,7 @@ async function createMemoryFromSelection(memoryService: MemoryService, authServi
         });
 
         vscode.window.showInformationMessage(`Memory "${title}" created successfully`);
-        vscode.commands.executeCommand('lanonasis.refreshMemories');
+        vscode.commands.executeCommand('LanOnasis.refreshMemories');
     } catch (error) {
         handleError('Failed to create memory', error);
     }
@@ -295,7 +295,7 @@ async function createMemoryFromFile(memoryService: MemoryService, authService: A
 
     if (!title) return;
 
-    const config = vscode.workspace.getConfiguration('lanonasis');
+    const config = vscode.workspace.getConfiguration('LanOnasis');
     const defaultType = config.get<string>('defaultMemoryType', 'context');
 
     try {
@@ -321,7 +321,7 @@ async function createMemoryFromFile(memoryService: MemoryService, authService: A
         });
 
         vscode.window.showInformationMessage(`Memory "${title}" created from file`);
-        vscode.commands.executeCommand('lanonasis.refreshMemories');
+        vscode.commands.executeCommand('LanOnasis.refreshMemories');
     } catch (error) {
         handleError('Failed to create memory from file', error);
     }
@@ -376,21 +376,21 @@ Path: ${workspaceFolder.uri.fsPath}`;
         });
 
         vscode.window.showInformationMessage(`Workspace memory "${title}" created`);
-        vscode.commands.executeCommand('lanonasis.refreshMemories');
+        vscode.commands.executeCommand('LanOnasis.refreshMemories');
     } catch (error) {
         handleError('Failed to create workspace memory', error);
     }
 }
 
 async function authenticate(authService: AuthenticationService, memoryTreeProvider: MemoryTreeProvider) {
-    const config = vscode.workspace.getConfiguration('lanonasis');
+    const config = vscode.workspace.getConfiguration('LanOnasis');
     const useAutoAuth = config.get<boolean>('useAutoAuth', true);
     
     if (useAutoAuth) {
         try {
             await vscode.window.withProgress({
                 location: vscode.ProgressLocation.Notification,
-                title: 'Authenticating with Lanonasis...',
+                title: 'Authenticating with LanOnasis...',
                 cancellable: true
             }, async (progress, token) => {
                 progress.report({ message: 'Opening browser for authentication...' });
@@ -398,8 +398,8 @@ async function authenticate(authService: AuthenticationService, memoryTreeProvid
                 const success = await authService.authenticateWithBrowser(token);
                 
                 if (success) {
-                    vscode.commands.executeCommand('setContext', 'lanonasis.authenticated', true);
-                    vscode.window.showInformationMessage('Successfully authenticated with Lanonasis Memory Service');
+                    vscode.commands.executeCommand('setContext', 'LanOnasis.authenticated', true);
+                    vscode.window.showInformationMessage('Successfully authenticated with LanOnasis Memory Service');
                     memoryTreeProvider.refresh();
                 } else {
                     throw new Error('Authentication was cancelled or failed');
@@ -410,8 +410,8 @@ async function authenticate(authService: AuthenticationService, memoryTreeProvid
         }
     } else {
         const apiKey = await vscode.window.showInputBox({
-            prompt: 'Enter your Lanonasis API Key',
-            placeHolder: 'Get your API key from api.lanonasis.com',
+            prompt: 'Enter your LanOnasis API Key',
+            placeHolder: 'Get your API key from api.LanOnasis.com',
             password: true,
             ignoreFocusOut: true
         });
@@ -422,8 +422,8 @@ async function authenticate(authService: AuthenticationService, memoryTreeProvid
             const success = await authService.authenticateWithApiKey(apiKey);
             
             if (success) {
-                vscode.commands.executeCommand('setContext', 'lanonasis.authenticated', true);
-                vscode.window.showInformationMessage('Successfully authenticated with Lanonasis Memory Service');
+                vscode.commands.executeCommand('setContext', 'LanOnasis.authenticated', true);
+                vscode.window.showInformationMessage('Successfully authenticated with LanOnasis Memory Service');
                 memoryTreeProvider.refresh();
             }
         } catch (error) {
@@ -434,14 +434,14 @@ async function authenticate(authService: AuthenticationService, memoryTreeProvid
 
 async function logout(authService: AuthenticationService, memoryTreeProvider: MemoryTreeProvider) {
     const confirmed = await vscode.window.showWarningMessage(
-        'Are you sure you want to logout from Lanonasis?',
+        'Are you sure you want to logout from LanOnasis?',
         'Logout', 'Cancel'
     );
     
     if (confirmed === 'Logout') {
         await authService.logout();
-        vscode.commands.executeCommand('setContext', 'lanonasis.authenticated', false);
-        vscode.window.showInformationMessage('Logged out from Lanonasis Memory Service');
+        vscode.commands.executeCommand('setContext', 'LanOnasis.authenticated', false);
+        vscode.window.showInformationMessage('Logged out from LanOnasis Memory Service');
         memoryTreeProvider.refresh();
     }
 }
@@ -449,7 +449,7 @@ async function logout(authService: AuthenticationService, memoryTreeProvider: Me
 async function aiAssist(aiAssistant: WindsurfAiAssistant, authService: AuthenticationService) {
     if (!await ensureAuthenticated(authService)) return;
     
-    const config = vscode.workspace.getConfiguration('lanonasis');
+    const config = vscode.workspace.getConfiguration('LanOnasis');
     if (!config.get<boolean>('enableAiAssist', true)) {
         vscode.window.showInformationMessage('AI Assistant is disabled in settings');
         return;
@@ -463,10 +463,10 @@ async function ensureAuthenticated(authService: AuthenticationService): Promise<
         return true;
     }
     
-    vscode.window.showWarningMessage('Please authenticate with Lanonasis first', 'Authenticate')
+    vscode.window.showWarningMessage('Please authenticate with LanOnasis first', 'Authenticate')
         .then(choice => {
             if (choice === 'Authenticate') {
-                vscode.commands.executeCommand('lanonasis.authenticate');
+                vscode.commands.executeCommand('LanOnasis.authenticate');
             }
         });
     
@@ -503,7 +503,7 @@ function openMemoryInEditor(memory: any) {
 ${memory.content}
 
 ---
-*Opened via Lanonasis Memory Assistant for Windsurf*`;
+*Opened via LanOnasis Memory Assistant for Windsurf*`;
     
     vscode.workspace.openTextDocument({
         content,
@@ -514,12 +514,12 @@ ${memory.content}
 }
 
 function showWelcomeMessage(authService: AuthenticationService) {
-    const config = vscode.workspace.getConfiguration('lanonasis');
+    const config = vscode.workspace.getConfiguration('LanOnasis');
     const useAutoAuth = config.get<boolean>('useAutoAuth', true);
     
     const authMethod = useAutoAuth ? 'auto-login with browser' : 'manual API key';
     
-    const message = `Welcome to Lanonasis Memory Assistant for Windsurf! 🚀
+    const message = `Welcome to LanOnasis Memory Assistant for Windsurf! 🚀
 
 🧠 AI-powered memory management integrated with Windsurf
 🔍 Press Ctrl+Shift+M to search memories
@@ -533,15 +533,15 @@ Authentication method: ${authMethod}`;
     vscode.window.showInformationMessage(message, 'Get Started', 'Configure')
         .then(selection => {
             if (selection === 'Get Started') {
-                vscode.commands.executeCommand('lanonasis.authenticate');
+                vscode.commands.executeCommand('LanOnasis.authenticate');
             } else if (selection === 'Configure') {
-                vscode.commands.executeCommand('workbench.action.openSettings', 'lanonasis');
+                vscode.commands.executeCommand('workbench.action.openSettings', 'LanOnasis');
             }
         });
 }
 
 async function switchConnectionMode(memoryService: MemoryService) {
-    const config = vscode.workspace.getConfiguration('lanonasis');
+    const config = vscode.workspace.getConfiguration('LanOnasis');
     const currentUseGateway = config.get<boolean>('useGateway', true);
     
     const options = [
@@ -619,7 +619,7 @@ async function manageApiKeys(apiKeyService: ApiKeyService) {
             await viewProjects(apiKeyService);
             break;
         case 'refresh':
-            vscode.commands.executeCommand('lanonasis.refreshApiKeys');
+            vscode.commands.executeCommand('LanOnasis.refreshApiKeys');
             break;
     }
 }
@@ -722,7 +722,7 @@ async function createApiKey(apiKeyService: ApiKeyService) {
         if (!selectedKeyType) return;
 
         // Environment selection
-        const config = vscode.workspace.getConfiguration('lanonasis');
+        const config = vscode.workspace.getConfiguration('LanOnasis');
         const defaultEnv = config.get<string>('defaultEnvironment', 'development');
         
         const environments = [
@@ -754,7 +754,7 @@ async function createApiKey(apiKeyService: ApiKeyService) {
         });
 
         vscode.window.showInformationMessage(`API key "${name}" created successfully`);
-        vscode.commands.executeCommand('lanonasis.refreshApiKeys');
+        vscode.commands.executeCommand('LanOnasis.refreshApiKeys');
 
     } catch (error) {
         vscode.window.showErrorMessage(`Failed to create API key: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -775,7 +775,7 @@ async function createProject(apiKeyService: ApiKeyService, apiKeyTreeProvider: A
             placeHolder: 'Enter a description for your project'
         });
 
-        const config = vscode.workspace.getConfiguration('lanonasis');
+        const config = vscode.workspace.getConfiguration('LanOnasis');
         const organizationId = config.get<string>('organizationId');
 
         if (!organizationId) {
@@ -806,7 +806,7 @@ async function createProject(apiKeyService: ApiKeyService, apiKeyTreeProvider: A
         });
 
         vscode.window.showInformationMessage(`Project "${name}" created successfully`);
-        vscode.commands.executeCommand('lanonasis.refreshApiKeys');
+        vscode.commands.executeCommand('LanOnasis.refreshApiKeys');
 
     } catch (error) {
         vscode.window.showErrorMessage(`Failed to create project: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -914,5 +914,5 @@ ${JSON.stringify(project.settings, null, 2)}
 }
 
 export function deactivate() {
-    console.log('Lanonasis Memory Extension for Windsurf is deactivated');
+    console.log('LanOnasis Memory Extension for Windsurf is deactivated');
 }

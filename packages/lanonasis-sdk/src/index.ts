@@ -125,10 +125,10 @@ export type {
  * 
  * @example
  * ```typescript
- * import LanOnasis from '@lanonasis/sdk';
+ * import LanOnasis from '@LanOnasis/sdk';
  * 
  * const client = new LanOnasis({
- *   apiUrl: 'https://api.lanonasis.com',
+ *   apiUrl: 'https://api.LanOnasis.com',
  *   apiKey: 'your-api-key'
  * });
  * 

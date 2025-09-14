@@ -83,7 +83,7 @@ export const BankStatementsAnalyze = () => {
               <pre className="text-xs text-muted-foreground">
                 <code>
 {`// Request example
-fetch('https://api.lanonasis.com/v1/bank-statements/analyze', {
+fetch('https://api.LanOnasis.com/v1/bank-statements/analyze', {
   method: 'POST',
   headers: {
     'Content-Type': 'application/json',

@@ -35,7 +35,7 @@ function createErrorEnvelope(requestId, message, type = 'Error', code = 'INTERNA
 
 function validateProjectScope(headers) {
   const projectScope = headers['x-project-scope'];
-  return projectScope === 'lanonasis-maas';
+  return projectScope === 'LanOnasis-maas';
 }
 
 // CORE ALIGNMENT: Enhanced Netlify function handler
@@ -46,9 +46,9 @@ exports.handler = async (event) => {
   
   // CORE ALIGNMENT: Enhanced CORS configuration
   const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') || [
-    'https://dashboard.lanonasis.com',
-    'https://docs.lanonasis.com',
-    'https://api.lanonasis.com'
+    'https://dashboard.LanOnasis.com',
+    'https://docs.LanOnasis.com',
+    'https://api.LanOnasis.com'
   ];
   
   // Add development origins if not in production

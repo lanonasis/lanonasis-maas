@@ -36,7 +36,7 @@ app.get('/', (req, res) => {
 // Health endpoint
 app.get('/health', (req, res) => {
   res.json({
-    name: 'Lanonasis Memory Service',
+    name: 'LanOnasis Memory Service',
     version: '1.0.0',
     status: 'healthy',
     timestamp: new Date().toISOString(),
@@ -53,7 +53,7 @@ app.get('/health', (req, res) => {
 
 app.get('/api/v1/health', (req, res) => {
   res.json({
-    name: 'Lanonasis Memory Service',
+    name: 'LanOnasis Memory Service',
     version: '1.0.0',
     status: 'healthy',
     timestamp: new Date().toISOString(),

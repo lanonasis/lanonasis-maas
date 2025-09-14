@@ -1,4 +1,4 @@
-# Lanonasis Memory Assistant for VSCode
+# LanOnasis Memory Assistant for VSCode
 
 **Transform your coding experience with intelligent memory management and API key management directly in VSCode.**
 
@@ -28,8 +28,8 @@
 
 ## 🚀 Getting Started
 
-1. **Get API Key**: Visit [api.lanonasis.com](https://api.lanonasis.com) to get your free API key
-2. **Configure Extension**: Open VSCode settings and add your API key to `lanonasis.apiKey`
+1. **Get API Key**: Visit [api.LanOnasis.com](https://api.LanOnasis.com) to get your free API key
+2. **Configure Extension**: Open VSCode settings and add your API key to `LanOnasis.apiKey`
 3. **Start Using**: 
    - Press `Ctrl+Shift+M` to search memories
    - Press `Ctrl+Shift+K` to manage API keys
@@ -58,23 +58,23 @@
 | `Ctrl+Shift+M` | Search memories |
 | `Ctrl+Shift+Alt+M` | Create memory from selection |
 | `Ctrl+Shift+K` | Manage API keys |
-| `F1` → "Lanonasis" | Access all commands |
+| `F1` → "LanOnasis" | Access all commands |
 
 ## 🔧 Configuration
 
 ### Memory Settings
-- `lanonasis.apiKey` - Your API key from api.lanonasis.com
-- `lanonasis.useGateway` - Use Onasis Gateway for enhanced performance (default: true)
-- `lanonasis.gatewayUrl` - Gateway endpoint (default: https://api.lanonasis.com)
-- `lanonasis.apiUrl` - Direct API endpoint (default: https://api.lanonasis.com)
-- `lanonasis.defaultMemoryType` - Default type for new memories
-- `lanonasis.searchLimit` - Number of search results to show
-- `lanonasis.enableAutoCompletion` - Enable memory-based code completion
+- `LanOnasis.apiKey` - Your API key from api.LanOnasis.com
+- `LanOnasis.useGateway` - Use Onasis Gateway for enhanced performance (default: true)
+- `LanOnasis.gatewayUrl` - Gateway endpoint (default: https://api.LanOnasis.com)
+- `LanOnasis.apiUrl` - Direct API endpoint (default: https://api.LanOnasis.com)
+- `LanOnasis.defaultMemoryType` - Default type for new memories
+- `LanOnasis.searchLimit` - Number of search results to show
+- `LanOnasis.enableAutoCompletion` - Enable memory-based code completion
 
 ### API Key Management Settings (NEW!)
-- `lanonasis.enableApiKeyManagement` - Enable API key management features (default: true)
-- `lanonasis.defaultEnvironment` - Default environment for new keys (dev/staging/production)
-- `lanonasis.organizationId` - Your organization ID for team features
+- `LanOnasis.enableApiKeyManagement` - Enable API key management features (default: true)
+- `LanOnasis.defaultEnvironment` - Default environment for new keys (dev/staging/production)
+- `LanOnasis.organizationId` - Your organization ID for team features
 
 ### Gateway vs Direct API
 - **Gateway Mode** (recommended): Uses Onasis Gateway for optimized routing, caching, and enhanced performance
@@ -94,19 +94,19 @@
 ## 📊 Commands
 
 ### Memory Commands
-- `Lanonasis: Search Memory` - Search through all memories
-- `Lanonasis: Create Memory` - Create memory from selection
-- `Lanonasis: List Memories` - View all memories
-- `Lanonasis: Delete Memory` - Remove a memory
-- `Lanonasis: Update Memory` - Edit existing memory
-- `Lanonasis: Refresh Memories` - Sync with server
-- `Lanonasis: Switch Gateway/Direct API Mode` - Toggle connection mode
+- `LanOnasis: Search Memory` - Search through all memories
+- `LanOnasis: Create Memory` - Create memory from selection
+- `LanOnasis: List Memories` - View all memories
+- `LanOnasis: Delete Memory` - Remove a memory
+- `LanOnasis: Update Memory` - Edit existing memory
+- `LanOnasis: Refresh Memories` - Sync with server
+- `LanOnasis: Switch Gateway/Direct API Mode` - Toggle connection mode
 
 ### API Key Commands (NEW!)
-- `Lanonasis: Manage API Keys` - Open API key management
-- `Lanonasis: Create API Key Project` - Create new project
-- `Lanonasis: View API Key Projects` - List all projects
-- `Lanonasis: Refresh API Keys` - Update key list
+- `LanOnasis: Manage API Keys` - Open API key management
+- `LanOnasis: Create API Key Project` - Create new project
+- `LanOnasis: View API Key Projects` - List all projects
+- `LanOnasis: Refresh API Keys` - Update key list
 
 ## 🔐 Security
 
@@ -118,10 +118,10 @@
 
 ## 📞 Support
 
-- **Documentation**: [docs.lanonasis.com](https://docs.lanonasis.com)
-- **API Reference**: [api.lanonasis.com/docs](https://api.lanonasis.com/docs)
-- **Issues**: [GitHub Issues](https://github.com/lanonasis/lanonasis-maas/issues)
-- **Enterprise**: Contact enterprise@lanonasis.com
+- **Documentation**: [docs.LanOnasis.com](https://docs.LanOnasis.com)
+- **API Reference**: [api.LanOnasis.com/docs](https://api.LanOnasis.com/docs)
+- **Issues**: [GitHub Issues](https://github.com/LanOnasis/LanOnasis-maas/issues)
+- **Enterprise**: Contact enterprise@LanOnasis.com
 
 ## 🎉 What's Next
 
@@ -133,6 +133,6 @@
 
 ---
 
-**Made with ❤️ by the Lanonasis Team**
+**Made with ❤️ by the LanOnasis Team**
 
 *Memory as a Service - Making knowledge persistent and searchable*

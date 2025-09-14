@@ -1,21 +1,21 @@
-# 🚀 Lanonasis Memory Service - Production Deployment Guide
+# 🚀 LanOnasis Memory Service - Production Deployment Guide
 
-Complete end-to-end production deployment for the **Lanonasis Memory as a Service (MaaS)** platform with full custom domain configuration.
+Complete end-to-end production deployment for the **LanOnasis Memory as a Service (MaaS)** platform with full custom domain configuration.
 
 ## 🎯 **Complete Production Architecture**
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                 Lanonasis Memory Service Suite              │
+│                 LanOnasis Memory Service Suite              │
 ├─────────────────────────────────────────────────────────────┤
 │                                                             │
-│  api.lanonasis.com          │  dashboard.lanonasis.com      │
+│  api.LanOnasis.com          │  dashboard.LanOnasis.com      │
 │  ├── /api/v1/*             │  ├── / (Dashboard Home)       │
 │  ├── /sse                  │  ├── /login                   │
 │  ├── /docs (Swagger)       │  ├── /dashboard               │
 │  └── /metrics              │  └── /settings                │
 │                             │                               │
-│  docs.lanonasis.com         │  mcp.lanonasis.com           │
+│  docs.LanOnasis.com         │  mcp.LanOnasis.com           │
 │  ├── / (Documentation)     │  ├── /sse (MCP Remote)       │
 │  ├── /guides               │  └── /health                  │
 │  └── /api-reference        │                               │
@@ -28,10 +28,10 @@ Complete end-to-end production deployment for the **Lanonasis Memory as a Servic
 
 | **Domain** | **Purpose** | **Netlify Site** | **Site ID** | **Content** |
 |------------|-------------|------------------|-------------|-------------|
-| **api.lanonasis.com** | Backend API & SSE Services | onasis-gateway | d8903f18-f595-4c5d-8f16-a88f0bf20b76 | Express backend, Memory API, SSE endpoint |
-| **dashboard.lanonasis.com** | SaaS Dashboard Frontend | onasis-maas | 3292422f-eabd-4860-a849-9795cfb40d43 | React dashboard, API key management |
-| **docs.lanonasis.com** | Documentation Site | lanonasis-docs | 9bd27611-dcb7-4d8c-a9b9-30f7164024d5 | VitePress docs, guides, API reference |
-| **mcp.lanonasis.com** | MCP Remote Connection | lanonasis-mcp | cce8abf3-c454-4ae9-b6e7-299ce339c862 | MCP SSE endpoint for external clients |
+| **api.LanOnasis.com** | Backend API & SSE Services | onasis-gateway | d8903f18-f595-4c5d-8f16-a88f0bf20b76 | Express backend, Memory API, SSE endpoint |
+| **dashboard.LanOnasis.com** | SaaS Dashboard Frontend | onasis-maas | 3292422f-eabd-4860-a849-9795cfb40d43 | React dashboard, API key management |
+| **docs.LanOnasis.com** | Documentation Site | LanOnasis-docs | 9bd27611-dcb7-4d8c-a9b9-30f7164024d5 | VitePress docs, guides, API reference |
+| **mcp.LanOnasis.com** | MCP Remote Connection | LanOnasis-mcp | cce8abf3-c454-4ae9-b6e7-299ce339c862 | MCP SSE endpoint for external clients |
 
 ### **🔧 Manual Configuration Steps**
 
@@ -40,7 +40,7 @@ For each domain, follow these steps in the Netlify Dashboard:
 #### **1. Add Custom Domain**
 - Navigate to: **Site Settings → Domain Management**
 - Click **Add custom domain**
-- Enter the domain name (e.g., `dashboard.lanonasis.com`)
+- Enter the domain name (e.g., `dashboard.LanOnasis.com`)
 - Click **Verify**
 
 #### **2. DNS Configuration**
@@ -54,15 +54,15 @@ TTL: 3600
 
 Type: CNAME
 Name: docs
-Value: lanonasis-docs.netlify.app
+Value: LanOnasis-docs.netlify.app
 TTL: 3600
 
 Type: CNAME
 Name: mcp
-Value: lanonasis-mcp.netlify.app
+Value: LanOnasis-mcp.netlify.app
 TTL: 3600
 
-# api.lanonasis.com already configured via onasis-gateway
+# api.LanOnasis.com already configured via onasis-gateway
 ```
 
 #### **3. SSL Certificate**
@@ -72,7 +72,7 @@ TTL: 3600
 
 ## 📦 **Deployment Content & Build Commands**
 
-### **api.lanonasis.com (Backend)**
+### **api.LanOnasis.com (Backend)**
 - **Content**: Express.js backend with Memory Service API
 - **Build**: Already deployed via onasis-gateway
 - **Endpoints**:
@@ -81,7 +81,7 @@ TTL: 3600
   - `/docs` - Swagger API documentation
   - `/metrics` - Prometheus metrics
 
-### **dashboard.lanonasis.com (Frontend)**
+### **dashboard.LanOnasis.com (Frontend)**
 - **Content**: React SaaS dashboard from `/dashboard/dist`
 - **Build Command**: `cd dashboard && npm install && npm run build`
 - **Publish Directory**: `dashboard/dist`
@@ -89,9 +89,9 @@ TTL: 3600
   - Self-service API key management
   - Memory CRUD operations
   - Usage analytics and insights
-  - Professional Lanonasis branding
+  - Professional LanOnasis branding
 
-### **docs.lanonasis.com (Documentation)**
+### **docs.LanOnasis.com (Documentation)**
 - **Content**: VitePress documentation from `/docs/.vitepress/dist`
 - **Build Command**: `cd docs && npm install && npm run build`
 - **Publish Directory**: `docs/.vitepress/dist`
@@ -101,7 +101,7 @@ TTL: 3600
   - CLI documentation
   - MCP integration guides
 
-### **mcp.lanonasis.com (MCP Remote)**
+### **mcp.LanOnasis.com (MCP Remote)**
 - **Content**: MCP connection endpoint and documentation
 - **Build**: Static site with proxy configuration
 - **Purpose**: External MCP client connections (Claude Desktop, etc.)
@@ -147,10 +147,10 @@ PORT=3000
 ### **Client-Safe Environment (.env.production.secure)**
 ```env
 # Public URLs (safe for frontend)
-VITE_API_URL=https://api.lanonasis.com
-VITE_DASHBOARD_URL=https://dashboard.lanonasis.com
-VITE_DOCS_URL=https://docs.lanonasis.com
-VITE_MCP_URL=https://mcp.lanonasis.com
+VITE_API_URL=https://api.LanOnasis.com
+VITE_DASHBOARD_URL=https://dashboard.LanOnasis.com
+VITE_DOCS_URL=https://docs.LanOnasis.com
+VITE_MCP_URL=https://mcp.LanOnasis.com
 
 # Feature Flags
 VITE_ENABLE_ANALYTICS=true
@@ -179,7 +179,7 @@ npm install
 npm run build
 
 # Deploy to Netlify
-netlify deploy --prod --dir=.vitepress/dist --site=lanonasis-docs
+netlify deploy --prod --dir=.vitepress/dist --site=LanOnasis-docs
 ```
 
 ### **Backend Deployment**
@@ -196,16 +196,16 @@ After deployment, verify all endpoints:
 
 ```bash
 # API Health Check
-curl https://api.lanonasis.com/health
+curl https://api.LanOnasis.com/health
 
 # Dashboard Access
-curl -I https://dashboard.lanonasis.com
+curl -I https://dashboard.LanOnasis.com
 
 # Documentation Access
-curl -I https://docs.lanonasis.com
+curl -I https://docs.LanOnasis.com
 
 # MCP SSE Connection
-curl https://mcp.lanonasis.com/sse
+curl https://mcp.LanOnasis.com/sse
 ```
 
 ### **Functionality Testing**
@@ -224,8 +224,8 @@ curl https://mcp.lanonasis.com/sse
 - **Security**: Authentication attempts, rate limiting
 
 ### **Monitoring Endpoints**
-- `https://api.lanonasis.com/metrics` - Prometheus metrics
-- `https://api.lanonasis.com/health` - Health check
+- `https://api.LanOnasis.com/metrics` - Prometheus metrics
+- `https://api.LanOnasis.com/health` - Health check
 - Netlify Analytics for frontend performance
 
 ## 🎯 **Production Features**
@@ -247,9 +247,9 @@ curl https://mcp.lanonasis.com/sse
 - [ ] Configure all 4 custom domains in Netlify
 - [ ] Update DNS records with domain registrar
 - [ ] Verify SSL certificates are active
-- [ ] Deploy dashboard to dashboard.lanonasis.com
-- [ ] Deploy documentation to docs.lanonasis.com
-- [ ] Configure MCP endpoint at mcp.lanonasis.com
+- [ ] Deploy dashboard to dashboard.LanOnasis.com
+- [ ] Deploy documentation to docs.LanOnasis.com
+- [ ] Configure MCP endpoint at mcp.LanOnasis.com
 - [ ] Test all endpoints and functionality
 - [ ] Verify external MCP connections work
 - [ ] Monitor logs and metrics
@@ -262,20 +262,20 @@ curl https://mcp.lanonasis.com/sse
 
 Once deployed, you'll have a complete **Memory as a Service (MaaS)** platform:
 
-- **🌐 dashboard.lanonasis.com**: Professional SaaS dashboard
-- **🔧 api.lanonasis.com**: Robust Memory Service API
-- **📚 docs.lanonasis.com**: Comprehensive documentation
-- **🔗 mcp.lanonasis.com**: External tool integration
+- **🌐 dashboard.LanOnasis.com**: Professional SaaS dashboard
+- **🔧 api.LanOnasis.com**: Robust Memory Service API
+- **📚 docs.LanOnasis.com**: Comprehensive documentation
+- **🔗 mcp.LanOnasis.com**: External tool integration
 
 **Your enterprise-grade Memory Service platform is ready for production!**
-│  🌐 api.lanonasis.com                                       │
+│  🌐 api.LanOnasis.com                                       │
 │  ├── /              → Dashboard (React SPA)                 │
 │  ├── /api/v1/       → Memory Service API                    │
 │  ├── /docs          → Swagger API Documentation             │
 │  ├── /sse           → Server-Sent Events                    │
 │  └── /metrics       → Prometheus Metrics                    │
 │                                                             │
-│  📚 docs.lanonasis.com                                      │
+│  📚 docs.LanOnasis.com                                      │
 │  └── /              → VitePress Documentation Site          │
 └─────────────────────────────────────────────────────────────┘
 ```
@@ -296,7 +296,7 @@ nano .env.production
 - ✅ **Supabase**: Production database credentials
 - ✅ **JWT Secret**: 256-bit production secret key
 - ✅ **OpenAI API**: Production API key for embeddings
-- ✅ **Domains**: SSL certificates for api.lanonasis.com & docs.lanonasis.com
+- ✅ **Domains**: SSL certificates for api.LanOnasis.com & docs.LanOnasis.com
 
 ### 2. **Deploy to Production**
 
@@ -326,13 +326,13 @@ docker-compose -f deploy/production.yml ps
 docker-compose -f deploy/production.yml logs -f
 
 # Test endpoints
-curl https://api.lanonasis.com/health
-curl https://docs.lanonasis.com/health
+curl https://api.LanOnasis.com/health
+curl https://docs.LanOnasis.com/health
 ```
 
 ## 🔧 **Production Services**
 
-### **Memory Service API** (`api.lanonasis.com`)
+### **Memory Service API** (`api.LanOnasis.com`)
 - **Dashboard**: Self-service API key management
 - **REST API**: Complete memory CRUD operations
 - **Authentication**: JWT + API key security
@@ -340,7 +340,7 @@ curl https://docs.lanonasis.com/health
 - **Documentation**: Swagger UI at `/docs`
 - **Monitoring**: Prometheus metrics at `/metrics`
 
-### **Documentation Site** (`docs.lanonasis.com`)
+### **Documentation Site** (`docs.LanOnasis.com`)
 - **VitePress**: Static documentation site
 - **Guides**: Getting started, API reference, CLI docs
 - **Examples**: Code samples and tutorials
@@ -362,7 +362,7 @@ docker-compose -f deploy/production.yml ps
 docker-compose -f deploy/production.yml logs -f
 
 # View specific service logs
-docker-compose -f deploy/production.yml logs -f lanonasis-api
+docker-compose -f deploy/production.yml logs -f LanOnasis-api
 docker-compose -f deploy/production.yml logs -f docs-site
 
 # Restart services
@@ -379,9 +379,9 @@ git pull
 ## 📊 **Monitoring & Health**
 
 ### **Health Endpoints**
-- API Health: `https://api.lanonasis.com/health`
-- Docs Health: `https://docs.lanonasis.com/health`
-- Metrics: `https://api.lanonasis.com/metrics`
+- API Health: `https://api.LanOnasis.com/health`
+- Docs Health: `https://docs.LanOnasis.com/health`
+- Metrics: `https://api.LanOnasis.com/metrics`
 
 ### **Service Monitoring**
 - **Traefik Dashboard**: `http://your-server:8080`
@@ -403,16 +403,16 @@ Once deployed, your complete Memory Service will be available at:
 
 | Service | URL | Description |
 |---------|-----|-------------|
-| **Dashboard** | `https://api.lanonasis.com/dashboard` | Self-service portal |
-| **API** | `https://api.lanonasis.com/api/v1` | REST API |
-| **SSE** | `https://api.lanonasis.com/sse` | Real-time updates |
-| **API Docs** | `https://api.lanonasis.com/docs` | Swagger UI |
-| **Documentation** | `https://docs.lanonasis.com` | Complete docs |
-| **Metrics** | `https://api.lanonasis.com/metrics` | Prometheus |
+| **Dashboard** | `https://api.LanOnasis.com/dashboard` | Self-service portal |
+| **API** | `https://api.LanOnasis.com/api/v1` | REST API |
+| **SSE** | `https://api.LanOnasis.com/sse` | Real-time updates |
+| **API Docs** | `https://api.LanOnasis.com/docs` | Swagger UI |
+| **Documentation** | `https://docs.LanOnasis.com` | Complete docs |
+| **Metrics** | `https://api.LanOnasis.com/metrics` | Prometheus |
 
 ## 🎉 **You're Ready!**
 
-Your complete **Lanonasis Memory Service** is now production-ready with:
+Your complete **LanOnasis Memory Service** is now production-ready with:
 
 - 🧠 **Memory Management**: Full CRUD with semantic search
 - 🔐 **Enterprise Security**: JWT + API keys + audit logging  

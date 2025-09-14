@@ -1,6 +1,6 @@
-# @lanonasis/memory-client
+# @LanOnasis/memory-client
 
-[![npm version](https://badge.fury.io/js/@lanonasis%2Fmemory-client.svg)](https://www.npmjs.com/package/@lanonasis/memory-client)
+[![npm version](https://badge.fury.io/js/@LanOnasis%2Fmemory-client.svg)](https://www.npmjs.com/package/@LanOnasis/memory-client)
 [![TypeScript](https://img.shields.io/badge/TypeScript-Ready-blue.svg)](https://www.typescriptlang.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
@@ -19,15 +19,15 @@
 ## 📦 Installation
 
 ```bash
-npm install @lanonasis/memory-client
+npm install @LanOnasis/memory-client
 ```
 
 ```bash
-yarn add @lanonasis/memory-client
+yarn add @LanOnasis/memory-client
 ```
 
 ```bash
-pnpm add @lanonasis/memory-client
+pnpm add @LanOnasis/memory-client
 ```
 
 ## 🏁 Quick Start
@@ -35,11 +35,11 @@ pnpm add @lanonasis/memory-client
 ### Basic Usage
 
 ```typescript
-import { createMemoryClient } from '@lanonasis/memory-client';
+import { createMemoryClient } from '@LanOnasis/memory-client';
 
 // Initialize the client
 const memoryClient = createMemoryClient({
-  apiUrl: 'https://api.lanonasis.com',
+  apiUrl: 'https://api.LanOnasis.com',
   apiKey: 'your-api-key-here'
 });
 
@@ -63,7 +63,7 @@ console.log('Found memories:', results.data?.results);
 ### Production Setup
 
 ```typescript
-import { createProductionClient } from '@lanonasis/memory-client';
+import { createProductionClient } from '@LanOnasis/memory-client';
 
 const client = createProductionClient(process.env.LANONASIS_API_KEY!);
 
@@ -75,7 +75,7 @@ console.log('Service health:', health.data?.status);
 ### Development Setup
 
 ```typescript
-import { createDevelopmentClient } from '@lanonasis/memory-client';
+import { createDevelopmentClient } from '@LanOnasis/memory-client';
 
 const client = createDevelopmentClient('dev-api-key');
 ```
@@ -191,7 +191,7 @@ console.log('By type:', stats.data?.memories_by_type);
 
 ```typescript
 const client = createMemoryClient({
-  apiUrl: 'https://api.lanonasis.com',
+  apiUrl: 'https://api.LanOnasis.com',
   apiKey: 'your-api-key'
 });
 ```
@@ -200,7 +200,7 @@ const client = createMemoryClient({
 
 ```typescript
 const client = createMemoryClient({
-  apiUrl: 'https://api.lanonasis.com',
+  apiUrl: 'https://api.LanOnasis.com',
   authToken: 'your-bearer-token'
 });
 ```
@@ -225,14 +225,14 @@ Gateway mode provides enhanced performance through optimized routing and caching
 ```typescript
 // Enable gateway mode (default)
 const client = createMemoryClient({
-  apiUrl: 'https://api.lanonasis.com',
+  apiUrl: 'https://api.LanOnasis.com',
   apiKey: 'your-key',
   useGateway: true
 });
 
 // Direct API mode (for debugging)
 const directClient = createMemoryClient({
-  apiUrl: 'https://api.lanonasis.com',
+  apiUrl: 'https://api.LanOnasis.com',
   apiKey: 'your-key',
   useGateway: false
 });
@@ -243,7 +243,7 @@ const directClient = createMemoryClient({
 ### Custom Hook
 
 ```typescript
-import { useMemoryClient } from '@lanonasis/memory-client';
+import { useMemoryClient } from '@LanOnasis/memory-client';
 
 function MyComponent() {
   const client = useMemoryClient({
@@ -294,7 +294,7 @@ if (result.error) {
 ```typescript
 // Production
 const prodClient = createMemoryClient({
-  apiUrl: 'https://api.lanonasis.com',
+  apiUrl: 'https://api.LanOnasis.com',
   apiKey: process.env.LANONASIS_API_KEY,
   timeout: 10000,
   useGateway: true
@@ -310,7 +310,7 @@ const devClient = createMemoryClient({
 
 // Custom headers
 const customClient = createMemoryClient({
-  apiUrl: 'https://api.lanonasis.com',
+  apiUrl: 'https://api.LanOnasis.com',
   apiKey: 'your-key',
   headers: {
     'X-Client-Version': '1.0.0',
@@ -330,7 +330,7 @@ import type {
   SearchMemoryRequest,
   MemoryType,
   ApiResponse 
-} from '@lanonasis/memory-client';
+} from '@LanOnasis/memory-client';
 
 // Strongly typed memory creation
 const memory: CreateMemoryRequest = {
@@ -363,9 +363,9 @@ Check out the [examples directory](./examples) for complete implementation examp
 
 ## 📖 Documentation
 
-- [API Reference](https://docs.lanonasis.com/sdk/api)
-- [Getting Started Guide](https://docs.lanonasis.com/sdk/quickstart)
-- [Migration Guide](https://docs.lanonasis.com/sdk/migration)
+- [API Reference](https://docs.LanOnasis.com/sdk/api)
+- [Getting Started Guide](https://docs.LanOnasis.com/sdk/quickstart)
+- [Migration Guide](https://docs.LanOnasis.com/sdk/migration)
 
 ## 🤝 Contributing
 
@@ -373,15 +373,15 @@ We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) f
 
 ## 📄 License
 
-MIT © [Lanonasis Team](https://lanonasis.com)
+MIT © [LanOnasis Team](https://LanOnasis.com)
 
 ## 🆘 Support
 
-- **Documentation**: [docs.lanonasis.com](https://docs.lanonasis.com)
-- **Issues**: [GitHub Issues](https://github.com/lanonasis/memory-client/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/lanonasis/memory-client/discussions)
-- **Email**: support@lanonasis.com
+- **Documentation**: [docs.LanOnasis.com](https://docs.LanOnasis.com)
+- **Issues**: [GitHub Issues](https://github.com/LanOnasis/memory-client/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/LanOnasis/memory-client/discussions)
+- **Email**: support@LanOnasis.com
 
 ---
 
-**Made with ❤️ by the Lanonasis Team**
+**Made with ❤️ by the LanOnasis Team**

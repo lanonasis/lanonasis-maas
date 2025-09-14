@@ -14,7 +14,7 @@ We take security vulnerabilities seriously. If you discover a security vulnerabi
 ### How to Report
 
 1. **Do NOT create a public GitHub issue**
-2. Email us at: security@lanonasis.com
+2. Email us at: security@LanOnasis.com
 3. Include detailed information about the vulnerability
 4. Provide steps to reproduce if possible
 
@@ -49,5 +49,5 @@ We take security vulnerabilities seriously. If you discover a security vulnerabi
 
 ## Contact
 
-For security-related questions: security@lanonasis.com
-For general support: support@lanonasis.com
+For security-related questions: security@LanOnasis.com
+For general support: support@LanOnasis.com

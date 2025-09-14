@@ -10,8 +10,8 @@
  *   X-Emergency-Token: [SECRET_TOKEN from env]
  * Body:
  *   {
- *     "email": "admin@example.com",
- *     "organizationName": "Lanonasis Admin"
+ *     "email": "admin@LanOnasis.com",
+ *     "organizationName": "LanOnasis Admin"
  *   }
  */
 
@@ -165,7 +165,7 @@ router.post('/emergency/bootstrap-admin', async (req, res) => {
         key_hash: hashedKey,
         key_prefix: apiKey.substring(0, 12) + '...',
         scopes: ['read', 'write', 'admin'], // Full access
-        project_scope: 'lanonasis-maas', // Set project scope
+        project_scope: 'LanOnasis-maas', // Set project scope
         created_by: userId,
         expires_at: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(), // 1 year
         created_at: new Date().toISOString(),
@@ -182,7 +182,7 @@ router.post('/emergency/bootstrap-admin', async (req, res) => {
     // 6. Log this emergency action to core.logs if table exists
     try {
       await supabase.rpc('log_event', {
-        p_project: 'lanonasis-maas',
+        p_project: 'LanOnasis-maas',
         p_user_id: userId,
         p_action: 'emergency_bootstrap',
         p_target: 'api_keys',

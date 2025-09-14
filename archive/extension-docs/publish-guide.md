@@ -2,7 +2,7 @@
 
 ## 🎯 Your Extension is Ready!
 
-✅ **Extension Packaged**: `lanonasis-memory-1.2.0.vsix` (33.16 KB)
+✅ **Extension Packaged**: `LanOnasis-memory-1.2.0.vsix` (33.16 KB)
 ✅ **Local Installation**: Successfully tested
 ✅ **Compatibility**: Fixed for VS Code ^1.99.0
 ✅ **Features Included**: 
@@ -25,15 +25,15 @@
 
 3. **Publish with new token**:
    ```bash
-   cd /Users/seyederick/DevOps/_project_folders/lanonasis-maas/vscode-extension
-   vsce publish --packagePath lanonasis-memory-1.2.0.vsix --pat YOUR_NEW_TOKEN
+   cd /Users/seyederick/DevOps/_project_folders/LanOnasis-maas/vscode-extension
+   vsce publish --packagePath LanOnasis-memory-1.2.0.vsix --pat YOUR_NEW_TOKEN
    ```
 
 ### Option 2: Manual Upload
 
-1. **Go to**: https://marketplace.visualstudio.com/manage/publishers/lanonasis
+1. **Go to**: https://marketplace.visualstudio.com/manage/publishers/LanOnasis
 2. **Click "Update"** on your existing extension
-3. **Upload**: `lanonasis-memory-1.2.0.vsix`
+3. **Upload**: `LanOnasis-memory-1.2.0.vsix`
 4. **Add release notes**: Mention API key management features
 
 ## 📋 Release Notes for v1.2.0
@@ -48,9 +48,9 @@
   - `Cmd+Shift+M` (Mac) / `Ctrl+Shift+M` (Windows) - Search Memories
 
 ### 🔧 Configuration
-- Added `lanonasis.enableApiKeyManagement` setting
-- Added `lanonasis.defaultEnvironment` setting
-- Added `lanonasis.organizationId` setting
+- Added `LanOnasis.enableApiKeyManagement` setting
+- Added `LanOnasis.defaultEnvironment` setting
+- Added `LanOnasis.organizationId` setting
 
 ### 🐛 Fixes
 - Updated VS Code engine compatibility to ^1.99.0
@@ -59,7 +59,7 @@
 
 ## 🎯 Current Status
 
-- **Published v1.0.0**: https://marketplace.visualstudio.com/items?itemName=lanonasis.lanonasis-memory
+- **Published v1.0.0**: https://marketplace.visualstudio.com/items?itemName=LanOnasis.LanOnasis-memory
 - **Ready v1.2.0**: With full API key management features
 - **Next Step**: Publish v1.2.0 using one of the options above
 
@@ -68,11 +68,11 @@
 Test the extension locally:
 ```bash
 # Install the extension
-code --install-extension lanonasis-memory-1.2.0.vsix
+code --install-extension LanOnasis-memory-1.2.0.vsix
 
 # Test commands in VS Code Command Palette (Cmd+Shift+P):
-- "Lanonasis: Manage API Keys"
-- "Lanonasis: Create API Key Project"  
-- "Lanonasis: View API Key Projects"
-- "Lanonasis: Search Memories"
+- "LanOnasis: Manage API Keys"
+- "LanOnasis: Create API Key Project"  
+- "LanOnasis: View API Key Projects"
+- "LanOnasis: Search Memories"
 ```

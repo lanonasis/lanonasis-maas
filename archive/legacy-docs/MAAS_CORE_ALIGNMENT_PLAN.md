@@ -3,7 +3,7 @@
 
 **Generated**: 2025-08-25  
 **Based On**: maas-core-alignment-issues.csv  
-**Scope**: Production deployment readiness for lanonasis-maas  
+**Scope**: Production deployment readiness for LanOnasis-maas  
 **Timeline**: Aug 25 - Sep 12 (3 weeks)
 
 ---
@@ -89,13 +89,13 @@ Current state would result in immediate production failures.
 ```typescript
 // public/.well-known/onasis.json
 {
-  "auth_base": "https://api.lanonasis.com/api/v1",
-  "memory_base": "https://api.lanonasis.com/api/v1/memories",
-  "mcp_ws_base": "wss://api.lanonasis.com",
-  "mcp_sse": "https://api.lanonasis.com/mcp/sse",
-  "mcp_message": "https://api.lanonasis.com/mcp/message",
-  "keys_base": "https://api.lanonasis.com/api/v1/keys",
-  "project_scope": "lanonasis-maas",
+  "auth_base": "https://api.LanOnasis.com/api/v1",
+  "memory_base": "https://api.LanOnasis.com/api/v1/memories",
+  "mcp_ws_base": "wss://api.LanOnasis.com",
+  "mcp_sse": "https://api.LanOnasis.com/mcp/sse",
+  "mcp_message": "https://api.LanOnasis.com/mcp/message",
+  "keys_base": "https://api.LanOnasis.com/api/v1/keys",
+  "project_scope": "LanOnasis-maas",
   "version": "1.2.0"
 }
 ```
@@ -147,8 +147,8 @@ export const centralAuth = async (req: Request, res: Response, next: NextFunctio
 
 **Environment Variables to Add**:
 ```bash
-ALLOWED_ORIGINS=https://dashboard.lanonasis.com,https://docs.lanonasis.com,https://api.lanonasis.com
-CENTRAL_AUTH_URL=https://api.lanonasis.com/auth/validate
+ALLOWED_ORIGINS=https://dashboard.LanOnasis.com,https://docs.LanOnasis.com,https://api.LanOnasis.com
+CENTRAL_AUTH_URL=https://api.LanOnasis.com/auth/validate
 SUPABASE_URL=https://<project-ref>.supabase.co
 SUPABASE_SERVICE_ROLE_KEY=REDACTED_SUPABASE_SERVICE_ROLE_KEY
 ALIGNMENT_ENFORCED=false  # Feature flag for rollout
@@ -164,14 +164,14 @@ ALIGNMENT_ENFORCED=false  # Feature flag for rollout
 **Changes Required**:
 - Replace all `Authorization: Bearer <api_key>` with `X-API-Key: <api_key>`
 - Reserve `Authorization: Bearer` strictly for JWT tokens
-- Add `X-Project-Scope: lanonasis-maas` to all protected calls
+- Add `X-Project-Scope: LanOnasis-maas` to all protected calls
 - Update all route handlers in `src/routes/`
 
 #### **P1.2 — Client Header Migration**
 **Production Impact**: 🔴 **BLOCKER** - SDK/CLI/IDE clients will fail authentication
 
 **Files to Update**:
-- SDK: `packages/lanonasis-sdk/src/`
+- SDK: `packages/LanOnasis-sdk/src/`
 - CLI: `cli/src/`
 - IDE Extensions: `vscode-extension/`, `cursor-extension/`
 
@@ -356,7 +356,7 @@ vercel.json              # Include well-known directory
 .env.example             # Document new env vars
 README.md                # Update with discovery info
 cli/src/                 # Update client headers
-packages/lanonasis-sdk/  # Update SDK headers
+packages/LanOnasis-sdk/  # Update SDK headers
 vscode-extension/        # Update extension headers
 cursor-extension/        # Update extension headers
 windsurf-extension/      # Update extension headers

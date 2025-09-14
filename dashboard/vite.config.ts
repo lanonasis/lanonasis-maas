@@ -5,7 +5,7 @@ import path from "path";
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
   // Set base path for proper asset resolution
-  base: '/', // Since we're deploying to dashboard.lanonasis.com root
+  base: '/', // Since we're deploying to dashboard.LanOnasis.com root
   server: {
     host: "::",
     port: 8080,

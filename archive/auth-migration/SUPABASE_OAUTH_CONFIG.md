@@ -1,7 +1,7 @@
 # Supabase OAuth Configuration Fix
 
 ## Issue
-Google and GitHub OAuth are redirecting to `api.lanonasis.com` instead of `dashboard.lanonasis.com/dashboard`.
+Google and GitHub OAuth are redirecting to `api.LanOnasis.com` instead of `dashboard.LanOnasis.com/dashboard`.
 
 ## Root Cause
 The OAuth provider configurations in Supabase Dashboard need to be updated with the correct redirect URLs.
@@ -13,12 +13,12 @@ The OAuth provider configurations in Supabase Dashboard need to be updated with 
 Go to **Supabase Dashboard** → **Authentication** → **Providers** and update:
 
 #### Google OAuth Provider
-- **Redirect URL**: `https://dashboard.lanonasis.com/auth/callback`
-- **Site URL**: `https://dashboard.lanonasis.com`
+- **Redirect URL**: `https://dashboard.LanOnasis.com/auth/callback`
+- **Site URL**: `https://dashboard.LanOnasis.com`
 
 #### GitHub OAuth Provider  
-- **Redirect URL**: `https://dashboard.lanonasis.com/auth/callback`
-- **Site URL**: `https://dashboard.lanonasis.com`
+- **Redirect URL**: `https://dashboard.LanOnasis.com/auth/callback`
+- **Site URL**: `https://dashboard.LanOnasis.com`
 
 ### 2. Update OAuth App Configurations
 
@@ -27,25 +27,25 @@ Go to **Supabase Dashboard** → **Authentication** → **Providers** and update
 2. Navigate to **APIs & Services** → **Credentials**
 3. Select your OAuth 2.0 Client ID
 4. Update **Authorized redirect URIs**:
-   - Remove: `https://api.lanonasis.com/auth/callback`
-   - Add: `https://dashboard.lanonasis.com/auth/callback`
+   - Remove: `https://api.LanOnasis.com/auth/callback`
+   - Add: `https://dashboard.LanOnasis.com/auth/callback`
 
 #### GitHub OAuth App
 1. Go to [GitHub Developer Settings](https://github.com/settings/developers)
 2. Select your OAuth App
 3. Update **Authorization callback URL**:
-   - Change from: `https://api.lanonasis.com/auth/callback`
-   - Change to: `https://dashboard.lanonasis.com/auth/callback`
+   - Change from: `https://api.LanOnasis.com/auth/callback`
+   - Change to: `https://dashboard.LanOnasis.com/auth/callback`
 
 ### 3. Verify Current Settings
 
 Check these URLs should be configured:
 
 #### Production URLs
-- **Site URL**: `https://dashboard.lanonasis.com`
+- **Site URL**: `https://dashboard.LanOnasis.com`
 - **Redirect URLs**: 
-  - `https://dashboard.lanonasis.com/auth/callback`
-  - `https://dashboard.lanonasis.com/dashboard` (fallback)
+  - `https://dashboard.LanOnasis.com/auth/callback`
+  - `https://dashboard.LanOnasis.com/dashboard` (fallback)
 
 #### Local Development URLs (if needed)
 - **Site URL**: `http://localhost:5173`
@@ -58,10 +58,10 @@ Check these URLs should be configured:
 After updating the configurations:
 
 1. **Clear browser cache and cookies**
-2. Go to `https://dashboard.lanonasis.com/auth/login`
+2. Go to `https://dashboard.LanOnasis.com/auth/login`
 3. Click "Sign in with Google" or "Sign in with GitHub"
 4. Complete OAuth flow
-5. Verify redirect goes to `https://dashboard.lanonasis.com/dashboard`
+5. Verify redirect goes to `https://dashboard.LanOnasis.com/dashboard`
 
 ### 5. Additional Netlify Configuration
 
@@ -73,7 +73,7 @@ Ensure the auth callback is properly handled in `netlify.toml`:
   from = "/auth/callback*"
   to = "/index.html"
   status = 200
-  conditions = {Host = ["dashboard.lanonasis.com"]}
+  conditions = {Host = ["dashboard.LanOnasis.com"]}
 ```
 
 ### 6. Environment Variables
@@ -87,8 +87,8 @@ VITE_SUPABASE_ANON_KEY=REDACTED_SUPABASE_ANON_KEY
 
 ## Testing Checklist
 
-- [ ] Google OAuth redirects to `dashboard.lanonasis.com/dashboard`
-- [ ] GitHub OAuth redirects to `dashboard.lanonasis.com/dashboard`  
+- [ ] Google OAuth redirects to `dashboard.LanOnasis.com/dashboard`
+- [ ] GitHub OAuth redirects to `dashboard.LanOnasis.com/dashboard`  
 - [ ] Email/password login works normally
 - [ ] Profile creation works for OAuth users
 - [ ] Dashboard loads after successful authentication
@@ -96,7 +96,7 @@ VITE_SUPABASE_ANON_KEY=REDACTED_SUPABASE_ANON_KEY
 
 ## Common Issues
 
-### Issue: Still redirecting to api.lanonasis.com
+### Issue: Still redirecting to api.LanOnasis.com
 **Solution**: Clear browser cache, check OAuth app settings in Google/GitHub
 
 ### Issue: OAuth callback fails

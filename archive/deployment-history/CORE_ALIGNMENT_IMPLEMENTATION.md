@@ -1,5 +1,5 @@
 # 🔧 Core Alignment Implementation Summary
-## Lanonasis-MaaS to Onasis-Core Standard Alignment
+## LanOnasis-MaaS to Onasis-Core Standard Alignment
 
 **Date**: 2025-08-25  
 **Status**: Phase 1 Critical Fixes Completed  
@@ -9,7 +9,7 @@
 
 ## 🎯 Implementation Overview
 
-Based on your comprehensive audit report, I've implemented the **Phase 1 Critical Fixes** to align lanonasis-maas with the onasis-core standard. These changes address the most critical issues while maintaining the existing Netlify deployment architecture.
+Based on your comprehensive audit report, I've implemented the **Phase 1 Critical Fixes** to align LanOnasis-maas with the onasis-core standard. These changes address the most critical issues while maintaining the existing Netlify deployment architecture.
 
 ### ✅ **What Was Implemented**
 
@@ -17,7 +17,7 @@ Based on your comprehensive audit report, I've implemented the **Phase 1 Critica
 - ✅ **Request ID Middleware** - Every request now has a unique UUID for tracking
 - ✅ **Environment-based CORS** - Replaced wildcard `*` with allowlist-based CORS
 - ✅ **Enhanced Authentication** - Supports both vendor keys (`pk_*.sk_*`) and JWT tokens
-- ✅ **Project Scope Validation** - Validates `X-Project-Scope: lanonasis-maas`
+- ✅ **Project Scope Validation** - Validates `X-Project-Scope: LanOnasis-maas`
 - ✅ **Service Discovery Endpoint** - Added `/.well-known/onasis.json`
 - ✅ **Uniform Error Envelopes** - Standardized error format with request_id
 - ✅ **Security Headers** - Added security headers to all responses
@@ -66,9 +66,9 @@ Based on your comprehensive audit report, I've implemented the **Phase 1 Critica
 
 // AFTER (Secure)
 const allowedOrigins = [
-  'https://dashboard.lanonasis.com',
-  'https://docs.lanonasis.com',
-  'https://api.lanonasis.com'
+  'https://dashboard.LanOnasis.com',
+  'https://docs.LanOnasis.com',
+  'https://api.LanOnasis.com'
 ];
 ```
 
@@ -109,12 +109,12 @@ The new `/.well-known/onasis.json` endpoint provides dynamic service discovery:
 ```json
 {
   "data": {
-    "auth_base": "https://api.lanonasis.com/api/v1",
-    "memory_base": "https://api.lanonasis.com/api/v1/memories", 
-    "mcp_ws_base": "wss://api.lanonasis.com",
-    "mcp_sse": "https://api.lanonasis.com/mcp/sse",
-    "keys_base": "https://api.lanonasis.com/api/v1/keys",
-    "project_scope": "lanonasis-maas",
+    "auth_base": "https://api.LanOnasis.com/api/v1",
+    "memory_base": "https://api.LanOnasis.com/api/v1/memories", 
+    "mcp_ws_base": "wss://api.LanOnasis.com",
+    "mcp_sse": "https://api.LanOnasis.com/mcp/sse",
+    "keys_base": "https://api.LanOnasis.com/api/v1/keys",
+    "project_scope": "LanOnasis-maas",
     "version": "1.2.0",
     "capabilities": {
       "auth": ["jwt", "api_key", "vendor_key"],
@@ -141,14 +141,14 @@ curl -X GET "https://your-domain.com/.well-known/onasis.json" \
 ```bash
 curl -X GET "https://your-domain.com/api/v1/memory" \
   -H "X-API-Key: pk_live_test.sk_live_secret" \
-  -H "X-Project-Scope: lanonasis-maas"
+  -H "X-Project-Scope: LanOnasis-maas"
 ```
 
 ### **3. JWT Authentication Test**
 ```bash
 curl -X GET "https://your-domain.com/api/v1/memory" \
   -H "Authorization: Bearer eyJ..." \
-  -H "X-Project-Scope: lanonasis-maas"
+  -H "X-Project-Scope: LanOnasis-maas"
 ```
 
 ### **4. CORS Security Test**
@@ -159,7 +159,7 @@ curl -X OPTIONS "https://your-domain.com/api/v1/memory" \
 
 # Should be allowed  
 curl -X OPTIONS "https://your-domain.com/api/v1/memory" \
-  -H "Origin: https://dashboard.lanonasis.com"
+  -H "Origin: https://dashboard.LanOnasis.com"
 ```
 
 ---
@@ -173,12 +173,12 @@ SUPABASE_URL=https://<project-ref>.supabase.co
 SUPABASE_SERVICE_KEY=REDACTED_SUPABASE_SERVICE_ROLE_KEY
 
 # New Variables for Enhanced Security
-ALLOWED_ORIGINS=https://dashboard.lanonasis.com,https://docs.lanonasis.com,https://api.lanonasis.com
+ALLOWED_ORIGINS=https://dashboard.LanOnasis.com,https://docs.LanOnasis.com,https://api.LanOnasis.com
 NODE_ENV=production
 
 # Optional (defaults provided)
 JWT_SECRET=REDACTED_JWT_SECRET
-CENTRAL_AUTH_URL=https://api.lanonasis.com/v1/auth
+CENTRAL_AUTH_URL=https://api.LanOnasis.com/v1/auth
 ```
 
 ### **Deployment Checklist**
@@ -232,7 +232,7 @@ CENTRAL_AUTH_URL=https://api.lanonasis.com/v1/auth
 
 ## 🚀 Ready for Integration
 
-The lanonasis-maas service is now **Phase 1 compliant** with the onasis-core golden standard. The critical security vulnerabilities have been addressed, and the service discovery infrastructure is in place.
+The LanOnasis-maas service is now **Phase 1 compliant** with the onasis-core golden standard. The critical security vulnerabilities have been addressed, and the service discovery infrastructure is in place.
 
 **Next**: Connect to central auth service and implement vendor key validation to achieve full alignment.
 
@@ -243,12 +243,12 @@ curl https://your-domain.com/.well-known/onasis.json
 
 # Test auth with vendor key
 curl -H "X-API-Key: pk_test.sk_test" \
-     -H "X-Project-Scope: lanonasis-maas" \
+     -H "X-Project-Scope: LanOnasis-maas" \
      https://your-domain.com/api/v1/health
 
 # Test MCP SSE with enhanced auth
 curl -H "X-API-Key: your-key" \
-     -H "X-Project-Scope: lanonasis-maas" \
+     -H "X-Project-Scope: LanOnasis-maas" \
      https://your-domain.com/mcp/sse
 ```
 

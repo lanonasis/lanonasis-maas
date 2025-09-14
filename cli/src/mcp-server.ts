@@ -2,7 +2,7 @@
 
 /**
  * CLI-Embedded MCP Server
- * Uses the same configuration and authentication as @lanonasis/cli v1.5.2+
+ * Uses the same configuration and authentication as @LanOnasis/cli v1.5.2+
  * Can run standalone or be invoked by CLI commands
  */
 
@@ -172,7 +172,7 @@ async function main() {
 CLI MCP Server - CLI-aligned Model Context Protocol server
 
 Usage:
-  lanonasis-mcp-server [options]
+  LanOnasis-mcp-server [options]
 
 Options:
   --stdio          Use stdio transport (default)
@@ -184,9 +184,9 @@ Options:
   --help           Show this help
 
 Examples:
-  lanonasis-mcp-server                    # Start stdio server
-  lanonasis-mcp-server --http --port=3002 # Start HTTP server
-  lanonasis-mcp-server --status           # Check status
+  LanOnasis-mcp-server                    # Start stdio server
+  LanOnasis-mcp-server --http --port=3002 # Start HTTP server
+  LanOnasis-mcp-server --status           # Check status
 `);
     return;
   }
