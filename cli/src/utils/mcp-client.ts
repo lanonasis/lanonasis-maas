@@ -116,7 +116,7 @@ export class MCPClient {
           // For remote MCP, we'll use the REST API with MCP-style interface
           serverUrl = options.serverUrl ?? 
                      this.config.get('mcpServerUrl') ?? 
-                     'https://api.lanonasis.com';
+                     'https://api.LanOnasis.com';
           console.log(chalk.cyan(`Connecting to remote MCP server at ${serverUrl}...`));
           
           // Initialize SSE connection for real-time updates
@@ -140,7 +140,7 @@ export class MCPClient {
           });
 
           this.client = new Client({
-            name: '@lanonasis/cli',
+            name: '@LanOnasis/cli',
             version: '2.0.0'
           });
           
@@ -223,7 +223,7 @@ export class MCPClient {
                 tools: ['memory_management', 'workflow_orchestration']
               },
               clientInfo: {
-                name: '@lanonasis/cli',
+                name: '@LanOnasis/cli',
                 version: '1.1.0'
               }
             }
@@ -299,7 +299,7 @@ export class MCPClient {
    */
   async callTool(toolName: string, args: MCPToolArgs): Promise<MCPToolResponse> {
     if (!this.isConnected) {
-      throw new Error('Not connected to MCP server. Run "lanonasis mcp connect" first.');
+      throw new Error('Not connected to MCP server. Run "LanOnasis mcp connect" first.');
     }
 
     const useRemote = this.config.get('mcpUseRemote') ?? false;
@@ -335,11 +335,11 @@ export class MCPClient {
    * Call remote tool via REST API with MCP interface
    */
   private async callRemoteTool(toolName: string, args: MCPToolArgs): Promise<MCPToolResponse> {
-    const apiUrl = this.config.get('apiUrl') ?? 'https://api.lanonasis.com';
+    const apiUrl = this.config.get('apiUrl') ?? 'https://api.LanOnasis.com';
     const token = this.config.get('token');
 
     if (!token) {
-      throw new Error('Authentication required. Run "lanonasis auth login" first.');
+      throw new Error('Authentication required. Run "LanOnasis auth login" first.');
     }
 
     // Map MCP tool names to REST API endpoints
@@ -466,7 +466,7 @@ export class MCPClient {
       connected: this.isConnected,
       mode: useRemote ? 'remote' : 'local',
       server: useRemote 
-        ? (this.config.get('mcpServerUrl') ?? 'https://api.lanonasis.com')
+        ? (this.config.get('mcpServerUrl') ?? 'https://api.LanOnasis.com')
         : (this.config.get('mcpServerPath') ?? 'local MCP server')
     };
   }

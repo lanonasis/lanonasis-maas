@@ -6,7 +6,7 @@
 import { Router } from 'express';
 import { URL } from 'url';
 // TODO: Import MCPClient when oauth-client package is built
-// import { MCPClient } from '@lanonasis/oauth-client';
+// import { MCPClient } from '@LanOnasis/oauth-client';
 import { config } from '@/config/environment';
 import { logger } from '@/utils/logger';
 
@@ -14,9 +14,9 @@ const router = Router();
 
 // Centralized auth configuration
 const AUTH_CONFIG = {
-  authServer: config.AUTH_SERVER_URL || 'https://api.lanonasis.com',
-  clientId: config.OAUTH_CLIENT_ID || 'lanonasis_mcp_client_2024',
-  redirectUri: config.OAUTH_REDIRECT_URI || 'https://dashboard.lanonasis.com/auth/oauth/callback',
+  authServer: config.AUTH_SERVER_URL || 'https://api.LanOnasis.com',
+  clientId: config.OAUTH_CLIENT_ID || 'LanOnasis_mcp_client_2024',
+  redirectUri: config.OAUTH_REDIRECT_URI || 'https://dashboard.LanOnasis.com/auth/oauth/callback',
   scope: 'memory:read memory:write api:access mcp:connect'
 };
 

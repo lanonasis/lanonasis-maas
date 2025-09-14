@@ -11,16 +11,16 @@ This workspace is used for:
 
 ## 📦 Official Publishing
 
-All npm packages should be published from the **lanonasis-maas** repository:
-- Repository: `/Users/seyederick/DevOps/_project_folders/lanonasis-maas`
-- Packages: `@lanonasis/cli`, `@lanonasis/memory-client`, `@lanonasis/sdk`
+All npm packages should be published from the **LanOnasis-maas** repository:
+- Repository: `/Users/seyederick/DevOps/_project_folders/LanOnasis-maas`
+- Packages: `@LanOnasis/cli`, `@LanOnasis/memory-client`, `@LanOnasis/sdk`
 - Extensions: Published to respective marketplaces from production repo
 
 ## 🔄 Development Workflow
 
 1. **Develop** features in this workspace
 2. **Test** thoroughly with dev versions
-3. **Migrate** code to lanonasis-maas
+3. **Migrate** code to LanOnasis-maas
 4. **Publish** from production repository
 
 ## 🛡️ Safety Measures
@@ -39,7 +39,7 @@ npm run dev
 npm test
 
 # When ready to migrate to production
-cd ../lanonasis-maas
+cd ../LanOnasis-maas
 # Copy tested code and publish from there
 ```
 
@@ -47,7 +47,7 @@ cd ../lanonasis-maas
 
 Before publishing any package:
 1. ❌ NOT from vibe-memory
-2. ✅ Switch to lanonasis-maas  
+2. ✅ Switch to LanOnasis-maas  
 3. ✅ Remove `-dev` version suffix
 4. ✅ Remove `"private": true`
 5. ✅ Run full test suite

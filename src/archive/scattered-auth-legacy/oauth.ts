@@ -12,16 +12,16 @@ const router = Router();
 
 // OAuth configuration
 const OAUTH_CONFIG = {
-  clientId: process.env.OAUTH_CLIENT_ID || 'lanonasis_mcp_client_2024',
+  clientId: process.env.OAUTH_CLIENT_ID || 'LanOnasis_mcp_client_2024',
   clientSecret: process.env.OAUTH_CLIENT_SECRET, // No fallback - must be provided
-  redirectUri: process.env.OAUTH_REDIRECT_URI || 'https://dashboard.lanonasis.com/auth/oauth/callback',
+  redirectUri: process.env.OAUTH_REDIRECT_URI || 'https://dashboard.LanOnasis.com/auth/oauth/callback',
   scope: process.env.OAUTH_SCOPE || 'memory:read memory:write api:access mcp:connect',
   authorizationEndpoint: '/oauth/authorize',
   tokenEndpoint: '/oauth/token',
   expiresIn: '1h',
   clients: {
-    'lanonasis_mcp_client_2024': {
-      redirectUris: ['https://dashboard.lanonasis.com/auth/oauth/callback', 'https://api.lanonasis.com/auth/oauth/callback']
+    'LanOnasis_mcp_client_2024': {
+      redirectUris: ['https://dashboard.LanOnasis.com/auth/oauth/callback', 'https://api.LanOnasis.com/auth/oauth/callback']
     }
   } as Record<string, { redirectUris: string[] }>
 };
@@ -250,8 +250,8 @@ router.post('/token', async (req, res) => {
     {
       client_id,
       scope: codeData.scope,
-      aud: 'lanonasis-mcp-api',
-      iss: 'https://api.lanonasis.com',
+      aud: 'LanOnasis-mcp-api',
+      iss: 'https://api.LanOnasis.com',
       jti: crypto.randomUUID()
     },
     jwtSecret,
@@ -265,8 +265,8 @@ router.post('/token', async (req, res) => {
     {
       client_id,
       type: 'refresh',
-      aud: 'lanonasis-mcp-api',
-      iss: 'https://api.lanonasis.com'
+      aud: 'LanOnasis-mcp-api',
+      iss: 'https://api.LanOnasis.com'
     },
     jwtSecret,
     { 
@@ -291,7 +291,7 @@ router.post('/token', async (req, res) => {
  */
 router.get('/client-info', (req, res) => {
   // Environment-driven base URL construction
-  const apiBaseUrl = process.env.API_BASE_URL || 'https://api.lanonasis.com';
+  const apiBaseUrl = process.env.API_BASE_URL || 'https://api.LanOnasis.com';
   const apiPrefix = process.env.API_PREFIX || '/api/v1';
   
   // Normalize slashes to avoid duplication

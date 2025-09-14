@@ -7,7 +7,7 @@
 - 📝 **Create from Selection** - Turn code snippets into memories with Ctrl+Shift+Alt+M  
 - 🌳 **Memory Tree View** - Browse memories organized by type in Explorer panel
 - 💡 **Code Completion** - Get memory suggestions while typing (@, #, //)
-- 🔐 **Secure Authentication** - API key integration with api.lanonasis.com
+- 🔐 **Secure Authentication** - API key integration with api.LanOnasis.com
 - ⚡ **Real-time Sync** - Always up-to-date with your memory service
 - 🎯 **Memory Types** - Support for context, project, knowledge, reference, personal, workflow
 - 📊 **Rich Metadata** - File paths, line numbers, source tracking

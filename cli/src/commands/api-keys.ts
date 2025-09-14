@@ -281,7 +281,7 @@ apiKeysCommand
 
       if (apiKeys.length === 0) {
         console.log(colors.warning('⚠️  No API keys found'));
-        console.log(colors.muted('Run: lanonasis api-keys create'));
+        console.log(colors.muted('Run: LanOnasis api-keys create'));
         return;
       }
 
@@ -630,7 +630,7 @@ mcpCommand
 
       if (tools.length === 0) {
         console.log(colors.warning('⚠️  No MCP tools found'));
-        console.log(colors.muted('Run: lanonasis api-keys mcp register-tool'));
+        console.log(colors.muted('Run: LanOnasis api-keys mcp register-tool'));
         return;
       }
 
@@ -751,7 +751,7 @@ mcpCommand
       console.log(`${colors.highlight('Request ID:')} ${colors.primary(response.requestId)}`);
       console.log(`${colors.highlight('Status:')} ${colors.accent(response.status)}`);
       console.log(colors.info('━'.repeat(50)));
-      console.log(colors.warning('💡 Check the status with: lanonasis api-keys analytics usage'));
+      console.log(colors.warning('💡 Check the status with: LanOnasis api-keys analytics usage'));
     } catch (error) {
       console.error(colors.error('✖ Failed to create access request:'), colors.muted(error.message));
       process.exit(1);

@@ -133,7 +133,7 @@ class MemoryCompletionProvider {
             item.sortText = String(1 - memory.similarity_score).padStart(5, '0') + String(index).padStart(3, '0');
             // Add command to open full memory
             item.command = {
-                command: 'lanonasis.openMemory',
+                command: 'LanOnasis.openMemory',
                 title: 'Open Memory',
                 arguments: [memory]
             };

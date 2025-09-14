@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 /**
- * Memory types for Lanonasis Memory Service
+ * Memory types for LanOnasis Memory Service
  */
 export type MemoryType = 'context' | 'project' | 'knowledge' | 'reference' | 'personal' | 'workflow';
 

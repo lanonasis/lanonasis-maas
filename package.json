@@ -1,5 +1,5 @@
 {
-  "name": "@lanonasis/memory-service-maas",
+  "name": "@LanOnasis/memory-service-maas",
   "version": "1.2.0-dev",
   "description": "[DEVELOPMENT] Enterprise Memory as a Service (MaaS) with API Key Management and MCP Integration",
   "main": "dist/server.js",
@@ -20,9 +20,9 @@
     "lint:fix": "eslint src/**/*.ts --fix",
     "type-check": "tsc --noEmit",
     "validate:env": "tsx scripts/validate-env.ts",
-    "docker:build": "docker build -t lanonasis-maas .",
-    "docker:run": "docker run -p 3000:3000 lanonasis-maas",
-    "docker:push": "docker push lanonasis-maas",
+    "docker:build": "docker build -t LanOnasis-maas .",
+    "docker:run": "docker run -p 3000:3000 LanOnasis-maas",
+    "docker:push": "docker push LanOnasis-maas",
     "db:migrate": "tsx src/db/migrate.ts",
     "db:seed": "tsx src/db/seed.ts",
     "deploy": "./scripts/deploy.sh deploy",
@@ -33,10 +33,10 @@
     "publish:cli": "./scripts/deploy.sh publish-cli",
     "build:all": "./scripts/deploy.sh build",
     "clean": "./scripts/deploy.sh clean",
-    "workspace:install": "npm ci && npm ci --prefix cli && npm ci --prefix packages/lanonasis-sdk",
-    "workspace:build": "npm run build && npm run build --prefix cli && npm run build --prefix packages/lanonasis-sdk",
-    "workspace:test": "npm run test && npm run test --prefix packages/lanonasis-sdk",
-    "workspace:lint": "npm run lint && npm run lint --prefix cli && npm run lint --prefix packages/lanonasis-sdk"
+    "workspace:install": "npm ci && npm ci --prefix cli && npm ci --prefix packages/LanOnasis-sdk",
+    "workspace:build": "npm run build && npm run build --prefix cli && npm run build --prefix packages/LanOnasis-sdk",
+    "workspace:test": "npm run test && npm run test --prefix packages/LanOnasis-sdk",
+    "workspace:lint": "npm run lint && npm run lint --prefix cli && npm run lint --prefix packages/LanOnasis-sdk"
   },
   "keywords": [
     "memory",

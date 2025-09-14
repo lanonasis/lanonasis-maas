@@ -1,11 +1,11 @@
 {
-  "auth_base": "https://api.lanonasis.com/api/v1",
-  "memory_base": "https://api.lanonasis.com/api/v1/memories",
-  "mcp_ws_base": "wss://api.lanonasis.com",
-  "mcp_sse": "https://api.lanonasis.com/mcp/sse",
-  "mcp_message": "https://api.lanonasis.com/mcp/message",
-  "keys_base": "https://api.lanonasis.com/api/v1/keys",
-  "project_scope": "lanonasis-maas",
+  "auth_base": "https://api.LanOnasis.com/api/v1",
+  "memory_base": "https://api.LanOnasis.com/api/v1/memories",
+  "mcp_ws_base": "wss://api.LanOnasis.com",
+  "mcp_sse": "https://api.LanOnasis.com/mcp/sse",
+  "mcp_message": "https://api.LanOnasis.com/mcp/message",
+  "keys_base": "https://api.LanOnasis.com/api/v1/keys",
+  "project_scope": "LanOnasis-maas",
   "version": "1.2.0",
   "discovery_version": "0.1",
   "last_updated": "2025-08-25T00:00:00Z",
@@ -17,9 +17,9 @@
     "features": ["bulk_operations", "semantic_search", "real_time"]
   },
   "endpoints": {
-    "health": "https://api.lanonasis.com/health",
-    "docs": "https://api.lanonasis.com/docs",
-    "swagger": "https://api.lanonasis.com/swagger.json",
-    "status": "https://status.lanonasis.com"
+    "health": "https://api.LanOnasis.com/health",
+    "docs": "https://api.LanOnasis.com/docs",
+    "swagger": "https://api.LanOnasis.com/swagger.json",
+    "status": "https://status.LanOnasis.com"
   }
 }

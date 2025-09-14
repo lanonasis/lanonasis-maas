@@ -176,7 +176,7 @@ export const ApiKeyManager = () => {
         <DialogHeader>
           <DialogTitle>API Key Management</DialogTitle>
           <DialogDescription>
-            Create, view and manage your API keys for accessing Lanonasis Memory Service.
+            Create, view and manage your API keys for accessing LanOnasis Memory Service.
           </DialogDescription>
         </DialogHeader>
         

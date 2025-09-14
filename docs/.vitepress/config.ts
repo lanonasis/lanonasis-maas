@@ -1,8 +1,8 @@
 import { defineConfig } from 'vitepress'
 
 export default defineConfig({
-  title: 'Lanonasis Memory Service',
-  description: 'Complete documentation for Lanonasis Memory as a Service (MaaS)',
+  title: 'LanOnasis Memory Service',
+  description: 'Complete documentation for LanOnasis Memory as a Service (MaaS)',
   base: '/docs/',
   
   head: [
@@ -10,9 +10,9 @@ export default defineConfig({
     ['meta', { name: 'theme-color', content: '#3c82f6' }],
     ['meta', { property: 'og:type', content: 'website' }],
     ['meta', { property: 'og:locale', content: 'en' }],
-    ['meta', { property: 'og:title', content: 'Lanonasis Memory Service | Documentation' }],
-    ['meta', { property: 'og:site_name', content: 'Lanonasis Docs' }],
-    ['meta', { property: 'og:url', content: 'https://docs.lanonasis.com/' }],
+    ['meta', { property: 'og:title', content: 'LanOnasis Memory Service | Documentation' }],
+    ['meta', { property: 'og:site_name', content: 'LanOnasis Docs' }],
+    ['meta', { property: 'og:url', content: 'https://docs.LanOnasis.com/' }],
   ],
 
   themeConfig: {
@@ -23,7 +23,7 @@ export default defineConfig({
       { text: 'API Reference', link: '/api/' },
       { text: 'CLI', link: '/cli/' },
       { text: 'SDK', link: '/sdk/' },
-      { text: 'Dashboard', link: 'https://api.lanonasis.com/dashboard' }
+      { text: 'Dashboard', link: 'https://api.LanOnasis.com/dashboard' }
     ],
 
     sidebar: {
@@ -93,12 +93,12 @@ export default defineConfig({
     },
 
     socialLinks: [
-      { icon: 'github', link: 'https://github.com/lanonasis/memory-service' }
+      { icon: 'github', link: 'https://github.com/LanOnasis/memory-service' }
     ],
 
     footer: {
       message: 'Released under the MIT License.',
-      copyright: 'Copyright © 2024 Lanonasis'
+      copyright: 'Copyright © 2024 LanOnasis'
     },
 
     search: {

@@ -19,8 +19,8 @@ export class MemoryService {
     }
 
     updateConfiguration(): void {
-        const config = vscode.workspace.getConfiguration('lanonasis');
-        const apiUrl = config.get<string>('apiUrl', 'https://api.lanonasis.com');
+        const config = vscode.workspace.getConfiguration('LanOnasis');
+        const apiUrl = config.get<string>('apiUrl', 'https://api.LanOnasis.com');
         const useGateway = config.get<boolean>('useGateway', true);
         
         this.baseUrl = useGateway ? 
@@ -188,7 +188,7 @@ export class MemoryService {
         const headers = {
             'Content-Type': 'application/json',
             'Authorization': authHeader,
-            'User-Agent': 'Lanonasis-Cursor-Extension/1.0.0',
+            'User-Agent': 'LanOnasis-Cursor-Extension/1.0.0',
             ...options.headers
         };
 

@@ -1,5 +1,5 @@
 # Robots.txt for Lan Onasis
-# https://lanonasis.com
+# https://LanOnasis.com
 
 # Allow all robots
 User-agent: *
@@ -13,7 +13,7 @@ Allow: /
 Crawl-delay: 1
 
 # Sitemap location
-Sitemap: https://lanonasis.com/sitemap.xml
+Sitemap: https://LanOnasis.com/sitemap.xml
 
 # Allow social media crawlers for better social sharing
 User-agent: facebookexternalhit/*

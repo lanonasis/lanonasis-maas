@@ -15,7 +15,7 @@ export class MemoryCompletionProvider implements vscode.CompletionItemProvider {
         context: vscode.CompletionContext
     ): Promise<vscode.CompletionItem[]> {
         // Skip completion if not enabled in configuration
-        const config = vscode.workspace.getConfiguration('lanonasis');
+        const config = vscode.workspace.getConfiguration('LanOnasis');
         if (!config.get<boolean>('enableAutoCompletion', true)) {
             return [];
         }
@@ -138,7 +138,7 @@ export class MemoryCompletionProvider implements vscode.CompletionItemProvider {
 
             // Add command to open full memory
             item.command = {
-                command: 'lanonasis.openMemory',
+                command: 'LanOnasis.openMemory',
                 title: 'Open Memory',
                 arguments: [memory]
             };

@@ -135,7 +135,7 @@ export class MemoryCompletionProvider implements vscode.CompletionItemProvider {
 
             // Add command to open full memory
             item.command = {
-                command: 'lanonasis.openMemory',
+                command: 'LanOnasis.openMemory',
                 title: 'Open Memory',
                 arguments: [memory]
             };

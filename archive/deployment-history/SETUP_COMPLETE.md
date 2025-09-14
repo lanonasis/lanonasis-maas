@@ -18,7 +18,7 @@ Your orchestrator and database setup is **COMPLETE** and ready for use!
 
 3. **CORS & Routing**: ✅ Configured for all domains
    - **Development**: localhost ports configured
-   - **Production**: All lanonasis.com, vortexai.io domains whitelisted
+   - **Production**: All LanOnasis.com, vortexai.io domains whitelisted
    - **Unified Router**: Ready for privacy-protected routing
 
 ### 🗄️ **Database Tables Found:**
@@ -38,7 +38,7 @@ Your orchestrator and database setup is **COMPLETE** and ready for use!
 
 1. **Start Development Server**:
    ```bash
-   JWT_SECRET="lanonasis-memory-service-development-jwt-secret-key-2024-with-sufficient-length-for-validation" npm run dev
+   JWT_SECRET="LanOnasis-memory-service-development-jwt-secret-key-2024-with-sufficient-length-for-validation" npm run dev
    ```
 
 2. **Test Orchestrator**:

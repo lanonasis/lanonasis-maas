@@ -25,7 +25,7 @@
 ### **3. Current API Keys Location**
 ```bash
 # ✅ SECURE - Keys are in:
-/Users/seyederick/DevOps/_project_folders/lan-onasis-monorepo/apps/lanonasis-maas/.env
+/Users/seyederick/DevOps/_project_folders/lan-onasis-monorepo/apps/LanOnasis-maas/.env
 # This file is gitignored and won't be committed
 ```
 

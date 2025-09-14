@@ -14,7 +14,7 @@ class MemoryClient {
         };
         this.baseHeaders = {
             'Content-Type': 'application/json',
-            'User-Agent': '@lanonasis/memory-client/1.0.0',
+            'User-Agent': '@LanOnasis/memory-client/1.0.0',
             ...config.headers
         };
         // Set authentication headers
@@ -239,7 +239,7 @@ function createMemoryClient(config) {
  * CLI Integration Module for Memory Client SDK
  *
  * Provides intelligent CLI detection and MCP channel utilization
- * when @lanonasis/cli v1.5.2+ is available in the environment
+ * when @LanOnasis/cli v1.5.2+ is available in the environment
  */
 const execAsync = promisify(exec);
 /**
@@ -269,8 +269,8 @@ class CLIIntegration {
     }
     async performDetection() {
         try {
-            // Check if onasis/lanonasis CLI is available
-            const { stdout: versionOutput } = await execAsync('onasis --version 2>/dev/null || lanonasis --version 2>/dev/null', {
+            // Check if onasis/LanOnasis CLI is available
+            const { stdout: versionOutput } = await execAsync('onasis --version 2>/dev/null || LanOnasis --version 2>/dev/null', {
                 timeout: 5000
             });
             const version = versionOutput.trim();
@@ -292,7 +292,7 @@ class CLIIntegration {
             // Check MCP availability
             let mcpAvailable = false;
             try {
-                await execAsync('onasis mcp status --output json 2>/dev/null || lanonasis mcp status --output json 2>/dev/null', {
+                await execAsync('onasis mcp status --output json 2>/dev/null || LanOnasis mcp status --output json 2>/dev/null', {
                     timeout: 3000
                 });
                 mcpAvailable = true;
@@ -303,7 +303,7 @@ class CLIIntegration {
             // Check authentication status
             let authenticated = false;
             try {
-                const { stdout: authOutput } = await execAsync('onasis auth status --output json 2>/dev/null || lanonasis auth status --output json 2>/dev/null', {
+                const { stdout: authOutput } = await execAsync('onasis auth status --output json 2>/dev/null || LanOnasis auth status --output json 2>/dev/null', {
                     timeout: 3000
                 });
                 const authStatus = JSON.parse(authOutput);
@@ -369,7 +369,7 @@ class CLIIntegration {
         }
     }
     /**
-     * Get preferred CLI command (onasis for Golden Contract, fallback to lanonasis)
+     * Get preferred CLI command (onasis for Golden Contract, fallback to LanOnasis)
      */
     async getPreferredCLICommand() {
         try {
@@ -377,7 +377,7 @@ class CLIIntegration {
             return 'onasis';
         }
         catch {
-            return 'lanonasis';
+            return 'LanOnasis';
         }
     }
     /**
@@ -836,7 +836,7 @@ function createSmartConfig(baseConfig, options = {}) {
         // Smart API configuration with environment detection
         apiUrl: baseConfig.apiUrl || (process?.env?.NODE_ENV === 'development'
             ? 'http://localhost:3001'
-            : 'https://api.lanonasis.com'),
+            : 'https://api.LanOnasis.com'),
         // Default timeout based on environment
         timeout: baseConfig.timeout || (Environment.isIDE ? 10000 : 15000)
     };
@@ -860,7 +860,7 @@ const ConfigPresets = {
      * Production configuration optimized for performance
      */
     production: (apiKey) => createSmartConfig({
-        apiUrl: 'https://api.lanonasis.com',
+        apiUrl: 'https://api.LanOnasis.com',
         apiKey,
         timeout: 15000
     }, {
@@ -871,7 +871,7 @@ const ConfigPresets = {
      * IDE extension configuration with MCP prioritization
      */
     ideExtension: (apiKey) => createSmartConfig({
-        apiUrl: 'https://api.lanonasis.com',
+        apiUrl: 'https://api.LanOnasis.com',
         apiKey,
         timeout: 10000
     }, {
@@ -883,7 +883,7 @@ const ConfigPresets = {
      * Browser-only configuration (no CLI support)
      */
     browserOnly: (apiKey) => createSmartConfig({
-        apiUrl: 'https://api.lanonasis.com',
+        apiUrl: 'https://api.LanOnasis.com',
         apiKey,
         timeout: 15000
     }, {
@@ -894,7 +894,7 @@ const ConfigPresets = {
      * CLI-first configuration for server environments
      */
     serverCLI: (apiKey) => createSmartConfig({
-        apiUrl: 'https://api.lanonasis.com',
+        apiUrl: 'https://api.LanOnasis.com',
         apiKey,
         timeout: 20000
     }, {
@@ -964,15 +964,15 @@ const createTopicSchema = z.object({
 });
 
 /**
- * @lanonasis/memory-client
+ * @LanOnasis/memory-client
  *
- * Memory as a Service (MaaS) Client SDK for Lanonasis
+ * Memory as a Service (MaaS) Client SDK for LanOnasis
  * Intelligent memory management with semantic search capabilities
  */
 // Main client
 // Constants
 const VERSION = '1.3.0';
-const CLIENT_NAME = '@lanonasis/memory-client';
+const CLIENT_NAME = '@LanOnasis/memory-client';
 // Environment detection
 const isBrowser = typeof window !== 'undefined';
 const isNode = typeof globalThis !== 'undefined' && 'process' in globalThis && globalThis.process?.versions?.node;
@@ -984,12 +984,12 @@ const defaultConfigs = {
         useGateway: false
     },
     production: {
-        apiUrl: 'https://api.lanonasis.com',
+        apiUrl: 'https://api.LanOnasis.com',
         timeout: 15000,
         useGateway: true
     },
     gateway: {
-        apiUrl: 'https://api.lanonasis.com',
+        apiUrl: 'https://api.LanOnasis.com',
         timeout: 10000,
         useGateway: true
     }

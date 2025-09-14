@@ -2,7 +2,7 @@
 
 ## ✅ **All Essential Files Successfully Restored**
 
-Your **Lanonasis MaaS** development environment is now **100% complete** with all essential files restored and services fully operational.
+Your **LanOnasis MaaS** development environment is now **100% complete** with all essential files restored and services fully operational.
 
 ## 📁 **Restored Files & Services**
 
@@ -10,18 +10,18 @@ Your **Lanonasis MaaS** development environment is now **100% complete** with al
 - **Location**: `/dashboard/dist/` 
 - **Assets**: `index.html`, `assets/index-HUUq9L0G.js`, `assets/index-tn0RQdqM.css`
 - **Status**: ✅ Built and ready to serve
-- **Access**: `https://api.lanonasis.com/dashboard`
+- **Access**: `https://api.LanOnasis.com/dashboard`
 
 ### 2. **Documentation Portal** ✅  
 - **Location**: `/docs/dist/`
 - **Files**: `index.html`, `index.md`, `MCP-REMOTE-CONNECTION.md`
 - **Status**: ✅ Created and ready to serve
-- **Access**: `https://api.lanonasis.com/docs-static`
+- **Access**: `https://api.LanOnasis.com/docs-static`
 
 ### 3. **MCP Connection Interface** ✅
 - **Location**: `/src/static/mcp-connection.html`
 - **Status**: ✅ Created with full SSE endpoint documentation
-- **Access**: `https://mcp.lanonasis.com/mcp`
+- **Access**: `https://mcp.LanOnasis.com/mcp`
 
 ### 4. **Server Static File Serving** ✅
 - **Dashboard Route**: `/dashboard/*` → serves React SPA
@@ -86,14 +86,14 @@ Your MCP SSE endpoint is now fully operational for external clients:
 ```json
 {
   "mcpServers": {
-    "lanonasis-memory": {
+    "LanOnasis-memory": {
       "command": "npx",
       "args": [
         "@modelcontextprotocol/server-sse",
-        "https://mcp.lanonasis.com/sse"
+        "https://mcp.LanOnasis.com/sse"
       ],
       "env": {
-        "MCP_API_KEY": "your-lanonasis-api-key-here"
+        "MCP_API_KEY": "your-LanOnasis-api-key-here"
       }
     }
   }
@@ -157,6 +157,6 @@ Your MCP SSE endpoint is now fully operational for external clients:
 
 **🎉 RESTORATION COMPLETE! 🎉**
 
-Your Lanonasis Memory as a Service is now fully restored with all essential files, comprehensive documentation, user interfaces, and remote connection capabilities. The service is secure, functional, and ready for production deployment.
+Your LanOnasis Memory as a Service is now fully restored with all essential files, comprehensive documentation, user interfaces, and remote connection capabilities. The service is secure, functional, and ready for production deployment.
 
 *Restoration completed successfully on $(date)*

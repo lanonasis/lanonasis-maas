@@ -51,7 +51,7 @@ router.get('/', alignedAuthMiddleware, asyncHandler(async (req: Request, res: Re
   // Send initial connection message
   res.write(`data: ${JSON.stringify({
     type: 'connection',
-    message: 'Connected to Lanonasis Memory Service',
+    message: 'Connected to LanOnasis Memory Service',
     timestamp: new Date().toISOString(),
     userId
   })}\n\n`);

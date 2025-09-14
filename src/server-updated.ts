@@ -66,7 +66,7 @@ app.get('/.well-known/onasis.json', (req, res) => {
     mcp_sse: `${req.protocol}://${req.get('host')}/mcp/sse`,
     mcp_message: `${req.protocol}://${req.get('host')}/mcp/message`,
     keys_base: `${req.protocol}://${req.get('host')}/api/v1/keys`,
-    project_scope: 'lanonasis-maas',
+    project_scope: 'LanOnasis-maas',
     version: '1.2.0',
     discovery_version: '0.1',
     last_updated: new Date().toISOString(),
@@ -116,9 +116,9 @@ const swaggerOptions = {
         - 🤖 **MCP Support**: Model Context Protocol for secure AI agent access to secrets
       `,
       contact: {
-        name: 'Lanonasis Support',
-        email: 'support@lanonasis.com',
-        url: 'https://docs.lanonasis.com'
+        name: 'LanOnasis Support',
+        email: 'support@LanOnasis.com',
+        url: 'https://docs.LanOnasis.com'
       },
       license: {
         name: 'MIT',
@@ -131,7 +131,7 @@ const swaggerOptions = {
         description: 'Development server'
       },
       {
-        url: 'https://api.lanonasis.com',
+        url: 'https://api.LanOnasis.com',
         description: 'Production server'
       }
     ],
@@ -157,7 +157,7 @@ const swaggerOptions = {
           required: true,
           schema: {
             type: 'string',
-            enum: ['lanonasis-maas']
+            enum: ['LanOnasis-maas']
           },
           description: 'Project scope identifier (required for all authenticated requests)'
         },
@@ -304,7 +304,7 @@ const startServer = async () => {
 🔑 Authentication:
   • JWT: Authorization: Bearer <token>
   • API Key: X-API-Key: <key>
-  • Project Scope: X-Project-Scope: lanonasis-maas
+  • Project Scope: X-Project-Scope: LanOnasis-maas
 
 📊 Middleware Stack:
   ✅ Request ID tracking

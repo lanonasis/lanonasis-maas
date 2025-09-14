@@ -13,7 +13,7 @@
 ## 🎯 **Test Objectives & Results**
 
 ### **Objective 1: Unified Backend Routing** ✅ PASSED
-- **CLI Configuration**: Points to `https://api.lanonasis.com/api/v1`
+- **CLI Configuration**: Points to `https://api.LanOnasis.com/api/v1`
 - **MCP Server**: Uses CLI-aligned authentication patterns  
 - **REST API**: Same backend endpoints with proper middleware
 - **Database**: Single Supabase instance shared across all components
@@ -24,7 +24,7 @@
 - **Result**: All AI clients now receive proper JSON responses
 
 ### **Objective 3: Authentication Routing** ✅ PASSED
-- **Verified**: Routes through `onasis-core` (`api.lanonasis.com`)
+- **Verified**: Routes through `onasis-core` (`api.LanOnasis.com`)
 - **NOT**: Dashboard routes (previous issue resolved)
 - **Supports**: JWT tokens, vendor keys (`pk_*.sk_*`), OAuth
 
@@ -84,12 +84,12 @@ GET /.well-known/onasis.json
 
 ✅ RESULT: Standardized service discovery
 {
-  "auth_base": "https://api.lanonasis.com/api/v1",
-  "memory_base": "https://api.lanonasis.com/api/v1/memory",
-  "mcp_ws_base": "wss://api.lanonasis.com",
-  "mcp_sse": "https://api.lanonasis.com/mcp/sse",
-  "keys_base": "https://api.lanonasis.com/api/v1/api-keys",
-  "project_scope": "lanonasis-maas",
+  "auth_base": "https://api.LanOnasis.com/api/v1",
+  "memory_base": "https://api.LanOnasis.com/api/v1/memory",
+  "mcp_ws_base": "wss://api.LanOnasis.com",
+  "mcp_sse": "https://api.LanOnasis.com/mcp/sse",
+  "keys_base": "https://api.LanOnasis.com/api/v1/api-keys",
+  "project_scope": "LanOnasis-maas",
   "capabilities": {
     "auth": ["jwt", "vendor_key"],
     "protocols": ["http", "https", "ws", "sse"], 
@@ -107,7 +107,7 @@ GET /api/v1/auth
 {
   "message": "Authentication API",
   "routes_through": "onasis-core (NOT dashboard)", ✅
-  "auth_server": "https://api.lanonasis.com",
+  "auth_server": "https://api.LanOnasis.com",
   "endpoints": {
     "login": "/api/v1/auth/login",
     "register": "/api/v1/auth/register", 
@@ -129,7 +129,7 @@ GET /api/v1/mcp
   "server": "cli-aligned-mcp-server",
   "authentication": "vendor-key-aligned",
   "endpoints": {
-    "stdio": "Use lanonasis-mcp-server command",
+    "stdio": "Use LanOnasis-mcp-server command",
     "http": "/api/v1/mcp/tools",
     "websocket": "/mcp/ws", 
     "sse": "/mcp/sse"
@@ -158,11 +158,11 @@ Content-Type: application/json
 
 ```bash
 # CLI pointing to same backend
-MEMORY_API_URL="https://api.lanonasis.com/api/v1" lanonasis --help
+MEMORY_API_URL="https://api.LanOnasis.com/api/v1" LanOnasis --help
 
 ✅ RESULT: CLI connects to unified backend
 🧠 Memory as a Service CLI
-lanonasis|memory [options] [command]
+LanOnasis|memory [options] [command]
 ```
 
 ## 🔧 **Technical Implementation**
@@ -186,16 +186,16 @@ if (req.isAIClient) {
 ### **Authentication Routing Configuration**
 ```typescript
 const AUTH_CONFIG = {
-  authServer: 'https://api.lanonasis.com', // onasis-core ✅
-  clientId: 'lanonasis_mcp_client_2024',
-  redirectUri: 'https://api.lanonasis.com/auth/oauth/callback'
+  authServer: 'https://api.LanOnasis.com', // onasis-core ✅
+  clientId: 'LanOnasis_mcp_client_2024',
+  redirectUri: 'https://api.LanOnasis.com/auth/oauth/callback'
 };
 ```
 
 ### **Unified Backend Endpoints**
 ```typescript
 // All components use same base URL
-const UNIFIED_BACKEND = 'https://api.lanonasis.com/api/v1';
+const UNIFIED_BACKEND = 'https://api.LanOnasis.com/api/v1';
 
 // Components:
 CLI: MEMORY_API_URL=UNIFIED_BACKEND

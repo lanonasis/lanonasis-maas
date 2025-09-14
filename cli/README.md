@@ -1,9 +1,9 @@
-# @lanonasis/cli v2.0.0 - Enhanced Interactive CLI Experience
+# @LanOnasis/cli v2.0.0 - Enhanced Interactive CLI Experience
 
-[![NPM Version](https://img.shields.io/npm/v/@lanonasis/cli)](https://www.npmjs.com/package/@lanonasis/cli)
-[![Downloads](https://img.shields.io/npm/dt/@lanonasis/cli)](https://www.npmjs.com/package/@lanonasis/cli)
+[![NPM Version](https://img.shields.io/npm/v/@LanOnasis/cli)](https://www.npmjs.com/package/@LanOnasis/cli)
+[![Downloads](https://img.shields.io/npm/dt/@LanOnasis/cli)](https://www.npmjs.com/package/@LanOnasis/cli)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Golden Contract](https://img.shields.io/badge/Onasis--Core-v0.1%20Compliant-gold)](https://api.lanonasis.com/.well-known/onasis.json)
+[![Golden Contract](https://img.shields.io/badge/Onasis--Core-v0.1%20Compliant-gold)](https://api.LanOnasis.com/.well-known/onasis.json)
 
 🚀 **NEW IN v2.0**: Revolutionary interactive CLI experience with guided workflows, smart suggestions, achievement system, and power user mode. Professional command-line interface for LanOnasis Memory as a Service (MaaS) platform with **Golden Contract compliance**.
 
@@ -12,10 +12,10 @@
 ### Installation
 ```bash
 # Global installation (recommended)
-npm install -g @lanonasis/cli
+npm install -g @LanOnasis/cli
 
 # Verify installation
-lanonasis --version  # or onasis --version
+LanOnasis --version  # or onasis --version
 ```
 
 ### First Steps
@@ -39,14 +39,14 @@ The CLI supports multiple command aliases for different use cases:
 | Command | Purpose | Golden Contract |
 |---------|---------|-----------------|
 | `onasis` | Golden Contract compliant interface | ✅ Yes |
-| `lanonasis` | Standard LanOnasis interface | ✅ Yes |
+| `LanOnasis` | Standard LanOnasis interface | ✅ Yes |
 | `memory` | Memory-focused operations | ✅ Yes |
 | `maas` | Memory as a Service operations | ✅ Yes |
 
 ```bash
 # All of these are equivalent:
 onasis memory list
-lanonasis memory list
+LanOnasis memory list
 memory list
 maas memory list
 ```
@@ -200,7 +200,7 @@ onasis health --output json | jq '.status'
 
 ### Environment Variables
 ```bash
-export MEMORY_API_URL="https://api.lanonasis.com/api/v1"
+export MEMORY_API_URL="https://api.LanOnasis.com/api/v1"
 export CLI_OUTPUT_FORMAT="json"
 export CLI_VERBOSE="true"
 ```
@@ -209,7 +209,7 @@ export CLI_VERBOSE="true"
 Location: `~/.maas/config.json`
 ```json
 {
-  "apiUrl": "https://api.lanonasis.com/api/v1",
+  "apiUrl": "https://api.LanOnasis.com/api/v1",
   "defaultOutputFormat": "table",
   "mcpPreference": "auto",
   "vendorKey": "pk_xxxxx.sk_xxxxx"
@@ -296,7 +296,7 @@ onasis login --vendor-key pk_xxx.sk_xxx
 onasis health --verbose
 
 # Test API connectivity
-onasis --api-url https://api.lanonasis.com/api/v1 health
+onasis --api-url https://api.LanOnasis.com/api/v1 health
 ```
 
 #### MCP Connection Issues
@@ -319,8 +319,8 @@ CLI_VERBOSE=true onasis --verbose health
 ### Development Setup
 ```bash
 # Clone CLI source
-git clone https://github.com/lanonasis/lanonasis-maas.git
-cd lanonasis-maas/cli
+git clone https://github.com/LanOnasis/LanOnasis-maas.git
+cd LanOnasis-maas/cli
 
 # Install dependencies
 npm install
@@ -358,7 +358,7 @@ onasis health
 - ✅ Professional shell completions (bash/zsh/fish)
 - ✅ Enhanced authentication (vendor keys, OAuth, credentials)
 - ✅ Interactive user guidance system
-- ✅ Dual command support (lanonasis/onasis)
+- ✅ Dual command support (LanOnasis/onasis)
 - ✅ Service discovery integration
 - ✅ Request correlation and enhanced security
 
@@ -375,12 +375,12 @@ MIT License - see [LICENSE](../LICENSE) for details.
 
 ## 🔗 Related Links
 
-- **NPM Package**: [https://www.npmjs.com/package/@lanonasis/cli](https://www.npmjs.com/package/@lanonasis/cli)
-- **Main Repository**: [https://github.com/lanonasis/lanonasis-maas](https://github.com/lanonasis/lanonasis-maas)
-- **Documentation**: [https://docs.lanonasis.com/cli](https://docs.lanonasis.com/cli)
-- **API Documentation**: [https://api.lanonasis.com/docs](https://api.lanonasis.com/docs)
-- **Service Discovery**: [https://api.lanonasis.com/.well-known/onasis.json](https://api.lanonasis.com/.well-known/onasis.json)
-- **Dashboard**: [https://api.lanonasis.com/dashboard](https://api.lanonasis.com/dashboard)
+- **NPM Package**: [https://www.npmjs.com/package/@LanOnasis/cli](https://www.npmjs.com/package/@LanOnasis/cli)
+- **Main Repository**: [https://github.com/LanOnasis/LanOnasis-maas](https://github.com/LanOnasis/LanOnasis-maas)
+- **Documentation**: [https://docs.LanOnasis.com/cli](https://docs.LanOnasis.com/cli)
+- **API Documentation**: [https://api.LanOnasis.com/docs](https://api.LanOnasis.com/docs)
+- **Service Discovery**: [https://api.LanOnasis.com/.well-known/onasis.json](https://api.LanOnasis.com/.well-known/onasis.json)
+- **Dashboard**: [https://api.LanOnasis.com/dashboard](https://api.LanOnasis.com/dashboard)
 
 ---
 

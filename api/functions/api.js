@@ -30,7 +30,7 @@ app.get('/', (req, res) => {
       tagline: 'Unified API Gateway for Enterprise Solutions',
       version: '1.0.0',
       status: 'operational',
-      baseUrl: 'https://api.lanonasis.com',
+      baseUrl: 'https://api.LanOnasis.com',
       services: {
         memory: {
           name: 'Memory as a Service (MaaS)',
@@ -75,9 +75,9 @@ app.get('/', (req, res) => {
         monitoring: 'Prometheus Metrics & Winston Logging'
       },
       support: {
-        documentation: 'https://docs.lanonasis.com',
-        contact: 'support@lanonasis.com',
-        github: 'https://github.com/lanonasis'
+        documentation: 'https://docs.LanOnasis.com',
+        contact: 'support@LanOnasis.com',
+        github: 'https://github.com/LanOnasis'
       },
       timestamp: new Date().toISOString()
     });
@@ -394,12 +394,12 @@ app.get('/', (req, res) => {
                         <span class="feature-tag">Password Mgmt</span>
                     </div>
                     <div class="service-links">
-                        <a href="https://www.npmjs.com/package/@lanonasis/sdk" class="btn btn-primary">Install SDK</a>
+                        <a href="https://www.npmjs.com/package/@LanOnasis/sdk" class="btn btn-primary">Install SDK</a>
                         <a href="/docs#sdk" class="btn btn-secondary">SDK Docs</a>
                     </div>
                     <div style="margin-top: 15px; padding: 15px; background: #f0f0f0; border-radius: 8px; font-family: monospace; font-size: 0.9rem;">
-                        <div>$ npm install @lanonasis/sdk</div>
-                        <div style="margin-top: 8px; color: #666;">import { LanonasisClient } from '@lanonasis/sdk';</div>
+                        <div>$ npm install @LanOnasis/sdk</div>
+                        <div style="margin-top: 8px; color: #666;">import { LanOnasisClient } from '@LanOnasis/sdk';</div>
                     </div>
                 </div>
 
@@ -413,14 +413,14 @@ app.get('/', (req, res) => {
                         <span class="feature-tag">Zero Install</span>
                     </div>
                     <div class="service-links">
-                        <a href="https://www.npmjs.com/package/@lanonasis/cli" class="btn btn-primary">View on NPM</a>
+                        <a href="https://www.npmjs.com/package/@LanOnasis/cli" class="btn btn-primary">View on NPM</a>
                         <a href="/docs#cli" class="btn btn-secondary">CLI Docs</a>
                     </div>
                     <div style="margin-top: 15px; padding: 15px; background: #f0f0f0; border-radius: 8px; font-family: monospace; font-size: 0.9rem;">
                         <div># Direct usage (no install needed):</div>
-                        <div style="color: #0066cc;">$ npx -y @lanonasis/cli</div>
+                        <div style="color: #0066cc;">$ npx -y @LanOnasis/cli</div>
                         <div style="margin-top: 8px;"># Global install:</div>
-                        <div style="color: #0066cc;">$ npm install -g @lanonasis/cli</div>
+                        <div style="color: #0066cc;">$ npm install -g @LanOnasis/cli</div>
                     </div>
                 </div>
 
@@ -434,7 +434,7 @@ app.get('/', (req, res) => {
                         <span class="feature-tag">Live Deploy</span>
                     </div>
                     <div class="service-links">
-                        <a href="https://marketplace.visualstudio.com/search?term=lanonasis" class="btn btn-primary">VS Code Extension</a>
+                        <a href="https://marketplace.visualstudio.com/search?term=LanOnasis" class="btn btn-primary">VS Code Extension</a>
                         <a href="/docs#extensions" class="btn btn-secondary">Extension Docs</a>
                     </div>
                 </div>
@@ -449,7 +449,7 @@ app.get('/', (req, res) => {
                         <span class="feature-tag">Real-time</span>
                     </div>
                     <div class="service-links">
-                        <a href="https://dashboard.lanonasis.com/visualizer" class="btn btn-primary">Open Visualizer</a>
+                        <a href="https://dashboard.LanOnasis.com/visualizer" class="btn btn-primary">Open Visualizer</a>
                         <a href="/docs#visualizer" class="btn btn-secondary">Learn More</a>
                     </div>
                 </div>
@@ -470,7 +470,7 @@ app.get('/', (req, res) => {
                         <span class="feature-tag">CSV/JSON</span>
                     </div>
                     <div class="service-links">
-                        <a href="https://dashboard.lanonasis.com/upload" class="btn btn-primary">Upload Memories</a>
+                        <a href="https://dashboard.LanOnasis.com/upload" class="btn btn-primary">Upload Memories</a>
                         <a href="/docs#upload" class="btn btn-secondary">Upload Guide</a>
                     </div>
                 </div>
@@ -485,7 +485,7 @@ app.get('/', (req, res) => {
                         <span class="feature-tag">Monitoring</span>
                     </div>
                     <div class="service-links">
-                        <a href="https://dashboard.lanonasis.com" class="btn btn-primary">Open Dashboard</a>
+                        <a href="https://dashboard.LanOnasis.com" class="btn btn-primary">Open Dashboard</a>
                         <a href="/docs#dashboard" class="btn btn-secondary">Dashboard Guide</a>
                     </div>
                 </div>
@@ -500,7 +500,7 @@ app.get('/', (req, res) => {
                         <span class="feature-tag">Secure</span>
                     </div>
                     <div class="service-links">
-                        <a href="https://mcp.lanonasis.com/sse" class="btn btn-primary">Connect SSE</a>
+                        <a href="https://mcp.LanOnasis.com/sse" class="btn btn-primary">Connect SSE</a>
                         <a href="/docs#mcp-sse" class="btn btn-secondary">SSE Guide</a>
                     </div>
                 </div>
@@ -602,7 +602,7 @@ app.get('/', (req, res) => {
 
         <div class="footer">
             <p>🚀 <strong>Tech Stack:</strong> TypeScript, Express, Supabase, OpenAI, JWT, Prometheus</p>
-            <p>📞 <strong>Support:</strong> support@lanonasis.com | 📖 <strong>Docs:</strong> docs.lanonasis.com</p>
+            <p>📞 <strong>Support:</strong> support@LanOnasis.com | 📖 <strong>Docs:</strong> docs.LanOnasis.com</p>
             <p>© 2024 LanOnasis. Enterprise Services Platform v1.0.0</p>
         </div>
     </div>
@@ -614,7 +614,7 @@ app.get('/', (req, res) => {
 // Health endpoint
 app.get('/health', (req, res) => {
   res.json({
-    name: 'Lanonasis Memory Service',
+    name: 'LanOnasis Memory Service',
     version: '1.0.0',
     status: 'healthy',
     timestamp: new Date().toISOString(),
@@ -631,7 +631,7 @@ app.get('/health', (req, res) => {
 
 app.get('/api/v1/health', (req, res) => {
   res.json({
-    name: 'Lanonasis Memory Service',
+    name: 'LanOnasis Memory Service',
     version: '1.0.0',
     status: 'healthy',
     timestamp: new Date().toISOString(),

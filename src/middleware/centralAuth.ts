@@ -122,7 +122,7 @@ export const centralAuth = async (req: Request, res: Response, next: NextFunctio
     const projectScope = req.headers['x-project-scope'] as string;
 
     // Validate project scope
-    if (projectScope !== 'lanonasis-maas') {
+    if (projectScope !== 'LanOnasis-maas') {
       console.warn(`[${req.id}] Invalid project scope: ${projectScope}`);
       throw createAuthError('Invalid project scope', 'INVALID_PROJECT_SCOPE', 403);
     }

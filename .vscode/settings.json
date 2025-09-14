@@ -1,6 +1,6 @@
 {
     "postman.settings.dotenv-detection-notification-visibility": false,
-    "lanonasis.defaultEnvironment": "production",
+    "LanOnasis.defaultEnvironment": "production",
     "editor.aiStats.enabled": true,
     "git.ignoreLimitWarning": true,
     "files.exclude": {

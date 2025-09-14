@@ -75,8 +75,8 @@ export function shouldUseUnifiedRouter(service: string): boolean {
 export function getUnifiedRouterHeaders(): Record<string, string> {
   return {
     'Content-Type': 'application/json',
-    'X-Service': 'lanonasis-maas',
+    'X-Service': 'LanOnasis-maas',
     'X-Client': 'orchestrator',
-    'User-Agent': 'Lanonasis-Orchestrator/1.0'
+    'User-Agent': 'LanOnasis-Orchestrator/1.0'
   };
 }

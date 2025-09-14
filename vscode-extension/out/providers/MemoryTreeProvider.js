@@ -46,7 +46,7 @@ class MemoryTreeItem extends vscode.TreeItem {
         this.iconPath = this.getIconForMemoryType(memory.memory_type);
         // Add command to open memory when clicked
         this.command = {
-            command: 'lanonasis.openMemory',
+            command: 'LanOnasis.openMemory',
             title: 'Open Memory',
             arguments: [memory]
         };

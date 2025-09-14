@@ -12,8 +12,8 @@ export const Footer = () => {
         <div className="grid grid-cols-1 gap-8 md:grid-cols-4">
           {/* Brand Section */}
           <div className="md:col-span-1">
-            <a href="https://lanonasis.com" className="flex items-center gap-2 text-xl font-semibold tracking-tight mb-4">
-              <span className="text-primary">Lanonasis</span>
+            <a href="https://LanOnasis.com" className="flex items-center gap-2 text-xl font-semibold tracking-tight mb-4">
+              <span className="text-primary">LanOnasis</span>
               <span className="text-foreground">Platform</span>
             </a>
             <p className="text-sm text-muted-foreground mb-6 max-w-xs">
@@ -42,7 +42,7 @@ export const Footer = () => {
                 <Linkedin className="h-5 w-5" />
               </a>
               <a
-                href="mailto:info@lanonasis.com"
+                href="mailto:info@LanOnasis.com"
                 className="text-muted-foreground hover:text-foreground transition-colors duration-300"
                 aria-label="Email"
               >
@@ -59,7 +59,7 @@ export const Footer = () => {
             <ul className="space-y-3">
               <li>
                 <a
-                  href="https://lanonasis.com#ecosystem"
+                  href="https://LanOnasis.com#ecosystem"
                   className="text-sm text-muted-foreground hover:text-foreground transition-colors duration-300"
                 >
                   Features
@@ -67,7 +67,7 @@ export const Footer = () => {
               </li>
               <li>
                 <a
-                  href="https://lanonasis.com#pricing"
+                  href="https://LanOnasis.com#pricing"
                   className="text-sm text-muted-foreground hover:text-foreground transition-colors duration-300"
                 >
                   Pricing
@@ -75,7 +75,7 @@ export const Footer = () => {
               </li>
               <li>
                 <a
-                  href="https://lanonasis.com#roadmap"
+                  href="https://LanOnasis.com#roadmap"
                   className="text-sm text-muted-foreground hover:text-foreground transition-colors duration-300"
                 >
                   Roadmap
@@ -83,7 +83,7 @@ export const Footer = () => {
               </li>
               <li>
                 <a
-                  href="https://api.lanonasis.com/"
+                  href="https://api.LanOnasis.com/"
                   className="text-sm text-muted-foreground hover:text-foreground transition-colors duration-300"
                 >
                   Status
@@ -91,7 +91,7 @@ export const Footer = () => {
               </li>
               <li>
                 <a
-                  href="https://docs.lanonasis.com"
+                  href="https://docs.LanOnasis.com"
                   className="text-sm text-muted-foreground hover:text-foreground transition-colors duration-300"
                 >
                   API Documentation
@@ -107,7 +107,7 @@ export const Footer = () => {
             <ul className="space-y-3">
               <li>
                 <a
-                  href="https://lanonasis.com#story"
+                  href="https://LanOnasis.com#story"
                   className="text-sm text-muted-foreground hover:text-foreground transition-colors duration-300"
                 >
                   About Us
@@ -115,7 +115,7 @@ export const Footer = () => {
               </li>
               <li>
                 <a
-                  href="https://lanonasis.com#contact"
+                  href="https://LanOnasis.com#contact"
                   className="text-sm text-muted-foreground hover:text-foreground transition-colors duration-300"
                 >
                   Careers
@@ -123,7 +123,7 @@ export const Footer = () => {
               </li>
               <li>
                 <a
-                  href="https://lanonasis.com#blog"
+                  href="https://LanOnasis.com#blog"
                   className="text-sm text-muted-foreground hover:text-foreground transition-colors duration-300"
                 >
                   Blog
@@ -131,7 +131,7 @@ export const Footer = () => {
               </li>
               <li>
                 <a
-                  href="https://lanonasis.com#press"
+                  href="https://LanOnasis.com#press"
                   className="text-sm text-muted-foreground hover:text-foreground transition-colors duration-300"
                 >
                   Press
@@ -139,7 +139,7 @@ export const Footer = () => {
               </li>
               <li>
                 <a
-                  href="https://lanonasis.com#partners"
+                  href="https://LanOnasis.com#partners"
                   className="text-sm text-muted-foreground hover:text-foreground transition-colors duration-300"
                 >
                   Partners
@@ -155,7 +155,7 @@ export const Footer = () => {
             <ul className="space-y-3">
               <li>
                 <a
-                  href="https://docs.lanonasis.com"
+                  href="https://docs.LanOnasis.com"
                   className="text-sm text-muted-foreground hover:text-foreground transition-colors duration-300"
                 >
                   Documentation
@@ -163,7 +163,7 @@ export const Footer = () => {
               </li>
               <li>
                 <a
-                  href="https://docs.lanonasis.com/guides"
+                  href="https://docs.LanOnasis.com/guides"
                   className="text-sm text-muted-foreground hover:text-foreground transition-colors duration-300"
                 >
                   Guides
@@ -171,7 +171,7 @@ export const Footer = () => {
               </li>
               <li>
                 <a
-                  href="https://lanonasis.com#contact"
+                  href="https://LanOnasis.com#contact"
                   className="text-sm text-muted-foreground hover:text-foreground transition-colors duration-300"
                 >
                   Support
@@ -179,7 +179,7 @@ export const Footer = () => {
               </li>
               <li>
                 <a
-                  href="https://lanonasis.com#security"
+                  href="https://LanOnasis.com#security"
                   className="text-sm text-muted-foreground hover:text-foreground transition-colors duration-300"
                 >
                   Security
@@ -187,7 +187,7 @@ export const Footer = () => {
               </li>
               <li>
                 <a
-                  href="https://lanonasis.com/privacy"
+                  href="https://LanOnasis.com/privacy"
                   className="text-sm text-muted-foreground hover:text-foreground transition-colors duration-300"
                 >
                   Privacy Policy
@@ -195,7 +195,7 @@ export const Footer = () => {
               </li>
               <li>
                 <a
-                  href="https://lanonasis.com/terms"
+                  href="https://LanOnasis.com/terms"
                   className="text-sm text-muted-foreground hover:text-foreground transition-colors duration-300"
                 >
                   Terms of Service
@@ -207,23 +207,23 @@ export const Footer = () => {
 
         <div className="mt-12 border-t border-gray-200/40 dark:border-gray-700/40 pt-8 flex flex-col md:flex-row justify-between items-center">
           <p className="text-sm text-muted-foreground mb-4 md:mb-0">
-            © {year} Lanonasis. All rights reserved.
+            © {year} LanOnasis. All rights reserved.
           </p>
           <div className="flex flex-col md:flex-row space-y-2 md:space-y-0 md:space-x-6">
             <a
-              href="https://lanonasis.com/privacy"
+              href="https://LanOnasis.com/privacy"
               className="text-sm text-muted-foreground hover:text-foreground transition-colors duration-300"
             >
               Privacy Policy
             </a>
             <a
-              href="https://lanonasis.com/terms"
+              href="https://LanOnasis.com/terms"
               className="text-sm text-muted-foreground hover:text-foreground transition-colors duration-300"
             >
               Terms of Service
             </a>
             <a
-              href="https://lanonasis.com/cookies"
+              href="https://LanOnasis.com/cookies"
               className="text-sm text-muted-foreground hover:text-foreground transition-colors duration-300"
             >
               Cookie Policy

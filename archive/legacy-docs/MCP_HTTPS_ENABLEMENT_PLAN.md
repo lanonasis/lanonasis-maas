@@ -15,7 +15,7 @@ This is **enterprise-grade MCP architecture** for serious productivity workflows
 ## Current Status Analysis
 
 ### ✅ **What's Working:**
-- Dashboard deployment at `developer.lanonasis.com`
+- Dashboard deployment at `developer.LanOnasis.com`
 - Translation system (11 languages, 139 keys)
 - MCP infrastructure (SSE endpoints, orchestrator)
 - API key management system
@@ -32,19 +32,19 @@ This is **enterprise-grade MCP architecture** for serious productivity workflows
 ### Phase 1: Fix API Routing (Immediate)
 
 The issue is that Vercel functions need proper deployment. Current status shows 404s for:
-- `https://developer.lanonasis.com/api/v1/health`
-- `https://developer.lanonasis.com/health`
-- `https://developer.lanonasis.com/mcp/sse`
+- `https://developer.LanOnasis.com/api/v1/health`
+- `https://developer.LanOnasis.com/health`
+- `https://developer.LanOnasis.com/mcp/sse`
 
 **Root Cause**: Vercel may not be building/deploying the API functions correctly.
 
 #### Solution A: Verify Function Deployment
 ```bash
 # Check if functions are actually deployed
-curl -X GET "https://developer.lanonasis.com/api/functions/api?path=/health"
+curl -X GET "https://developer.LanOnasis.com/api/functions/api?path=/health"
 
 # Check function logs
-vercel logs https://developer.lanonasis.com
+vercel logs https://developer.LanOnasis.com
 ```
 
 #### Solution B: Update Vercel Configuration
@@ -54,7 +54,7 @@ vercel logs https://developer.lanonasis.com
 ```json
 {
   "version": 2,
-  "name": "lanonasis-developer", 
+  "name": "LanOnasis-developer", 
   "functions": {
     "api/functions/*.js": {
       "runtime": "@vercel/node@3.0.7"
@@ -170,7 +170,7 @@ interface MCPConfig {
 const MCPConfigPanel = () => {
   const [config, setConfig] = useState<MCPConfig>({
     transport: 'https',
-    endpoint: 'https://developer.lanonasis.com/mcp/sse',
+    endpoint: 'https://developer.LanOnasis.com/mcp/sse',
     apiKey: userApiKey,
     features: ['memory', 'orchestration', 'banking', 'analytics']
   });
@@ -271,12 +271,12 @@ app.post('/api/v1/orchestrate', authenticateApiKey, async (req, res) => {
 #### 1. **CLI Integration**
 ```bash
 # Configure CLI with HTTPS MCP
-lanonasis config set mcp.transport https
-lanonasis config set mcp.endpoint https://developer.lanonasis.com/mcp/sse
-lanonasis config set api.key YOUR_API_KEY
+LanOnasis config set mcp.transport https
+LanOnasis config set mcp.endpoint https://developer.LanOnasis.com/mcp/sse
+LanOnasis config set api.key YOUR_API_KEY
 
 # Use orchestrator from CLI
-lanonasis orchestrate --workflow "analyze-project" --context "~/my-project"
+LanOnasis orchestrate --workflow "analyze-project" --context "~/my-project"
 ```
 
 #### 2. **IDE Extension Integration**
@@ -284,7 +284,7 @@ lanonasis orchestrate --workflow "analyze-project" --context "~/my-project"
 // VS Code Extension: MCP Client
 class HTTPSMCPClient {
   constructor(apiKey: string) {
-    this.endpoint = 'https://developer.lanonasis.com/mcp/sse';
+    this.endpoint = 'https://developer.LanOnasis.com/mcp/sse';
     this.apiKey = apiKey;
   }
   
@@ -300,7 +300,7 @@ class HTTPSMCPClient {
   }
   
   async orchestrate(workflow: string, context: any) {
-    return fetch('https://developer.lanonasis.com/api/v1/orchestrate', {
+    return fetch('https://developer.LanOnasis.com/api/v1/orchestrate', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

@@ -43,7 +43,7 @@ class MemoryCompletionProvider {
     }
     async provideCompletionItems(document, position, _token, context) {
         // Skip completion if not enabled in configuration
-        const config = vscode.workspace.getConfiguration('lanonasis');
+        const config = vscode.workspace.getConfiguration('LanOnasis');
         if (!config.get('enableAutoCompletion', true)) {
             return [];
         }
@@ -136,7 +136,7 @@ class MemoryCompletionProvider {
             item.sortText = String(1 - memory.relevance_score).padStart(5, '0') + String(index).padStart(3, '0');
             // Add command to open full memory
             item.command = {
-                command: 'lanonasis.openMemory',
+                command: 'LanOnasis.openMemory',
                 title: 'Open Memory',
                 arguments: [memory]
             };

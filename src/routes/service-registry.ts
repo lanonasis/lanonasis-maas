@@ -5,7 +5,7 @@
 
 import { Router, Request, Response } from 'express';
 // TODO: Import MCPClient when oauth-client package is built
-// import { MCPClient } from '@lanonasis/oauth-client';
+// import { MCPClient } from '@LanOnasis/oauth-client';
 import { config } from '@/config/environment';
 import { logger } from '@/utils/logger';
 import { authenticateApiKey } from '@/middleware/auth-aligned';
@@ -84,7 +84,7 @@ router.get('/', (req, res) => {
 
   res.json({
     services,
-    auth_server: config.AUTH_SERVER_URL || 'https://api.lanonasis.com',
+    auth_server: config.AUTH_SERVER_URL || 'https://api.LanOnasis.com',
     oauth_endpoints: {
       authorize: '/api/v1/auth/oauth/authorize',
       token: '/api/v1/auth/oauth/token',
@@ -97,9 +97,9 @@ router.get('/', (req, res) => {
       ws: '/api/v1/mcp/ws'
     },
     sdk_info: {
-      package: '@lanonasis/oauth-client',
+      package: '@LanOnasis/oauth-client',
       version: '1.0.0',
-      repository: 'https://github.com/lanonasis/oauth-client'
+      repository: 'https://github.com/LanOnasis/oauth-client'
     }
   });
 });
@@ -174,8 +174,8 @@ router.get('/auth/test', authenticateApiKey, async (req: Request, res: Response)
     
     // TODO: Test MCP client connection when package is built
     // const mcpClient = new MCPClient({
-    //   clientId: config.OAUTH_CLIENT_ID || 'lanonasis_mcp_client_2024',
-    //   authServer: config.AUTH_SERVER_URL || 'https://api.lanonasis.com'
+    //   clientId: config.OAUTH_CLIENT_ID || 'LanOnasis_mcp_client_2024',
+    //   authServer: config.AUTH_SERVER_URL || 'https://api.LanOnasis.com'
     // });
 
     res.json({
@@ -213,9 +213,9 @@ router.get('/mcp/test', authenticateApiKey, async (req: Request, res: Response):
     
     // TODO: Create MCP client and test connection when package is built
     // const mcpClient = new MCPClient({
-    //   clientId: config.OAUTH_CLIENT_ID || 'lanonasis_mcp_client_2024',
-    //   authServer: config.AUTH_SERVER_URL || 'https://api.lanonasis.com',
-    //   mcpEndpoint: config.MCP_ENDPOINT || 'https://api.lanonasis.com'
+    //   clientId: config.OAUTH_CLIENT_ID || 'LanOnasis_mcp_client_2024',
+    //   authServer: config.AUTH_SERVER_URL || 'https://api.LanOnasis.com',
+    //   mcpEndpoint: config.MCP_ENDPOINT || 'https://api.LanOnasis.com'
     // });
 
     // TODO: Test basic MCP functionality

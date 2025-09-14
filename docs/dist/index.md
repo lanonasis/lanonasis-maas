@@ -1,24 +1,24 @@
-# 🧠 Lanonasis Memory as a Service
+# 🧠 LanOnasis Memory as a Service
 
 Enterprise-grade memory management with semantic search, multi-tenant support, and AI agent integration.
 
 ## 🚀 Quick Start
 
 ### 1. Create Account
-Visit the [Dashboard](https://api.lanonasis.com/dashboard) to create your account and generate API keys.
+Visit the [Dashboard](https://api.LanOnasis.com/dashboard) to create your account and generate API keys.
 
 ### 2. Install SDK
 ```bash
-npm install @lanonasis/memory-client
+npm install @LanOnasis/memory-client
 ```
 
 ### 3. Start Using
 ```javascript
-import { MemoryClient } from '@lanonasis/memory-client';
+import { MemoryClient } from '@LanOnasis/memory-client';
 
 const client = new MemoryClient({
   apiKey: 'your-api-key',
-  baseUrl: 'https://api.lanonasis.com'
+  baseUrl: 'https://api.LanOnasis.com'
 });
 
 // Create a memory
@@ -35,10 +35,10 @@ const results = await client.searchMemories('important information');
 
 ## 🔗 Key Endpoints
 
-- **API Base URL**: `https://api.lanonasis.com/api/v1`
-- **Dashboard**: `https://api.lanonasis.com/dashboard`
-- **MCP SSE**: `https://mcp.lanonasis.com/sse`
-- **Documentation**: `https://api.lanonasis.com/docs`
+- **API Base URL**: `https://api.LanOnasis.com/api/v1`
+- **Dashboard**: `https://api.LanOnasis.com/dashboard`
+- **MCP SSE**: `https://mcp.LanOnasis.com/sse`
+- **Documentation**: `https://api.LanOnasis.com/docs`
 
 ## ✨ Features
 
@@ -148,14 +148,14 @@ Connect external MCP clients (like Claude Desktop) to your Memory Service:
 ```json
 {
   "mcpServers": {
-    "lanonasis-memory": {
+    "LanOnasis-memory": {
       "command": "npx",
       "args": [
         "@modelcontextprotocol/server-sse",
-        "https://mcp.lanonasis.com/sse"
+        "https://mcp.LanOnasis.com/sse"
       ],
       "env": {
-        "MCP_API_KEY": "your-lanonasis-api-key-here"
+        "MCP_API_KEY": "your-LanOnasis-api-key-here"
       }
     }
   }
@@ -170,16 +170,16 @@ Connect external MCP clients (like Claude Desktop) to your Memory Service:
 
 ### CLI Installation
 ```bash
-npm install -g @lanonasis/cli
+npm install -g @LanOnasis/cli
 ```
 
 ### VS Code Extension
-Search for "Lanonasis Memory" in the VS Code marketplace.
+Search for "LanOnasis Memory" in the VS Code marketplace.
 
 ### SDKs Available
-- **JavaScript/TypeScript**: `@lanonasis/memory-client`
-- **Python**: `lanonasis-python` (coming soon)
-- **CLI**: `@lanonasis/cli`
+- **JavaScript/TypeScript**: `@LanOnasis/memory-client`
+- **Python**: `LanOnasis-python` (coming soon)
+- **CLI**: `@LanOnasis/cli`
 
 ## 📈 Plans & Limits
 
@@ -194,7 +194,7 @@ Search for "Lanonasis Memory" in the VS Code marketplace.
 ### Environment Variables
 ```bash
 LANONASIS_API_KEY=your-api-key
-LANONASIS_BASE_URL=https://api.lanonasis.com
+LANONASIS_BASE_URL=https://api.LanOnasis.com
 LANONASIS_ORGANIZATION_ID=your-org-id
 ```
 
@@ -220,6 +220,6 @@ const client = new MemoryClient({
 
 ## 🌟 Getting Started
 
-Ready to get started? [Create your account](https://api.lanonasis.com/dashboard) and begin building with Lanonasis Memory Service today!
+Ready to get started? [Create your account](https://api.LanOnasis.com/dashboard) and begin building with LanOnasis Memory Service today!
 
-For questions and support, visit our [documentation](https://docs.lanonasis.com) or contact us at support@lanonasis.com.
+For questions and support, visit our [documentation](https://docs.LanOnasis.com) or contact us at support@LanOnasis.com.

@@ -405,9 +405,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       // Environment-specific redirect URLs (as per OAUTH_SETUP_GUIDE.md)
       const getRedirectUrl = () => {
         const origin = window.location.origin;
-        // Production: dashboard.lanonasis.com
-        if (origin.includes('dashboard.lanonasis.com')) {
-          return 'https://dashboard.lanonasis.com/auth/callback';
+        // Production: dashboard.LanOnasis.com
+        if (origin.includes('dashboard.LanOnasis.com')) {
+          return 'https://dashboard.LanOnasis.com/auth/callback';
         }
         // Development: localhost
         if (origin.includes('localhost')) {

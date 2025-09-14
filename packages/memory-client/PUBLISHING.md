@@ -1,8 +1,8 @@
-# Publishing Guide for @lanonasis/memory-client
+# Publishing Guide for @LanOnasis/memory-client
 
 ## Package Information
 
-- **Name**: @lanonasis/memory-client
+- **Name**: @LanOnasis/memory-client
 - **Version**: 1.0.0
 - **Registry**: npm (public)
 - **License**: MIT
@@ -59,7 +59,7 @@ npm login
 npm publish
 
 # Verify publication
-npm info @lanonasis/memory-client
+npm info @LanOnasis/memory-client
 ```
 
 ### 4. Post-publication
@@ -88,26 +88,26 @@ This package follows semantic versioning:
 
 - **Registry**: https://registry.npmjs.org/
 - **Access**: Public
-- **Scoped**: @lanonasis/memory-client
+- **Scoped**: @LanOnasis/memory-client
 
 ## Installation for Users
 
 After publication, users can install with:
 
 ```bash
-npm install @lanonasis/memory-client
-yarn add @lanonasis/memory-client
-pnpm add @lanonasis/memory-client
+npm install @LanOnasis/memory-client
+yarn add @LanOnasis/memory-client
+pnpm add @LanOnasis/memory-client
 ```
 
 ## Usage Verification
 
 Basic usage test:
 ```javascript
-import { createMemoryClient } from '@lanonasis/memory-client';
+import { createMemoryClient } from '@LanOnasis/memory-client';
 
 const client = createMemoryClient({
-  apiUrl: 'https://api.lanonasis.com',
+  apiUrl: 'https://api.LanOnasis.com',
   apiKey: 'your-api-key'
 });
 ```

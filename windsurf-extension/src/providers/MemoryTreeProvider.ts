@@ -30,7 +30,7 @@ export class MemoryTreeProvider implements vscode.TreeDataProvider<MemoryTreeIte
                 '',
                 vscode.TreeItemCollapsibleState.None,
                 {
-                    command: 'lanonasis.authenticate',
+                    command: 'LanOnasis.authenticate',
                     title: 'Authenticate',
                     arguments: []
                 },
@@ -74,7 +74,7 @@ export class MemoryTreeProvider implements vscode.TreeDataProvider<MemoryTreeIte
                     'Create your first memory by selecting text and pressing Ctrl+Shift+Alt+M',
                     vscode.TreeItemCollapsibleState.None,
                     {
-                        command: 'lanonasis.createMemory',
+                        command: 'LanOnasis.createMemory',
                         title: 'Create Memory',
                         arguments: []
                     },
@@ -121,7 +121,7 @@ export class MemoryTreeProvider implements vscode.TreeDataProvider<MemoryTreeIte
                 error instanceof Error ? error.message : 'Unknown error',
                 vscode.TreeItemCollapsibleState.None,
                 {
-                    command: 'lanonasis.refreshMemories',
+                    command: 'LanOnasis.refreshMemories',
                     title: 'Retry',
                     arguments: []
                 },
@@ -142,7 +142,7 @@ export class MemoryTreeProvider implements vscode.TreeDataProvider<MemoryTreeIte
                 this.getMemoryDescription(memory),
                 vscode.TreeItemCollapsibleState.None,
                 {
-                    command: 'lanonasis.openMemory',
+                    command: 'LanOnasis.openMemory',
                     title: 'Open Memory',
                     arguments: [memory]
                 },

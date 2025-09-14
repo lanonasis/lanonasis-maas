@@ -4,15 +4,15 @@
 
 ### Google OAuth (Already Correct)
 - **Authorized JavaScript origins**: 
-  - ✅ `https://api.lanonasis.com`
-  - ✅ `https://dashboard.lanonasis.com`
+  - ✅ `https://api.LanOnasis.com`
+  - ✅ `https://dashboard.LanOnasis.com`
 - **Authorized redirect URIs**: 
-  - ✅ `https://dashboard.lanonasis.com/auth/callback`
+  - ✅ `https://dashboard.LanOnasis.com/auth/callback`
 
 ### Code Configuration (Already Fixed)
 - ✅ OAuth callback route added: `/auth/callback`
 - ✅ Netlify routing configured for OAuth callbacks
-- ✅ Redirect URL logic updated to target `dashboard.lanonasis.com`
+- ✅ Redirect URL logic updated to target `dashboard.LanOnasis.com`
 
 ## Remaining Manual Configuration Required ⚠️
 
@@ -23,8 +23,8 @@
 **Update these fields**:
 
 ```
-Site URL: https://lanonasis.com
-Additional redirect URLs: https://lanonasis.com/**,https://dashboard.lanonasis.com/**,https://api.lanonasis.com/**
+Site URL: https://LanOnasis.com
+Additional redirect URLs: https://LanOnasis.com/**,https://dashboard.LanOnasis.com/**,https://api.LanOnasis.com/**
 ```
 
 ### 2. GitHub OAuth App (If Not Already Done)
@@ -33,7 +33,7 @@ Additional redirect URLs: https://lanonasis.com/**,https://dashboard.lanonasis.c
 
 **Update**:
 ```
-Authorization callback URL: https://dashboard.lanonasis.com/auth/callback
+Authorization callback URL: https://dashboard.LanOnasis.com/auth/callback
 ```
 
 ## Alternative: Use Supabase CLI (If Available)
@@ -51,15 +51,15 @@ node fix-supabase-auth-config.js
 ## Testing Instructions
 
 1. **Clear browser cache and cookies**
-2. Go to `https://dashboard.lanonasis.com/auth/login`
+2. Go to `https://dashboard.LanOnasis.com/auth/login`
 3. Test Google OAuth:
    - Click "Sign in with Google"
    - Complete OAuth flow
-   - Should redirect to `https://dashboard.lanonasis.com/dashboard`
+   - Should redirect to `https://dashboard.LanOnasis.com/dashboard`
 4. Test GitHub OAuth:
    - Click "Sign in with GitHub"
    - Complete OAuth flow
-   - Should redirect to `https://dashboard.lanonasis.com/dashboard`
+   - Should redirect to `https://dashboard.LanOnasis.com/dashboard`
 
 ## Expected Behavior After Fix
 
@@ -71,21 +71,21 @@ Redirected to OAuth provider
 ↓
 User grants permission
 ↓
-Redirected to: https://dashboard.lanonasis.com/auth/callback
+Redirected to: https://dashboard.LanOnasis.com/auth/callback
 ↓
 React Router handles /auth/callback
 ↓
 useAuth hook processes OAuth response
 ↓
-User redirected to: https://dashboard.lanonasis.com/dashboard
+User redirected to: https://dashboard.LanOnasis.com/dashboard
 ```
 
 ## Verification Checklist
 
-- [ ] Supabase Site URL set to `https://lanonasis.com`
+- [ ] Supabase Site URL set to `https://LanOnasis.com`
 - [ ] Supabase Additional redirect URLs include all domains
-- [ ] Google OAuth callback URL is `https://dashboard.lanonasis.com/auth/callback`
-- [ ] GitHub OAuth callback URL is `https://dashboard.lanonasis.com/auth/callback`
+- [ ] Google OAuth callback URL is `https://dashboard.LanOnasis.com/auth/callback`
+- [ ] GitHub OAuth callback URL is `https://dashboard.LanOnasis.com/auth/callback`
 - [ ] Google OAuth test successful
 - [ ] GitHub OAuth test successful
 - [ ] No redirect loops
@@ -108,8 +108,8 @@ The simplest approach is to manually update the Supabase Dashboard settings:
 1. Open [Supabase Dashboard](https://supabase.com/dashboard)
 2. Go to: Authentication → Settings
 3. Set:
-   - **Site URL**: `https://lanonasis.com`
-   - **Additional redirect URLs**: `https://lanonasis.com/**,https://dashboard.lanonasis.com/**,https://api.lanonasis.com/**`
+   - **Site URL**: `https://LanOnasis.com`
+   - **Additional redirect URLs**: `https://LanOnasis.com/**,https://dashboard.LanOnasis.com/**,https://api.LanOnasis.com/**`
 4. Save settings
 5. Test OAuth flows
 

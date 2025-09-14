@@ -13,7 +13,7 @@ const ApiDocs = () => {
         <div className="max-w-3xl mx-auto mb-16">
           <h1 className="text-4xl font-bold mb-4">API Documentation</h1>
           <p className="text-lg text-muted-foreground mb-8">
-            Comprehensive guides and references for the Lanonasis Memory Service API platform.
+            Comprehensive guides and references for the LanOnasis Memory Service API platform.
           </p>
           
           <div className="flex flex-wrap gap-4">
@@ -46,7 +46,7 @@ const ApiDocs = () => {
             <Card>
               <CardHeader>
                 <CardTitle>Quick Start Guide</CardTitle>
-                <CardDescription>Get started with Lanonasis Memory Service API in minutes</CardDescription>
+                <CardDescription>Get started with LanOnasis Memory Service API in minutes</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="space-y-4">
@@ -56,7 +56,7 @@ const ApiDocs = () => {
                     </div>
                     <div>
                       <h3 className="text-lg font-semibold">Create an account</h3>
-                      <p className="text-muted-foreground">Sign up for a Lanonasis account to get your API keys.</p>
+                      <p className="text-muted-foreground">Sign up for a LanOnasis account to get your API keys.</p>
                       <Link to="/auth/register">
                         <Button variant="link" className="pl-0 pt-2">
                           Create an account <ArrowRight className="ml-1 h-4 w-4" />
@@ -90,7 +90,7 @@ const ApiDocs = () => {
                       <div className="mt-3 p-4 bg-secondary/50 rounded-md overflow-x-auto">
                         <pre className="text-xs text-muted-foreground">
                           <code>
-{`curl -X GET "https://api.lanonasis.com/v1/memories" \\
+{`curl -X GET "https://api.LanOnasis.com/v1/memories" \\
   -H "Authorization: Bearer YOUR_API_KEY" \\
   -H "Content-Type: application/json"`}
                           </code>
@@ -137,11 +137,11 @@ const ApiDocs = () => {
                   <div className="space-y-3">
                     <div>
                       <div className="text-sm font-medium">Production</div>
-                      <code className="text-sm bg-secondary py-1 px-2 rounded">https://api.lanonasis.com</code>
+                      <code className="text-sm bg-secondary py-1 px-2 rounded">https://api.LanOnasis.com</code>
                     </div>
                     <div>
                       <div className="text-sm font-medium">Sandbox</div>
-                      <code className="text-sm bg-secondary py-1 px-2 rounded">https://sandbox-api.lanonasis.com</code>
+                      <code className="text-sm bg-secondary py-1 px-2 rounded">https://sandbox-api.LanOnasis.com</code>
                     </div>
                   </div>
                 </CardContent>
@@ -183,14 +183,14 @@ const ApiDocs = () => {
                       API Key Authentication
                     </h3>
                     <p className="text-muted-foreground mb-4">
-                      All API requests require authentication using your API key. You can generate API keys from your Lanonasis dashboard.
+                      All API requests require authentication using your API key. You can generate API keys from your LanOnasis dashboard.
                     </p>
                     
                     <div className="p-4 bg-secondary/50 rounded-md overflow-x-auto mb-4">
                       <pre className="text-xs text-muted-foreground">
                         <code>
 {`// Example API request with authentication header
-fetch('https://api.lanonasis.com/v1/memories', {
+fetch('https://api.LanOnasis.com/v1/memories', {
   method: 'GET',
   headers: {
     'Authorization': 'Bearer YOUR_API_KEY',
@@ -477,11 +477,11 @@ fetch('https://api.lanonasis.com/v1/memories', {
                       <pre className="text-xs text-muted-foreground">
                         <code>
 {`// Install the package
-npm install @lanonasis/memory-sdk
+npm install @LanOnasis/memory-sdk
 
 // Initialize and use the SDK
-const Lanonasis = require('@lanonasis/memory-sdk');
-const client = new Lanonasis.Client({
+const LanOnasis = require('@LanOnasis/memory-sdk');
+const client = new LanOnasis.Client({
   apiKey: 'your_api_key_here',
   environment: 'production' // or 'sandbox'
 });
@@ -529,12 +529,12 @@ async function fetchBankStatement() {
               <CardContent>
                 <div className="space-y-4">
                   <p className="text-sm text-muted-foreground">
-                    In addition to our official SDKs, the community has built several frameworks, plugins, and integrations to help you integrate Lanonasis into your tech stack.
+                    In addition to our official SDKs, the community has built several frameworks, plugins, and integrations to help you integrate LanOnasis into your tech stack.
                   </p>
                   
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     {[
-                      { name: 'React Hook', desc: 'React hooks for Lanonasis Memory API' },
+                      { name: 'React Hook', desc: 'React hooks for LanOnasis Memory API' },
                       { name: 'WordPress Plugin', desc: 'WP integration for e-commerce sites' },
                       { name: 'Laravel Package', desc: 'Native Laravel integration' },
                       { name: 'Django App', desc: 'Django integration for Python apps' }

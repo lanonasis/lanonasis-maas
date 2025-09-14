@@ -31,7 +31,7 @@ export class APIClient {
             const requestId = randomUUID();
             config.headers['X-Request-ID'] = requestId;
             // Add project scope for Golden Contract compliance
-            config.headers['X-Project-Scope'] = 'lanonasis-maas';
+            config.headers['X-Project-Scope'] = 'LanOnasis-maas';
             if (process.env.CLI_VERBOSE === 'true') {
                 console.log(chalk.dim(`→ ${config.method?.toUpperCase()} ${config.url} [${requestId}]`));
             }

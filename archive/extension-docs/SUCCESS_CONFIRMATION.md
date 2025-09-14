@@ -2,12 +2,12 @@
 
 ## ✅ SUCCESS CONFIRMED!
 
-Your VS Code extension **"Lanonasis Memory Assistant"** is now live in the Visual Studio Marketplace!
+Your VS Code extension **"LanOnasis Memory Assistant"** is now live in the Visual Studio Marketplace!
 
 **Extension Details:**
-- **ID**: `lanonasis.lanonasis-memory`
+- **ID**: `LanOnasis.LanOnasis-memory`
 - **Version**: 1.2.0
-- **Publisher**: lanonasis
+- **Publisher**: LanOnasis
 - **Published**: August 4, 2025 at 6:42:46 AM
 - **Status**: ✅ LIVE and downloadable
 
@@ -16,15 +16,15 @@ Your VS Code extension **"Lanonasis Memory Assistant"** is now live in the Visua
 ### Option 1: Install via VS Code
 1. Open VS Code
 2. Go to Extensions (Cmd+Shift+X on Mac)
-3. Search: `lanonasis` or `memory assistant`
-4. Click Install on "Lanonasis Memory Assistant"
+3. Search: `LanOnasis` or `memory assistant`
+4. Click Install on "LanOnasis Memory Assistant"
 
 ### Option 2: Direct Marketplace Link
-**🔗 https://marketplace.visualstudio.com/items?itemName=lanonasis.lanonasis-memory**
+**🔗 https://marketplace.visualstudio.com/items?itemName=LanOnasis.LanOnasis-memory**
 
 ### Option 3: Command Line Install
 ```bash
-code --install-extension lanonasis.lanonasis-memory
+code --install-extension LanOnasis.LanOnasis-memory
 ```
 
 ## 📊 Current Stats
@@ -35,7 +35,7 @@ code --install-extension lanonasis.lanonasis-memory
 
 ## 🎯 What You've Achieved
 
-1. ✅ **Publisher Created**: "lanonasis" publisher established
+1. ✅ **Publisher Created**: "LanOnasis" publisher established
 2. ✅ **Extension Packaged**: 35KB package created
 3. ✅ **Successfully Published**: Live in marketplace
 4. ✅ **Searchable**: Indexed and discoverable

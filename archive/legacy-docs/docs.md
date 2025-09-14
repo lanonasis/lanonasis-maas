@@ -1,8 +1,8 @@
-public-facing documentation section for docs.lanonasis.com.
+public-facing documentation section for docs.LanOnasis.com.
 
 ⸻
 
-✅ Suggested File Structure for docs.lanonasis.com
+✅ Suggested File Structure for docs.LanOnasis.com
 
 Create a new markdown file at:
 
@@ -170,7 +170,7 @@ Built with ❤️ by Seye Derick
 
 ### ✅ Next Steps
 
-- Deploy this at `https://docs.lanonasis.com/overview`
+- Deploy this at `https://docs.LanOnasis.com/overview`
 - Add to sidebar nav as: `MaaS Overview`
 - (Optional) Break out SDK, CLI, and Auth sections into `docs/sdk.md`, `docs/cli.md`, `docs/auth.md`
 

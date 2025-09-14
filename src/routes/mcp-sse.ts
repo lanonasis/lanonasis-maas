@@ -92,7 +92,7 @@ const authenticateApiKey = async (req: Request, res: Response, next: NextFunctio
  *         required: true
  *         schema:
  *           type: string
- *         description: Lanonasis API key for authentication
+ *         description: LanOnasis API key for authentication
  *       - in: query
  *         name: api_key
  *         required: false
@@ -156,9 +156,9 @@ router.get('/', authenticateApiKey, asyncHandler(async (req: Request, res: Respo
         logging: {}
       },
       serverInfo: {
-        name: 'lanonasis-memory-service',
+        name: 'LanOnasis-memory-service',
         version: '1.0.0',
-        description: 'Lanonasis Memory as a Service - Remote MCP Server'
+        description: 'LanOnasis Memory as a Service - Remote MCP Server'
       },
       clientInfo: {
         name: clientId,
@@ -172,7 +172,7 @@ router.get('/', authenticateApiKey, asyncHandler(async (req: Request, res: Respo
   // Send connection confirmation
   res.write(`data: ${JSON.stringify({
     type: 'mcp_connection',
-    message: 'Connected to Lanonasis Memory Service MCP Server',
+    message: 'Connected to LanOnasis Memory Service MCP Server',
     timestamp: new Date().toISOString(),
     connectionId,
     apiKey: {
