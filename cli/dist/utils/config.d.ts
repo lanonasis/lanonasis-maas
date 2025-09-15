@@ -15,6 +15,7 @@ export declare class CLIConfig {
     getApiUrl(): string;
     discoverServices(): Promise<void>;
     getDiscoveredApiUrl(): string;
+    private normalizeUrl;
     setVendorKey(vendorKey: string): Promise<void>;
     getVendorKey(): string | undefined;
     hasVendorKey(): boolean;

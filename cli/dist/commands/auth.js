@@ -118,7 +118,8 @@ async function handleOAuthFlow(config) {
         console.log(chalk.yellow('Authentication cancelled'));
         return;
     }
-    const authUrl = `${config.getDiscoveredApiUrl()}/auth/cli-login`;
+    const baseUrl = config.getDiscoveredApiUrl().replace(/\/$/, '');
+    const authUrl = `${baseUrl}/auth/cli-login`;
     try {
         console.log(colors.info('Opening browser...'));
         await open(authUrl);

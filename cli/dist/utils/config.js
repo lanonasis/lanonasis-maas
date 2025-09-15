@@ -59,7 +59,11 @@ export class CLIConfig {
         }
     }
     getDiscoveredApiUrl() {
-        return this.config.discoveredServices?.auth_base || this.getApiUrl();
+        const baseUrl = this.config.discoveredServices?.auth_base || this.getApiUrl();
+        return this.normalizeUrl(baseUrl);
+    }
+    normalizeUrl(url) {
+        return url.replace(/\/$/, '');
     }
     // Enhanced authentication support
     async setVendorKey(vendorKey) {
