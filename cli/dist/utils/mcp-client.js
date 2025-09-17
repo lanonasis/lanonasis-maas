@@ -3,6 +3,7 @@ import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js'
 import chalk from 'chalk';
 import { CLIConfig } from './config.js';
 import * as path from 'path';
+import * as fs from 'fs';
 import { EventSource } from 'eventsource';
 import { fileURLToPath } from 'url';
 import WebSocket from 'ws';
@@ -23,11 +24,12 @@ export class MCPClient {
     async connect(options = {}) {
         try {
             // Determine connection mode with priority to explicit mode option
+            // Default to 'remote' for better user experience
             const connectionMode = options.connectionMode ??
                 (options.useWebSocket ? 'websocket' :
                     options.useRemote ? 'remote' :
                         this.config.get('mcpConnectionMode') ??
-                            this.config.get('mcpUseRemote') ? 'remote' : 'local');
+                            this.config.get('mcpUseRemote') ? 'remote' : 'remote');
             let wsUrl;
             let serverUrl;
             let serverPath;
@@ -55,10 +57,17 @@ export class MCPClient {
                 case 'local':
                 default:
                     {
-                        // Local MCP server connection
+                        // Local MCP server connection - check if server exists
                         serverPath = options.serverPath ??
                             this.config.get('mcpServerPath') ??
                             path.join(__dirname, '../../../../onasis-gateway/mcp-server/server.js');
+                        // Check if the server file exists
+                        if (!fs.existsSync(serverPath)) {
+                            console.log(chalk.yellow(`⚠️  Local MCP server not found at ${serverPath}`));
+                            console.log(chalk.cyan('💡 For remote connection, use: onasis mcp connect --url wss://mcp.lanonasis.com/ws'));
+                            console.log(chalk.cyan('💡 Or install local server: npm install -g @lanonasis/mcp-server'));
+                            throw new Error(`MCP server not found at ${serverPath}`);
+                        }
                         console.log(chalk.cyan(`Connecting to local MCP server at ${serverPath}...`));
                         const localTransport = new StdioClientTransport({
                             command: 'node',
