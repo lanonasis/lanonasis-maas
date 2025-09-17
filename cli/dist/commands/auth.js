@@ -118,7 +118,9 @@ async function handleOAuthFlow(config) {
         console.log(chalk.yellow('Authentication cancelled'));
         return;
     }
-    const authUrl = `${config.getDiscoveredApiUrl()}/auth/cli-login`;
+    // Ensure proper URL joining to prevent double slashes
+    const baseUrl = config.getDiscoveredApiUrl().replace(/\/+$/, ''); // Remove trailing slashes
+    const authUrl = `${baseUrl}/auth/cli-login`;
     try {
         console.log(colors.info('Opening browser...'));
         await open(authUrl);

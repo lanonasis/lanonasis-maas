@@ -52,10 +52,18 @@ export class CLIConfig {
             await this.save();
         }
         catch (error) {
-            // Service discovery failed, use defaults
+            // Service discovery failed, use fallback defaults
             if (process.env.CLI_VERBOSE === 'true') {
-                console.log('Service discovery failed, using defaults');
+                console.log('Service discovery failed, using fallback defaults');
             }
+            // Set fallback service endpoints to prevent double slash issues
+            this.config.discoveredServices = {
+                auth_base: 'https://mcp.lanonasis.com',
+                memory_base: 'https://api.lanonasis.com/api/v1',
+                mcp_ws_base: 'wss://mcp.lanonasis.com/ws',
+                project_scope: 'lanonasis'
+            };
+            await this.save();
         }
     }
     getDiscoveredApiUrl() {
