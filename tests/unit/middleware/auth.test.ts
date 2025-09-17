@@ -3,7 +3,7 @@ import { Request, Response, NextFunction } from 'express';
 
 describe('Authentication Middleware', () => {
   let mockReq: Partial<Request>;
-  let mockRes: Partial<Response>;
+  let mockRes: jest.Mocked<Partial<Response>>;
   let mockNext: NextFunction;
 
   beforeEach(() => {
@@ -14,10 +14,10 @@ describe('Authentication Middleware', () => {
       params: {}
     };
     mockRes = {
-      status: jest.fn().mockReturnThis(),
-      json: jest.fn().mockReturnThis(),
+      status: jest.fn<Response['status']>().mockReturnThis(),
+      json: jest.fn<Response['json']>().mockReturnThis(),
       locals: {}
-    };
+    } as jest.Mocked<Partial<Response>>;
     mockNext = jest.fn();
   });
 

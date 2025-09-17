@@ -1,16 +1,34 @@
 import { describe, it, expect } from '@jest/globals';
-import request from 'supertest';
+import { createTestApiClient, type ApiClientInstance } from '../utils/test-api-client';
 
-const API_BASE = process.env.TEST_API_BASE || 'http://localhost:3000';
+let apiClient: ApiClientInstance;
+let closeClient: () => Promise<void> | void;
 
 describe('Authentication Header Semantics Conformance', () => {
   const testApiKey = process.env.TEST_API_KEY || 'test_api_key_123';
   const testJwtToken = process.env.TEST_JWT_TOKEN || 'test_jwt_token_456';
   const validProjectScope = 'lanonasis-maas';
 
+  beforeAll(async () => {
+    const { client, close } = await createTestApiClient({
+      validApiKey: testApiKey,
+      validJwt: testJwtToken,
+      validProjectScope,
+    });
+
+    apiClient = client;
+    closeClient = close;
+  });
+
+  afterAll(async () => {
+    if (closeClient) {
+      await closeClient();
+    }
+  });
+
   describe('X-API-Key Authentication', () => {
     it('should accept valid X-API-Key header', async () => {
-      const response = await request(API_BASE)
+      const response = await apiClient
         .get('/api/v1/memories')
         .set('X-API-Key', testApiKey)
         .set('X-Project-Scope', validProjectScope);
@@ -20,7 +38,7 @@ describe('Authentication Header Semantics Conformance', () => {
     });
 
     it('should reject missing X-API-Key for protected routes', async () => {
-      const response = await request(API_BASE)
+      const response = await apiClient
         .get('/api/v1/memories')
         .set('X-Project-Scope', validProjectScope)
         .expect(401);
@@ -29,7 +47,7 @@ describe('Authentication Header Semantics Conformance', () => {
     });
 
     it('should reject invalid X-API-Key', async () => {
-      const response = await request(API_BASE)
+      const response = await apiClient
         .get('/api/v1/memories')
         .set('X-API-Key', 'invalid_key_123')
         .set('X-Project-Scope', validProjectScope)
@@ -39,7 +57,7 @@ describe('Authentication Header Semantics Conformance', () => {
     });
 
     it('should NOT accept API key in Authorization header', async () => {
-      const response = await request(API_BASE)
+      const response = await apiClient
         .get('/api/v1/memories')
         .set('Authorization', `Bearer ${testApiKey}`)
         .set('X-Project-Scope', validProjectScope)
@@ -50,7 +68,7 @@ describe('Authentication Header Semantics Conformance', () => {
     });
 
     it('should include X-Request-ID in API key response', async () => {
-      const response = await request(API_BASE)
+      const response = await apiClient
         .get('/api/v1/memories')
         .set('X-API-Key', testApiKey)
         .set('X-Project-Scope', validProjectScope);
@@ -62,7 +80,7 @@ describe('Authentication Header Semantics Conformance', () => {
 
   describe('JWT Authentication', () => {
     it('should accept valid JWT in Authorization Bearer header', async () => {
-      const response = await request(API_BASE)
+      const response = await apiClient
         .get('/api/v1/memories')
         .set('Authorization', `Bearer ${testJwtToken}`)
         .set('X-Project-Scope', validProjectScope);
@@ -81,7 +99,7 @@ describe('Authentication Header Semantics Conformance', () => {
       ];
 
       for (const authHeader of testCases) {
-        const response = await request(API_BASE)
+        const response = await apiClient
           .get('/api/v1/memories')
           .set('Authorization', authHeader)
           .set('X-Project-Scope', validProjectScope)
@@ -94,7 +112,7 @@ describe('Authentication Header Semantics Conformance', () => {
     it('should reject expired JWT tokens', async () => {
       const expiredToken = 'REDACTED_JWT';
       
-      const response = await request(API_BASE)
+      const response = await apiClient
         .get('/api/v1/memories')
         .set('Authorization', `Bearer ${expiredToken}`)
         .set('X-Project-Scope', validProjectScope)
@@ -104,7 +122,7 @@ describe('Authentication Header Semantics Conformance', () => {
     });
 
     it('should include X-Request-ID in JWT response', async () => {
-      const response = await request(API_BASE)
+      const response = await apiClient
         .get('/api/v1/memories')
         .set('Authorization', `Bearer ${testJwtToken}`)
         .set('X-Project-Scope', validProjectScope);
@@ -115,7 +133,7 @@ describe('Authentication Header Semantics Conformance', () => {
 
   describe('X-Project-Scope Header', () => {
     it('should require X-Project-Scope for all authenticated requests', async () => {
-      const response = await request(API_BASE)
+      const response = await apiClient
         .get('/api/v1/memories')
         .set('X-API-Key', testApiKey)
         // Intentionally omit X-Project-Scope
@@ -133,7 +151,7 @@ describe('Authentication Header Semantics Conformance', () => {
       ];
 
       for (const scope of invalidScopes) {
-        const response = await request(API_BASE)
+        const response = await apiClient
           .get('/api/v1/memories')
           .set('X-API-Key', testApiKey)
           .set('X-Project-Scope', scope)
@@ -144,7 +162,7 @@ describe('Authentication Header Semantics Conformance', () => {
     });
 
     it('should accept valid project scope', async () => {
-      const response = await request(API_BASE)
+      const response = await apiClient
         .get('/api/v1/memories')
         .set('X-API-Key', testApiKey)
         .set('X-Project-Scope', validProjectScope);
@@ -155,7 +173,7 @@ describe('Authentication Header Semantics Conformance', () => {
 
   describe('Mixed Authentication Scenarios', () => {
     it('should prefer X-API-Key over Authorization when both provided', async () => {
-      const response = await request(API_BASE)
+      const response = await apiClient
         .get('/api/v1/memories')
         .set('X-API-Key', testApiKey)
         .set('Authorization', `Bearer ${testJwtToken}`)
@@ -171,7 +189,7 @@ describe('Authentication Header Semantics Conformance', () => {
     });
 
     it('should handle case-insensitive header names', async () => {
-      const response = await request(API_BASE)
+      const response = await apiClient
         .get('/api/v1/memories')
         .set('x-api-key', testApiKey)           // lowercase
         .set('x-project-scope', validProjectScope); // lowercase
@@ -180,7 +198,7 @@ describe('Authentication Header Semantics Conformance', () => {
     });
 
     it('should handle additional whitespace in headers', async () => {
-      const response = await request(API_BASE)
+      const response = await apiClient
         .get('/api/v1/memories')
         .set('X-API-Key', `  ${testApiKey}  `)
         .set('X-Project-Scope', validProjectScope);
@@ -191,7 +209,7 @@ describe('Authentication Header Semantics Conformance', () => {
 
   describe('Rate Limiting Headers', () => {
     it('should include rate limit headers for authenticated requests', async () => {
-      const response = await request(API_BASE)
+      const response = await apiClient
         .get('/api/v1/memories')
         .set('X-API-Key', testApiKey)
         .set('X-Project-Scope', validProjectScope);
@@ -208,7 +226,7 @@ describe('Authentication Header Semantics Conformance', () => {
       const requests = [];
       for (let i = 0; i < 5; i++) {
         requests.push(
-          request(API_BASE)
+          apiClient
             .get('/api/v1/memories')
             .set('X-API-Key', testApiKey)
             .set('X-Project-Scope', validProjectScope)
@@ -217,17 +235,27 @@ describe('Authentication Header Semantics Conformance', () => {
       
       const responses = await Promise.all(requests);
       
-      // At least first request should succeed
-      expect(responses[0].status).not.toBe(429);
-      
-      // Check rate limit headers are present
-      expect(responses[0].headers['x-ratelimit-limit']).toBeDefined();
+      const successfulResponse = responses.find(
+        (res) => res.status !== 401 && res.status !== 429,
+      );
+
+      expect(successfulResponse).toBeDefined();
+
+      if (!successfulResponse) {
+        return;
+      }
+
+      // At least one request should succeed without hitting rate limit
+      expect(successfulResponse.status).not.toBe(429);
+
+      // Check rate limit headers are present on successful response
+      expect(successfulResponse.headers['x-ratelimit-limit']).toBeDefined();
     });
   });
 
   describe('Security Headers', () => {
     it('should include security headers in authenticated responses', async () => {
-      const response = await request(API_BASE)
+      const response = await apiClient
         .get('/api/v1/memories')
         .set('X-API-Key', testApiKey)
         .set('X-Project-Scope', validProjectScope);
@@ -239,7 +267,7 @@ describe('Authentication Header Semantics Conformance', () => {
     });
 
     it('should not leak sensitive information in error responses', async () => {
-      const response = await request(API_BASE)
+      const response = await apiClient
         .get('/api/v1/memories')
         .set('X-API-Key', 'invalid_key')
         .set('X-Project-Scope', validProjectScope)
@@ -254,7 +282,7 @@ describe('Authentication Header Semantics Conformance', () => {
 
   describe('Error Envelope Conformance', () => {
     it('should return uniform error envelope for auth failures', async () => {
-      const response = await request(API_BASE)
+      const response = await apiClient
         .get('/api/v1/memories')
         .set('X-API-Key', 'invalid_key')
         .set('X-Project-Scope', validProjectScope)
@@ -270,7 +298,7 @@ describe('Authentication Header Semantics Conformance', () => {
     });
 
     it('should include request context in error envelope', async () => {
-      const response = await request(API_BASE)
+      const response = await apiClient
         .get('/api/v1/memories/test')
         .set('X-API-Key', 'invalid_key')
         .set('X-Project-Scope', validProjectScope)
