@@ -86,15 +86,16 @@ export class CLIConfig {
       const response = await axios.get(discoveryUrl);
       this.config.discoveredServices = response.data;
       await this.save();
-    } catch (error) {
+    } catch {
       // Service discovery failed, use fallback defaults
       if (process.env.CLI_VERBOSE === 'true') {
         console.log('Service discovery failed, using fallback defaults');
       }
       
       // Set fallback service endpoints to prevent double slash issues
+      // Based on architecture: auth routes through onasis-core, not MCP server
       this.config.discoveredServices = {
-        auth_base: 'https://mcp.lanonasis.com',
+        auth_base: 'https://api.lanonasis.com/api/v1',
         memory_base: 'https://api.lanonasis.com/api/v1',
         mcp_ws_base: 'wss://mcp.lanonasis.com/ws',
         project_scope: 'lanonasis'
