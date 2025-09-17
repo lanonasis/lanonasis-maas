@@ -1,0 +1,7 @@
+# GitHub Actions workflow files
+*.yml linguist-language=YAML
+*.yaml linguist-language=YAML
+
+# Ensure proper syntax highlighting and validation
+*.yml gitlab-ci=false
+*.yaml gitlab-ci=false
