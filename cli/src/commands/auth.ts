@@ -159,7 +159,9 @@ async function handleOAuthFlow(config: CLIConfig): Promise<void> {
     return;
   }
   
-  const authUrl = `${config.getDiscoveredApiUrl()}/auth/cli-login`;
+  // Ensure proper URL joining to prevent double slashes
+  const baseUrl = config.getDiscoveredApiUrl().replace(/\/+$/, ''); // Remove trailing slashes
+  const authUrl = `${baseUrl}/auth/cli-login`;
   
   try {
     console.log(colors.info('Opening browser...'));
