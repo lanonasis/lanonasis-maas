@@ -51,7 +51,7 @@ export class CLIConfig {
             this.config.discoveredServices = response.data;
             await this.save();
         }
-        catch (error) {
+        catch {
             // Service discovery failed, use fallback defaults
             if (process.env.CLI_VERBOSE === 'true') {
                 console.log('Service discovery failed, using fallback defaults');

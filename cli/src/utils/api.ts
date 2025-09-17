@@ -180,7 +180,12 @@ export class APIClient {
       
       // Service Discovery
       await this.config.discoverServices();
-      config.baseURL = this.config.getDiscoveredApiUrl();
+      
+      // Use appropriate base URL based on endpoint
+      const isAuthEndpoint = config.url?.includes('/auth/') || config.url?.includes('/login') || config.url?.includes('/register');
+      config.baseURL = isAuthEndpoint ? 
+        (this.config.get('discoveredServices')?.auth_base || 'https://api.lanonasis.com/auth') :
+        this.config.getApiUrl();
       
       // Enhanced Authentication Support
       const token = this.config.getToken();
