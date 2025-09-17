@@ -23,6 +23,18 @@ const ALLOWED_CORS_ORIGINS = [
   'https://api.lanonasis.com',
 ];
 
+/**
+ * Builds an in-process Express application that simulates the test API used by integration tests.
+ *
+ * The mock app provides:
+ * - Global request headers (request id, rate-limit, security and cache headers).
+ * - A discovery manifest at `/.well-known/onasis.json` with environment-aware caching and CORS support for ALLOWED_CORS_ORIGINS.
+ * - A health endpoint at `/health`.
+ * - Memory endpoints at `/api/v1/memories` and `/api/v1/memories/:id` that enforce `X-Project-Scope` and accept either a valid `X-API-Key` or a Bearer JWT. Responses mirror the real API's success and structured error shapes (401/403) used by tests.
+ *
+ * @param options - Configuration used by the mock: supplies the valid API key, valid JWT, and the expected project scope that requests must present.
+ * @returns An Express application instance ready to be used with supertest or mounted in-process.
+ */
 function buildMockApp(options: TestApiClientOptions) {
   const app = express();
 
@@ -231,6 +243,16 @@ function buildMockApp(options: TestApiClientOptions) {
   return app;
 }
 
+/**
+ * Creates a test API client configured either against an external base URL or an in-process mock server.
+ *
+ * When the TEST_API_BASE environment variable is set, the returned client targets that base URL. Otherwise
+ * the function builds an in-process Express mock app (with authentication, CORS, discovery manifest, and
+ * memory endpoints) and returns a supertest-bound client for it.
+ *
+ * @param options - Configuration for the mock server (validApiKey, validJwt, validProjectScope).
+ * @returns An object with `client` (a supertest request instance) and `close` (a no-op Promise-resolving function).
+ */
 export async function createTestApiClient(options: TestApiClientOptions): Promise<TestApiClient> {
   if (process.env.TEST_API_BASE) {
     return {
