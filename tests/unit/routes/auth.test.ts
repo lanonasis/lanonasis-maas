@@ -1,13 +1,24 @@
 import { describe, it, expect, beforeAll, afterAll, jest } from '@jest/globals';
 
+type LoginPayload = { email: string; password: string };
+type LoginResult = { token: string; user: { id: string; email: string } };
+type RegisterPayload = { email: string; password: string; name: string };
+type MinimalRegisterPayload = { email: string };
+type RegisterResult = {
+  user: { id: string; email: string; name: string };
+  token: string;
+};
+type JwtPayload = { userId: string };
+type DecodedJwt = { userId: string; exp: number };
+
 describe('Authentication Routes', () => {
   describe('POST /api/v1/auth/login', () => {
     it('should authenticate valid credentials', async () => {
       // Mock implementation - will be connected to actual auth service
-      const mockLogin = jest.fn().mockResolvedValue({
+      const mockLogin = jest.fn(async (_payload: LoginPayload): Promise<LoginResult> => ({
         token: 'jwt_token_123',
         user: { id: '1', email: 'test@example.com' }
-      });
+      }));
       
       const result = await mockLogin({
         email: 'test@example.com',
@@ -19,9 +30,9 @@ describe('Authentication Routes', () => {
     });
 
     it('should reject invalid credentials', async () => {
-      const mockLogin = jest.fn().mockRejectedValue(
-        new Error('Invalid credentials')
-      );
+      const mockLogin = jest.fn(async (_payload: LoginPayload): Promise<never> => {
+        throw new Error('Invalid credentials');
+      });
       
       await expect(mockLogin({
         email: 'test@example.com',
@@ -51,14 +62,14 @@ describe('Authentication Routes', () => {
 
   describe('POST /api/v1/auth/register', () => {
     it('should register new user', async () => {
-      const mockRegister = jest.fn().mockResolvedValue({
+      const mockRegister = jest.fn(async (_payload: RegisterPayload): Promise<RegisterResult> => ({
         user: {
           id: 'user_123',
           email: 'newuser@example.com',
           name: 'Test User'
         },
         token: 'jwt_token_456'
-      });
+      }));
       
       const result = await mockRegister({
         email: 'newuser@example.com',
@@ -72,9 +83,18 @@ describe('Authentication Routes', () => {
     });
 
     it('should prevent duplicate registration', async () => {
-      const mockRegister = jest.fn()
-        .mockResolvedValueOnce({ success: true })
-        .mockRejectedValueOnce(new Error('User already exists'));
+      const responses = [
+        async () => ({ success: true }),
+        async () => { throw new Error('User already exists'); }
+      ];
+
+      const mockRegister = jest.fn(async (_payload: MinimalRegisterPayload): Promise<{ success: boolean }> => {
+        const handler = responses.shift();
+        if (!handler) {
+          throw new Error('No handler configured');
+        }
+        return handler();
+      });
       
       await mockRegister({ email: 'duplicate@example.com' });
       
@@ -84,7 +104,8 @@ describe('Authentication Routes', () => {
     });
 
     it('should hash passwords before storage', async () => {
-      const mockHashPassword = jest.fn().mockImplementation((password: string) => {
+      const mockHashPassword = jest.fn<(password: string) => string>();
+      mockHashPassword.mockImplementation((password: string) => {
         return `hashed_${password}`;
       });
       
@@ -96,20 +117,22 @@ describe('Authentication Routes', () => {
 
   describe('JWT Token Handling', () => {
     it('should generate valid JWT tokens', () => {
-      const mockGenerateToken = jest.fn().mockReturnValue('valid.jwt.token');
-      const token = mockGenerateToken({ userId: '123' }) as string;
+      const mockGenerateToken = jest.fn<(payload: JwtPayload) => string>();
+      mockGenerateToken.mockReturnValue('valid.jwt.token');
+      const token = mockGenerateToken({ userId: '123' });
       
       expect(token).toBeTruthy();
       expect(token.split('.')).toHaveLength(3);
     });
 
     it('should verify JWT tokens', () => {
-      const mockVerifyToken = jest.fn().mockReturnValue({
+      const mockVerifyToken = jest.fn<(token: string) => DecodedJwt>();
+      mockVerifyToken.mockReturnValue({
         userId: '123',
         exp: Date.now() + 3600000
       });
-      
-      const decoded = mockVerifyToken('valid.jwt.token') as { userId: string; exp: number };
+
+      const decoded = mockVerifyToken('valid.jwt.token');
       expect(decoded).toHaveProperty('userId');
       expect(decoded.exp).toBeGreaterThan(Date.now());
     });
