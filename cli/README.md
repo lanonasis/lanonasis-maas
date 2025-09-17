@@ -1,4 +1,4 @@
-# @lanonasis/cli v2.0.0 - Enhanced Interactive CLI Experience
+# @lanonasis/cli v2.0.1 - Enhanced Interactive CLI Experience
 
 [![NPM Version](https://img.shields.io/npm/v/@lanonasis/cli)](https://www.npmjs.com/package/@lanonasis/cli)
 [![Downloads](https://img.shields.io/npm/dt/@lanonasis/cli)](https://www.npmjs.com/package/@lanonasis/cli)
