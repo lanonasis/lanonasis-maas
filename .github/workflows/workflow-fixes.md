@@ -1,38 +1,52 @@
-# GitHub Actions Workflow Fixes
+# GitHub Actions Workflows Documentation
 
-## Required Secrets Configuration
+## 🚀 Active Workflows
 
-Add these secrets in your GitHub repository settings:
-(Settings → Secrets and variables → Actions)
+### 1. `publish-cli-trusted.yml` - **RECOMMENDED**
+**Purpose**: Automated CLI package publishing with modern security
 
-### Required Secrets:
-1. **TEST_SUPABASE_URL** - Your Supabase project URL
-2. **TEST_SUPABASE_KEY** - Supabase anon key for testing
-3. **TEST_SUPABASE_SERVICE_KEY** - Supabase service role key
-4. **TEST_OPENAI_API_KEY** - OpenAI API key for embeddings
-5. **AWS_ACCESS_KEY_ID** - AWS credentials (if using AWS deployment)
-6. **AWS_SECRET_ACCESS_KEY** - AWS secret key
-7. **NPM_TOKEN** - npm authentication token for publishing
+**Features**:
+- ✅ **Trusted Publishing**: Uses OIDC (no NPM tokens required)
+- ✅ **Auto-publish**: Triggers on CLI changes to main branch
+- ✅ **Manual publish**: Supports workflow_dispatch with version input
+- ✅ **Security**: npm provenance attestations
+- ✅ **Testing**: Includes CLI functionality tests
 
-### Optional Secrets:
-- **POSTGRES_PASSWORD** - If using external PostgreSQL
-- **DOCKER_USERNAME** - For Docker Hub publishing
-- **DOCKER_PASSWORD** - Docker Hub password
+**Triggers**:
+- Push to `main` branch with CLI changes
+- Manual workflow dispatch
 
-## Quick Fix for Workflow
+**No secrets required** - uses GitHub's trusted publishing!
 
-If you don't need all features immediately, you can:
+### 2. Disabled Workflows
+- `ci-cd.yml.disabled` - Legacy CI/CD (disabled)
+- `deploy.yml.disabled` - Legacy deployment (disabled)
 
-1. **Disable failing jobs** by commenting them out
-2. **Use dummy values** for non-critical secrets
-3. **Focus on essential workflows** (test, build)
+## 🔧 Setup Instructions
 
-## Minimal Working Configuration
+### For NPM Trusted Publishing (Recommended)
+1. Go to [npmjs.com](https://npmjs.com) → Account Settings → Publishing
+2. Add GitHub Actions as trusted publisher:
+   - **Repository**: `lanonasis/lanonasis-maas`
+   - **Workflow**: `publish-cli-trusted.yml`
+   - **Environment**: (leave blank)
 
-```yaml
-env:
-  # Use placeholder values for development
-  SUPABASE_URL: ${{ secrets.TEST_SUPABASE_URL || 'https://placeholder.supabase.co' }}
-  SUPABASE_KEY: ${{ secrets.TEST_SUPABASE_KEY || 'placeholder-key' }}
-  JWT_SECRET: ${{ secrets.JWT_SECRET || 'development-secret-min-32-chars-long' }}
-```
+### Manual Publishing (if needed)
+If you prefer manual control, you can trigger the workflow:
+1. Go to Actions tab in GitHub
+2. Select "Publish CLI Package (Trusted Publishing)"
+3. Click "Run workflow"
+4. Enter version number (e.g., `2.0.3`)
+
+## 🧹 Cleanup Completed
+
+**Removed stale workflows**:
+- ❌ `publish.yml` - Legacy complex publishing (replaced by trusted publishing)
+- ❌ `claude.yml` - Claude Code integration (unused, required secrets)
+- ❌ `claude-code-review.yml` - Claude Code reviews (unused, required secrets)
+
+**Benefits**:
+- ✅ No more secret management headaches
+- ✅ Enhanced security with OIDC
+- ✅ Simplified workflow maintenance
+- ✅ Automatic provenance attestations
