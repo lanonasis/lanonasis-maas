@@ -135,7 +135,7 @@ export class WelcomeExperience {
     this.stateManager.pushNavigation({
       name: 'dashboard',
       path: '/dashboard',
-      context: {},
+      preferences: {},
       timestamp: new Date()
     });
   }
