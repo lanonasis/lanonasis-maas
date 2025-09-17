@@ -1,5 +1,6 @@
 name: Claude Code
 
+# Note: IDE may show false positives for 'secrets' context - this is valid GitHub Actions syntax
 on:
   issue_comment:
     types: [created]
@@ -32,10 +33,10 @@ jobs:
 
       - name: Run Claude Code
         id: claude
+        if: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
         uses: anthropics/claude-code-action@beta
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-
           # This is an optional setting that allows Claude to read CI results on PRs
           additional_permissions: |
             actions: read
@@ -45,6 +46,10 @@ jobs:
           
           # Optional: Customize the trigger phrase (default: @claude)
           # trigger_phrase: "/claude"
+      
+      - name: Skip Claude (No Token)
+        if: ${{ !secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+        run: echo "⚠️ Claude Code skipped - CLAUDE_CODE_OAUTH_TOKEN not configured"
           
           # Optional: Trigger when specific user is assigned to an issue
           # assignee_trigger: "claude-bot"
