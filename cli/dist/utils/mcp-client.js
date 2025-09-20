@@ -34,54 +34,57 @@ export class MCPClient {
             let serverUrl;
             let serverPath;
             switch (connectionMode) {
-                case 'websocket':
+                case 'websocket': {
                     // WebSocket connection mode for enterprise users
-                    wsUrl = options.serverUrl ??
+                    const wsUrlValue = options.serverUrl ??
                         this.config.get('mcpWebSocketUrl') ??
                         'ws://localhost:8081/mcp/ws';
+                    wsUrl = wsUrlValue;
                     console.log(chalk.cyan(`Connecting to WebSocket MCP server at ${wsUrl}...`));
                     // Initialize WebSocket connection
                     await this.initializeWebSocket(wsUrl);
                     this.isConnected = true;
                     return true;
-                case 'remote':
+                }
+                case 'remote': {
                     // For remote MCP, we'll use the REST API with MCP-style interface
-                    serverUrl = options.serverUrl ??
+                    const serverUrlValue = options.serverUrl ??
                         this.config.get('mcpServerUrl') ??
                         'https://api.lanonasis.com';
+                    serverUrl = serverUrlValue;
                     console.log(chalk.cyan(`Connecting to remote MCP server at ${serverUrl}...`));
                     // Initialize SSE connection for real-time updates
                     await this.initializeSSE(serverUrl);
                     this.isConnected = true;
                     return true;
-                case 'local':
-                default:
-                    {
-                        // Local MCP server connection - check if server exists
-                        serverPath = options.serverPath ??
-                            this.config.get('mcpServerPath') ??
-                            path.join(__dirname, '../../../../onasis-gateway/mcp-server/server.js');
-                        // Check if the server file exists
-                        if (!fs.existsSync(serverPath)) {
-                            console.log(chalk.yellow(`⚠️  Local MCP server not found at ${serverPath}`));
-                            console.log(chalk.cyan('💡 For remote connection, use: onasis mcp connect --url wss://mcp.lanonasis.com/ws'));
-                            console.log(chalk.cyan('💡 Or install local server: npm install -g @lanonasis/mcp-server'));
-                            throw new Error(`MCP server not found at ${serverPath}`);
-                        }
-                        console.log(chalk.cyan(`Connecting to local MCP server at ${serverPath}...`));
-                        const localTransport = new StdioClientTransport({
-                            command: 'node',
-                            args: [serverPath]
-                        });
-                        this.client = new Client({
-                            name: '@lanonasis/cli',
-                            version: '2.0.0'
-                        });
-                        await this.client.connect(localTransport);
+                }
+                default: {
+                    // Local MCP server connection (default)
+                    const serverPathValue = options.serverPath ??
+                        this.config.get('mcpServerPath') ??
+                        path.join(__dirname, '../../../../onasis-gateway/mcp-server/server.js');
+                    serverPath = serverPathValue;
+                    // Check if the server file exists
+                    if (!fs.existsSync(serverPath)) {
+                        console.log(chalk.yellow(`⚠️  Local MCP server not found at ${serverPath}`));
+                        console.log(chalk.cyan('💡 For remote connection, use: onasis mcp connect --url wss://mcp.lanonasis.com/ws'));
+                        console.log(chalk.cyan('💡 Or install local server: npm install -g @lanonasis/mcp-server'));
+                        throw new Error(`MCP server not found at ${serverPath}`);
                     }
+                    console.log(chalk.cyan(`Connecting to local MCP server at ${serverPath}...`));
+                    const localTransport = new StdioClientTransport({
+                        command: 'node',
+                        args: [serverPath]
+                    });
+                    this.client = new Client({
+                        name: '@lanonasis/cli',
+                        version: '2.0.0'
+                    });
+                    await this.client.connect(localTransport);
                     this.isConnected = true;
                     console.log(chalk.green('✓ Connected to MCP server'));
                     return true;
+                }
             }
         }
         catch (error) {
@@ -129,7 +132,7 @@ export class MCPClient {
                     this.wsConnection = null;
                 }
                 // Create new WebSocket connection with authentication
-                this.wsConnection = new WebSocket(wsUrl, {
+                this.wsConnection = new WebSocket(wsUrl, [], {
                     headers: {
                         'Authorization': `Bearer ${token}`,
                         'X-API-Key': token
