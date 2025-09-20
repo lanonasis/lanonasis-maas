@@ -15,7 +15,7 @@ import { configCommands } from './commands/config.js';
 import { orgCommands } from './commands/organization.js';
 import { mcpCommands } from './commands/mcp.js';
 import apiKeysCommand from './commands/api-keys.js';
-import { completionCommand, installCompletionsCommand, generateCompletionData } from './commands/completion.js';
+import { completionCommand, installCompletionsCommand } from './commands/completion.js';
 import { guideCommand, quickStartCommand } from './commands/guide.js';
 import { CLIConfig } from './utils/config.js';
 import { getMCPClient } from './utils/mcp-client.js';
@@ -55,7 +55,7 @@ program
   .alias(isOnasisInvocation ? 'lanonasis' : 'memory')
   .alias(isOnasisInvocation ? 'memory' : 'maas')
   .description(colors.info(`🧠 ${isOnasisInvocation ? 'Onasis-Core Golden Contract CLI' : 'LanOnasis Enterprise CLI'} - Memory as a Service, API Management & Infrastructure Orchestration`))
-  .version('2.0.1', '-v, --version', 'display version number')
+  .version('2.0.6', '-v, --version', 'display version number')
   .option('-V, --verbose', 'enable verbose logging')
   .option('--api-url <url>', 'override API URL')
   .option('--output <format>', 'output format (json, table, yaml)', 'table')
@@ -734,7 +734,7 @@ async function main() {
         const script = fs.readFileSync(scriptPath, 'utf8');
         console.log(script);
         return;
-      } catch (error) {
+      } catch {
         console.error(colors.error('Failed to read completion script'));
         process.exit(1);
       }
