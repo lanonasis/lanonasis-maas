@@ -34,7 +34,7 @@ interface CLIConfigData {
   // Enhanced Authentication
   vendorKey?: string;
   authMethod?: 'jwt' | 'vendor_key' | 'oauth';
-  [key: string]: any; // Allow dynamic properties
+  [key: string]: unknown; // Allow dynamic properties
 }
 
 export class CLIConfig {
@@ -93,12 +93,12 @@ export class CLIConfig {
       }
       
       // Set fallback service endpoints to prevent double slash issues
-      // Based on architecture: auth routes through onasis-core, not MCP server
+      // CORRECTED: CLI auth routes through central auth system (api.lanonasis.com)
       this.config.discoveredServices = {
-        auth_base: 'https://api.lanonasis.com/api/v1',
-        memory_base: 'https://api.lanonasis.com/api/v1',
-        mcp_ws_base: 'wss://mcp.lanonasis.com/ws',
-        project_scope: 'lanonasis'
+        auth_base: 'https://api.lanonasis.com',  // CLI auth goes to central auth system
+        memory_base: 'https://api.lanonasis.com/api/v1',  // Memory via onasis-core
+        mcp_ws_base: 'wss://mcp.lanonasis.com/ws',  // MCP WebSocket separate
+        project_scope: 'lanonasis-maas'  // Correct project scope
       };
       await this.save();
     }
@@ -198,15 +198,15 @@ export class CLIConfig {
   }
 
   // Generic get/set methods for MCP and other dynamic config
-  get(key: string): any {
-    return this.config[key];
+  get<T = unknown>(key: string): T {
+    return this.config[key] as T;
   }
 
-  set(key: string, value: any): void {
+  set(key: string, value: unknown): void {
     this.config[key] = value;
   }
 
-  async setAndSave(key: string, value: any): Promise<void> {
+  async setAndSave(key: string, value: unknown): Promise<void> {
     this.set(key, value);
     await this.save();
   }

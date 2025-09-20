@@ -57,12 +57,12 @@ export class CLIConfig {
                 console.log('Service discovery failed, using fallback defaults');
             }
             // Set fallback service endpoints to prevent double slash issues
-            // Based on architecture: auth routes through onasis-core, not MCP server
+            // CORRECTED: CLI auth routes through central auth system (api.lanonasis.com)
             this.config.discoveredServices = {
-                auth_base: 'https://api.lanonasis.com/api/v1',
-                memory_base: 'https://api.lanonasis.com/api/v1',
-                mcp_ws_base: 'wss://mcp.lanonasis.com/ws',
-                project_scope: 'lanonasis'
+                auth_base: 'https://api.lanonasis.com', // CLI auth goes to central auth system
+                memory_base: 'https://api.lanonasis.com/api/v1', // Memory via onasis-core
+                mcp_ws_base: 'wss://mcp.lanonasis.com/ws', // MCP WebSocket separate
+                project_scope: 'lanonasis-maas' // Correct project scope
             };
             await this.save();
         }

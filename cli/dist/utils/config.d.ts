@@ -27,9 +27,9 @@ export declare class CLIConfig {
     clear(): Promise<void>;
     getConfigPath(): string;
     exists(): Promise<boolean>;
-    get(key: string): any;
-    set(key: string, value: any): void;
-    setAndSave(key: string, value: any): Promise<void>;
+    get<T = unknown>(key: string): T;
+    set(key: string, value: unknown): void;
+    setAndSave(key: string, value: unknown): Promise<void>;
     getMCPServerPath(): string;
     getMCPServerUrl(): string;
     shouldUseRemoteMCP(): boolean;
