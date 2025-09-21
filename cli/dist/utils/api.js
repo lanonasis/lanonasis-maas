@@ -17,8 +17,12 @@ export class APIClient {
             const isAuthEndpoint = config.url?.includes('/auth/') || config.url?.includes('/login') || config.url?.includes('/register');
             const discoveredServices = this.config.get('discoveredServices');
             config.baseURL = isAuthEndpoint ?
-                (discoveredServices?.auth_base || 'https://api.lanonasis.com/auth') :
+                (discoveredServices?.auth_base || 'https://api.lanonasis.com') :
                 this.config.getApiUrl();
+            // Add project scope header for auth endpoints
+            if (isAuthEndpoint) {
+                config.headers['X-Project-Scope'] = 'lanonasis-maas';
+            }
             // Enhanced Authentication Support
             const token = this.config.getToken();
             const vendorKey = this.config.getVendorKey();
@@ -78,17 +82,17 @@ export class APIClient {
     }
     // Authentication - aligned with Supabase auth
     async login(email, password) {
-        const response = await this.client.post('/api/v1/auth/login', {
+        const response = await this.client.post('/v1/auth/login', {
             email,
             password
         });
         return response.data;
     }
     async register(email, password, organizationName) {
-        const response = await this.client.post('/api/v1/auth/register', {
+        const response = await this.client.post('/v1/auth/signup', {
             email,
             password,
-            organization_name: organizationName
+            name: organizationName
         });
         return response.data;
     }

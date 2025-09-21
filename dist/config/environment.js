@@ -24,8 +24,8 @@ const envSchema = z.object({
     MCP_MAX_TOOLS_PER_KEY: z.string().transform(Number).default('10'),
     // OpenAI
     OPENAI_API_KEY=REDACTED_OPENAI_API_KEY
-    // Redis (REQUIRED for API key caching)
-    REDIS_URL: z.string().url('Redis URL is required for API key caching'),
+    // Redis (OPTIONAL for API key caching - will use in-memory for dev)
+    REDIS_URL: z.string().url().optional(),
     REDIS_PASSWORD: z.string().optional(),
     REDIS_KEY_PREFIX: z.string().default('maas:'),
     REDIS_API_KEY_TTL: z.string().transform(Number).default('300'),
