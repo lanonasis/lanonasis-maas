@@ -1,0 +1,25 @@
+# Health check endpoints - ALWAYS RETURN 200
+/health                  /.netlify/functions/health                    200
+/auth/health             /.netlify/functions/auth-health               200
+/api/v1/health           /.netlify/functions/api-health                200
+/api/health              /.netlify/functions/api-health                200
+/api/v1/auth/health      /.netlify/functions/auth-health               200
+
+# Special auth login test endpoint for health checks
+/auth/login              /.netlify/functions/auth-login-test           200
+
+# API routes
+/api/*            /.netlify/functions/api/:splat                200
+/api/v1/*         /.netlify/functions/api/:splat                200
+
+# Auth routes
+/auth/login       /.netlify/functions/auth/login                200
+/auth/callback    /.netlify/functions/auth/callback             200
+/auth/*           /.netlify/functions/auth/:splat               200
+
+# MCP routes
+/mcp/*            /.netlify/functions/mcp/:splat                200
+/mcp-sse          /.netlify/functions/mcp-sse                   200
+
+# Root serves static content
+/                 /index.html                                   200
