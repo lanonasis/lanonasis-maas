@@ -17,7 +17,7 @@ declare const envSchema: z.ZodObject<{
     MCP_SESSION_TIMEOUT_HOURS: z.ZodDefault<z.ZodEffects<z.ZodString, number, string>>;
     MCP_MAX_TOOLS_PER_KEY: z.ZodDefault<z.ZodEffects<z.ZodString, number, string>>;
     OPENAI_API_KEY: z.ZodString;
-    REDIS_URL: z.ZodString;
+    REDIS_URL: z.ZodOptional<z.ZodString>;
     REDIS_PASSWORD: z.ZodOptional<z.ZodString>;
     REDIS_KEY_PREFIX: z.ZodDefault<z.ZodString>;
     REDIS_API_KEY_TTL: z.ZodDefault<z.ZodEffects<z.ZodString, number, string>>;
@@ -94,7 +94,6 @@ declare const envSchema: z.ZodObject<{
     MCP_SESSION_TIMEOUT_HOURS: number;
     MCP_MAX_TOOLS_PER_KEY: number;
     OPENAI_API_KEY: string;
-    REDIS_URL: string;
     REDIS_KEY_PREFIX: string;
     REDIS_API_KEY_TTL: number;
     REDIS_SESSION_TTL: number;
@@ -132,6 +131,7 @@ declare const envSchema: z.ZodObject<{
     METRICS_PORT: number;
     CORS_ORIGIN: string;
     CORS_CREDENTIALS: boolean;
+    REDIS_URL?: string | undefined;
     REDIS_PASSWORD?: string | undefined;
     API_BASE_URL?: string | undefined;
     AUTH_SERVER_URL?: string | undefined;
@@ -160,7 +160,6 @@ declare const envSchema: z.ZodObject<{
     JWT_SECRET: string;
     API_KEY_ENCRYPTION_KEY: string;
     OPENAI_API_KEY: string;
-    REDIS_URL: string;
     NODE_ENV?: "development" | "production" | "test" | undefined;
     PORT?: string | undefined;
     HOST?: string | undefined;
@@ -172,6 +171,7 @@ declare const envSchema: z.ZodObject<{
     MCP_ACCESS_REQUEST_EXPIRY_HOURS?: string | undefined;
     MCP_SESSION_TIMEOUT_HOURS?: string | undefined;
     MCP_MAX_TOOLS_PER_KEY?: string | undefined;
+    REDIS_URL?: string | undefined;
     REDIS_PASSWORD?: string | undefined;
     REDIS_KEY_PREFIX?: string | undefined;
     REDIS_API_KEY_TTL?: string | undefined;
@@ -249,7 +249,6 @@ export declare const config: {
     MCP_SESSION_TIMEOUT_HOURS: number;
     MCP_MAX_TOOLS_PER_KEY: number;
     OPENAI_API_KEY: string;
-    REDIS_URL: string;
     REDIS_KEY_PREFIX: string;
     REDIS_API_KEY_TTL: number;
     REDIS_SESSION_TTL: number;
@@ -287,6 +286,7 @@ export declare const config: {
     METRICS_PORT: number;
     CORS_ORIGIN: string;
     CORS_CREDENTIALS: boolean;
+    REDIS_URL?: string | undefined;
     REDIS_PASSWORD?: string | undefined;
     API_BASE_URL?: string | undefined;
     AUTH_SERVER_URL?: string | undefined;
