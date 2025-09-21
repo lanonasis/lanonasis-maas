@@ -48,13 +48,28 @@ export async function loginCommand(options: LoginOptions): Promise<void> {
   console.log(chalk.blue.bold('🔐 Onasis-Core Golden Contract Authentication'));
   console.log(colors.info('━'.repeat(50)));
   console.log();
+
+  // Debug: Check options
+  if (process.env.CLI_VERBOSE === 'true') {
+    console.log('Debug - Login options:', {
+      hasEmail: !!options.email,
+      hasPassword: !!options.password,
+      hasVendorKey: !!options.vendorKey
+    });
+  }
   
   // Enhanced authentication flow - check for vendor key first
   if (options.vendorKey) {
     await handleVendorKeyAuth(options.vendorKey, config);
     return;
   }
-  
+
+  // Check for email/password for direct credentials flow
+  if (options.email && options.password) {
+    await handleCredentialsFlow(options, config);
+    return;
+  }
+
   // Show authentication options
   const authChoice = await inquirer.prompt<{ method: 'vendor' | 'oauth' | 'credentials' }>([
     {
