@@ -110,8 +110,8 @@ describe('MemoryService', () => {
         { id: '3', content: 'Low similarity', similarity: 0.55 }
       ];
 
-      memoryService.searchMemories.mockImplementation(async ({ threshold }) => {
-        return allResults.filter(r => r.similarity >= threshold);
+      memoryService.searchMemories.mockImplementation(async ({ threshold }: { threshold: number }) => {
+        return allResults.filter((r) => r.similarity >= threshold);
       });
 
       const results = await memoryService.searchMemories({
@@ -198,7 +198,7 @@ describe('MemoryService', () => {
       
       expect(Array.isArray(embedding)).toBe(true);
       expect(embedding).toHaveLength(1536); // OpenAI embedding dimension
-      expect(embedding.every(v => v >= -1 && v <= 1)).toBe(true);
+      expect(embedding.every((v: number) => v >= -1 && v <= 1)).toBe(true);
     });
 
     it('should cache embeddings for identical content', async () => {

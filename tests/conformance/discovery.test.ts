@@ -1,30 +1,45 @@
-import { describe, it, expect, beforeAll } from '@jest/globals';
-import request from 'supertest';
+import { describe, it, expect, beforeAll, afterAll } from '@jest/globals';
 
-const API_BASE = process.env.TEST_API_BASE || 'http://localhost:3000';
+import { createTestApiClient, type ApiClientInstance } from '../utils/test-api-client';
 
 describe('Service Discovery Conformance', () => {
   let discoveryManifest: any;
+  let apiClient: ApiClientInstance;
+  let closeClient: () => Promise<void> | void;
 
   beforeAll(async () => {
-    // Fetch the discovery manifest
-    const response = await request(API_BASE)
+    const { client, close } = await createTestApiClient({
+      validApiKey: process.env.TEST_API_KEY || 'test_api_key_123',
+      validJwt: process.env.TEST_JWT_TOKEN || 'test_jwt_token_456',
+      validProjectScope: 'lanonasis-maas',
+    });
+
+    apiClient = client;
+    closeClient = close;
+
+    const response = await apiClient
       .get('/.well-known/onasis.json')
       .expect(200);
-    
+
     discoveryManifest = response.body.data || response.body;
+  });
+
+  afterAll(async () => {
+    if (closeClient) {
+      await closeClient();
+    }
   });
 
   describe('Manifest Accessibility', () => {
     it('should be accessible at /.well-known/onasis.json', async () => {
-      await request(API_BASE)
+      await apiClient
         .get('/.well-known/onasis.json')
         .expect(200)
         .expect('Content-Type', /json/);
     });
 
     it('should include X-Request-ID header', async () => {
-      const response = await request(API_BASE)
+      const response = await apiClient
         .get('/.well-known/onasis.json')
         .expect(200);
       
@@ -33,7 +48,7 @@ describe('Service Discovery Conformance', () => {
     });
 
     it('should include security headers', async () => {
-      const response = await request(API_BASE)
+      const response = await apiClient
         .get('/.well-known/onasis.json')
         .expect(200);
       
@@ -122,21 +137,18 @@ describe('Service Discovery Conformance', () => {
     it('should have working auth_base endpoint', async () => {
       const authUrl = `${discoveryManifest.auth_base}/health`.replace('/api/v1/health', '/health');
       
-      try {
-        await request(authUrl.replace(API_BASE, ''))
-          .get('')
-          .expect(200);
-      } catch (error) {
-        // If we can't reach the auth endpoint, at least verify the URL structure
-        expect(discoveryManifest.auth_base).toMatch(/\/api\/v1$/);
-      }
+      const path = new URL(authUrl).pathname;
+
+      await apiClient
+        .get(path)
+        .expect(200);
     });
 
     it('should have working health endpoint if specified', async () => {
       if (discoveryManifest.endpoints?.health) {
-        const healthUrl = discoveryManifest.endpoints.health.replace(API_BASE, '');
-        await request(API_BASE)
-          .get(healthUrl)
+        const healthUrl = new URL(discoveryManifest.endpoints.health);
+        await apiClient
+          .get(healthUrl.pathname)
           .expect(200);
       }
     });
@@ -151,7 +163,7 @@ describe('Service Discovery Conformance', () => {
       ];
 
       for (const origin of allowedOrigins) {
-        const response = await request(API_BASE)
+        const response = await apiClient
           .options('/.well-known/onasis.json')
           .set('Origin', origin)
           .set('Access-Control-Request-Method', 'GET')
@@ -169,7 +181,7 @@ describe('Service Discovery Conformance', () => {
       ];
 
       for (const origin of disallowedOrigins) {
-        await request(API_BASE)
+        await apiClient
           .options('/.well-known/onasis.json')
           .set('Origin', origin)
           .set('Access-Control-Request-Method', 'GET')
@@ -182,7 +194,7 @@ describe('Service Discovery Conformance', () => {
     it('should complete within reasonable time', async () => {
       const startTime = Date.now();
       
-      await request(API_BASE)
+      await apiClient
         .get('/.well-known/onasis.json')
         .expect(200);
       
@@ -192,7 +204,7 @@ describe('Service Discovery Conformance', () => {
 
     it('should include appropriate cache headers for production', async () => {
       if (process.env.NODE_ENV === 'production') {
-        const response = await request(API_BASE)
+        const response = await apiClient
           .get('/.well-known/onasis.json')
           .expect(200);
         
@@ -208,7 +220,7 @@ describe('Service Discovery Conformance', () => {
 
   describe('Response Format Conformance', () => {
     it('should use success envelope format', async () => {
-      const response = await request(API_BASE)
+      const response = await apiClient
         .get('/.well-known/onasis.json')
         .expect(200);
       
@@ -221,7 +233,7 @@ describe('Service Discovery Conformance', () => {
     });
 
     it('should be valid JSON', async () => {
-      const response = await request(API_BASE)
+      const response = await apiClient
         .get('/.well-known/onasis.json')
         .expect(200);
       

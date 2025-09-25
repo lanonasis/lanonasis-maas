@@ -124,7 +124,7 @@ describe('Memory API Routes', () => {
       });
 
       const result = await mockMemoryService.findAll({ type: 'context' });
-      expect(result.data.every(m => m.type === 'context')).toBe(true);
+      expect(result.data.every((m: { type: string }) => m.type === 'context')).toBe(true);
     });
 
     it('should filter by tags', async () => {
@@ -138,7 +138,7 @@ describe('Memory API Routes', () => {
       });
 
       const result = await mockMemoryService.findAll({ tag: 'important' });
-      expect(result.data.every(m => m.tags.includes('important'))).toBe(true);
+      expect(result.data.every((m: { tags: string[] }) => m.tags.includes('important'))).toBe(true);
     });
   });
 
@@ -216,8 +216,8 @@ describe('Memory API Routes', () => {
         { id: 'mem_3', similarity: 0.65 }
       ];
 
-      mockMemoryService.search.mockImplementation(async ({ threshold }) => {
-        return allResults.filter(r => r.similarity >= threshold);
+      mockMemoryService.search.mockImplementation(async ({ threshold }: { threshold: number }) => {
+        return allResults.filter((r) => r.similarity >= threshold);
       });
 
       const result = await mockMemoryService.search({
