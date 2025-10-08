@@ -128,13 +128,13 @@ setup_environment() {
     # Supabase Configuration
     echo -e "${BLUE}Supabase Configuration:${NC}"
     read -p "Supabase URL: " SUPABASE_URL
-    read -p "Supabase Service Key: " SUPABASE_SERVICE_KEY
-    read -p "Supabase Anon Key: " SUPABASE_ANON_KEY
+    read -s -p "Supabase Service Key: " SUPABASE_SERVICE_KEY; echo
+    read -s -p "Supabase Anon Key: " SUPABASE_ANON_KEY; echo
     
     # OpenAI Configuration (optional)
     echo
     echo -e "${BLUE}OpenAI Configuration (optional for embeddings):${NC}"
-    read -p "OpenAI API Key (press Enter to skip): " OPENAI_API_KEY
+    read -s -p "OpenAI API Key (press Enter to skip): " OPENAI_API_KEY; echo
     
     # Vector Store Configuration
     echo
