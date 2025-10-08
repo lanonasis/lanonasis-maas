@@ -424,7 +424,7 @@ export class EnhancedMCPServer {
         required: false
       }]
     }, async (args) => {
-      const memories = await this.mcp.callTool("memory_search_memories", {
+      const memories = await this.mcp.invokeTool("memory_search_memories", {
         query: args.query,
         limit: parseInt(args.limit || '5')
       });
