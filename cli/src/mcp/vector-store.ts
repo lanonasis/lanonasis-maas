@@ -54,14 +54,23 @@ export class LanonasisVectorStore {
     const queryEmbedding = this.generateSimpleEmbedding(query);
     const results: SearchResult[] = [];
 
+    // Only consider memories the caller is allowed to see
+    const allowedIds: Set<string> | undefined = options.memoryIds
+      ? new Set(options.memoryIds)
+      : undefined;
+
     for (const [id, data] of this.localEmbeddings) {
+      if (allowedIds && !allowedIds.has(id)) continue;
+
       const similarity = this.cosineSimilarity(queryEmbedding, data.embedding);
       if (similarity >= (options.threshold || 0.7)) {
         results.push({ id, score: similarity, metadata: data.metadata });
       }
     }
 
-    return results.sort((a, b) => b.score - a.score).slice(0, options.limit || 10);
+    return results
+      .sort((a, b) => b.score - a.score)
+      .slice(0, options.limit || 10);
   }
 
   async findRelatedMemories(memoryId: string, options: any = {}): Promise<SearchResult[]> {
