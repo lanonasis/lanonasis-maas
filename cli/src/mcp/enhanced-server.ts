@@ -93,7 +93,7 @@ export class EnhancedMCPServer {
    */
   private setupTools(): void {
     // Enhanced memory creation with state management
-    this.mcp.tool("memory_create_memory", {
+    this.server.tool("memory_create_memory", {
       description: "Create a new memory with advanced state management and access control",
       inputSchema: {
         type: "object",
