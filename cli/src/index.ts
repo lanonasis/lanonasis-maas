@@ -34,13 +34,12 @@ const program = new Command();
 
 // CLI Configuration
 const cliConfig = new CLIConfig();
-
 program
   .name('lanonasis')
   .alias('memory')
   .alias('maas')
-  .description(colors.info('🧠 LanOnasis Enterprise CLI - Memory as a Service, API Management & Infrastructure Orchestration'))
-  .version('1.2.0', '-v, --version', 'display version number')
+  .description(colors.info(' LanOnasis Enterprise CLI - Memory as a Service, API Management & Infrastructure Orchestration'))
+  .version('3.0.1', '-v, --version', 'display version number')
   .option('-V, --verbose', 'enable verbose logging')
   .option('--api-url <url>', 'override API URL')
   .option('--output <format>', 'output format (json, table, yaml)', 'table')
