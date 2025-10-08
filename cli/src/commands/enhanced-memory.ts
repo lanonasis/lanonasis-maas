@@ -156,8 +156,18 @@ export function enhancedMemoryCommands(program: Command) {
         result.related_memories.forEach((memory: any, index: number) => {
           console.log(`\n${chalk.bold(`${index + 1}. ${memory.title}`)}`);
           console.log(`   ID: ${chalk.gray(memory.id)}`);
-          console.log(`   Similarity: ${chalk.green((memory.relevance_score * 100).toFixed(1) + '%')}`);
-          console.log(`   Content: ${memory.content.substring(0, 80)}...`);
+          const similarity = memory.relevance_score ?? memory.score;
+          if (similarity !== undefined) {
+            console.log(`   Similarity: ${chalk.green((similarity * 100).toFixed(1) + '%')}`);
+          }
+          const content = memory.content ?? memory.metadata?.content ?? '';
+          console.log(
+            `   Content: ${
+              content
+                ? `${content.substring(0, 80)}...`
+                : chalk.gray('[no preview]')
+            }`
+          );
         });
       } catch (error) {
         spinner.fail(`Related search failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
