@@ -64,23 +64,29 @@ export class MemoryAccessControl {
   async checkMemoryAccess(memoryId: string, appId: string): Promise<boolean> {
     try {
       const memory = await this.getMemoryInfo(memoryId);
+      const currentUserId = await this.getCurrentUserId();
       
       if (!memory) {
         return false;
       }
 
       // Owner always has access
-      if (memory.user_id === await this.getCurrentUserId()) {
+      if (memory.user_id === currentUserId) {
         return true;
       }
 
       // Check app-level permissions
-      const rules = this.getAccessRules(memory.user_id, appId);
+      const rules = this.getAccessRules(currentUserId, appId);
       return rules.some(rule => 
         rule.granted && 
         (!rule.expires_at || new Date(rule.expires_at) > new Date()) &&
         (rule.memory_id === memoryId || !rule.memory_id)
       );
+    } catch (err) {
+      // existing error handling…
+      throw err;
+    }
+  }
     } catch (error) {
       logger.error('Memory access check failed', { error, memoryId, appId });
       return false;
