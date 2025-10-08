@@ -1,11 +1,11 @@
-# @lanonasis/cli v2.0.9 - Enhanced MCP & Interactive CLI Experience
+# @lanonasis/cli v3.0.1 - Enhanced MCP & Interactive CLI Experience
 
 [![NPM Version](https://img.shields.io/npm/v/@lanonasis/cli)](https://www.npmjs.com/package/@lanonasis/cli)
 [![Downloads](https://img.shields.io/npm/dt/@lanonasis/cli)](https://www.npmjs.com/package/@lanonasis/cli)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Golden Contract](https://img.shields.io/badge/Onasis--Core-v0.1%20Compliant-gold)](https://api.lanonasis.com/.well-known/onasis.json)
 
-🚀 **NEW IN v2.0.9**: Advanced Model Context Protocol (MCP) support with multi-server connections, enhanced error handling, and enterprise-grade transport protocols. Revolutionary interactive CLI experience with guided workflows, smart suggestions, achievement system, and power user mode. Professional command-line interface for LanOnasis Memory as a Service (MaaS) platform with **Golden Contract compliance**.
+🚀 **NEW IN v3.0**: Advanced Model Context Protocol (MCP) support with multi-server connections, enhanced error handling, and enterprise-grade transport protocols. Revolutionary interactive CLI experience with guided workflows, smart suggestions, achievement system, and power user mode. Professional command-line interface for LanOnasis Memory as a Service (MaaS) platform with **Golden Contract compliance**.
 
 ## 🚀 Quick Start
 
@@ -166,13 +166,13 @@ onasis mcp tools                          # List available MCP tools
 onasis mcp resources                      # List MCP resources
 onasis mcp call <tool> --args             # Execute MCP tool directly
 
-# Advanced Features (v2.0.9)
+# Advanced Features (v3.0)
 onasis mcp health                         # Detailed health check with latency
 onasis mcp server start                   # Start local MCP server
 onasis mcp server stop                    # Stop local MCP server
 ```
 
-### 🆕 MCP Server Mode (v2.0.9)
+### 🆕 MCP Server Mode (v3.0)
 Run the CLI as a standalone MCP server:
 ```bash
 # Start MCP server for IDE integrations

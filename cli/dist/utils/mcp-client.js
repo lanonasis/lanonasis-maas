@@ -86,7 +86,7 @@ export class MCPClient {
                     });
                     this.client = new Client({
                         name: '@lanonasis/cli',
-                        version: '2.0.0'
+                        version: '3.0.1'
                     });
                     await this.client.connect(localTransport);
                     this.isConnected = true;
