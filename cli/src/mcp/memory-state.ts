@@ -98,10 +98,15 @@ export class MemoryStateManager {
       await this.updateMemoryViaAPI(memoryId, {
         state: newState,
         updated_at: transition.timestamp,
-        ...(newState === MemoryState.ARCHIVED && { archived_at: transition.timestamp }),
-        ...(newState === MemoryState.DELETED && { deleted_at: transition.timestamp })
+        archived_at:
+          newState === MemoryState.ARCHIVED
+            ? transition.timestamp
+            : null,
+        deleted_at:
+          newState === MemoryState.DELETED
+            ? transition.timestamp
+            : null
       });
-
       // Record transition
       this.stateTransitions.push(transition);
 
