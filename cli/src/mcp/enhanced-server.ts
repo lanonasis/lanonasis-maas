@@ -357,12 +357,24 @@ export class EnhancedMCPServer {
           );
         }
 
+        // Hydrate and reshape vector-store results to match CLI expectations
+        const enriched = await Promise.all(
+          relatedMemories.map(async result => {
+            const memory = await this.callMemoryAPI('GET', `/memory/${result.id}`);
+            return {
+              ...memory,
+              relevance_score: result.score,
+              metadata: result.metadata
+            };
+          })
+        );
+
         return {
           success: true,
           source_memory: sourceMemory,
-          related_memories: relatedMemories,
-          count: relatedMemories.length,
-          message: `Found ${relatedMemories.length} related memories`
+          related_memories: enriched,
+          count: enriched.length,
+          message: `Found ${enriched.length} related memories`
         };
       } catch (error) {
         logger.error('Related memory search failed', { error, args });
