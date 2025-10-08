@@ -384,7 +384,7 @@ export class MemoryStateManager {
     const token = this.config.get('token');
     if (token) {
       try {
-        const payload = JSON.parse(Buffer.from(token.split('.')[1], 'base64').toString());
+        const payload = JSON.parse(Buffer.from((token as string).split('.')[1], 'base64').toString());
         return payload.sub || payload.user_id || 'anonymous';
       } catch {
         return 'anonymous';

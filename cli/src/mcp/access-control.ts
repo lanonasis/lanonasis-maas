@@ -75,18 +75,13 @@ export class MemoryAccessControl {
         return true;
       }
 
-      // Check app-level permissions
+      // Check app-level permissions using CURRENT user ID, not memory owner
       const rules = this.getAccessRules(currentUserId, appId);
       return rules.some(rule => 
         rule.granted && 
         (!rule.expires_at || new Date(rule.expires_at) > new Date()) &&
         (rule.memory_id === memoryId || !rule.memory_id)
       );
-    } catch (err) {
-      // existing error handling…
-      throw err;
-    }
-  }
     } catch (error) {
       logger.error('Memory access check failed', { error, memoryId, appId });
       return false;
@@ -242,7 +237,7 @@ export class MemoryAccessControl {
     const token = this.config.get('token');
     if (token) {
       try {
-        const payload = JSON.parse(Buffer.from(token.split('.')[1], 'base64').toString());
+        const payload = JSON.parse(Buffer.from((token as string).split('.')[1], 'base64').toString());
         return payload.sub || payload.user_id || 'anonymous';
       } catch {
         return 'anonymous';
@@ -301,6 +296,6 @@ export class MemoryAccessControl {
   }
 
   private generateId(): string {
-    return `acl_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    return `acl_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
   }
 }
