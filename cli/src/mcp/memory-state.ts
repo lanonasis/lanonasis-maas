@@ -382,7 +382,7 @@ export class MemoryStateManager {
 
   private async getCurrentUserId(): Promise<string> {
     const token = this.config.get('token');
-    if (token) {
+    if (token && typeof token === 'string') {
       try {
         const payload = JSON.parse(Buffer.from(token.split('.')[1], 'base64').toString());
         return payload.sub || payload.user_id || 'anonymous';
@@ -394,6 +394,6 @@ export class MemoryStateManager {
   }
 
   private generateTransitionId(): string {
-    return `transition_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    return `transition_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
   }
 }

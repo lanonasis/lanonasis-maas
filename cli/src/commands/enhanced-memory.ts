@@ -47,15 +47,15 @@ export function enhancedMemoryCommands(program: Command) {
 
         const result = await client.callTool('memory_bulk_operations', bulkArgs);
         
-        spinner.succeed(`Bulk pause completed: ${result.affected_count} memories paused`);
+        spinner.succeed(`Bulk pause completed: ${(result.result as any)?.affected_count} memories paused`);
         
-        if (result.results && result.results.length > 0) {
+        if ((result.result as any)?.results && (result.result as any)?.results.length > 0) {
           console.log(chalk.cyan('\n📊 Operation Results:'));
           const tableData = [
             [chalk.bold('Memory ID'), chalk.bold('Status'), chalk.bold('Previous State')]
           ];
           
-          result.results.forEach((r: any) => {
+          (result.result as any)?.results.forEach((r: any) => {
             tableData.push([
               r.memory_id.substring(0, 8) + '...',
               r.success ? chalk.green('✓ Paused') : chalk.red('✗ Failed'),
@@ -104,9 +104,9 @@ export function enhancedMemoryCommands(program: Command) {
 
         const result = await client.callTool('memory_bulk_operations', bulkArgs);
         
-        spinner.succeed(`Archive completed: ${result.affected_count} memories archived`);
+        spinner.succeed(`Archive completed: ${(result.result as any)?.affected_count} memories archived`);
         
-        console.log(chalk.green(`\n✓ Successfully archived ${result.affected_count} memories`));
+        console.log(chalk.green(`\n✓ Successfully archived ${(result.result as any)?.affected_count} memories`));
         console.log(chalk.cyan(`  Archived memories created before: ${options.before}`));
         if (options.app) {
           console.log(chalk.cyan(`  From app: ${options.app}`));
@@ -141,19 +141,19 @@ export function enhancedMemoryCommands(program: Command) {
           threshold: parseFloat(options.threshold)
         });
         
-        spinner.succeed(`Found ${result.count} related memories`);
+        spinner.succeed(`Found ${(result.result as any)?.count} related memories`);
         
-        if (result.count === 0) {
+        if ((result.result as any)?.count === 0) {
           console.log(chalk.yellow('\nNo related memories found'));
           return;
         }
 
         console.log(chalk.cyan('\n🔗 Source Memory:'));
-        console.log(`  ${chalk.bold(result.source_memory.title)}`);
-        console.log(`  ${result.source_memory.content.substring(0, 100)}...`);
+        console.log(`  ${chalk.bold((result.result as any)?.source_memory.title)}`);
+        console.log(`  ${(result.result as any)?.source_memory.content.substring(0, 100)}...`);
         
         console.log(chalk.cyan('\n🔍 Related Memories:'));
-        result.related_memories.forEach((memory: any, index: number) => {
+        (result.result as any)?.related_memories.forEach((memory: any, index: number) => {
           console.log(`\n${chalk.bold(`${index + 1}. ${memory.title}`)}`);
           console.log(`   ID: ${chalk.gray(memory.id)}`);
           const similarity = memory.relevance_score ?? memory.score;
@@ -208,9 +208,9 @@ export function enhancedMemoryCommands(program: Command) {
 
         const result = await client.callTool('memory_search_memories', searchArgs);
         
-        spinner.succeed(`Found ${result.total || result.results.length} memories`);
+        spinner.succeed(`Found ${(result.result as any)?.total || (result.result as any)?.results.length} memories`);
         
-        if (result.results.length === 0) {
+        if ((result.result as any)?.results.length === 0) {
           console.log(chalk.yellow('\nNo memories match the filter criteria'));
           return;
         }
@@ -220,7 +220,7 @@ export function enhancedMemoryCommands(program: Command) {
           [chalk.bold('ID'), chalk.bold('Title'), chalk.bold('Type'), chalk.bold('Created')]
         ];
         
-        result.results.forEach((memory: any) => {
+        (result.result as any)?.results.forEach((memory: any) => {
           tableData.push([
             memory.id.substring(0, 8) + '...',
             memory.title.substring(0, 30) + (memory.title.length > 30 ? '...' : ''),
@@ -269,7 +269,7 @@ export function enhancedMemoryCommands(program: Command) {
 
         spinner.succeed('Analytics generated');
         
-        const memories = allMemories.results || [];
+        const memories = (allMemories.result as any)?.results || [];
         
         // Basic statistics
         console.log(chalk.cyan('\n📊 Memory Analytics'));
@@ -375,9 +375,9 @@ export function enhancedMemoryCommands(program: Command) {
               if (query) {
                 const spinner = ora('Searching...').start();
                 const results = await client.callTool('memory_search_memories', { query });
-                spinner.succeed(`Found ${results.results.length} memories`);
+                spinner.succeed(`Found ${(results.result as any)?.results.length} memories`);
                 
-                results.results.slice(0, 5).forEach((m: any, i: number) => {
+                (results.result as any)?.results.slice(0, 5).forEach((m: any, i: number) => {
                   console.log(`\n${i + 1}. ${chalk.bold(m.title)}`);
                   console.log(`   ${m.content.substring(0, 100)}...`);
                 });
@@ -399,9 +399,9 @@ export function enhancedMemoryCommands(program: Command) {
               if (memoryId) {
                 const spinner = ora('Finding related memories...').start();
                 const related = await client.callTool('memory_find_related', { memory_id: memoryId });
-                spinner.succeed(`Found ${related.count} related memories`);
+                spinner.succeed(`Found ${(related.result as any)?.count} related memories`);
                 
-                related.related_memories?.slice(0, 3).forEach((m: any, i: number) => {
+                (related.result as any)?.related_memories?.slice(0, 3).forEach((m: any, i: number) => {
                   console.log(`\n${i + 1}. ${chalk.bold(m.title)}`);
                   console.log(
                     `   Similarity: ${chalk.green(
@@ -451,7 +451,7 @@ export function enhancedMemoryCommands(program: Command) {
                   operation: 'archive',
                   before: archiveDate
                 });
-                spinner.succeed(`Archived ${result.affected_count} memories`);
+                spinner.succeed(`Archived ${(result.result as any)?.affected_count} memories`);
               }
               break;
             }
