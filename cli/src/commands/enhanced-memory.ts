@@ -367,6 +367,7 @@ export function enhancedMemoryCommands(program: Command) {
           // Handle each action
           switch (action) {
             case 'search':
+            case 'search': {
               const { query } = await inquirer.prompt([
                 { type: 'input', name: 'query', message: 'Enter search query:' }
               ]);
@@ -382,13 +383,15 @@ export function enhancedMemoryCommands(program: Command) {
                 });
               }
               break;
-              
-            case 'analytics':
+            }
+            
+            case 'analytics': {
               console.log(chalk.cyan('📊 Generating analytics...'));
               // Could call the analytics logic here
               break;
-              
-            case 'related':
+            }
+            
+            case 'related': {
               const { memoryId } = await inquirer.prompt([
                 { type: 'input', name: 'memoryId', message: 'Enter memory ID:' }
               ]);
@@ -400,12 +403,17 @@ export function enhancedMemoryCommands(program: Command) {
                 
                 related.related_memories?.slice(0, 3).forEach((m: any, i: number) => {
                   console.log(`\n${i + 1}. ${chalk.bold(m.title)}`);
-                  console.log(`   Similarity: ${chalk.green((m.relevance_score * 100).toFixed(1) + '%')}`);
+                  console.log(
+                    `   Similarity: ${chalk.green(
+                      (m.relevance_score * 100).toFixed(1) + '%'
+                    )}`
+                  );
                 });
               }
               break;
-              
-            case 'bulk_pause':
+            }
+            
+            case 'bulk_pause': {
               const { pauseCriteria } = await inquirer.prompt([
                 {
                   type: 'list',
@@ -422,8 +430,9 @@ export function enhancedMemoryCommands(program: Command) {
               console.log(chalk.yellow(`Selected: ${pauseCriteria}`));
               // Could implement the specific pause logic here
               break;
-              
-            case 'archive':
+            }
+            
+            case 'archive': {
               const { archiveDate } = await inquirer.prompt([
                 { 
                   type: 'input', 
@@ -445,6 +454,7 @@ export function enhancedMemoryCommands(program: Command) {
                 spinner.succeed(`Archived ${result.affected_count} memories`);
               }
               break;
+            }
           }
           
           console.log(); // Add spacing
