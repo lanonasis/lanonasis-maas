@@ -1,0 +1,226 @@
+# Enhanced Docker Compose - mem0-inspired architecture
+# Provides complete development environment with vector stores and enhanced services
+
+version: '3.8'
+
+services:
+  # Main API Service
+  lanonasis-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+      - SUPABASE_URL=https://<project-ref>.supabase.co
+      - SUPABASE_SERVICE_KEY=REDACTED_SUPABASE_SERVICE_ROLE_KEY
+      - SUPABASE_ANON_KEY=REDACTED_SUPABASE_ANON_KEY
+      - OPENAI_API_KEY=REDACTED_OPENAI_API_KEY
+      - REDIS_URL=redis://redis:6379
+      - QDRANT_URL=http://qdrant:6333
+      - POSTGRES_URL=postgresql://<user>:<password>@<host>:<port>/<db>
+    depends_on:
+      - postgres
+      - redis
+      - qdrant
+    volumes:
+      - .:/app
+      - /app/node_modules
+    networks:
+      - lanonasis-network
+
+  # Enhanced Dashboard
+  lanonasis-dashboard:
+    build:
+      context: ./dashboard
+      dockerfile: Dockerfile
+    ports:
+      - "3001:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:3000
+      - NEXT_PUBLIC_SUPABASE_URL=https://<project-ref>.supabase.co
+      - NEXT_PUBLIC_SUPABASE_ANON_KEY=REDACTED_SUPABASE_ANON_KEY
+    depends_on:
+      - lanonasis-api
+    networks:
+      - lanonasis-network
+
+  # MCP Server (Enhanced)
+  lanonasis-mcp:
+    build:
+      context: ./cli
+      dockerfile: Dockerfile.mcp
+    ports:
+      - "3002:3002"
+    environment:
+      - NODE_ENV=development
+      - MEMORY_API_URL=http://lanonasis-api:3000/api/v1
+      - MCP_PORT=3002
+      - MCP_VERBOSE=true
+      - VECTOR_STORE_PROVIDER=qdrant
+      - QDRANT_URL=http://qdrant:6333
+    depends_on:
+      - lanonasis-api
+      - qdrant
+    networks:
+      - lanonasis-network
+
+  # PostgreSQL Database with Vector Extension
+  postgres:
+    image: pgvector/pgvector:pg15
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_DB=lanonasis_dev
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./src/db/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
+      - ./src/db/schema-enhanced-mem0.sql:/docker-entrypoint-initdb.d/02-enhanced-schema.sql
+    networks:
+      - lanonasis-network
+
+  # Redis for Caching and Session Management
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - lanonasis-network
+
+  # Qdrant Vector Database (mem0-inspired)
+  qdrant:
+    image: qdrant/qdrant:latest
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    volumes:
+      - qdrant_data:/qdrant/storage
+    environment:
+      - QDRANT__SERVICE__HTTP_PORT=6333
+      - QDRANT__SERVICE__GRPC_PORT=6334
+    networks:
+      - lanonasis-network
+
+  # Chroma Vector Database (Alternative)
+  chroma:
+    image: ghcr.io/chroma-core/chroma:latest
+    ports:
+      - "8000:8000"
+    volumes:
+      - chroma_data:/chroma/chroma
+    environment:
+      - IS_PERSISTENT=TRUE
+      - PERSIST_DIRECTORY=/chroma/chroma
+    networks:
+      - lanonasis-network
+    profiles:
+      - chroma
+
+  # Nginx Reverse Proxy (Production-like setup)
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    # volumes:
+      # - ./docker/nginx.conf:/etc/nginx/nginx.conf
+      # - ./docker/ssl:/etc/nginx/ssl
+    depends_on:
+      - lanonasis-api
+      - lanonasis-dashboard
+      - lanonasis-mcp
+    networks:
+      - lanonasis-network
+    profiles:
+      - production
+
+  # Monitoring with Prometheus
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./docker/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+    networks:
+      - lanonasis-network
+    profiles:
+      - monitoring
+
+  # Grafana for Dashboards
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3003:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./docker/grafana/dashboards:/etc/grafana/provisioning/dashboards
+      - ./docker/grafana/datasources:/etc/grafana/provisioning/datasources
+    depends_on:
+      - prometheus
+    networks:
+      - lanonasis-network
+    profiles:
+      - monitoring
+
+  # Elasticsearch for Advanced Search (Optional)
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
+    ports:
+      - "9200:9200"
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    networks:
+      - lanonasis-network
+    profiles:
+      - elasticsearch
+
+  # Kibana for Elasticsearch Management
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.11.0
+    ports:
+      - "5601:5601"
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+    depends_on:
+      - elasticsearch
+    networks:
+      - lanonasis-network
+    profiles:
+      - elasticsearch
+
+volumes:
+  postgres_data:
+  redis_data:
+  qdrant_data:
+  chroma_data:
+  prometheus_data:
+  grafana_data:
+  elasticsearch_data:
+
+networks:
+  lanonasis-network:
+    driver: bridge
+
+# Development profiles for different setups
+# Usage examples:
+# docker-compose -f docker-compose.enhanced.yml up                    # Basic setup
+# docker-compose -f docker-compose.enhanced.yml --profile chroma up   # With Chroma instead of Qdrant
+# docker-compose -f docker-compose.enhanced.yml --profile monitoring up # With monitoring
+# docker-compose -f docker-compose.enhanced.yml --profile production up # Production setup
