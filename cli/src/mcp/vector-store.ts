@@ -82,7 +82,7 @@ export class LanonasisVectorStore {
 
   private generateSimpleEmbedding(text: string): number[] {
     const words = text.toLowerCase().split(/\s+/);
-    const embedding = new Array(384).fill(0);
+    const embedding = new Array(this.storeConfig.dimensions ?? 384).fill(0);
     
     words.forEach((word, index) => {
       const hash = this.simpleHash(word);
