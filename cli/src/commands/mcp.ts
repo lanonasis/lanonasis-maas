@@ -3,6 +3,7 @@ import chalk from 'chalk';
 import ora from 'ora';
 import { table } from 'table';
 import { getMCPClient } from '../utils/mcp-client.js';
+import { EnhancedMCPClient } from '../mcp/client/enhanced-client.js';
 import { CLIConfig } from '../utils/config.js';
 
 export function mcpCommands(program: Command) {
@@ -98,12 +99,34 @@ export function mcpCommands(program: Command) {
           }
         }
         
-        const client = getMCPClient();
-        const connected = await client.connect({
-          connectionMode,
-          serverPath: options.server,
-          serverUrl: options.url
-        });
+        let connected = false;
+        
+        // Use Enhanced MCP Client for better connection handling
+        const enhancedClient = new EnhancedMCPClient();
+        
+        if (options.url) {
+          // Connect to specific URL (WebSocket or remote)
+          const serverConfig = {
+            name: 'user-specified',
+            type: (options.url.startsWith('wss://') ? 'websocket' : 'stdio') as 'websocket' | 'stdio',
+            url: options.url,
+            priority: 1
+          };
+          
+          connected = await enhancedClient.connectSingle(serverConfig);
+          if (connected) {
+            spinner.succeed(chalk.green(`Connected to MCP server at ${options.url}`));
+            return;
+          }
+        } else {
+          // Fall back to old client for local connections
+          const client = getMCPClient();
+          connected = await client.connect({
+            connectionMode,
+            serverPath: options.server,
+            serverUrl: options.url
+          });
+        }
         
         if (connected) {
           spinner.succeed(chalk.green(`Connected to MCP server in ${connectionMode} mode`));
