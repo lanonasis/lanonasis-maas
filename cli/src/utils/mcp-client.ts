@@ -84,10 +84,19 @@ export class MCPClient {
   }
 
   /**
+   * Initialize the MCP client configuration
+   */
+  async init(): Promise<void> {
+    await this.config.init();
+  }
+  /**
    * Connect to MCP server (local or remote)
    */
   async connect(options: MCPConnectionOptions = {}): Promise<boolean> {
     try {
+      // Initialize config if not already done
+      await this.init();
+      
       // Determine connection mode with priority to explicit mode option
       // Default to 'remote' for better user experience
       const connectionMode = options.connectionMode ?? 
@@ -359,22 +368,22 @@ export class MCPClient {
     const toolMappings: Record<string, RemoteToolMapping> = {
       'memory_create_memory': {
         method: 'POST',
-        endpoint: '/api/v1/memory',
+        endpoint: '/memory',
         transform: (args) => args
       },
       'memory_search_memories': {
         method: 'POST',
-        endpoint: '/api/v1/memory/search',
+        endpoint: '/memory/search',
         transform: (args) => args
       },
       'memory_get_memory': {
         method: 'GET',
-        endpoint: '/api/v1/memory/{id}',
+        endpoint: '/memory/{id}',
         transform: () => undefined
       },
       'memory_update_memory': {
         method: 'PUT',
-        endpoint: '/api/v1/memory/{id}',
+        endpoint: '/memory/{id}',
         transform: (args) => {
           const data = { ...args };
           delete data.memory_id;
@@ -383,12 +392,12 @@ export class MCPClient {
       },
       'memory_delete_memory': {
         method: 'DELETE',
-        endpoint: '/api/v1/memory/{id}',
+        endpoint: '/memory/{id}',
         transform: () => undefined
       },
       'memory_list_memories': {
         method: 'GET',
-        endpoint: '/api/v1/memory',
+        endpoint: '/memory',
         transform: (args) => args
       }
     };

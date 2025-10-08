@@ -1,6 +1,6 @@
 {
   "name": "@lanonasis/cli",
-  "version": "2.0.8",
+  "version": "2.0.9",
   "description": "LanOnasis Enterprise CLI - Memory as a Service, API Key Management, and Infrastructure Orchestration",
   "main": "dist/index-simple.js",
   "bin": {
@@ -14,12 +14,20 @@
   "type": "module",
   "scripts": {
     "dev": "tsx src/index.ts",
+    "dev:mcp": "tsx src/mcp/server/lanonasis-server.ts --verbose",
     "build": "tsc && chmod +x dist/index-simple.js && chmod +x dist/mcp-server.js && cp -r src/completions dist/",
+    "build:mcp": "tsc && npm run build:mcp-server && npm run build:mcp-client",
+    "build:mcp-server": "tsc src/mcp/server/lanonasis-server.ts --outDir dist/mcp/server && chmod +x dist/mcp/server/lanonasis-server.js",
+    "build:mcp-client": "tsc src/mcp/client/enhanced-client.ts --outDir dist/mcp/client",
     "start": "node dist/index.js",
+    "start:mcp-server": "node dist/mcp/server/lanonasis-server.js",
     "test": "jest",
+    "test:mcp": "jest --testPathPattern=mcp",
+    "test:integration": "npm run build:mcp && npm run test:mcp",
     "lint": "eslint src/**/*.ts",
     "type-check": "tsc --noEmit",
-    "prepare": "npm run build"
+    "prepare": "npm run build",
+    "publish:with-mcp": "npm run build:mcp && npm publish"
   },
   "keywords": [
     "lanonasis",

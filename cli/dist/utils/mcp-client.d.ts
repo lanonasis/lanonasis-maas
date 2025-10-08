@@ -51,6 +51,10 @@ export declare class MCPClient {
     private wsConnection;
     constructor();
     /**
+     * Initialize the MCP client configuration
+     */
+    init(): Promise<void>;
+    /**
      * Connect to MCP server (local or remote)
      */
     connect(options?: MCPConnectionOptions): Promise<boolean>;
