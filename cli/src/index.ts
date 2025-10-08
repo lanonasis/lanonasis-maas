@@ -116,6 +116,9 @@ const healthCheck = async () => {
   console.log(colors.info('═'.repeat(40)));
   console.log();
 
+  // Initialize config
+  await cliConfig.init();
+
   // Authentication status
   process.stdout.write('Authentication status: ');
   const isAuth = await cliConfig.isAuthenticated();
@@ -178,10 +181,11 @@ const healthCheck = async () => {
 // Check if user is authenticated for protected commands
 const requireAuth = (command: Command) => {
   command.hook('preAction', async () => {
+    await cliConfig.init();
     const isAuthenticated = await cliConfig.isAuthenticated();
     if (!isAuthenticated) {
       console.error(chalk.red('✖ Authentication required'));
-      console.log(chalk.yellow('Please run:'), chalk.white('memory login'));
+      console.log(chalk.yellow('Please run:'), chalk.white('lanonasis auth login'));
       process.exit(1);
     }
   });

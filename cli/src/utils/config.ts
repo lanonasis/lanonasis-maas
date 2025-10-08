@@ -164,6 +164,23 @@ export class CLIConfig {
     const token = this.getToken();
     if (!token) return false;
 
+    // Handle simple CLI tokens (format: cli_xxx_timestamp)
+    if (token.startsWith('cli_')) {
+      // Extract timestamp from CLI token
+      const parts = token.split('_');
+      if (parts.length >= 3) {
+        const timestamp = parseInt(parts[parts.length - 1]);
+        if (!isNaN(timestamp)) {
+          // CLI tokens are valid for 30 days
+          const thirtyDaysInMs = 30 * 24 * 60 * 60 * 1000;
+          return (Date.now() - timestamp) < thirtyDaysInMs;
+        }
+      }
+      // If we can't parse timestamp, assume valid (fallback)
+      return true;
+    }
+
+    // Handle JWT tokens
     try {
       const decoded = jwtDecode(token) as Record<string, unknown>;
       const now = Date.now() / 1000;
