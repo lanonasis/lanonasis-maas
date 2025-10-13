@@ -1,0 +1,48 @@
+{
+  "name": "lanonasis-mcp",
+  "description": "Lanonasis MCP Server for Memory as a Service",
+  "version": "2.0.8",
+  "author": "Lanonasis (Seye Derick)",
+  "server": {
+    "command": "node",
+    "args": [
+      "/path/to/your/project/apps/lanonasis-maas/cli/dist/mcp-server.js"
+    ],
+    "env": {
+      "ONASIS_SUPABASE_URL=https://<project-ref>.supabase.co
+      "ONASIS_SUPABASE_SERVICE_KEY=REDACTED_SUPABASE_SERVICE_ROLE_KEY
+      "ONASIS_SUPABASE_ANON_KEY=REDACTED_SUPABASE_ANON_KEY
+      "MCP_SERVER_URL": "https://mcp.lanonasis.com",
+      "LOG_LEVEL": "info"
+    }
+  },
+  "tools": [
+    "create_memory",
+    "search_memories",
+    "get_memory",
+    "update_memory",
+    "delete_memory",
+    "list_memories",
+    "create_topic",
+    "list_topics",
+    "get_topic",
+    "update_topic",
+    "delete_topic",
+    "create_api_key",
+    "list_api_keys",
+    "rotate_api_key",
+    "delete_api_key",
+    "get_health_status",
+    "get_auth_status",
+    "get_organization_info",
+    "create_project",
+    "list_projects",
+    "get_config"
+  ],
+  "resources": [
+    "memories",
+    "topics",
+    "api-keys",
+    "health"
+  ]
+}
