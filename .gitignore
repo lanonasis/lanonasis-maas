@@ -92,3 +92,4 @@ coverage/
 # Package artifacts  
 *.vsix.backup
 *.tgz.backup
+cli/claude-code-config.json
