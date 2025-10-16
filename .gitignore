@@ -92,3 +92,6 @@ coverage/
 # Package artifacts  
 *.vsix.backup
 *.tgz.backup
+.kiro/settings/mcp.json
+test-github-mcp.cjs
+mcp-config-fixed.json
