@@ -18,5 +18,6 @@
         ".env": ".env.*",
         "docker-compose.yml": "docker-compose.*.yml",
         "README.md": "*.md"
-    }
+    },
+    "markdown.validate.enabled": true
 }
