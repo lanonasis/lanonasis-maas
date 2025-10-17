@@ -122,6 +122,8 @@ services:
       - chroma
 
   # Nginx Reverse Proxy (Production-like setup)
+  # Note: For custom nginx configuration, create ./docker/nginx.conf and ./docker/ssl/
+  # and uncomment the volumes below. Example configs available in ./docs/nginx.conf
   nginx:
     image: nginx:alpine
     ports:
