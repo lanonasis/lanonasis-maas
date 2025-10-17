@@ -5,7 +5,7 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![MCP Integration](https://img.shields.io/badge/MCP-Model%20Context%20Protocol-purple)](https://modelcontextprotocol.com)
 [![Golden Contract](https://img.shields.io/badge/Onasis--Core-v0.1%20Compliant-gold)](https://api.lanonasis.com/.well-known/onasis.json)
-[![CLI Version](https://img.shields.io/npm/v/@lanonasis/cli?label=CLI%20v3.0.1&color=blue)](https://www.npmjs.com/package/@lanonasis/cli)
+[![CLI Version](https://img.shields.io/npm/v/@lanonasis/cli?label=CLI%20v3.0.2&color=blue)](https://www.npmjs.com/package/@lanonasis/cli)
 
 🚀 **NEW ENHANCED EDITION**: Enterprise-grade Memory as a Service platform with **mem0-inspired architecture**, featuring advanced state management, granular access control, multi-vector store support, and production-ready deployment capabilities.
 
