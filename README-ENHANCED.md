@@ -35,6 +35,21 @@
 
 ## 🚀 Quick Start (Enhanced)
 
+### Prerequisites
+
+Before getting started, ensure you have:
+
+- **Node.js**: v18.0.0 or higher
+- **Docker**: v20.10 or higher (for containerized deployment)
+- **Docker Compose**: v2.0 or higher
+- **npm** or **bun**: Latest version
+- **Operating System**: macOS, Linux, or Windows with WSL2
+
+**Optional** (for vector stores):
+- Qdrant instance URL and API key (if using Qdrant)
+- Chroma instance URL (if using Chroma)
+- PostgreSQL with pgvector extension (if using PGVector)
+
 ### One-Command Installation
 ```bash
 # Complete setup with enhanced features
@@ -121,18 +136,22 @@ const similar = await vectorStore.searchMemories(query, {
 ```
 
 #### 3. Access Control System
+
+**Note**: The CLI-side AccessControl class provides client-side caching and validation. 
+The authoritative access control is enforced by the backend API with persistent database storage.
+
 ```typescript
-// Check permissions
+// Check permissions (CLI-side validation + API enforcement)
 const hasAccess = await accessControl.checkMemoryAccess(
   memoryId, userId, appId, 'write'
 );
 
-// Grant app-level access
+// Grant app-level access (persisted to backend)
 await accessControl.grantAccess(
   userId, appId, 'read', null, '2024-12-31'
 );
 
-// Audit trail
+// Audit trail (fetched from backend)
 const logs = await accessControl.getAccessLogs(orgId, {
   user_id: userId,
   access_type: 'bulk_operation',
@@ -256,16 +275,22 @@ docker-compose -f docker-compose.enhanced.yml --profile production up
 ```
 
 ### Services Included
-- **API Server**: Enhanced with state management and access control
-- **Dashboard**: Real-time memory management interface
-- **MCP Server**: Enhanced with vector store integration
-- **PostgreSQL**: With pgvector extension and enhanced schema
-- **Redis**: Caching and session management
-- **Qdrant**: Vector database for semantic search
-- **Chroma**: Alternative vector database
-- **Nginx**: Reverse proxy and load balancer
-- **Prometheus**: Metrics collection
-- **Grafana**: Analytics dashboards
+
+**Core Services** (always available):
+- **API Server** (`lanonasis-api`): Enhanced with state management and access control
+- **Dashboard** (`lanonasis-dashboard`): Real-time memory management interface
+- **MCP Server** (`lanonasis-mcp`): Enhanced with vector store integration
+- **PostgreSQL** (`postgres`): With pgvector extension and enhanced schema
+- **Redis** (`redis`): Caching and session management
+- **Qdrant** (`qdrant`): Vector database for semantic search (default)
+
+**Optional Services** (profile-based):
+- **Chroma** (`chroma`): Alternative vector database (use `--profile chroma`)
+- **Nginx** (`nginx`): Reverse proxy and load balancer (use `--profile production`)
+- **Prometheus** (`prometheus`): Metrics collection (use `--profile monitoring`)
+- **Grafana** (`grafana`): Analytics dashboards (use `--profile monitoring`)
+- **Elasticsearch** (`elasticsearch`): Advanced search capabilities (use `--profile monitoring`)
+- **Kibana** (`kibana`): Log visualization (use `--profile monitoring`)
 
 ## 📊 Enhanced Features Deep Dive
 
@@ -507,17 +532,23 @@ docker-compose -f docker-compose.enhanced.yml up
 
 ### Testing Enhanced Features
 ```bash
-# Run enhanced test suite
-npm run test:enhanced
+# Run all tests
+npm run test
 
-# Test vector store integration
-npm run test:vector-stores
+# Run tests in watch mode
+npm run test:watch
 
-# Test access control
-npm run test:access-control
+# Run tests with coverage
+npm run test:coverage
 
-# Test bulk operations
-npm run test:bulk-operations
+# Run conformance tests
+npm run test:conformance
+
+# Run all tests (unit + conformance)
+npm run test:all
+
+# Note: Enhanced feature-specific tests (vector-stores, access-control, bulk-operations)
+# are included in the main test suite above
 ```
 
 ## 📚 Documentation
