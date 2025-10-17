@@ -46,7 +46,7 @@ program
   .option('--no-mcp', 'disable MCP and use direct API')
   .hook('preAction', async (thisCommand, actionCommand) => {
     const opts = thisCommand.opts();
-    if (opts.verbose) {
+    await cliConfig.init();    if (opts.verbose) {
       process.env.CLI_VERBOSE = 'true';
     }
     if (opts.apiUrl) {
@@ -509,7 +509,7 @@ program
   .description('Show overall system status')
   .action(async () => {
     const isAuth = await cliConfig.isAuthenticated();
-    const apiUrl = cliConfig.getApiUrl();
+    await cliConfig.init();    const apiUrl = cliConfig.getApiUrl();
     
     console.log(chalk.blue.bold('MaaS CLI Status'));
     console.log(`API URL: ${apiUrl}`);
