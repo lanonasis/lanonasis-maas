@@ -12,6 +12,7 @@
 ## 🎯 What's New in Enhanced Edition
 
 ### 🧠 mem0-Inspired Architecture
+
 - **Advanced State Management**: Active, paused, archived, deleted states with full transition history
 - **Granular Access Control**: App-level and memory-level permissions with comprehensive audit trails
 - **Multi-Vector Store Support**: Qdrant, Chroma, PGVector, and local vector storage
@@ -51,6 +52,7 @@ Before getting started, ensure you have:
 - PostgreSQL with pgvector extension (if using PGVector)
 
 ### One-Command Installation
+
 ```bash
 # Complete setup with enhanced features
 curl -fsSL https://raw.githubusercontent.com/lanonasis/lanonasis-maas/main/scripts/install-enhanced.sh | bash
