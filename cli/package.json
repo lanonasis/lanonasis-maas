@@ -1,6 +1,6 @@
 {
   "name": "@lanonasis/cli",
-  "version": "3.0.3",
+  "version": "3.0.6",
   "description": "LanOnasis Enterprise CLI - Memory as a Service, API Key Management, and Infrastructure Orchestration",
   "main": "dist/index-simple.js",
   "bin": {
