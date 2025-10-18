@@ -18,6 +18,11 @@ import { getMCPClient } from './utils/mcp-client.js';
 // Load environment variables
 config();
 
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
+const packageJson = require('../package.json');
+
+
 // Enhanced color scheme (VPS-style)
 const colors = {
   primary: chalk.blue.bold,
@@ -39,7 +44,7 @@ program
   .alias('memory')
   .alias('maas')
   .description(colors.info(' LanOnasis Enterprise CLI - Memory as a Service, API Management & Infrastructure Orchestration'))
-  .version('3.0.1', '-v, --version', 'display version number')
+  .version(packageJson.version, '-v, --version', 'display version number')
   .option('-V, --verbose', 'enable verbose logging')
   .option('--api-url <url>', 'override API URL')
   .option('--output <format>', 'output format (json, table, yaml)', 'table')
