@@ -1,12 +1,14 @@
 # README-ENHANCED.md Updates Required
 
-## Changes to Make:
+## Changes to Make
 
 ### 1. Fix typo on line 38
+
 Change: `- **Comprehensive Commands**: Create, update, search,iesage memor and man`
 To: `- **Comprehensive Commands**: Create, update, search, and manage memories`
 
 ### 2. Remove mem0 reference on line 661
+
 Change: `_Enhanced Memory as a Service - Inspired by mem0's architecture, built for enterprise scale_`
 To: `_Enhanced Memory as a Service - Built for enterprise scale with advanced state management_`
 
@@ -16,6 +18,7 @@ To: `_Enhanced Memory as a Service - Built for enterprise scale with advanced st
 ## 📊 Feature Status
 
 ### ✅ Fully Implemented & Production Ready
+
 - **Core Memory Operations**: Create, read, update, delete, search
 - **Authentication & Authorization**: JWT tokens, API keys, vendor keys
 - **State Management**: Active, paused, archived, deleted states
@@ -27,6 +30,7 @@ To: `_Enhanced Memory as a Service - Built for enterprise scale with advanced st
 - **Service Discovery**: Golden Contract compliance
 
 ### 🚧 In Progress / Placeholder
+
 - **Bulk Operations CLI**: `bulk-pause`, `bulk-archive` commands exist but are placeholders
   - Backend methods (`bulkUpdateMemoryState`) are implemented
   - CLI wiring to backend is pending
@@ -37,6 +41,7 @@ To: `_Enhanced Memory as a Service - Built for enterprise scale with advanced st
 - **Related Memory Discovery**: Backend logic exists, CLI integration pending
 
 ### 🔮 Planned Features
+
 - AI-Powered Categorization: Automatic memory categorization using LLMs
 - Advanced Relationship Detection: ML-based memory relationship discovery
 - Multi-Tenant Architecture: Complete organization isolation
@@ -49,11 +54,13 @@ To: `_Enhanced Memory as a Service - Built for enterprise scale with advanced st
 ### 4. Update CLI Examples Section (around lines 75-80)
 
 Remove or comment out examples for:
+
 - `onasis memory bulk-pause --category "old-notes" --before "2024-01-01"`
 - `onasis memory archive --before "2023-12-01"`
 - Analytics examples with `--period` and `--app` options
 
 Replace with:
+
 ```bash
 # Memory management (fully functional)
 onasis memory create --title "Enhanced Memory" --content "Advanced features" --app-id "my-app"
@@ -81,6 +88,7 @@ Either remove the bulk operations section entirely, or add a clear note:
 **Note**: Bulk operation commands are placeholders in CLI v3.0.3. Backend methods are implemented and will be wired in v3.1.0.
 
 The backend supports:
+
 - `bulkUpdateMemoryState()` - Update multiple memories by criteria
 - Filtering by app_id, category, date ranges
 - Dry-run mode for preview
@@ -99,6 +107,7 @@ Add clear status note:
 **Note**: Analytics command is a placeholder in CLI v3.0.3. Backend analytics infrastructure exists and will be exposed in v3.1.0.
 
 Backend provides:
+
 - Memory usage statistics
 - Access patterns
 - State distribution
@@ -110,6 +119,7 @@ CLI display and filtering coming soon.
 ## Summary
 
 These changes will:
+
 1. ✅ Remove all mem0 references
 2. ✅ Add transparent Feature Status section
 3. ✅ Clarify what's implemented vs placeholder
