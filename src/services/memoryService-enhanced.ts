@@ -142,23 +142,22 @@ export class EnhancedMemoryService {
       const embedding = await this.createEmbedding(data.content);
 
       const memoryData = {
-        const memoryData = {
-          id,
-          title: data.title,
-          content: data.content,
-          memory_type: data.memory_type,
-          tags: data.tags || [],
-          topic_id: data.topic_id || null,
-          user_id: data.user_id,
-          organization_id: data.organization_id,
-          app_id: data.app_id || 'default',
-          state: MemoryState.ACTIVE,
-          embedding,
-          metadata: data.metadata || {},
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-          access_count: 0
-        };
+        id,
+        title: data.title,
+        content: data.content,
+        memory_type: data.memory_type,
+        tags: data.tags || [],
+        topic_id: data.topic_id || null,
+        user_id: data.user_id,
+        organization_id: data.organization_id,
+        app_id: data.app_id || 'default',
+        state: MemoryState.ACTIVE,
+        embedding,
+        metadata: data.metadata || {},
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        access_count: 0
+      };
 
       const { data: memory, error } = await this.supabase
         .from('memory_entries')
@@ -515,7 +514,7 @@ export class EnhancedMemoryService {
     organization_id: string;
     access_type: string;
     success?: boolean;
-    metadata?: Record<string, any>;
+    metadata?: Record<string, unknown>;
     ip_address?: string;
     user_agent?: string;
   }): Promise<void> {

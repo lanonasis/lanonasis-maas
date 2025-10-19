@@ -1,5 +1,21 @@
 # Change Log
 
+## [1.3.2] - 2025-10-18
+
+### Added
+- ✅ Web extension support (works in vscode.dev, GitHub.dev)
+- ✅ Virtual workspace compatibility
+- ✅ Untrusted workspace support
+
+### Changed
+- 🔄 Updated CLI integration to v3.0.6+ (with auth persistence)
+- 📝 Updated description to reflect CLI v3.0.6 compatibility
+- 🌐 Added browser entry point for web compatibility
+
+### Fixed
+- 🐛 Fixed "extension not available in VS Code for Web" warning
+- 🔧 Updated CLI version references from v1.5.2+ to v3.0.6+
+
 ## [1.0.0] - 2025-01-30
 
 ### Added
