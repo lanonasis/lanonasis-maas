@@ -51,7 +51,7 @@ export async function loginCommand(options) {
                     value: 'vendor'
                 },
                 {
-                    name: '🌐 Web OAuth (Browser-based)',
+                    name: '🌐 Browser Login (Get token from web page)',
                     value: 'oauth'
                 },
                 {
@@ -116,7 +116,7 @@ async function handleVendorKeyFlow(config) {
 }
 async function handleOAuthFlow(config) {
     console.log();
-    console.log(chalk.yellow('🌐 Web OAuth Authentication'));
+    console.log(chalk.yellow('🌐 Browser-Based Authentication'));
     console.log(chalk.gray('This will open your browser for secure authentication'));
     console.log();
     const { proceed } = await inquirer.prompt([
@@ -131,26 +131,38 @@ async function handleOAuthFlow(config) {
         console.log(chalk.yellow('Authentication cancelled'));
         return;
     }
-    // Ensure proper URL joining to prevent double slashes
-    const baseUrl = config.getDiscoveredApiUrl().replace(/\/+$/, ''); // Remove trailing slashes
-    const authUrl = `${baseUrl}/oauth/authorize`;
+    // Use the browser-based CLI login endpoint from MCP service
+    // The discovery JSON points to mcp.lanonasis.com/auth/cli-login
+    const authUrl = 'https://mcp.lanonasis.com/auth/cli-login';
     try {
         console.log(colors.info('Opening browser...'));
         await open(authUrl);
         console.log();
         console.log(colors.info('Please complete authentication in your browser'));
+        console.log(colors.info('The page will display your authentication token'));
         console.log(colors.muted(`If browser doesn't open, visit: ${authUrl}`));
-        // TODO: Implement OAuth callback handling or polling mechanism
+        console.log();
+        // Prompt for the token from the browser page
         const { token } = await inquirer.prompt([
             {
                 type: 'input',
                 name: 'token',
-                message: 'Paste the authentication token from browser:'
+                message: 'Paste the authentication token from browser:',
+                validate: (input) => {
+                    if (!input || input.trim().length === 0) {
+                        return 'Token is required';
+                    }
+                    return true;
+                }
             }
         ]);
-        if (token) {
-            await config.setToken(token);
-            console.log(chalk.green('✓ OAuth authentication successful'));
+        if (token && token.trim()) {
+            await config.setToken(token.trim());
+            console.log(chalk.green('✓ Browser authentication successful'));
+            console.log(colors.info('You can now use Lanonasis services'));
+        }
+        else {
+            console.log(chalk.yellow('⚠️  No token provided'));
         }
     }
     catch (error) {
