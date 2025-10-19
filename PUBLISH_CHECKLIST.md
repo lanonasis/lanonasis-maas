@@ -32,6 +32,7 @@
 - [x] Added troubleshooting guide
 
 ### Version Control
+
 - [x] Version bumped to 3.0.11
 - [x] Changes committed with detailed message
 - [x] Ready to push to main
@@ -39,6 +40,7 @@
 ## 🚀 Ready to Publish
 
 ### Pre-Publish Tests
+
 ```bash
 # Build check
 npm run build --prefix cli
@@ -51,6 +53,7 @@ node cli/dist/index-simple.js mcp connect --remote
 ```
 
 ### Publish Commands
+
 ```bash
 # Push to GitHub
 git push origin main
@@ -63,6 +66,7 @@ npm view @lanonasis/cli@latest version
 ```
 
 ### Post-Publish Verification
+
 ```bash
 # Install globally
 npm install -g @lanonasis/cli@latest
@@ -86,16 +90,19 @@ onasis mcp status
 ## 📋 Endpoint Summary
 
 ### Auth (api.lanonasis.com)
+
 - Login: `https://api.lanonasis.com/auth/login`
 - Register: `https://api.lanonasis.com/auth/register`
 - Health: `https://api.lanonasis.com/auth/health`
 
 ### Memory (api.lanonasis.com)
+
 - Base: `https://api.lanonasis.com/api/v1`
 - Memories: `https://api.lanonasis.com/api/v1/memories`
 - Topics: `https://api.lanonasis.com/api/v1/topics`
 
 ### MCP (mcp.lanonasis.com) ⭐ NEW
+
 - REST: `https://mcp.lanonasis.com/api/v1`
 - WebSocket: `wss://mcp.lanonasis.com/ws`
 - SSE: `https://mcp.lanonasis.com/api/v1/events`
@@ -104,19 +111,22 @@ onasis mcp status
 ## 🎯 Key Features
 
 1. **Multi-Transport Support**
+
    - STDIO for local clients
    - HTTP/REST for standard API calls
    - WebSocket for real-time bidirectional
    - SSE for server push events
 
 2. **Auto-Discovery**
+
    - Fetches endpoints from /.well-known/onasis.json
    - Falls back to hardcoded defaults
    - Caches discovered services
 
 3. **Flexible Auth**
+
    - JWT tokens
-   - Vendor keys (pk_*.sk_*)
+   - Vendor keys (pk*\*.sk*\*)
    - OAuth flow
    - Browser-based CLI login
 
@@ -129,16 +139,19 @@ onasis mcp status
 Users upgrading from v3.0.10 or earlier need to:
 
 1. Clear cached discovery:
+
    ```bash
    onasis config set discoveredServices ""
    ```
 
 2. Reconnect to MCP:
+
    ```bash
    onasis mcp connect --remote
    ```
 
 3. Verify endpoints:
+
    ```bash
    onasis config show
    ```
@@ -162,5 +175,5 @@ Users upgrading from v3.0.10 or earlier need to:
 - [ ] Documentation complete
 - [ ] Ready to publish
 
-**Approved by**: _____________
+**Approved by**: ******\_******
 **Date**: 2025-10-19
