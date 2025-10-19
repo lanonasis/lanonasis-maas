@@ -513,8 +513,9 @@ program
   .command('status')
   .description('Show overall system status')
   .action(async () => {
+    await cliConfig.init();
     const isAuth = await cliConfig.isAuthenticated();
-    await cliConfig.init();    const apiUrl = cliConfig.getApiUrl();
+    const apiUrl = cliConfig.getApiUrl();
     
     console.log(chalk.blue.bold('MaaS CLI Status'));
     console.log(`API URL: ${apiUrl}`);
