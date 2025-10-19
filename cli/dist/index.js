@@ -14,6 +14,9 @@ import { CLIConfig } from './utils/config.js';
 import { getMCPClient } from './utils/mcp-client.js';
 // Load environment variables
 config();
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
+const packageJson = require('../package.json');
 // Enhanced color scheme (VPS-style)
 const colors = {
     primary: chalk.blue.bold,
@@ -33,13 +36,14 @@ program
     .alias('memory')
     .alias('maas')
     .description(colors.info(' LanOnasis Enterprise CLI - Memory as a Service, API Management & Infrastructure Orchestration'))
-    .version('3.0.1', '-v, --version', 'display version number')
+    .version(packageJson.version, '-v, --version', 'display version number')
     .option('-V, --verbose', 'enable verbose logging')
     .option('--api-url <url>', 'override API URL')
     .option('--output <format>', 'output format (json, table, yaml)', 'table')
     .option('--no-mcp', 'disable MCP and use direct API')
     .hook('preAction', async (thisCommand, actionCommand) => {
     const opts = thisCommand.opts();
+    await cliConfig.init();
     if (opts.verbose) {
         process.env.CLI_VERBOSE = 'true';
     }
@@ -449,6 +453,7 @@ program
     .command('status')
     .description('Show overall system status')
     .action(async () => {
+    await cliConfig.init();
     const isAuth = await cliConfig.isAuthenticated();
     const apiUrl = cliConfig.getApiUrl();
     console.log(chalk.blue.bold('MaaS CLI Status'));

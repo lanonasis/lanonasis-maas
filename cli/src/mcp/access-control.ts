@@ -50,24 +50,22 @@ export class MemoryAccessControl {
       // Check explicit permissions
       const rules = this.getAccessRules(userId, appId);
       return rules.some(rule => 
-        rule.granted && 
-        (rule.permission === 'write' || rule.permission === 'admin') &&
-        (!rule.expires_at || new Date(rule.expires_at) > new Date())
+        rule.permission === 'write' || rule.permission === 'admin'
       );
     } catch (error) {
-      logger.error('Failed to check create access', { error, userId, appId });
+      logger.error('Access check failed', { error, userId, appId });
       return false;
     }
   }
 
   /**
-   * Check if user has access to read a specific memory
+   * Check if user has access to a specific memory
    */
   async checkMemoryAccess(memoryId: string, appId: string): Promise<boolean> {
     try {
       const memory = await this.getMemoryInfo(memoryId);
       const currentUserId = await this.getCurrentUserId();
-
+      
       if (!memory) {
         return false;
       }
@@ -77,32 +75,32 @@ export class MemoryAccessControl {
         return true;
       }
 
-      // Check explicit permissions using current user ID (FIXED)
+      // Check app-level permissions using CURRENT user ID, not memory owner
       const rules = this.getAccessRules(currentUserId, appId);
-      return rules.some(rule =>
-        rule.granted &&
+      return rules.some(rule => 
+        rule.granted && 
         (!rule.expires_at || new Date(rule.expires_at) > new Date()) &&
         (rule.memory_id === memoryId || !rule.memory_id)
       );
     } catch (error) {
-      logger.error('Failed to check memory access', { error, memoryId, appId });
+      logger.error('Memory access check failed', { error, memoryId, appId });
       return false;
     }
   }
 
   /**
-   * Get all memories accessible to a user in an app
+   * Get list of accessible memory IDs for user/app combination
    */
   async getAccessibleMemories(userId: string, appId: string): Promise<string[]> {
     try {
       // Get user's own memories
       const ownMemories = await this.getUserMemories(userId);
       
-      // Get memories shared with the user
+      // Get shared memories based on permissions
       const sharedMemories = await this.getSharedMemories(userId, appId);
       
       // Combine and deduplicate
-      const allMemories = [...ownMemories, ...sharedMemories];
+      const allMemories = [...new Set([...ownMemories, ...sharedMemories])];
       
       return allMemories;
     } catch (error) {
@@ -112,7 +110,7 @@ export class MemoryAccessControl {
   }
 
   /**
-   * Log memory access for audit purposes
+   * Log memory access for audit trail
    */
   async logMemoryAccess(
     memoryId: string,
@@ -237,9 +235,9 @@ export class MemoryAccessControl {
 
   private async getCurrentUserId(): Promise<string> {
     const token = this.config.get('token');
-    if (token && typeof token === 'string') {
+    if (token) {
       try {
-        const payload = JSON.parse(Buffer.from(token.split('.')[1], 'base64').toString());
+        const payload = JSON.parse(Buffer.from((token as string).split('.')[1], 'base64').toString());
         return payload.sub || payload.user_id || 'anonymous';
       } catch {
         return 'anonymous';
