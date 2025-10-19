@@ -75,8 +75,8 @@ export class LanonasisMCPServer {
 
     // Register tools, resources, and prompts after config is loaded
     await this.registerTools();
-    this.registerResources();
-    this.registerPrompts();
+    await this.registerResources();
+    await this.registerPrompts();
 
     if (this.options.verbose) {
       console.log(chalk.cyan('🚀 Lanonasis MCP Server initialized'));
@@ -366,8 +366,10 @@ export class LanonasisMCPServer {
   /**
    * Register MCP resources
    */
-  private registerResources(): void {
-    this.server.setRequestHandler({ method: 'resources/list' } as any, async () => ({
+  private async registerResources(): Promise<void> {
+    const { ListResourcesRequestSchema, ReadResourceRequestSchema } = await import('@modelcontextprotocol/sdk/types.js');
+    
+    this.server.setRequestHandler(ListResourcesRequestSchema, async () => ({
       resources: [
         {
           uri: 'memory://recent',
@@ -396,7 +398,7 @@ export class LanonasisMCPServer {
       ]
     }));
 
-    this.server.setRequestHandler({ method: 'resources/read' } as any, async (request: any) => {
+    this.server.setRequestHandler(ReadResourceRequestSchema, async (request: any) => {
       const { uri } = request.params;
       
       try {
@@ -419,8 +421,10 @@ export class LanonasisMCPServer {
   /**
    * Register MCP prompts
    */
-  private registerPrompts(): void {
-    this.server.setRequestHandler({ method: 'prompts/list' } as any, async () => ({
+  private async registerPrompts(): Promise<void> {
+    const { ListPromptsRequestSchema, GetPromptRequestSchema } = await import('@modelcontextprotocol/sdk/types.js');
+    
+    this.server.setRequestHandler(ListPromptsRequestSchema, async () => ({
       prompts: [
         {
           name: 'create_memory',
@@ -452,7 +456,7 @@ export class LanonasisMCPServer {
       ]
     }));
 
-    this.server.setRequestHandler({ method: 'prompts/get' } as any, async (request: any) => {
+    this.server.setRequestHandler(GetPromptRequestSchema, async (request: any) => {
       const { name, arguments: args } = request.params;
       
       const prompts: Record<string, any> = {
