@@ -114,7 +114,8 @@ export class MCPClient {
           // WebSocket connection mode for enterprise users
           const wsUrlValue = options.serverUrl ?? 
                   this.config.get<string>('mcpWebSocketUrl') ?? 
-                  'ws://localhost:8081/mcp/ws';
+                  this.config.getMCPServerUrl() ??
+                  'wss://mcp.lanonasis.com/ws';
           wsUrl = wsUrlValue;
           console.log(chalk.cyan(`Connecting to WebSocket MCP server at ${wsUrl}...`));
           
@@ -129,7 +130,8 @@ export class MCPClient {
           // For remote MCP, we'll use the REST API with MCP-style interface
           const serverUrlValue = options.serverUrl ?? 
                      this.config.get<string>('mcpServerUrl') ?? 
-                     'https://api.lanonasis.com';
+                     this.config.getMCPRestUrl() ??
+                     'https://mcp.lanonasis.com/api/v1';
           serverUrl = serverUrlValue;
           console.log(chalk.cyan(`Connecting to remote MCP server at ${serverUrl}...`));
           
@@ -184,7 +186,8 @@ export class MCPClient {
    * Initialize SSE connection for real-time updates
    */
   private async initializeSSE(serverUrl: string): Promise<void> {
-    const sseUrl = `${serverUrl}/sse`;
+    // Use the proper SSE endpoint from config
+    const sseUrl = this.config.getMCPSSEUrl() ?? `${serverUrl}/events`;
     const token = this.config.get<string>('token');
     
     if (token) {
@@ -357,7 +360,7 @@ export class MCPClient {
    * Call remote tool via REST API with MCP interface
    */
   private async callRemoteTool(toolName: string, args: MCPToolArgs): Promise<MCPToolResponse> {
-    const apiUrl = this.config.get('apiUrl') ?? 'https://api.lanonasis.com';
+    const apiUrl = this.config.getMCPRestUrl() ?? 'https://mcp.lanonasis.com/api/v1';
     const token = this.config.get('token');
 
     if (!token) {
@@ -422,6 +425,7 @@ export class MCPClient {
         url: `${apiUrl}${endpoint}`,
         headers: {
           'Authorization': `Bearer ${token}`,
+          'x-api-key': String(token),
           'Content-Type': 'application/json'
         },
         data: mapping.transform ? mapping.transform(args) : undefined,
