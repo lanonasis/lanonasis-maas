@@ -43,11 +43,7 @@ export class LanonasisMCPServer {
     this.config = new CLIConfig();
     this.apiClient = new APIClient();
     
-    // Register all tools, resources, and prompts
-    this.registerTools();
-    this.registerResources();
-    this.registerPrompts();
-    
+    // Note: registerTools is now async and called in initialize()
     // Setup error handling
     this.setupErrorHandling();
   }
@@ -77,6 +73,11 @@ export class LanonasisMCPServer {
       // APIClient will use the config internally
     }
 
+    // Register tools, resources, and prompts after config is loaded
+    await this.registerTools();
+    this.registerResources();
+    this.registerPrompts();
+
     if (this.options.verbose) {
       console.log(chalk.cyan('🚀 Lanonasis MCP Server initialized'));
       console.log(chalk.gray(`API URL: ${apiUrl}`));
@@ -87,9 +88,12 @@ export class LanonasisMCPServer {
   /**
    * Register MCP tools
    */
-  private registerTools(): void {
-    // Memory operations
-    this.server.setRequestHandler({ method: 'tools/list' } as any, async () => ({
+  private async registerTools(): Promise<void> {
+    // Import request schemas dynamically for ES modules
+    const { ListToolsRequestSchema, CallToolRequestSchema } = await import('@modelcontextprotocol/sdk/types.js');
+    
+    // List available tools
+    this.server.setRequestHandler(ListToolsRequestSchema, async () => ({
       tools: [
         // Memory tools
         {
@@ -331,8 +335,8 @@ export class LanonasisMCPServer {
       ]
     }));
 
-    // Tool call handler
-    this.server.setRequestHandler({ method: 'tools/call' } as any, async (request: any) => {
+    // Tool call handler (CallToolRequestSchema already imported above)
+    this.server.setRequestHandler(CallToolRequestSchema, async (request: any) => {
       const { name, arguments: args } = request.params;
       
       try {
