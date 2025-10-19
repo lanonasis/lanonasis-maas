@@ -1,9 +1,9 @@
 #!/bin/bash
 
 # Publish VS Code Extension to Marketplace
-# Version 1.3.1 - LanOnasis Branding Update
+# Version 1.3.2 - Web Compatibility & CLI v3.0.6 Integration
 
-echo "🚀 Publishing LanOnasis Memory Extension v1.3.1 to VS Code Marketplace"
+echo "🚀 Publishing LanOnasis Memory Extension to VS Code Marketplace"
 echo "=========================================================="
 
 cd vscode-extension || exit 1
@@ -18,7 +18,7 @@ npm run compile
 
 # Package extension
 echo "📦 Packaging extension..."
-vsce package --no-dependencies
+vsce package --no-yarn
 
 if [ -f "lanonasis-memory-${CURRENT_VERSION}.vsix" ]; then
     echo "✅ Package created: lanonasis-memory-${CURRENT_VERSION}.vsix"
