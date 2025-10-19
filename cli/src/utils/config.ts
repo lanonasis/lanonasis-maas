@@ -28,7 +28,9 @@ interface CLIConfigData {
   discoveredServices?: {
     auth_base: string;
     memory_base: string;
+    mcp_base?: string;
     mcp_ws_base: string;
+    mcp_sse_base?: string;
     project_scope: string;
   };
   // Enhanced Authentication
@@ -82,9 +84,19 @@ export class CLIConfig {
     try {
       // Use axios instead of fetch for consistency
       const axios = (await import('axios')).default;
-      const discoveryUrl = 'https://api.lanonasis.com/.well-known/onasis.json';
+      const discoveryUrl = 'https://mcp.lanonasis.com/.well-known/onasis.json';
       const response = await axios.get(discoveryUrl);
-      this.config.discoveredServices = response.data;
+      
+      // Map discovery response to our config format
+      const discovered = response.data;
+      this.config.discoveredServices = {
+        auth_base: discovered.auth?.login?.replace('/auth/login', '') || 'https://api.lanonasis.com',
+        memory_base: 'https://api.lanonasis.com/api/v1',
+        mcp_base: discovered.endpoints?.http || 'https://mcp.lanonasis.com/api/v1',
+        mcp_ws_base: discovered.endpoints?.websocket || 'wss://mcp.lanonasis.com/ws',
+        mcp_sse_base: discovered.endpoints?.sse || 'https://mcp.lanonasis.com/api/v1/events',
+        project_scope: 'lanonasis-maas'
+      };
       await this.save();
     } catch {
       // Service discovery failed, use fallback defaults
@@ -93,11 +105,13 @@ export class CLIConfig {
       }
       
       // Set fallback service endpoints to prevent double slash issues
-      // CORRECTED: CLI auth routes through central auth system (api.lanonasis.com)
+      // Use mcp.lanonasis.com for MCP services (proxied to port 3001)
       this.config.discoveredServices = {
         auth_base: 'https://api.lanonasis.com',  // CLI auth goes to central auth system
         memory_base: 'https://api.lanonasis.com/api/v1',  // Memory via onasis-core
-        mcp_ws_base: 'wss://mcp.lanonasis.com/ws',  // MCP WebSocket separate
+        mcp_base: 'https://mcp.lanonasis.com/api/v1',  // MCP HTTP/REST
+        mcp_ws_base: 'wss://mcp.lanonasis.com/ws',  // MCP WebSocket
+        mcp_sse_base: 'https://mcp.lanonasis.com/api/v1/events',  // MCP SSE
         project_scope: 'lanonasis-maas'  // Correct project scope
       };
       await this.save();
@@ -236,7 +250,17 @@ export class CLIConfig {
   getMCPServerUrl(): string {
     return this.config.discoveredServices?.mcp_ws_base || 
            this.config.mcpServerUrl || 
-           'https://api.lanonasis.com';
+           'wss://mcp.lanonasis.com/ws';
+  }
+  
+  getMCPRestUrl(): string {
+    return this.config.discoveredServices?.mcp_base || 
+           'https://mcp.lanonasis.com/api/v1';
+  }
+  
+  getMCPSSEUrl(): string {
+    return this.config.discoveredServices?.mcp_sse_base || 
+           'https://mcp.lanonasis.com/api/v1/events';
   }
 
   shouldUseRemoteMCP(): boolean {

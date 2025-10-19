@@ -418,7 +418,7 @@ deployCmd
     console.log();
     console.log(colors.highlight('🔧 API Services:'));
     console.log(`  Memory Service: ${colors.success('✅ https://api.lanonasis.com')}`);
-    console.log(`  MCP Server: ${colors.success('✅ /mcp/sse')}`);
+    console.log(`  MCP Server: ${colors.success('✅ mcp.lanonasis.com')}`);
     console.log(`  REST API: ${colors.success('✅ All endpoints active')}`);
     console.log();
     console.log(colors.highlight('📦 Package Distribution:'));
@@ -443,7 +443,7 @@ deployCmd
         { name: 'Dashboard', url: 'https://api.lanonasis.com/dashboard', status: 'healthy' },
         { name: 'Documentation', url: 'https://docs.lanonasis.com/memory-services', status: 'healthy' },
         { name: 'Memory API', url: 'https://api.lanonasis.com/memories', status: 'healthy' },
-        { name: 'MCP Server', url: 'https://api.lanonasis.com/mcp/sse', status: 'healthy' },
+        { name: 'MCP Server', url: 'https://mcp.lanonasis.com/api/v1/events', status: 'healthy' },
         { name: 'Authentication', url: 'https://api.lanonasis.com/auth', status: 'healthy' }
     ];
     for (const service of services) {

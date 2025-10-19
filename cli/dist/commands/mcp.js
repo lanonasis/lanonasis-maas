@@ -21,7 +21,7 @@ export function mcpCommands(program) {
         const isAuthenticated = !!config.get('token');
         if (isAuthenticated) {
             console.log(chalk.green('✓ Authenticated - Using remote MCP mode'));
-            console.log('  Your memory operations will use api.lanonasis.com');
+            console.log('  Your memory operations will use mcp.lanonasis.com');
             console.log('  with real-time SSE updates enabled');
         }
         else {
@@ -57,7 +57,7 @@ export function mcpCommands(program) {
     mcp.command('connect')
         .description('Connect to MCP server (local, remote, or WebSocket)')
         .option('-l, --local', 'Connect to local MCP server')
-        .option('-r, --remote', 'Connect to remote MCP server (api.lanonasis.com)')
+        .option('-r, --remote', 'Connect to remote MCP server (mcp.lanonasis.com)')
         .option('-w, --websocket', 'Connect using WebSocket mode for enterprise users')
         .option('-s, --server <path>', 'Local MCP server path')
         .option('-u, --url <url>', 'Remote/WebSocket server URL')
@@ -122,7 +122,7 @@ export function mcpCommands(program) {
             if (connected) {
                 spinner.succeed(chalk.green(`Connected to MCP server in ${connectionMode} mode`));
                 if (connectionMode === 'remote') {
-                    console.log(chalk.cyan('ℹ️  Using remote MCP via api.lanonasis.com'));
+                    console.log(chalk.cyan('ℹ️  Using remote MCP via mcp.lanonasis.com'));
                     console.log(chalk.cyan('📡 SSE endpoint active for real-time updates'));
                 }
                 else if (connectionMode === 'websocket') {
@@ -350,7 +350,7 @@ export function mcpCommands(program) {
             const current = config.get('mcpPreference') || 'auto';
             console.log(`Current MCP preference: ${chalk.cyan(current)}`);
             console.log('\nOptions:');
-            console.log('  --prefer-remote : Use remote MCP server (api.lanonasis.com)');
+            console.log('  --prefer-remote : Use remote MCP server (mcp.lanonasis.com)');
             console.log('  --prefer-local  : Use local MCP server');
             console.log('  --auto          : Auto-detect based on authentication');
         }
