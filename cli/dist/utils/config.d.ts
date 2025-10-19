@@ -32,6 +32,8 @@ export declare class CLIConfig {
     setAndSave(key: string, value: unknown): Promise<void>;
     getMCPServerPath(): string;
     getMCPServerUrl(): string;
+    getMCPRestUrl(): string;
+    getMCPSSEUrl(): string;
     shouldUseRemoteMCP(): boolean;
 }
 export {};
