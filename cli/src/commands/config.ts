@@ -133,7 +133,7 @@ export function configCommands(program: Command): void {
         { key: 'ai-integration', description: 'AI integration mode', current: config.get('aiIntegration') || 'none' },
         { key: 'mcp-use-remote', description: 'Use remote MCP server', current: config.get('mcpUseRemote') || false },
         { key: 'mcp-server-path', description: 'Local MCP server path', current: config.get('mcpServerPath') || 'default' },
-        { key: 'mcp-server-url', description: 'Remote MCP server URL', current: config.get('mcpServerUrl') || 'https://api.lanonasis.com' },
+        { key: 'mcp-server-url', description: 'Remote MCP server URL', current: config.get('mcpServerUrl') || 'https://mcp.lanonasis.com' },
         { key: 'mcpEnabled', description: 'MCP integration enabled', current: config.get('mcpEnabled') || false }
       ];
 
