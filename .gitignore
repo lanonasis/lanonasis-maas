@@ -95,3 +95,7 @@ coverage/
 .kiro/settings/mcp.json
 test-github-mcp.cjs
 mcp-config-fixed.json
+
+# Package lock files (using bun.lock instead)
+package-lock.json
+**/package-lock.json
