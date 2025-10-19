@@ -122,14 +122,16 @@ services:
       - chroma
 
   # Nginx Reverse Proxy (Production-like setup)
+  # Note: For custom nginx configuration, create ./docker/nginx.conf and ./docker/ssl/
+  # and uncomment the volumes below. Example configs available in ./docs/nginx.conf
   nginx:
     image: nginx:alpine
     ports:
       - "80:80"
       - "443:443"
     # volumes:
-      # # - ./docker/nginx.conf:/etc/nginx/nginx.conf
-      # # - ./docker/ssl:/etc/nginx/ssl
+      # - ./docker/nginx.conf:/etc/nginx/nginx.conf
+      # - ./docker/ssl:/etc/nginx/ssl
     depends_on:
       - lanonasis-api
       - lanonasis-dashboard
