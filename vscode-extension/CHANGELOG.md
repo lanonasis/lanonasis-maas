@@ -3,7 +3,7 @@
 ## [1.3.2] - 2025-10-18
 
 ### Added
-- ✅ Web extension support (works in vscode.dev, github.dev)
+- ✅ Web extension support (works in vscode.dev, GitHub.dev)
 - ✅ Virtual workspace compatibility
 - ✅ Untrusted workspace support
 

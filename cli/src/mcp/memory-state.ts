@@ -394,6 +394,6 @@ export class MemoryStateManager {
   }
 
   private generateTransitionId(): string {
-    return `transition_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    return `transition_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
   }
 }
