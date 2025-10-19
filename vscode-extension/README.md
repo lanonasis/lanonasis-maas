@@ -2,13 +2,20 @@
 
 **Transform your coding experience with intelligent memory management and API key management directly in VSCode.**
 
-## 🆕 New in v1.2.0
+## 🆕 New in v1.3.2
+
+- **🌐 Web Extension Support** - Now works in VS Code for Web (vscode.dev, github.dev)
+- **🔧 CLI v3.0.6 Integration** - Enhanced integration with @lanonasis/cli v3.0.6+
+- **🔐 Auth Persistence** - Leverages CLI's persistent authentication
+- **📦 Virtual Workspaces** - Full support for virtual and untrusted workspaces
+- **⚡ Improved Compatibility** - Better cross-platform support
+
+## Previous Updates (v1.2.0)
 
 - **🔑 API Key Management** - Create and manage API keys directly from VSCode
 - **📁 Project Organization** - Organize API keys by projects
 - **🌳 API Key Tree View** - Browse projects and keys in Explorer panel
 - **🔄 Key Rotation** - Rotate API keys for enhanced security
-- **⚡ Enhanced Performance** - Improved memory search and creation
 
 ## 🧠 Features
 
@@ -28,9 +35,16 @@
 
 ## 🚀 Getting Started
 
+### Prerequisites
+- VS Code 1.99.0 or higher (Desktop or Web)
+- @lanonasis/cli v3.0.6+ (optional, for enhanced features)
+- Internet connection for API access
+
+### Quick Start
 1. **Get API Key**: Visit [api.lanonasis.com](https://api.lanonasis.com) to get your free API key
 2. **Configure Extension**: Open VSCode settings and add your API key to `lanonasis.apiKey`
-3. **Start Using**: 
+3. **Optional - Install CLI**: `npm install -g @lanonasis/cli@latest` for enhanced auth
+4. **Start Using**: 
    - Press `Ctrl+Shift+M` to search memories
    - Press `Ctrl+Shift+K` to manage API keys
    - Select code and press `Ctrl+Shift+Alt+M` to create memories
@@ -71,10 +85,16 @@
 - `lanonasis.searchLimit` - Number of search results to show
 - `lanonasis.enableAutoCompletion` - Enable memory-based code completion
 
-### API Key Management Settings (NEW!)
+### API Key Management Settings
 - `lanonasis.enableApiKeyManagement` - Enable API key management features (default: true)
 - `lanonasis.defaultEnvironment` - Default environment for new keys (dev/staging/production)
 - `lanonasis.organizationId` - Your organization ID for team features
+
+### CLI Integration Settings (v3.0.6+)
+- `lanonasis.preferCLI` - Prefer CLI integration when available (default: true)
+- `lanonasis.enableMCP` - Enable Model Context Protocol channels (default: true)
+- `lanonasis.cliDetectionTimeout` - CLI detection timeout in ms (default: 2000)
+- `lanonasis.verboseLogging` - Enable verbose logging for debugging (default: false)
 
 ### Gateway vs Direct API
 - **Gateway Mode** (recommended): Uses Onasis Gateway for optimized routing, caching, and enhanced performance
