@@ -133,7 +133,7 @@ async function handleOAuthFlow(config) {
     }
     // Ensure proper URL joining to prevent double slashes
     const baseUrl = config.getDiscoveredApiUrl().replace(/\/+$/, ''); // Remove trailing slashes
-    const authUrl = `${baseUrl}/auth/cli-login`;
+    const authUrl = `${baseUrl}/oauth/authorize`;
     try {
         console.log(colors.info('Opening browser...'));
         await open(authUrl);
