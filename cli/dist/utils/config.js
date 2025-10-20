@@ -2,10 +2,7 @@ import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as os from 'os';
 import { jwtDecode } from 'jwt-decode';
-import { fileURLToPath } from 'url';
 import { randomUUID } from 'crypto';
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 export class CLIConfig {
     configDir;
     configPath;
@@ -205,7 +202,7 @@ export class CLIConfig {
         this.config.vendorKey = vendorKey;
         this.config.authMethod = 'vendor_key';
         this.config.lastValidated = new Date().toISOString();
-        this.config.authFailureCount = 0; // Reset failure count on successful auth
+        await this.resetFailureCount(); // Reset failure count on successful auth
         await this.save();
     }
     async validateVendorKeyWithServer(vendorKey) {
@@ -251,7 +248,7 @@ export class CLIConfig {
         this.config.token = token;
         this.config.authMethod = 'jwt';
         this.config.lastValidated = new Date().toISOString();
-        this.config.authFailureCount = 0; // Reset failure count on successful auth
+        await this.resetFailureCount(); // Reset failure count on successful auth
         // Decode token to get user info and expiry
         try {
             const decoded = jwtDecode(token);
@@ -288,7 +285,8 @@ export class CLIConfig {
             // Extract timestamp from CLI token
             const parts = token.split('_');
             if (parts.length >= 3) {
-                const timestamp = parseInt(parts[parts.length - 1]);
+                const lastPart = parts[parts.length - 1];
+                const timestamp = lastPart ? parseInt(lastPart) : NaN;
                 if (!isNaN(timestamp)) {
                     // CLI tokens are valid for 30 days
                     const thirtyDaysInMs = 30 * 24 * 60 * 60 * 1000;
@@ -360,15 +358,13 @@ export class CLIConfig {
             });
             // Update last validated timestamp
             this.config.lastValidated = new Date().toISOString();
-            this.config.authFailureCount = 0;
+            await this.resetFailureCount();
             await this.save();
             return true;
         }
         catch (error) {
             // Increment failure count
-            this.config.authFailureCount = (this.config.authFailureCount || 0) + 1;
-            this.config.lastAuthFailure = new Date().toISOString();
-            await this.save();
+            await this.incrementFailureCount();
             return false;
         }
     }
@@ -407,9 +403,7 @@ export class CLIConfig {
         }
         catch (error) {
             // If refresh fails, mark credentials as potentially invalid
-            this.config.authFailureCount = (this.config.authFailureCount || 0) + 1;
-            this.config.lastAuthFailure = new Date().toISOString();
-            await this.save();
+            await this.incrementFailureCount();
         }
     }
     async clearInvalidCredentials() {
@@ -422,6 +416,36 @@ export class CLIConfig {
         this.config.authFailureCount = 0;
         this.config.lastAuthFailure = undefined;
         await this.save();
+    }
+    async incrementFailureCount() {
+        this.config.authFailureCount = (this.config.authFailureCount || 0) + 1;
+        this.config.lastAuthFailure = new Date().toISOString();
+        await this.save();
+    }
+    async resetFailureCount() {
+        this.config.authFailureCount = 0;
+        this.config.lastAuthFailure = undefined;
+        await this.save();
+    }
+    getFailureCount() {
+        return this.config.authFailureCount || 0;
+    }
+    getLastAuthFailure() {
+        return this.config.lastAuthFailure;
+    }
+    shouldDelayAuth() {
+        const failureCount = this.getFailureCount();
+        return failureCount >= 3;
+    }
+    getAuthDelayMs() {
+        const failureCount = this.getFailureCount();
+        if (failureCount < 3)
+            return 0;
+        // Progressive delays: 3 failures = 2s, 4 = 4s, 5 = 8s, 6+ = 16s max
+        const baseDelay = 2000; // 2 seconds
+        const maxDelay = 16000; // 16 seconds max
+        const delay = Math.min(baseDelay * Math.pow(2, failureCount - 3), maxDelay);
+        return delay;
     }
     // Generic get/set methods for MCP and other dynamic config
     get(key) {
@@ -436,7 +460,7 @@ export class CLIConfig {
     }
     // MCP-specific helpers
     getMCPServerPath() {
-        return this.config.mcpServerPath || path.join(__dirname, '../../../../onasis-gateway/mcp-server/server.js');
+        return this.config.mcpServerPath || path.join(process.cwd(), 'onasis-gateway/mcp-server/server.js');
     }
     getMCPServerUrl() {
         return this.config.discoveredServices?.mcp_ws_base ||

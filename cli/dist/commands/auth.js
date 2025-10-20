@@ -15,6 +15,27 @@ const colors = {
     muted: chalk.gray,
     highlight: chalk.white.bold
 };
+// Helper function to handle authentication delays
+async function handleAuthDelay(config) {
+    if (config.shouldDelayAuth()) {
+        const delayMs = config.getAuthDelayMs();
+        const failureCount = config.getFailureCount();
+        const lastFailure = config.getLastAuthFailure();
+        console.log();
+        console.log(chalk.yellow(`⚠️  Multiple authentication failures detected (${failureCount} attempts)`));
+        if (lastFailure) {
+            const lastFailureDate = new Date(lastFailure);
+            console.log(chalk.gray(`Last failure: ${lastFailureDate.toLocaleString()}`));
+        }
+        console.log(chalk.yellow(`Waiting ${Math.round(delayMs / 1000)} seconds before retry...`));
+        console.log(chalk.gray('This delay helps prevent account lockouts and reduces server load.'));
+        // Show countdown
+        const spinner = ora(`Waiting ${Math.round(delayMs / 1000)} seconds...`).start();
+        await new Promise(resolve => setTimeout(resolve, delayMs));
+        spinner.succeed('Ready to retry authentication');
+        console.log();
+    }
+}
 export async function loginCommand(options) {
     const config = new CLIConfig();
     await config.init();
@@ -74,6 +95,8 @@ export async function loginCommand(options) {
     }
 }
 async function handleVendorKeyAuth(vendorKey, config) {
+    // Check for authentication delay before attempting
+    await handleAuthDelay(config);
     const spinner = ora('Validating vendor key...').start();
     try {
         await config.setVendorKey(vendorKey);
@@ -86,8 +109,19 @@ async function handleVendorKeyAuth(vendorKey, config) {
     }
     catch (error) {
         spinner.fail('Vendor key validation failed');
+        // Increment failure count for failed authentication
+        await config.incrementFailureCount();
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
         console.error(chalk.red('✖ Invalid vendor key:'), errorMessage);
+        // Provide guidance for repeated failures
+        const failureCount = config.getFailureCount();
+        if (failureCount >= 3) {
+            console.log();
+            console.log(chalk.yellow('💡 Troubleshooting tips:'));
+            console.log(chalk.gray('• Verify your vendor key format: pk_xxx.sk_xxx'));
+            console.log(chalk.gray('• Check if your key is active in your account dashboard'));
+            console.log(chalk.gray('• Try: lanonasis auth logout && lanonasis auth login'));
+        }
         process.exit(1);
     }
 }
@@ -174,6 +208,8 @@ async function handleCredentialsFlow(options, config) {
     console.log();
     console.log(chalk.yellow('⚙️  Username/Password Authentication'));
     console.log();
+    // Check for authentication delay before attempting
+    await handleAuthDelay(config);
     let { email, password } = options;
     // Get credentials if not provided
     if (!email || !password) {
@@ -215,10 +251,21 @@ async function handleCredentialsFlow(options, config) {
     }
     catch (error) {
         spinner.fail('Login failed');
+        // Increment failure count for failed authentication
+        await config.incrementFailureCount();
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
         const errorResponse = error && typeof error === 'object' && 'response' in error ? error.response : null;
         if (errorResponse && typeof errorResponse === 'object' && 'status' in errorResponse && errorResponse.status === 401) {
             console.error(chalk.red('✖ Invalid email or password'));
+            // Provide guidance for repeated failures
+            const failureCount = config.getFailureCount();
+            if (failureCount >= 3) {
+                console.log();
+                console.log(chalk.yellow('💡 Multiple login failures detected. Consider:'));
+                console.log(chalk.gray('• Double-check your email and password'));
+                console.log(chalk.gray('• Reset your password if needed'));
+                console.log(chalk.gray('• Try using a vendor key instead: lanonasis auth login --vendor-key'));
+            }
             // Ask if they want to register
             const answer = await inquirer.prompt([
                 {
@@ -234,6 +281,15 @@ async function handleCredentialsFlow(options, config) {
         }
         else {
             console.error(chalk.red('✖ Login failed:'), errorMessage);
+            // Provide guidance for repeated failures
+            const failureCount = config.getFailureCount();
+            if (failureCount >= 3) {
+                console.log();
+                console.log(chalk.yellow('💡 Connection issues detected. Try:'));
+                console.log(chalk.gray('• Check your internet connection'));
+                console.log(chalk.gray('• Verify the service is available'));
+                console.log(chalk.gray('• Try again later'));
+            }
         }
         process.exit(1);
     }
