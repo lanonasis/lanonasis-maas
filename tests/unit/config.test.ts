@@ -98,6 +98,145 @@ describe('CLIConfig Atomic Save Implementation', () => {
   });
 });
 
+describe('CLIConfig Authentication Failure Tracking', () => {
+  let testConfigDir: string;
+  let config: CLIConfig;
+
+  beforeEach(async () => {
+    // Create a temporary test directory
+    testConfigDir = path.join(os.tmpdir(), `test-maas-failure-${Date.now()}`);
+    await fs.mkdir(testConfigDir, { recursive: true });
+    
+    // Mock the config directory for testing
+    config = new (CLIConfig as any)();
+    (config as any).configDir = testConfigDir;
+    (config as any).configPath = path.join(testConfigDir, 'config.json');
+    (config as any).lockFile = path.join(testConfigDir, 'config.lock');
+    
+    await config.init();
+  });
+
+  afterEach(async () => {
+    // Clean up test directory
+    try {
+      await fs.rm(testConfigDir, { recursive: true, force: true });
+    } catch {
+      // Ignore cleanup errors
+    }
+  });
+
+  it('should initialize with zero failure count', () => {
+    expect(config.getFailureCount()).toBe(0);
+    expect(config.getLastAuthFailure()).toBeUndefined();
+    expect(config.shouldDelayAuth()).toBe(false);
+    expect(config.getAuthDelayMs()).toBe(0);
+  });
+
+  it('should increment failure count correctly', async () => {
+    expect(config.getFailureCount()).toBe(0);
+    
+    await config.incrementFailureCount();
+    expect(config.getFailureCount()).toBe(1);
+    expect(config.getLastAuthFailure()).toBeDefined();
+    
+    await config.incrementFailureCount();
+    expect(config.getFailureCount()).toBe(2);
+  });
+
+  it('should reset failure count correctly', async () => {
+    // First increment some failures
+    await config.incrementFailureCount();
+    await config.incrementFailureCount();
+    expect(config.getFailureCount()).toBe(2);
+    
+    // Then reset
+    await config.resetFailureCount();
+    expect(config.getFailureCount()).toBe(0);
+    expect(config.getLastAuthFailure()).toBeUndefined();
+  });
+
+  it('should require delay after 3 failures', async () => {
+    // Add 2 failures - should not require delay
+    await config.incrementFailureCount();
+    await config.incrementFailureCount();
+    expect(config.shouldDelayAuth()).toBe(false);
+    expect(config.getAuthDelayMs()).toBe(0);
+    
+    // Add 3rd failure - should require delay
+    await config.incrementFailureCount();
+    expect(config.shouldDelayAuth()).toBe(true);
+    expect(config.getAuthDelayMs()).toBe(2000); // 2 seconds for 3 failures
+  });
+
+  it('should calculate progressive delays correctly', async () => {
+    // 3 failures = 2s
+    await config.incrementFailureCount();
+    await config.incrementFailureCount();
+    await config.incrementFailureCount();
+    expect(config.getAuthDelayMs()).toBe(2000);
+    
+    // 4 failures = 4s
+    await config.incrementFailureCount();
+    expect(config.getAuthDelayMs()).toBe(4000);
+    
+    // 5 failures = 8s
+    await config.incrementFailureCount();
+    expect(config.getAuthDelayMs()).toBe(8000);
+    
+    // 6 failures = 16s (max)
+    await config.incrementFailureCount();
+    expect(config.getAuthDelayMs()).toBe(16000);
+    
+    // 7+ failures should still be 16s (max)
+    await config.incrementFailureCount();
+    expect(config.getAuthDelayMs()).toBe(16000);
+  });
+
+  it('should persist failure count across config saves', async () => {
+    await config.incrementFailureCount();
+    await config.incrementFailureCount();
+    expect(config.getFailureCount()).toBe(2);
+    
+    // Save and reload config
+    await config.save();
+    
+    // Create new config instance to test persistence
+    const newConfig = new (CLIConfig as any)();
+    (newConfig as any).configDir = testConfigDir;
+    (newConfig as any).configPath = path.join(testConfigDir, 'config.json');
+    (newConfig as any).lockFile = path.join(testConfigDir, 'config.lock');
+    await newConfig.init();
+    
+    expect(newConfig.getFailureCount()).toBe(2);
+  });
+
+  it('should reset failure count on successful authentication', async () => {
+    // Add some failures
+    await config.incrementFailureCount();
+    await config.incrementFailureCount();
+    expect(config.getFailureCount()).toBe(2);
+    
+    // Simulate successful token setting (which should reset failures)
+    await config.setToken('test-token');
+    expect(config.getFailureCount()).toBe(0);
+  });
+
+  it('should store last failure timestamp', async () => {
+    const beforeTime = new Date();
+    await config.incrementFailureCount();
+    const afterTime = new Date();
+    
+    const lastFailure = config.getLastAuthFailure();
+    expect(lastFailure).toBeDefined();
+    
+    if (lastFailure) {
+      const failureTime = new Date(lastFailure);
+      expect(failureTime.getTime()).toBeGreaterThanOrEqual(beforeTime.getTime());
+      expect(failureTime.getTime()).toBeLessThanOrEqual(afterTime.getTime());
+    }
+  });
+});
+
 describe('CLIConfig Credential Validation Implementation', () => {
   it('should have implemented credential validation methods', () => {
     // This test verifies that the implementation was completed

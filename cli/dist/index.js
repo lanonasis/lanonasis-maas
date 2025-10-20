@@ -211,15 +211,45 @@ authCmd
     .action(async () => {
     const isAuth = await cliConfig.isAuthenticated();
     const user = await cliConfig.getCurrentUser();
+    const failureCount = cliConfig.getFailureCount();
+    const lastFailure = cliConfig.getLastAuthFailure();
+    const authMethod = cliConfig.get('authMethod');
+    const lastValidated = cliConfig.get('lastValidated');
+    console.log(chalk.blue.bold('🔐 Authentication Status'));
+    console.log('━'.repeat(40));
     if (isAuth && user) {
         console.log(chalk.green('✓ Authenticated'));
         console.log(`Email: ${user.email}`);
         console.log(`Organization: ${user.organization_id}`);
         console.log(`Plan: ${user.plan}`);
+        if (authMethod) {
+            console.log(`Method: ${authMethod}`);
+        }
+        if (lastValidated) {
+            const validatedDate = new Date(lastValidated);
+            console.log(`Last validated: ${validatedDate.toLocaleString()}`);
+        }
     }
     else {
         console.log(chalk.red('✖ Not authenticated'));
         console.log(chalk.yellow('Run:'), chalk.white('memory login'));
+    }
+    // Show failure tracking information
+    if (failureCount > 0) {
+        console.log();
+        console.log(chalk.yellow('⚠️  Authentication Issues:'));
+        console.log(`Failed attempts: ${failureCount}`);
+        if (lastFailure) {
+            const failureDate = new Date(lastFailure);
+            console.log(`Last failure: ${failureDate.toLocaleString()}`);
+        }
+        if (cliConfig.shouldDelayAuth()) {
+            const delayMs = cliConfig.getAuthDelayMs();
+            console.log(chalk.yellow(`Next retry delay: ${Math.round(delayMs / 1000)} seconds`));
+        }
+        console.log();
+        console.log(chalk.cyan('💡 To reset failure count:'));
+        console.log(chalk.white('  lanonasis auth logout && lanonasis auth login'));
     }
 });
 // MCP Commands (primary interface)
