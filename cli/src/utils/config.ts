@@ -261,7 +261,7 @@ export class CLIConfig {
     this.config.vendorKey = vendorKey;
     this.config.authMethod = 'vendor_key';
     this.config.lastValidated = new Date().toISOString();
-    this.config.authFailureCount = 0; // Reset failure count on successful auth
+    await this.resetFailureCount(); // Reset failure count on successful auth
     await this.save();
   }
 
@@ -312,7 +312,7 @@ export class CLIConfig {
     this.config.token = token;
     this.config.authMethod = 'jwt';
     this.config.lastValidated = new Date().toISOString();
-    this.config.authFailureCount = 0; // Reset failure count on successful auth
+    await this.resetFailureCount(); // Reset failure count on successful auth
     
     // Decode token to get user info and expiry
     try {
@@ -438,15 +438,13 @@ export class CLIConfig {
       
       // Update last validated timestamp
       this.config.lastValidated = new Date().toISOString();
-      this.config.authFailureCount = 0;
+      await this.resetFailureCount();
       await this.save();
       
       return true;
     } catch (error: any) {
       // Increment failure count
-      this.config.authFailureCount = (this.config.authFailureCount || 0) + 1;
-      this.config.lastAuthFailure = new Date().toISOString();
-      await this.save();
+      await this.incrementFailureCount();
       
       return false;
     }
@@ -492,9 +490,7 @@ export class CLIConfig {
       }
     } catch (error) {
       // If refresh fails, mark credentials as potentially invalid
-      this.config.authFailureCount = (this.config.authFailureCount || 0) + 1;
-      this.config.lastAuthFailure = new Date().toISOString();
-      await this.save();
+      await this.incrementFailureCount();
     }
   }
 
@@ -508,6 +504,42 @@ export class CLIConfig {
     this.config.authFailureCount = 0;
     this.config.lastAuthFailure = undefined;
     await this.save();
+  }
+
+  async incrementFailureCount(): Promise<void> {
+    this.config.authFailureCount = (this.config.authFailureCount || 0) + 1;
+    this.config.lastAuthFailure = new Date().toISOString();
+    await this.save();
+  }
+
+  async resetFailureCount(): Promise<void> {
+    this.config.authFailureCount = 0;
+    this.config.lastAuthFailure = undefined;
+    await this.save();
+  }
+
+  getFailureCount(): number {
+    return this.config.authFailureCount || 0;
+  }
+
+  getLastAuthFailure(): string | undefined {
+    return this.config.lastAuthFailure;
+  }
+
+  shouldDelayAuth(): boolean {
+    const failureCount = this.getFailureCount();
+    return failureCount >= 3;
+  }
+
+  getAuthDelayMs(): number {
+    const failureCount = this.getFailureCount();
+    if (failureCount < 3) return 0;
+    
+    // Progressive delays: 3 failures = 2s, 4 = 4s, 5 = 8s, 6+ = 16s max
+    const baseDelay = 2000; // 2 seconds
+    const maxDelay = 16000; // 16 seconds max
+    const delay = Math.min(baseDelay * Math.pow(2, failureCount - 3), maxDelay);
+    return delay;
   }
 
   // Generic get/set methods for MCP and other dynamic config
