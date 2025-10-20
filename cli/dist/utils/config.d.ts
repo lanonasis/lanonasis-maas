@@ -38,6 +38,12 @@ export declare class CLIConfig {
     validateStoredCredentials(): Promise<boolean>;
     refreshTokenIfNeeded(): Promise<void>;
     clearInvalidCredentials(): Promise<void>;
+    incrementFailureCount(): Promise<void>;
+    resetFailureCount(): Promise<void>;
+    getFailureCount(): number;
+    getLastAuthFailure(): string | undefined;
+    shouldDelayAuth(): boolean;
+    getAuthDelayMs(): number;
     get<T = unknown>(key: string): T;
     set(key: string, value: unknown): void;
     setAndSave(key: string, value: unknown): Promise<void>;
