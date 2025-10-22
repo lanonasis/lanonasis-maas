@@ -32,6 +32,9 @@ interface CLIConfigData {
     mcp_sse_base?: string;
     project_scope: string;
   };
+  lastServiceDiscovery?: string;
+  manualEndpointOverrides?: boolean;
+  lastManualEndpointUpdate?: string;
   // Enhanced Authentication
   vendorKey?: string | undefined;
   authMethod?: 'jwt' | 'vendor_key' | 'oauth' | undefined;
@@ -205,13 +208,24 @@ export class CLIConfig {
            'https://api.lanonasis.com/api/v1';
   }
 
-  // Service Discovery Integration
-  async discoverServices(): Promise<void> {
+  // Enhanced Service Discovery Integration
+  async discoverServices(verbose: boolean = false): Promise<void> {
+    const discoveryUrl = 'https://mcp.lanonasis.com/.well-known/onasis.json';
+    
     try {
       // Use axios instead of fetch for consistency
       const axios = (await import('axios')).default;
-      const discoveryUrl = 'https://mcp.lanonasis.com/.well-known/onasis.json';
-      const response = await axios.get(discoveryUrl);
+      
+      if (verbose) {
+        console.log(`🔍 Discovering services from ${discoveryUrl}...`);
+      }
+      
+      const response = await axios.get(discoveryUrl, {
+        timeout: 10000,
+        headers: {
+          'User-Agent': 'Lanonasis-CLI/3.0.13'
+        }
+      });
       
       // Map discovery response to our config format
       const discovered = response.data;
@@ -223,25 +237,146 @@ export class CLIConfig {
         mcp_sse_base: discovered.endpoints?.sse || 'https://mcp.lanonasis.com/api/v1/events',
         project_scope: 'lanonasis-maas'
       };
+      
+      // Mark discovery as successful
+      this.config.lastServiceDiscovery = new Date().toISOString();
       await this.save();
-    } catch {
-      // Service discovery failed, use fallback defaults
-      if (process.env.CLI_VERBOSE === 'true') {
-        console.log('Service discovery failed, using fallback defaults');
+      
+      if (verbose) {
+        console.log('✓ Service discovery completed successfully');
+        console.log(`  Auth: ${this.config.discoveredServices.auth_base}`);
+        console.log(`  MCP: ${this.config.discoveredServices.mcp_base}`);
+        console.log(`  WebSocket: ${this.config.discoveredServices.mcp_ws_base}`);
       }
       
-      // Set fallback service endpoints to prevent double slash issues
-      // Use mcp.lanonasis.com for MCP services (proxied to port 3001)
-      this.config.discoveredServices = {
-        auth_base: 'https://api.lanonasis.com',  // CLI auth goes to central auth system
-        memory_base: 'https://api.lanonasis.com/api/v1',  // Memory via onasis-core
-        mcp_base: 'https://mcp.lanonasis.com/api/v1',  // MCP HTTP/REST
-        mcp_ws_base: 'wss://mcp.lanonasis.com/ws',  // MCP WebSocket
-        mcp_sse_base: 'https://mcp.lanonasis.com/api/v1/events',  // MCP SSE
-        project_scope: 'lanonasis-maas'  // Correct project scope
-      };
-      await this.save();
+    } catch (error: any) {
+      // Enhanced error handling with user-visible messages
+      await this.handleServiceDiscoveryFailure(error, verbose);
     }
+  }
+
+  private async handleServiceDiscoveryFailure(error: any, verbose: boolean): Promise<void> {
+    const errorType = this.categorizeServiceDiscoveryError(error);
+    
+    if (verbose || process.env.CLI_VERBOSE === 'true') {
+      console.log('⚠️  Service discovery failed, using cached/fallback endpoints');
+      
+      switch (errorType) {
+        case 'network_error':
+          console.log('   Reason: Network connection failed');
+          console.log('   This is normal when offline or behind restrictive firewalls');
+          break;
+        case 'timeout':
+          console.log('   Reason: Request timed out');
+          console.log('   The discovery service may be temporarily slow');
+          break;
+        case 'server_error':
+          console.log('   Reason: Discovery service returned an error');
+          console.log('   The service may be temporarily unavailable');
+          break;
+        case 'invalid_response':
+          console.log('   Reason: Invalid response format from discovery service');
+          console.log('   Using known working endpoints instead');
+          break;
+        default:
+          console.log(`   Reason: ${error.message || 'Unknown error'}`);
+      }
+    }
+    
+    // Use cached endpoints if available and recent (within 24 hours)
+    if (this.config.discoveredServices && this.config.lastServiceDiscovery) {
+      const lastDiscovery = new Date(this.config.lastServiceDiscovery);
+      const hoursSinceDiscovery = (Date.now() - lastDiscovery.getTime()) / (1000 * 60 * 60);
+      
+      if (hoursSinceDiscovery < 24) {
+        if (verbose) {
+          console.log('✓ Using cached service endpoints (less than 24 hours old)');
+        }
+        return;
+      }
+    }
+    
+    // Set fallback service endpoints
+    this.config.discoveredServices = {
+      auth_base: 'https://api.lanonasis.com',  // CLI auth goes to central auth system
+      memory_base: 'https://api.lanonasis.com/api/v1',  // Memory via onasis-core
+      mcp_base: 'https://mcp.lanonasis.com/api/v1',  // MCP HTTP/REST
+      mcp_ws_base: 'wss://mcp.lanonasis.com/ws',  // MCP WebSocket
+      mcp_sse_base: 'https://mcp.lanonasis.com/api/v1/events',  // MCP SSE
+      project_scope: 'lanonasis-maas'  // Correct project scope
+    };
+    
+    // Mark as fallback (don't set lastServiceDiscovery)
+    await this.save();
+    
+    if (verbose) {
+      console.log('✓ Using fallback service endpoints');
+      console.log('   These are the standard production endpoints');
+    }
+  }
+
+  private categorizeServiceDiscoveryError(error: any): 'network_error' | 'timeout' | 'server_error' | 'invalid_response' | 'unknown' {
+    if (error.code) {
+      switch (error.code) {
+        case 'ECONNREFUSED':
+        case 'ENOTFOUND':
+        case 'ECONNRESET':
+        case 'ENETUNREACH':
+          return 'network_error';
+        case 'ETIMEDOUT':
+          return 'timeout';
+      }
+    }
+    
+    if (error.response?.status >= 500) {
+      return 'server_error';
+    }
+    
+    if (error.response?.status === 404) {
+      return 'invalid_response';
+    }
+    
+    const message = error.message?.toLowerCase() || '';
+    if (message.includes('timeout')) {
+      return 'timeout';
+    }
+    if (message.includes('network') || message.includes('connection')) {
+      return 'network_error';
+    }
+    
+    return 'unknown';
+  }
+
+  // Manual endpoint override functionality
+  async setManualEndpoints(endpoints: Partial<CLIConfigData['discoveredServices']>): Promise<void> {
+    if (!this.config.discoveredServices) {
+      // Initialize with defaults first
+      await this.discoverServices();
+    }
+    
+    // Merge manual overrides with existing endpoints
+    this.config.discoveredServices = {
+      ...this.config.discoveredServices!,
+      ...endpoints
+    };
+    
+    // Mark as manually configured
+    this.config.manualEndpointOverrides = true;
+    this.config.lastManualEndpointUpdate = new Date().toISOString();
+    
+    await this.save();
+  }
+
+  hasManualEndpointOverrides(): boolean {
+    return !!this.config.manualEndpointOverrides;
+  }
+
+  async clearManualEndpointOverrides(): Promise<void> {
+    this.config.manualEndpointOverrides = undefined;
+    this.config.lastManualEndpointUpdate = undefined;
+    
+    // Rediscover services
+    await this.discoverServices();
   }
 
   getDiscoveredApiUrl(): string {
@@ -250,9 +385,10 @@ export class CLIConfig {
 
   // Enhanced authentication support
   async setVendorKey(vendorKey: string): Promise<void> {
-    // Validate vendor key format (pk_*.sk_*)
-    if (!vendorKey.match(/^pk_[a-zA-Z0-9]+\.sk_[a-zA-Z0-9]+$/)) {
-      throw new Error('Invalid vendor key format. Expected: pk_xxx.sk_xxx');
+    // Enhanced format validation with detailed error messages
+    const formatValidation = this.validateVendorKeyFormat(vendorKey);
+    if (formatValidation !== true) {
+      throw new Error(typeof formatValidation === 'string' ? formatValidation : 'Invalid vendor key format');
     }
     
     // Server-side validation
@@ -263,6 +399,56 @@ export class CLIConfig {
     this.config.lastValidated = new Date().toISOString();
     await this.resetFailureCount(); // Reset failure count on successful auth
     await this.save();
+  }
+
+  validateVendorKeyFormat(vendorKey: string): string | boolean {
+    if (!vendorKey || vendorKey.trim().length === 0) {
+      return 'Vendor key is required';
+    }
+    
+    const trimmed = vendorKey.trim();
+    
+    // Check basic format
+    if (!trimmed.includes('.')) {
+      return 'Invalid vendor key format: Must contain a dot (.) separator. Expected format: pk_xxx.sk_xxx';
+    }
+    
+    const parts = trimmed.split('.');
+    if (parts.length !== 2) {
+      return 'Invalid vendor key format: Must have exactly two parts separated by a dot. Expected format: pk_xxx.sk_xxx';
+    }
+    
+    const [publicPart, secretPart] = parts;
+    
+    // Validate public key part
+    if (!publicPart.startsWith('pk_')) {
+      return 'Invalid vendor key format: First part must start with "pk_". Expected format: pk_xxx.sk_xxx';
+    }
+    
+    if (publicPart.length < 11) { // pk_ + minimum 8 chars
+      return 'Invalid vendor key format: Public key part is too short. Expected format: pk_xxx.sk_xxx (minimum 8 characters after "pk_")';
+    }
+    
+    const publicKeyContent = publicPart.substring(3); // Remove 'pk_'
+    if (!/^[a-zA-Z0-9]+$/.test(publicKeyContent)) {
+      return 'Invalid vendor key format: Public key part contains invalid characters. Only letters and numbers are allowed after "pk_"';
+    }
+    
+    // Validate secret key part
+    if (!secretPart.startsWith('sk_')) {
+      return 'Invalid vendor key format: Second part must start with "sk_". Expected format: pk_xxx.sk_xxx';
+    }
+    
+    if (secretPart.length < 19) { // sk_ + minimum 16 chars
+      return 'Invalid vendor key format: Secret key part is too short. Expected format: pk_xxx.sk_xxx (minimum 16 characters after "sk_")';
+    }
+    
+    const secretKeyContent = secretPart.substring(3); // Remove 'sk_'
+    if (!/^[a-zA-Z0-9]+$/.test(secretKeyContent)) {
+      return 'Invalid vendor key format: Secret key part contains invalid characters. Only letters and numbers are allowed after "sk_"';
+    }
+    
+    return true;
   }
 
   private async validateVendorKeyWithServer(vendorKey: string): Promise<void> {
@@ -285,12 +471,34 @@ export class CLIConfig {
         timeout: 10000
       });
     } catch (error: any) {
-      if (error.response?.status === 401 || error.response?.status === 403) {
-        throw new Error('Invalid vendor key: Authentication failed with server');
-      } else if (error.code === 'ECONNREFUSED' || error.code === 'ENOTFOUND') {
-        throw new Error('Cannot validate vendor key: Server unreachable');
+      // Provide specific error messages based on response
+      if (error.response?.status === 401) {
+        const errorData = error.response.data;
+        if (errorData?.error?.includes('expired') || errorData?.message?.includes('expired')) {
+          throw new Error('Vendor key has expired. Please generate a new key from your dashboard.');
+        } else if (errorData?.error?.includes('revoked') || errorData?.message?.includes('revoked')) {
+          throw new Error('Vendor key has been revoked. Please generate a new key from your dashboard.');
+        } else if (errorData?.error?.includes('invalid') || errorData?.message?.includes('invalid')) {
+          throw new Error('Vendor key is invalid. Please check the key format and ensure it was copied correctly.');
+        } else {
+          throw new Error('Vendor key authentication failed. The key may be invalid, expired, or revoked.');
+        }
+      } else if (error.response?.status === 403) {
+        throw new Error('Vendor key access denied. The key may not have sufficient permissions for this operation.');
+      } else if (error.response?.status === 429) {
+        throw new Error('Too many validation attempts. Please wait a moment before trying again.');
+      } else if (error.response?.status >= 500) {
+        throw new Error('Server error during validation. Please try again in a few moments.');
+      } else if (error.code === 'ECONNREFUSED') {
+        throw new Error('Cannot connect to authentication server. Please check your internet connection and try again.');
+      } else if (error.code === 'ENOTFOUND') {
+        throw new Error('Authentication server not found. Please check your internet connection.');
+      } else if (error.code === 'ETIMEDOUT') {
+        throw new Error('Validation request timed out. Please check your internet connection and try again.');
+      } else if (error.code === 'ECONNRESET') {
+        throw new Error('Connection was reset during validation. Please try again.');
       } else {
-        throw new Error(`Vendor key validation failed: ${error.message}`);
+        throw new Error(`Vendor key validation failed: ${error.message || 'Unknown error'}`);
       }
     }
   }
@@ -540,6 +748,15 @@ export class CLIConfig {
     const maxDelay = 16000; // 16 seconds max
     const delay = Math.min(baseDelay * Math.pow(2, failureCount - 3), maxDelay);
     return delay;
+  }
+
+  async getDeviceId(): Promise<string> {
+    if (!this.config.deviceId) {
+      // Generate a new device ID
+      this.config.deviceId = randomUUID();
+      await this.save();
+    }
+    return this.config.deviceId;
   }
 
   // Generic get/set methods for MCP and other dynamic config

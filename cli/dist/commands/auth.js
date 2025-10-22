@@ -36,6 +36,340 @@ async function handleAuthDelay(config) {
         console.log();
     }
 }
+// Enhanced authentication failure handler
+async function handleAuthenticationFailure(error, config, authMethod = 'jwt') {
+    // Increment failure count
+    await config.incrementFailureCount();
+    const failureCount = config.getFailureCount();
+    // Determine error type and provide specific guidance
+    const errorType = categorizeAuthError(error);
+    console.log();
+    console.log(chalk.red('✖ Authentication failed'));
+    switch (errorType) {
+        case 'invalid_credentials':
+            console.log(chalk.red('Invalid credentials provided'));
+            if (authMethod === 'vendor_key') {
+                console.log(chalk.gray('• Check your vendor key format: pk_xxx.sk_xxx'));
+                console.log(chalk.gray('• Verify the key is active in your account dashboard'));
+                console.log(chalk.gray('• Ensure you copied the complete key including both parts'));
+            }
+            else {
+                console.log(chalk.gray('• Double-check your email and password'));
+                console.log(chalk.gray('• Passwords are case-sensitive'));
+                console.log(chalk.gray('• Consider resetting your password if needed'));
+            }
+            break;
+        case 'network_error':
+            console.log(chalk.red('Network connection failed'));
+            console.log(chalk.gray('• Check your internet connection'));
+            console.log(chalk.gray('• Verify you can access https://api.lanonasis.com'));
+            console.log(chalk.gray('• Try again in a few moments'));
+            if (failureCount >= 2) {
+                console.log(chalk.gray('• Consider using a different network if issues persist'));
+            }
+            break;
+        case 'server_error':
+            console.log(chalk.red('Server temporarily unavailable'));
+            console.log(chalk.gray('• The authentication service may be experiencing issues'));
+            console.log(chalk.gray('• Please try again in a few minutes'));
+            console.log(chalk.gray('• Check https://status.lanonasis.com for service status'));
+            break;
+        case 'rate_limited':
+            console.log(chalk.red('Too many authentication attempts'));
+            console.log(chalk.gray('• Please wait before trying again'));
+            console.log(chalk.gray('• Rate limiting helps protect your account'));
+            console.log(chalk.gray('• Consider using a vendor key for automated access'));
+            break;
+        case 'expired_token':
+            console.log(chalk.red('Authentication token has expired'));
+            console.log(chalk.gray('• Please log in again to refresh your session'));
+            console.log(chalk.gray('• Consider using a vendor key for longer-term access'));
+            await config.clearInvalidCredentials();
+            break;
+        default:
+            console.log(chalk.red(`Unexpected error: ${error.message || 'Unknown error'}`));
+            console.log(chalk.gray('• Please try again'));
+            console.log(chalk.gray('• If the problem persists, contact support'));
+    }
+    // Progressive guidance for repeated failures
+    if (failureCount >= 3) {
+        console.log();
+        console.log(chalk.yellow('💡 Multiple failures detected. Recovery options:'));
+        if (authMethod === 'vendor_key') {
+            console.log(chalk.cyan('• Generate a new vendor key from your dashboard'));
+            console.log(chalk.cyan('• Try: lanonasis auth logout && lanonasis auth login'));
+            console.log(chalk.cyan('• Switch to browser login: lanonasis auth login --use-web-auth'));
+        }
+        else {
+            console.log(chalk.cyan('• Reset your password if you\'re unsure'));
+            console.log(chalk.cyan('• Try vendor key authentication instead'));
+            console.log(chalk.cyan('• Clear stored config: lanonasis auth logout'));
+        }
+        if (failureCount >= 5) {
+            console.log(chalk.yellow('• Consider contacting support if issues persist'));
+            console.log(chalk.gray('• Include error details and your email address'));
+        }
+    }
+}
+// Categorize authentication errors for specific handling
+function categorizeAuthError(error) {
+    if (!error)
+        return 'unknown';
+    // Check HTTP status codes
+    if (error.response?.status) {
+        const status = error.response.status;
+        switch (status) {
+            case 401:
+                // Check if it's specifically an expired token
+                if (error.response.data?.error?.includes('expired') || error.response.data?.message?.includes('expired')) {
+                    return 'expired_token';
+                }
+                return 'invalid_credentials';
+            case 403:
+                return 'invalid_credentials';
+            case 429:
+                return 'rate_limited';
+            case 500:
+            case 502:
+            case 503:
+            case 504:
+                return 'server_error';
+        }
+    }
+    // Check error codes for network issues
+    if (error.code) {
+        switch (error.code) {
+            case 'ECONNREFUSED':
+            case 'ENOTFOUND':
+            case 'ECONNRESET':
+            case 'ETIMEDOUT':
+            case 'ENETUNREACH':
+                return 'network_error';
+        }
+    }
+    // Check error messages
+    const message = error.message?.toLowerCase() || '';
+    if (message.includes('network') || message.includes('connection') || message.includes('timeout')) {
+        return 'network_error';
+    }
+    if (message.includes('invalid') || message.includes('unauthorized') || message.includes('forbidden')) {
+        return 'invalid_credentials';
+    }
+    if (message.includes('expired')) {
+        return 'expired_token';
+    }
+    if (message.includes('rate limit') || message.includes('too many')) {
+        return 'rate_limited';
+    }
+    return 'unknown';
+}
+export async function diagnoseCommand() {
+    const config = new CLIConfig();
+    await config.init();
+    console.log(chalk.blue.bold('🔍 Authentication Diagnostic'));
+    console.log(colors.info('━'.repeat(50)));
+    console.log();
+    const diagnostics = {
+        configExists: false,
+        hasCredentials: false,
+        credentialType: 'none',
+        credentialsValid: false,
+        tokenExpired: false,
+        authFailures: 0,
+        lastFailure: null,
+        endpointsReachable: false,
+        serviceDiscovery: false,
+        deviceId: null
+    };
+    // Step 1: Check if config exists
+    console.log(chalk.cyan('1. Configuration File'));
+    try {
+        const configExists = await config.exists();
+        diagnostics.configExists = configExists;
+        if (configExists) {
+            console.log(chalk.green('   ✓ Config file exists at'), config.getConfigPath());
+        }
+        else {
+            console.log(chalk.red('   ✖ Config file not found at'), config.getConfigPath());
+            console.log(chalk.gray('   → Run: lanonasis auth login'));
+        }
+    }
+    catch (error) {
+        console.log(chalk.red('   ✖ Error checking config:'), error instanceof Error ? error.message : 'Unknown error');
+    }
+    // Step 2: Check stored credentials
+    console.log(chalk.cyan('\n2. Stored Credentials'));
+    const token = config.getToken();
+    const vendorKey = config.getVendorKey();
+    const authMethod = config.get('authMethod');
+    if (vendorKey) {
+        diagnostics.hasCredentials = true;
+        diagnostics.credentialType = 'vendor_key';
+        console.log(chalk.green('   ✓ Vendor key found'));
+        // Validate vendor key format
+        const formatValidation = config.validateVendorKeyFormat(vendorKey);
+        if (formatValidation === true) {
+            console.log(chalk.green('   ✓ Vendor key format is valid'));
+        }
+        else {
+            console.log(chalk.red('   ✖ Vendor key format is invalid:'));
+            console.log(chalk.gray(`     ${formatValidation}`));
+        }
+    }
+    else if (token) {
+        diagnostics.hasCredentials = true;
+        diagnostics.credentialType = authMethod === 'oauth' ? 'oauth' : 'jwt';
+        console.log(chalk.green(`   ✓ ${diagnostics.credentialType.toUpperCase()} token found`));
+        // Check token expiry
+        try {
+            const isAuth = await config.isAuthenticated();
+            if (!isAuth) {
+                diagnostics.tokenExpired = true;
+                console.log(chalk.red('   ✖ Token is expired'));
+            }
+            else {
+                console.log(chalk.green('   ✓ Token is not expired'));
+            }
+        }
+        catch (error) {
+            console.log(chalk.yellow('   ⚠ Could not validate token expiry'));
+        }
+    }
+    else {
+        console.log(chalk.red('   ✖ No credentials found'));
+        console.log(chalk.gray('   → Run: lanonasis auth login'));
+    }
+    // Step 3: Check authentication failures
+    console.log(chalk.cyan('\n3. Authentication History'));
+    diagnostics.authFailures = config.getFailureCount();
+    diagnostics.lastFailure = config.getLastAuthFailure();
+    if (diagnostics.authFailures === 0) {
+        console.log(chalk.green('   ✓ No recent authentication failures'));
+    }
+    else {
+        console.log(chalk.yellow(`   ⚠ ${diagnostics.authFailures} recent authentication failures`));
+        if (diagnostics.lastFailure) {
+            const lastFailureDate = new Date(diagnostics.lastFailure);
+            console.log(chalk.gray(`     Last failure: ${lastFailureDate.toLocaleString()}`));
+        }
+        if (config.shouldDelayAuth()) {
+            const delayMs = config.getAuthDelayMs();
+            console.log(chalk.yellow(`   ⚠ Authentication delay active: ${Math.round(delayMs / 1000)}s`));
+        }
+    }
+    // Step 4: Test credential validation against server
+    console.log(chalk.cyan('\n4. Server Validation'));
+    if (diagnostics.hasCredentials) {
+        const spinner = ora('Testing credentials against server...').start();
+        try {
+            const isValid = await config.validateStoredCredentials();
+            diagnostics.credentialsValid = isValid;
+            if (isValid) {
+                spinner.succeed('Credentials are valid');
+                console.log(chalk.green('   ✓ Server authentication successful'));
+            }
+            else {
+                spinner.fail('Credentials are invalid');
+                console.log(chalk.red('   ✖ Server rejected credentials'));
+                console.log(chalk.gray('   → Try: lanonasis auth login'));
+            }
+        }
+        catch (error) {
+            spinner.fail('Server validation failed');
+            console.log(chalk.red('   ✖ Could not validate with server:'));
+            console.log(chalk.gray(`     ${error instanceof Error ? error.message : 'Unknown error'}`));
+        }
+    }
+    else {
+        console.log(chalk.gray('   - Skipped (no credentials to validate)'));
+    }
+    // Step 5: Test endpoint connectivity
+    console.log(chalk.cyan('\n5. Endpoint Connectivity'));
+    const spinner2 = ora('Testing authentication endpoints...').start();
+    try {
+        await config.discoverServices();
+        diagnostics.serviceDiscovery = true;
+        const services = config.get('discoveredServices');
+        if (services) {
+            spinner2.succeed('Authentication endpoints reachable');
+            console.log(chalk.green('   ✓ Service discovery successful'));
+            console.log(chalk.gray(`     Auth endpoint: ${services.auth_base}`));
+            diagnostics.endpointsReachable = true;
+        }
+        else {
+            spinner2.warn('Using fallback endpoints');
+            console.log(chalk.yellow('   ⚠ Service discovery failed, using fallbacks'));
+            diagnostics.endpointsReachable = true; // Fallbacks still work
+        }
+    }
+    catch (error) {
+        spinner2.fail('Endpoint connectivity failed');
+        console.log(chalk.red('   ✖ Cannot reach authentication endpoints'));
+        console.log(chalk.gray(`     ${error instanceof Error ? error.message : 'Unknown error'}`));
+        console.log(chalk.gray('   → Check internet connection'));
+    }
+    // Step 6: Device identification
+    console.log(chalk.cyan('\n6. Device Information'));
+    try {
+        const deviceId = await config.getDeviceId();
+        diagnostics.deviceId = deviceId;
+        console.log(chalk.green('   ✓ Device ID:'), chalk.gray(deviceId));
+    }
+    catch (error) {
+        console.log(chalk.yellow('   ⚠ Could not get device ID'));
+    }
+    // Summary and recommendations
+    console.log(chalk.blue.bold('\n📋 Diagnostic Summary'));
+    console.log(colors.info('━'.repeat(50)));
+    const issues = [];
+    const recommendations = [];
+    if (!diagnostics.configExists) {
+        issues.push('No configuration file found');
+        recommendations.push('Run: lanonasis auth login');
+    }
+    if (!diagnostics.hasCredentials) {
+        issues.push('No authentication credentials stored');
+        recommendations.push('Run: lanonasis auth login --vendor-key pk_xxx.sk_xxx');
+    }
+    if (diagnostics.hasCredentials && !diagnostics.credentialsValid) {
+        issues.push('Stored credentials are invalid');
+        recommendations.push('Run: lanonasis auth logout && lanonasis auth login');
+    }
+    if (diagnostics.tokenExpired) {
+        issues.push('Authentication token has expired');
+        recommendations.push('Run: lanonasis auth login');
+    }
+    if (diagnostics.authFailures >= 3) {
+        issues.push(`Multiple authentication failures (${diagnostics.authFailures})`);
+        recommendations.push('Wait for delay period, then try: lanonasis auth login');
+    }
+    if (!diagnostics.endpointsReachable) {
+        issues.push('Cannot reach authentication endpoints');
+        recommendations.push('Check internet connection and firewall settings');
+    }
+    if (issues.length === 0) {
+        console.log(chalk.green('✅ All authentication checks passed!'));
+        console.log(chalk.cyan('   Your authentication is working correctly.'));
+    }
+    else {
+        console.log(chalk.red(`❌ Found ${issues.length} issue(s):`));
+        issues.forEach(issue => {
+            console.log(chalk.red(`   • ${issue}`));
+        });
+        console.log(chalk.yellow('\n💡 Recommended actions:'));
+        recommendations.forEach(rec => {
+            console.log(chalk.cyan(`   • ${rec}`));
+        });
+    }
+    // Additional troubleshooting info
+    if (diagnostics.authFailures > 0 || !diagnostics.credentialsValid) {
+        console.log(chalk.gray('\n🔧 Additional troubleshooting:'));
+        console.log(chalk.gray('   • Verify your vendor key format: pk_xxx.sk_xxx'));
+        console.log(chalk.gray('   • Check if your key is active in the dashboard'));
+        console.log(chalk.gray('   • Try browser authentication: lanonasis auth login --use-web-auth'));
+        console.log(chalk.gray('   • Contact support if issues persist'));
+    }
+}
 export async function loginCommand(options) {
     const config = new CLIConfig();
     await config.init();
@@ -109,19 +443,8 @@ async function handleVendorKeyAuth(vendorKey, config) {
     }
     catch (error) {
         spinner.fail('Vendor key validation failed');
-        // Increment failure count for failed authentication
-        await config.incrementFailureCount();
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-        console.error(chalk.red('✖ Invalid vendor key:'), errorMessage);
-        // Provide guidance for repeated failures
-        const failureCount = config.getFailureCount();
-        if (failureCount >= 3) {
-            console.log();
-            console.log(chalk.yellow('💡 Troubleshooting tips:'));
-            console.log(chalk.gray('• Verify your vendor key format: pk_xxx.sk_xxx'));
-            console.log(chalk.gray('• Check if your key is active in your account dashboard'));
-            console.log(chalk.gray('• Try: lanonasis auth logout && lanonasis auth login'));
-        }
+        // Use enhanced error handling
+        await handleAuthenticationFailure(error, config, 'vendor_key');
         process.exit(1);
     }
 }
@@ -130,6 +453,13 @@ async function handleVendorKeyFlow(config) {
     console.log(chalk.yellow('🔑 Vendor Key Authentication'));
     console.log(chalk.gray('Vendor keys provide secure API access with format: pk_xxx.sk_xxx'));
     console.log();
+    // Enhanced guidance for obtaining vendor keys
+    console.log(chalk.cyan('📋 How to get your vendor key:'));
+    console.log(chalk.gray('1. Visit your Lanonasis dashboard at https://app.lanonasis.com'));
+    console.log(chalk.gray('2. Navigate to Settings → API Keys'));
+    console.log(chalk.gray('3. Click "Generate New Key" and copy the full key'));
+    console.log(chalk.gray('4. The key format should be: pk_[letters/numbers].sk_[letters/numbers]'));
+    console.log();
     const { vendorKey } = await inquirer.prompt([
         {
             type: 'password',
@@ -137,16 +467,57 @@ async function handleVendorKeyFlow(config) {
             message: 'Enter your vendor key (pk_xxx.sk_xxx):',
             mask: '*',
             validate: (input) => {
-                if (!input)
-                    return 'Vendor key is required';
-                if (!input.match(/^pk_[a-zA-Z0-9]+\.sk_[a-zA-Z0-9]+$/)) {
-                    return 'Invalid format. Expected: pk_xxx.sk_xxx';
-                }
-                return true;
+                return validateVendorKeyFormat(input);
             }
         }
     ]);
     await handleVendorKeyAuth(vendorKey, config);
+}
+// Enhanced vendor key format validation with detailed error messages
+function validateVendorKeyFormat(input) {
+    if (!input || input.trim().length === 0) {
+        return 'Vendor key is required';
+    }
+    const trimmed = input.trim();
+    // Check basic format
+    if (!trimmed.includes('.')) {
+        return 'Invalid format: Vendor key must contain a dot (.) separator\nExpected format: pk_xxx.sk_xxx';
+    }
+    const parts = trimmed.split('.');
+    if (parts.length !== 2) {
+        return 'Invalid format: Vendor key must have exactly two parts separated by a dot\nExpected format: pk_xxx.sk_xxx';
+    }
+    const [publicPart, secretPart] = parts;
+    // Validate public key part
+    if (!publicPart.startsWith('pk_')) {
+        return 'Invalid format: First part must start with "pk_"\nExpected format: pk_xxx.sk_xxx';
+    }
+    if (publicPart.length < 4) {
+        return 'Invalid format: Public key part is too short\nExpected format: pk_xxx.sk_xxx (where xxx is alphanumeric)';
+    }
+    const publicKeyContent = publicPart.substring(3); // Remove 'pk_'
+    if (!/^[a-zA-Z0-9]+$/.test(publicKeyContent)) {
+        return 'Invalid format: Public key part contains invalid characters\nOnly letters and numbers are allowed after "pk_"';
+    }
+    // Validate secret key part
+    if (!secretPart.startsWith('sk_')) {
+        return 'Invalid format: Second part must start with "sk_"\nExpected format: pk_xxx.sk_xxx';
+    }
+    if (secretPart.length < 4) {
+        return 'Invalid format: Secret key part is too short\nExpected format: pk_xxx.sk_xxx (where xxx is alphanumeric)';
+    }
+    const secretKeyContent = secretPart.substring(3); // Remove 'sk_'
+    if (!/^[a-zA-Z0-9]+$/.test(secretKeyContent)) {
+        return 'Invalid format: Secret key part contains invalid characters\nOnly letters and numbers are allowed after "sk_"';
+    }
+    // Check minimum length requirements
+    if (publicKeyContent.length < 8) {
+        return 'Invalid format: Public key part is too short (minimum 8 characters after "pk_")';
+    }
+    if (secretKeyContent.length < 16) {
+        return 'Invalid format: Secret key part is too short (minimum 16 characters after "sk_")';
+    }
+    return true;
 }
 async function handleOAuthFlow(config) {
     console.log();
@@ -251,22 +622,12 @@ async function handleCredentialsFlow(options, config) {
     }
     catch (error) {
         spinner.fail('Login failed');
-        // Increment failure count for failed authentication
-        await config.incrementFailureCount();
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        // Use enhanced error handling
+        await handleAuthenticationFailure(error, config, 'jwt');
+        // For 401 errors, offer registration option
         const errorResponse = error && typeof error === 'object' && 'response' in error ? error.response : null;
         if (errorResponse && typeof errorResponse === 'object' && 'status' in errorResponse && errorResponse.status === 401) {
-            console.error(chalk.red('✖ Invalid email or password'));
-            // Provide guidance for repeated failures
-            const failureCount = config.getFailureCount();
-            if (failureCount >= 3) {
-                console.log();
-                console.log(chalk.yellow('💡 Multiple login failures detected. Consider:'));
-                console.log(chalk.gray('• Double-check your email and password'));
-                console.log(chalk.gray('• Reset your password if needed'));
-                console.log(chalk.gray('• Try using a vendor key instead: lanonasis auth login --vendor-key'));
-            }
-            // Ask if they want to register
+            console.log();
             const answer = await inquirer.prompt([
                 {
                     type: 'confirm',
@@ -277,18 +638,7 @@ async function handleCredentialsFlow(options, config) {
             ]);
             if (answer.register) {
                 await registerFlow(email);
-            }
-        }
-        else {
-            console.error(chalk.red('✖ Login failed:'), errorMessage);
-            // Provide guidance for repeated failures
-            const failureCount = config.getFailureCount();
-            if (failureCount >= 3) {
-                console.log();
-                console.log(chalk.yellow('💡 Connection issues detected. Try:'));
-                console.log(chalk.gray('• Check your internet connection'));
-                console.log(chalk.gray('• Verify the service is available'));
-                console.log(chalk.gray('• Try again later'));
+                return; // Don't exit if registration succeeds
             }
         }
         process.exit(1);
