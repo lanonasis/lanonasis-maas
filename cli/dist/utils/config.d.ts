@@ -4,6 +4,36 @@ interface UserProfile {
     role: string;
     plan: string;
 }
+interface CLIConfigData {
+    version?: string;
+    apiUrl?: string;
+    token?: string | undefined;
+    user?: UserProfile | undefined;
+    lastUpdated?: string;
+    mcpServerPath?: string;
+    mcpServerUrl?: string;
+    mcpUseRemote?: boolean;
+    mcpPreference?: 'local' | 'remote' | 'auto';
+    discoveredServices?: {
+        auth_base: string;
+        memory_base: string;
+        mcp_base?: string;
+        mcp_ws_base: string;
+        mcp_sse_base?: string;
+        project_scope: string;
+    };
+    lastServiceDiscovery?: string;
+    manualEndpointOverrides?: boolean;
+    lastManualEndpointUpdate?: string;
+    vendorKey?: string | undefined;
+    authMethod?: 'jwt' | 'vendor_key' | 'oauth' | undefined;
+    tokenExpiry?: number | undefined;
+    lastValidated?: string | undefined;
+    deviceId?: string;
+    authFailureCount?: number;
+    lastAuthFailure?: string | undefined;
+    [key: string]: unknown;
+}
 export declare class CLIConfig {
     private configDir;
     private configPath;
@@ -20,9 +50,15 @@ export declare class CLIConfig {
     private acquireLock;
     private releaseLock;
     getApiUrl(): string;
-    discoverServices(): Promise<void>;
+    discoverServices(verbose?: boolean): Promise<void>;
+    private handleServiceDiscoveryFailure;
+    private categorizeServiceDiscoveryError;
+    setManualEndpoints(endpoints: Partial<CLIConfigData['discoveredServices']>): Promise<void>;
+    hasManualEndpointOverrides(): boolean;
+    clearManualEndpointOverrides(): Promise<void>;
     getDiscoveredApiUrl(): string;
     setVendorKey(vendorKey: string): Promise<void>;
+    validateVendorKeyFormat(vendorKey: string): string | boolean;
     private validateVendorKeyWithServer;
     getVendorKey(): string | undefined;
     hasVendorKey(): boolean;
@@ -44,6 +80,7 @@ export declare class CLIConfig {
     getLastAuthFailure(): string | undefined;
     shouldDelayAuth(): boolean;
     getAuthDelayMs(): number;
+    getDeviceId(): Promise<string>;
     get<T = unknown>(key: string): T;
     set(key: string, value: unknown): void;
     setAndSave(key: string, value: unknown): Promise<void>;

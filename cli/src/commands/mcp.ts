@@ -388,4 +388,332 @@ export function mcpCommands(program: Command) {
         console.log('  --auto          : Auto-detect based on authentication');
       }
     });
+
+  // Diagnose MCP connection issues
+  mcp.command('diagnose')
+    .description('Diagnose MCP connection issues')
+    .option('-v, --verbose', 'show detailed diagnostic information')
+    .action(async (options) => {
+      const config = new CLIConfig();
+      await config.init();
+
+      console.log(chalk.blue.bold('🔍 MCP Connection Diagnostic'));
+      console.log(chalk.cyan('━'.repeat(50)));
+      console.log();
+
+      const diagnostics = {
+        authenticationValid: false,
+        endpointsReachable: false,
+        transportTests: {
+          websocket: false,
+          http: false,
+          sse: false
+        },
+        connectionLatency: {} as Record<string, number>,
+        currentConnection: null as any,
+        toolsAvailable: false,
+        healthCheckPassing: false
+      };
+
+      // Step 1: Check authentication status
+      console.log(chalk.cyan('1. Authentication Status'));
+      const token = config.getToken();
+      const vendorKey = config.getVendorKey();
+      
+      if (!token && !vendorKey) {
+        console.log(chalk.red('   ✖ No authentication credentials found'));
+        console.log(chalk.gray('   → Run: lanonasis auth login'));
+        console.log(chalk.gray('   → MCP requires authentication for remote access'));
+      } else {
+        try {
+          const isValid = await config.validateStoredCredentials();
+          diagnostics.authenticationValid = isValid;
+          
+          if (isValid) {
+            console.log(chalk.green('   ✓ Authentication credentials are valid'));
+          } else {
+            console.log(chalk.red('   ✖ Authentication credentials are invalid'));
+            console.log(chalk.gray('   → Run: lanonasis auth login'));
+          }
+        } catch (error) {
+          console.log(chalk.yellow('   ⚠ Could not validate authentication'));
+          console.log(chalk.gray(`     ${error instanceof Error ? error.message : 'Unknown error'}`));
+        }
+      }
+
+      // Step 2: Test endpoint availability
+      console.log(chalk.cyan('\n2. Endpoint Availability'));
+      const spinner1 = ora('Testing MCP endpoints...').start();
+      
+      try {
+        await config.discoverServices(options.verbose);
+        const services = config.get('discoveredServices');
+        
+        if (services) {
+          spinner1.succeed('MCP endpoints discovered');
+          diagnostics.endpointsReachable = true;
+          
+          console.log(chalk.green('   ✓ Service discovery successful'));
+          if (options.verbose) {
+            console.log(chalk.gray(`     HTTP: ${(services as any).mcp_base}`));
+            console.log(chalk.gray(`     WebSocket: ${(services as any).mcp_ws_base}`));
+            console.log(chalk.gray(`     SSE: ${(services as any).mcp_sse_base}`));
+          }
+        } else {
+          spinner1.warn('Using fallback endpoints');
+          console.log(chalk.yellow('   ⚠ Service discovery failed, using fallbacks'));
+          diagnostics.endpointsReachable = true; // Fallbacks still work
+        }
+      } catch (error) {
+        spinner1.fail('Endpoint discovery failed');
+        console.log(chalk.red('   ✖ Cannot discover MCP endpoints'));
+        console.log(chalk.gray(`     ${error instanceof Error ? error.message : 'Unknown error'}`));
+      }
+
+      // Step 3: Test transport protocols
+      console.log(chalk.cyan('\n3. Transport Protocol Tests'));
+      
+      // Test HTTP/REST endpoint
+      if (diagnostics.authenticationValid) {
+        const httpSpinner = ora('Testing HTTP transport...').start();
+        try {
+          const startTime = Date.now();
+          const axios = (await import('axios')).default;
+          const httpUrl = config.getMCPRestUrl();
+          
+          await axios.get(`${httpUrl}/health`, {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'x-api-key': String(token || vendorKey)
+            },
+            timeout: 10000
+          });
+          
+          const latency = Date.now() - startTime;
+          diagnostics.connectionLatency.http = latency;
+          diagnostics.transportTests.http = true;
+          
+          httpSpinner.succeed(`HTTP transport working (${latency}ms)`);
+          console.log(chalk.green(`   ✓ HTTP/REST endpoint reachable`));
+        } catch (error: any) {
+          httpSpinner.fail('HTTP transport failed');
+          console.log(chalk.red('   ✖ HTTP/REST endpoint failed'));
+          if (options.verbose) {
+            console.log(chalk.gray(`     Error: ${error.message}`));
+          }
+        }
+
+        // Test WebSocket endpoint
+        const wsSpinner = ora('Testing WebSocket transport...').start();
+        try {
+          const startTime = Date.now();
+          const wsUrl = config.getMCPServerUrl();
+          
+          // Create a test WebSocket connection
+          const WebSocket = (await import('ws')) as any;
+          const ws = new WebSocket(wsUrl, [], {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'X-API-Key': String(token || vendorKey)
+            }
+          });
+          
+          await new Promise((resolve, reject) => {
+            const timeout = setTimeout(() => {
+              ws.close();
+              reject(new Error('WebSocket connection timeout'));
+            }, 10000);
+            
+            ws.on('open', () => {
+              clearTimeout(timeout);
+              const latency = Date.now() - startTime;
+              diagnostics.connectionLatency.websocket = latency;
+              diagnostics.transportTests.websocket = true;
+              ws.close();
+              resolve(true);
+            });
+            
+            ws.on('error', (error) => {
+              clearTimeout(timeout);
+              reject(error);
+            });
+          });
+          
+          wsSpinner.succeed(`WebSocket transport working (${diagnostics.connectionLatency.websocket}ms)`);
+          console.log(chalk.green('   ✓ WebSocket endpoint reachable'));
+        } catch (error: any) {
+          wsSpinner.fail('WebSocket transport failed');
+          console.log(chalk.red('   ✖ WebSocket endpoint failed'));
+          if (options.verbose) {
+            console.log(chalk.gray(`     Error: ${error.message}`));
+          }
+        }
+
+        // Test SSE endpoint
+        const sseSpinner = ora('Testing SSE transport...').start();
+        try {
+          const startTime = Date.now();
+          const sseUrl = config.getMCPSSEUrl();
+          
+          // Test SSE endpoint with a quick connection test
+          const axios = (await import('axios')).default;
+          await axios.get(sseUrl.replace('/events', '/health'), {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'x-api-key': String(token || vendorKey)
+            },
+            timeout: 10000
+          });
+          
+          const latency = Date.now() - startTime;
+          diagnostics.connectionLatency.sse = latency;
+          diagnostics.transportTests.sse = true;
+          
+          sseSpinner.succeed(`SSE transport working (${latency}ms)`);
+          console.log(chalk.green('   ✓ SSE endpoint reachable'));
+        } catch (error: any) {
+          sseSpinner.fail('SSE transport failed');
+          console.log(chalk.red('   ✖ SSE endpoint failed'));
+          if (options.verbose) {
+            console.log(chalk.gray(`     Error: ${error.message}`));
+          }
+        }
+      } else {
+        console.log(chalk.gray('   - Skipped transport tests (authentication required)'));
+      }
+
+      // Step 4: Test current MCP connection
+      console.log(chalk.cyan('\n4. Current MCP Connection'));
+      const client = getMCPClient();
+      diagnostics.currentConnection = client.getConnectionStatus();
+      
+      if (diagnostics.currentConnection.connected) {
+        console.log(chalk.green('   ✓ MCP client is connected'));
+        console.log(chalk.gray(`     Mode: ${diagnostics.currentConnection.mode}`));
+        console.log(chalk.gray(`     Server: ${diagnostics.currentConnection.server}`));
+        
+        if (diagnostics.currentConnection.connectionUptime) {
+          const uptimeSeconds = Math.floor(diagnostics.currentConnection.connectionUptime / 1000);
+          console.log(chalk.gray(`     Uptime: ${uptimeSeconds}s`));
+        }
+        
+        if (diagnostics.currentConnection.lastHealthCheck) {
+          const healthCheckAge = Date.now() - diagnostics.currentConnection.lastHealthCheck.getTime();
+          console.log(chalk.gray(`     Last health check: ${Math.floor(healthCheckAge / 1000)}s ago`));
+        }
+      } else {
+        console.log(chalk.red('   ✖ MCP client is not connected'));
+        console.log(chalk.gray('   → Try: lanonasis mcp connect'));
+      }
+
+      // Step 5: Test tool availability
+      console.log(chalk.cyan('\n5. Tool Availability'));
+      if (diagnostics.currentConnection.connected) {
+        const toolSpinner = ora('Testing MCP tools...').start();
+        try {
+          const tools = await client.listTools();
+          diagnostics.toolsAvailable = tools.length > 0;
+          
+          toolSpinner.succeed(`Found ${tools.length} available tools`);
+          console.log(chalk.green(`   ✓ ${tools.length} MCP tools available`));
+          
+          if (options.verbose && tools.length > 0) {
+            console.log(chalk.gray('     Available tools:'));
+            tools.slice(0, 5).forEach(tool => {
+              console.log(chalk.gray(`       • ${tool.name}`));
+            });
+            if (tools.length > 5) {
+              console.log(chalk.gray(`       ... and ${tools.length - 5} more`));
+            }
+          }
+        } catch (error) {
+          toolSpinner.fail('Tool listing failed');
+          console.log(chalk.red('   ✖ Cannot list MCP tools'));
+          if (options.verbose) {
+            console.log(chalk.gray(`     Error: ${error instanceof Error ? error.message : 'Unknown error'}`));
+          }
+        }
+      } else {
+        console.log(chalk.gray('   - Skipped (not connected to MCP server)'));
+      }
+
+      // Step 6: Connection quality measurement
+      console.log(chalk.cyan('\n6. Connection Quality'));
+      if (Object.keys(diagnostics.connectionLatency).length > 0) {
+        console.log(chalk.green('   ✓ Latency measurements:'));
+        Object.entries(diagnostics.connectionLatency).forEach(([transport, latency]) => {
+          const quality = latency < 100 ? 'Excellent' : latency < 300 ? 'Good' : latency < 1000 ? 'Fair' : 'Poor';
+          const color = latency < 100 ? chalk.green : latency < 300 ? chalk.yellow : chalk.red;
+          console.log(color(`     ${transport.toUpperCase()}: ${latency}ms (${quality})`));
+        });
+      } else {
+        console.log(chalk.gray('   - No latency measurements available'));
+      }
+
+      // Summary and recommendations
+      console.log(chalk.blue.bold('\n📋 MCP Diagnostic Summary'));
+      console.log(chalk.cyan('━'.repeat(50)));
+
+      const issues: string[] = [];
+      const recommendations: string[] = [];
+
+      if (!diagnostics.authenticationValid) {
+        issues.push('Authentication credentials are invalid or missing');
+        recommendations.push('Run: lanonasis auth login');
+      }
+
+      if (!diagnostics.endpointsReachable) {
+        issues.push('MCP endpoints are not reachable');
+        recommendations.push('Check internet connection and firewall settings');
+      }
+
+      const workingTransports = Object.values(diagnostics.transportTests).filter(Boolean).length;
+      if (workingTransports === 0 && diagnostics.authenticationValid) {
+        issues.push('No transport protocols are working');
+        recommendations.push('Check network connectivity to mcp.lanonasis.com');
+      } else if (workingTransports < 3 && diagnostics.authenticationValid) {
+        issues.push(`Only ${workingTransports}/3 transport protocols working`);
+        recommendations.push('Some MCP features may be limited');
+      }
+
+      if (!diagnostics.currentConnection.connected) {
+        issues.push('MCP client is not connected');
+        recommendations.push('Run: lanonasis mcp connect');
+      }
+
+      if (!diagnostics.toolsAvailable && diagnostics.currentConnection.connected) {
+        issues.push('No MCP tools are available');
+        recommendations.push('Check MCP server configuration');
+      }
+
+      // Show results
+      if (issues.length === 0) {
+        console.log(chalk.green('✅ All MCP connection checks passed!'));
+        console.log(chalk.cyan('   Your MCP connection is working correctly.'));
+        
+        if (Object.keys(diagnostics.connectionLatency).length > 0) {
+          const avgLatency = Object.values(diagnostics.connectionLatency).reduce((a, b) => a + b, 0) / Object.values(diagnostics.connectionLatency).length;
+          console.log(chalk.cyan(`   Average latency: ${Math.round(avgLatency)}ms`));
+        }
+      } else {
+        console.log(chalk.red(`❌ Found ${issues.length} issue(s):`));
+        issues.forEach(issue => {
+          console.log(chalk.red(`   • ${issue}`));
+        });
+
+        console.log(chalk.yellow('\n💡 Recommended actions:'));
+        recommendations.forEach(rec => {
+          console.log(chalk.cyan(`   • ${rec}`));
+        });
+      }
+
+      // Additional troubleshooting info
+      if (issues.length > 0) {
+        console.log(chalk.gray('\n🔧 Additional troubleshooting:'));
+        console.log(chalk.gray('   • Try different connection modes: --mode websocket|remote|local'));
+        console.log(chalk.gray('   • Check firewall settings for ports 80, 443, and WebSocket'));
+        console.log(chalk.gray('   • Verify your network allows outbound HTTPS connections'));
+        console.log(chalk.gray('   • Contact support if issues persist'));
+      }
+    });
 }

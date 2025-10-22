@@ -5,7 +5,7 @@ import chalk from 'chalk';
 import { config } from 'dotenv';
 
 import { initCommand } from './commands/init.js';
-import { loginCommand } from './commands/auth.js';
+import { loginCommand, diagnoseCommand } from './commands/auth.js';
 import { memoryCommands } from './commands/memory.js';
 import { topicCommands } from './commands/topics.js';
 import { configCommands } from './commands/config.js';
@@ -277,6 +277,11 @@ authCmd
       console.log(chalk.white('  lanonasis auth logout && lanonasis auth login'));
     }
   });
+
+authCmd
+  .command('diagnose')
+  .description('Diagnose authentication issues')
+  .action(diagnoseCommand);
 
 // MCP Commands (primary interface)
 mcpCommands(program);
