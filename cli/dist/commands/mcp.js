@@ -466,7 +466,7 @@ export function mcpCommands(program) {
                 const startTime = Date.now();
                 const wsUrl = config.getMCPServerUrl();
                 // Create a test WebSocket connection
-                const WebSocket = (await import('ws')).default;
+                const WebSocket = (await import('ws'));
                 const ws = new WebSocket(wsUrl, [], {
                     headers: {
                         'Authorization': `Bearer ${token}`,
