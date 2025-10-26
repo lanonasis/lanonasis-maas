@@ -25,7 +25,13 @@
     "notes",
     "documentation"
   ],
-  "activationEvents": [],
+  "activationEvents": [
+    "onStartupFinished",
+    "onCommand:lanonasis.searchMemory",
+    "onCommand:lanonasis.createMemory",
+    "onCommand:lanonasis.authenticate",
+    "onView:lanonasisMemories"
+  ],
   "main": "./out/extension.js",
   "browser": "./out/extension.js",
   "capabilities": {
