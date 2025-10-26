@@ -273,7 +273,8 @@
     "publish": "vsce publish"
   },
   "dependencies": {
-    "@lanonasis/memory-client": "file:../packages/memory-client"
+    "@lanonasis/memory-client": "file:../../packages/memory-client",
+    "zod": "^3.23.8"
   },
   "devDependencies": {
     "@types/node": "^24.1.0",
