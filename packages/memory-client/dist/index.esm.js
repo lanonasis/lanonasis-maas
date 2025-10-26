@@ -270,9 +270,16 @@ class CLIIntegration {
     async performDetection() {
         try {
             // Check if onasis/lanonasis CLI is available
-            const { stdout: versionOutput } = await execAsync('onasis --version 2>/dev/null || lanonasis --version 2>/dev/null', {
-                timeout: 5000
-            });
+            let versionOutput = '';
+            try {
+                const { stdout } = await execAsync('onasis --version 2>/dev/null', { timeout: 5000 });
+                versionOutput = stdout;
+            }
+            catch {
+                // Try lanonasis if onasis fails
+                const { stdout } = await execAsync('lanonasis --version 2>/dev/null', { timeout: 5000 });
+                versionOutput = stdout;
+            }
             const version = versionOutput.trim();
             // Verify it's v1.5.2 or higher for Golden Contract support
             const versionMatch = version.match(/(\d+)\.(\d+)\.(\d+)/);
@@ -497,6 +504,14 @@ class CLIIntegration {
  * Enhanced Memory Client with intelligent CLI/API routing
  */
 class EnhancedMemoryClient {
+    createDefaultCapabilities() {
+        return {
+            cliAvailable: false,
+            mcpSupport: false,
+            authenticated: false,
+            goldenContract: false
+        };
+    }
     constructor(config) {
         this.capabilities = null;
         this.config = {
@@ -510,6 +525,7 @@ class EnhancedMemoryClient {
             useGateway: true,
             apiKey: config.apiKey || process.env.LANONASIS_API_KEY || '',
             authToken: config.authToken || '',
+            headers: config.headers || {},
             ...config
         };
         this.directClient = new MemoryClient(config);
@@ -520,19 +536,34 @@ class EnhancedMemoryClient {
      */
     async initialize() {
         try {
-            this.capabilities = await this.cliIntegration.getCapabilities();
-            if (this.capabilities.cliAvailable && !this.capabilities.authenticated) {
-                console.warn('CLI is available but not authenticated. Consider running: onasis login');
+            const detectionPromise = this.cliIntegration.getCapabilities();
+            const capabilities = this.config.cliDetectionTimeout > 0
+                ? await Promise.race([
+                    detectionPromise,
+                    new Promise((resolve) => {
+                        setTimeout(() => resolve(null), this.config.cliDetectionTimeout);
+                    })
+                ])
+                : await detectionPromise;
+            if (capabilities) {
+                this.capabilities = capabilities;
+                if (this.config.verbose && capabilities.cliAvailable && !capabilities.authenticated) {
+                    const suggestedCommand = capabilities.goldenContract ? 'onasis login' : 'lanonasis login';
+                    console.warn(`CLI detected but not authenticated. Run '${suggestedCommand}' to enable enhanced SDK features.`);
+                }
+            }
+            else {
+                this.capabilities = this.createDefaultCapabilities();
+                if (this.config.verbose) {
+                    console.warn(`CLI detection timed out after ${this.config.cliDetectionTimeout}ms. Falling back to API mode.`);
+                }
             }
         }
         catch (error) {
-            console.warn('CLI detection failed:', error);
-            this.capabilities = {
-                cliAvailable: false,
-                mcpSupport: false,
-                authenticated: false,
-                goldenContract: false
-            };
+            if (this.config.verbose) {
+                console.warn('CLI detection failed:', error);
+            }
+            this.capabilities = this.createDefaultCapabilities();
         }
     }
     /**
@@ -541,6 +572,9 @@ class EnhancedMemoryClient {
     async getCapabilities() {
         if (!this.capabilities) {
             await this.initialize();
+        }
+        if (!this.capabilities) {
+            this.capabilities = this.createDefaultCapabilities();
         }
         return this.capabilities;
     }
@@ -826,13 +860,18 @@ function createSmartConfig(baseConfig, options = {}) {
         verbose: false
     };
     const config = { ...defaults, ...options };
+    const preferCLI = config.preferCLI ?? defaults.preferCLI ?? false;
+    const minCLIVersion = config.minCLIVersion ?? defaults.minCLIVersion ?? '1.5.2';
+    const enableMCP = config.enableMCP ?? defaults.enableMCP ?? true;
+    const cliDetectionTimeout = config.cliDetectionTimeout ?? defaults.cliDetectionTimeout ?? 3000;
+    const verbose = config.verbose ?? defaults.verbose ?? false;
     return {
         ...baseConfig,
-        preferCLI: config.preferCLI,
-        minCLIVersion: config.minCLIVersion,
-        enableMCP: config.enableMCP,
-        cliDetectionTimeout: config.cliDetectionTimeout,
-        verbose: config.verbose,
+        preferCLI,
+        minCLIVersion,
+        enableMCP,
+        cliDetectionTimeout,
+        verbose,
         // Smart API configuration with environment detection
         apiUrl: baseConfig.apiUrl || (process?.env?.NODE_ENV === 'development'
             ? 'http://localhost:3001'
@@ -971,7 +1010,7 @@ const createTopicSchema = z.object({
  */
 // Main client
 // Constants
-const VERSION = '1.3.0';
+const VERSION = '1.0.0';
 const CLIENT_NAME = '@lanonasis/memory-client';
 // Environment detection
 const isBrowser = typeof window !== 'undefined';

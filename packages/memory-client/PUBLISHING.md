@@ -62,7 +62,29 @@ npm publish
 npm info @lanonasis/memory-client
 ```
 
-### 4. Post-publication
+### 4. Publish to GitHub Packages
+
+```bash
+# Ensure your ~/.npmrc contains:
+# //npm.pkg.github.com/:_authToken=YOUR_GITHUB_TOKEN
+# @lanonasis:registry=https://npm.pkg.github.com/
+
+npm publish --registry https://npm.pkg.github.com
+
+# Verify publication
+npm view @lanonasis/memory-client --registry https://npm.pkg.github.com version
+```
+
+### 5. (Optional) Use the helper script
+
+```bash
+cd packages/memory-client
+NPM_TOKEN=xxx GH_TOKEN=yyy scripts/publish-sdk.sh
+```
+
+`scripts/publish-sdk.sh` runs lint/type-check/build (unless `--skip-verify` is passed), then publishes to both registries using temporary npmrc files so tokens never hit the repository. Add `--dry-run` to rehearse the release.
+
+### 6. Post-publication
 
 - [ ] Update documentation with installation instructions
 - [ ] Create GitHub release

@@ -34,7 +34,7 @@ export default [
         declarationMap: false,
       }),
     ],
-    external: ['zod'],
+    external: ['zod', 'child_process', 'util'],
   },
   // Type definitions
   {
@@ -44,6 +44,6 @@ export default [
       format: 'esm',
     },
     plugins: [dts()],
-    external: ['zod'],
+    external: ['zod', 'child_process', 'util'],
   },
 ];
