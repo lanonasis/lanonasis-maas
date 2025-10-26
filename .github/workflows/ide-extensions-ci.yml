@@ -39,8 +39,7 @@ jobs:
         run: npm install --ignore-scripts --no-audit --no-fund
 
       - name: Lint
-        run: npm run lint --if-present || echo "Lint skipped or failed"
-        continue-on-error: true
+        run: npm run lint --if-present
 
       - name: Test
         run: npm test --if-present
