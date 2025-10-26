@@ -61,14 +61,19 @@ export function createSmartConfig(
   };
   
   const config = { ...defaults, ...options };
+  const preferCLI = config.preferCLI ?? defaults.preferCLI ?? false;
+  const minCLIVersion = config.minCLIVersion ?? defaults.minCLIVersion ?? '1.5.2';
+  const enableMCP = config.enableMCP ?? defaults.enableMCP ?? true;
+  const cliDetectionTimeout = config.cliDetectionTimeout ?? defaults.cliDetectionTimeout ?? 3000;
+  const verbose = config.verbose ?? defaults.verbose ?? false;
   
   return {
     ...baseConfig,
-    preferCLI: config.preferCLI!,
-    minCLIVersion: config.minCLIVersion!,
-    enableMCP: config.enableMCP!,
-    cliDetectionTimeout: config.cliDetectionTimeout!,
-    verbose: config.verbose!,
+    preferCLI,
+    minCLIVersion,
+    enableMCP,
+    cliDetectionTimeout,
+    verbose,
     
     // Smart API configuration with environment detection
     apiUrl: baseConfig.apiUrl || (

@@ -366,6 +366,31 @@ interface CLICapabilities {
     version?: string;
 }
 type RoutingStrategy = 'cli-first' | 'api-first' | 'cli-only' | 'api-only' | 'auto';
+interface CLIAuthStatus {
+    authenticated: boolean;
+    user?: {
+        id?: string;
+        email?: string;
+        name?: string;
+        [key: string]: unknown;
+    };
+    scopes?: string[];
+    expiresAt?: string;
+    [key: string]: unknown;
+}
+interface CLIMCPStatus {
+    connected: boolean;
+    channel?: string;
+    endpoint?: string;
+    details?: Record<string, unknown>;
+    [key: string]: unknown;
+}
+interface CLIMCPTool {
+    name: string;
+    title?: string;
+    description?: string;
+    [key: string]: unknown;
+}
 /**
  * CLI Detection and Integration Service
  */
@@ -380,7 +405,7 @@ declare class CLIIntegration {
     /**
      * Execute CLI command and return parsed JSON result
      */
-    executeCLICommand<T = any>(command: string, options?: CLIExecutionOptions): Promise<ApiResponse<T>>;
+    executeCLICommand<T = unknown>(command: string, options?: CLIExecutionOptions): Promise<ApiResponse<T>>;
     /**
      * Get preferred CLI command (onasis for Golden Contract, fallback to lanonasis)
      */
@@ -392,30 +417,39 @@ declare class CLIIntegration {
         memoryType?: string;
         tags?: string[];
         topicId?: string;
-    }): Promise<ApiResponse<any>>;
+    }): Promise<ApiResponse<MemoryEntry>>;
     listMemoriesViaCLI(options?: {
         limit?: number;
         memoryType?: string;
         tags?: string[];
         sortBy?: string;
-    }): Promise<ApiResponse<any>>;
+    }): Promise<ApiResponse<PaginatedResponse<MemoryEntry>>>;
     searchMemoriesViaCLI(query: string, options?: {
         limit?: number;
         memoryTypes?: string[];
-    }): Promise<ApiResponse<any>>;
+    }): Promise<ApiResponse<{
+        results: MemorySearchResult[];
+        total_results: number;
+        search_time_ms: number;
+    }>>;
     /**
      * Health check via CLI
      */
-    healthCheckViaCLI(): Promise<ApiResponse<any>>;
+    healthCheckViaCLI(): Promise<ApiResponse<{
+        status: string;
+        timestamp: string;
+    }>>;
     /**
      * MCP-specific operations
      */
-    getMCPStatus(): Promise<ApiResponse<any>>;
-    listMCPTools(): Promise<ApiResponse<any>>;
+    getMCPStatus(): Promise<ApiResponse<CLIMCPStatus>>;
+    listMCPTools(): Promise<ApiResponse<{
+        tools: CLIMCPTool[];
+    }>>;
     /**
      * Authentication operations
      */
-    getAuthStatus(): Promise<ApiResponse<any>>;
+    getAuthStatus(): Promise<ApiResponse<CLIAuthStatus>>;
     /**
      * Check if specific CLI features are available
      */
@@ -472,6 +506,7 @@ declare class EnhancedMemoryClient {
     private cliIntegration;
     private config;
     private capabilities;
+    private createDefaultCapabilities;
     constructor(config: EnhancedMemoryClientConfig);
     /**
      * Initialize the client and detect capabilities
@@ -513,7 +548,7 @@ declare class EnhancedMemoryClient {
         tags?: string[];
         sort?: string;
         order?: 'asc' | 'desc';
-    }): Promise<OperationResult<any>>;
+    }): Promise<OperationResult<PaginatedResponse<MemoryEntry>>>;
     /**
      * Search memories with MCP enhancement when available
      */
@@ -534,10 +569,10 @@ declare class EnhancedMemoryClient {
      * Delete memory (API only for now)
      */
     deleteMemory(id: string): Promise<OperationResult<void>>;
-    createTopic(topic: any): Promise<OperationResult<MemoryTopic>>;
+    createTopic(topic: CreateTopicRequest): Promise<OperationResult<MemoryTopic>>;
     getTopics(): Promise<OperationResult<MemoryTopic[]>>;
     getTopic(id: string): Promise<OperationResult<MemoryTopic>>;
-    updateTopic(id: string, updates: any): Promise<OperationResult<MemoryTopic>>;
+    updateTopic(id: string, updates: Partial<CreateTopicRequest>): Promise<OperationResult<MemoryTopic>>;
     deleteTopic(id: string): Promise<OperationResult<void>>;
     /**
      * Get memory statistics
@@ -550,11 +585,11 @@ declare class EnhancedMemoryClient {
     /**
      * Get authentication status from CLI
      */
-    getAuthStatus(): Promise<OperationResult<any>>;
+    getAuthStatus(): Promise<OperationResult<CLIAuthStatus>>;
     /**
      * Get MCP status when available
      */
-    getMCPStatus(): Promise<OperationResult<any>>;
+    getMCPStatus(): Promise<OperationResult<CLIMCPStatus>>;
     /**
      * Update authentication for both CLI and API client
      */
@@ -652,7 +687,7 @@ declare function migrateToEnhanced(existingConfig: MemoryClientConfig, enhanceme
  * Intelligent memory management with semantic search capabilities
  */
 
-declare const VERSION = "1.3.0";
+declare const VERSION = "1.0.0";
 declare const CLIENT_NAME = "@lanonasis/memory-client";
 declare const isBrowser: boolean;
 declare const isNode: string | false;
