@@ -7,7 +7,11 @@
 
 import { exec, execSync } from 'child_process';
 import { promisify } from 'util';
-import type { ApiResponse } from './client';
+import type { ApiResponse, PaginatedResponse } from './client';
+import type {
+  MemoryEntry,
+  MemorySearchResult
+} from './types';
 
 const execAsync = promisify(exec);
 
@@ -45,6 +49,34 @@ export interface CLICapabilities {
 }
 
 export type RoutingStrategy = 'cli-first' | 'api-first' | 'cli-only' | 'api-only' | 'auto';
+
+export interface CLIAuthStatus {
+  authenticated: boolean;
+  user?: {
+    id?: string;
+    email?: string;
+    name?: string;
+    [key: string]: unknown;
+  };
+  scopes?: string[];
+  expiresAt?: string;
+  [key: string]: unknown;
+}
+
+export interface CLIMCPStatus {
+  connected: boolean;
+  channel?: string;
+  endpoint?: string;
+  details?: Record<string, unknown>;
+  [key: string]: unknown;
+}
+
+export interface CLIMCPTool {
+  name: string;
+  title?: string;
+  description?: string;
+  [key: string]: unknown;
+}
 
 /**
  * CLI Detection and Integration Service
@@ -145,7 +177,7 @@ export class CLIIntegration {
   /**
    * Execute CLI command and return parsed JSON result
    */
-  async executeCLICommand<T = any>(command: string, options: CLIExecutionOptions = {}): Promise<ApiResponse<T>> {
+  async executeCLICommand<T = unknown>(command: string, options: CLIExecutionOptions = {}): Promise<ApiResponse<T>> {
     const cliInfo = await this.detectCLI();
     
     if (!cliInfo.available) {
@@ -177,14 +209,14 @@ export class CLIIntegration {
 
       if (outputFormat === 'json') {
         try {
-          const result = JSON.parse(stdout);
+          const result = JSON.parse(stdout) as T;
           return { data: result };
         } catch (parseError) {
           return { error: `Failed to parse CLI JSON output: ${parseError instanceof Error ? parseError.message : 'Unknown error'}` };
         }
       }
 
-      return { data: stdout as T };
+      return { data: stdout as unknown as T };
 
     } catch (error) {
       if (error instanceof Error && error.message.includes('timeout')) {
@@ -216,7 +248,7 @@ export class CLIIntegration {
     memoryType?: string;
     tags?: string[];
     topicId?: string;
-  } = {}): Promise<ApiResponse<any>> {
+  } = {}): Promise<ApiResponse<MemoryEntry>> {
     const { memoryType = 'context', tags = [], topicId } = options;
     
     let command = `memory create --title "${title}" --content "${content}" --memory-type ${memoryType}`;
@@ -229,7 +261,7 @@ export class CLIIntegration {
       command += ` --topic-id "${topicId}"`;
     }
 
-    return this.executeCLICommand(command);
+    return this.executeCLICommand<MemoryEntry>(command);
   }
 
   async listMemoriesViaCLI(options: {
@@ -237,7 +269,7 @@ export class CLIIntegration {
     memoryType?: string;
     tags?: string[];
     sortBy?: string;
-  } = {}): Promise<ApiResponse<any>> {
+  } = {}): Promise<ApiResponse<PaginatedResponse<MemoryEntry>>> {
     let command = 'memory list';
     
     if (options.limit) {
@@ -256,13 +288,17 @@ export class CLIIntegration {
       command += ` --sort-by ${options.sortBy}`;
     }
 
-    return this.executeCLICommand(command);
+    return this.executeCLICommand<PaginatedResponse<MemoryEntry>>(command);
   }
 
   async searchMemoriesViaCLI(query: string, options: {
     limit?: number;
     memoryTypes?: string[];
-  } = {}): Promise<ApiResponse<any>> {
+  } = {}): Promise<ApiResponse<{
+    results: MemorySearchResult[];
+    total_results: number;
+    search_time_ms: number;
+  }>> {
     let command = `memory search "${query}"`;
     
     if (options.limit) {
@@ -273,44 +309,48 @@ export class CLIIntegration {
       command += ` --memory-types "${options.memoryTypes.join(',')}"`;
     }
 
-    return this.executeCLICommand(command);
+    return this.executeCLICommand<{
+      results: MemorySearchResult[];
+      total_results: number;
+      search_time_ms: number;
+    }>(command);
   }
 
   /**
    * Health check via CLI
    */
-  async healthCheckViaCLI(): Promise<ApiResponse<any>> {
-    return this.executeCLICommand('health');
+  async healthCheckViaCLI(): Promise<ApiResponse<{ status: string; timestamp: string }>> {
+    return this.executeCLICommand<{ status: string; timestamp: string }>('health');
   }
 
   /**
    * MCP-specific operations
    */
-  async getMCPStatus(): Promise<ApiResponse<any>> {
+  async getMCPStatus(): Promise<ApiResponse<CLIMCPStatus>> {
     const cliInfo = await this.detectCLI();
     
     if (!cliInfo.mcpAvailable) {
       return { error: 'MCP not available via CLI' };
     }
 
-    return this.executeCLICommand('mcp status');
+    return this.executeCLICommand<CLIMCPStatus>('mcp status');
   }
 
-  async listMCPTools(): Promise<ApiResponse<any>> {
+  async listMCPTools(): Promise<ApiResponse<{ tools: CLIMCPTool[] }>> {
     const cliInfo = await this.detectCLI();
     
     if (!cliInfo.mcpAvailable) {
       return { error: 'MCP not available via CLI' };
     }
 
-    return this.executeCLICommand('mcp tools');
+    return this.executeCLICommand<{ tools: CLIMCPTool[] }>('mcp tools');
   }
 
   /**
    * Authentication operations
    */
-  async getAuthStatus(): Promise<ApiResponse<any>> {
-    return this.executeCLICommand('auth status');
+  async getAuthStatus(): Promise<ApiResponse<CLIAuthStatus>> {
+    return this.executeCLICommand<CLIAuthStatus>('auth status');
   }
 
   /**

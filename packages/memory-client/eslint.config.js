@@ -17,7 +17,9 @@ export default [
         fetch: 'readonly',
         AbortSignal: 'readonly',
         window: 'readonly',
-        globalThis: 'readonly'
+        globalThis: 'readonly',
+        console: 'readonly',
+        process: 'readonly'
       }
     },
     plugins: {
