@@ -42,8 +42,8 @@ build_extension() {
     if ls *.vsix 1> /dev/null 2>&1; then
         echo -e "${GREEN}✅ $name packaged successfully${NC}"
         # Move to output directory
-        mkdir -p ../../../dist/extensions
-        mv *.vsix ../../../dist/extensions/
+        mkdir -p ../../dist/extensions
+        mv *.vsix ../../dist/extensions/
     else
         echo -e "${RED}❌ Failed to package $name${NC}"
     fi
