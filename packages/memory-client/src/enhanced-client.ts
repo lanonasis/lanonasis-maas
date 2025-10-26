@@ -5,8 +5,8 @@
  * with fallback to direct API for maximum compatibility and performance
  */
 
-import { MemoryClient, type MemoryClientConfig, type ApiResponse } from './client';
-import { CLIIntegration } from './cli-integration';
+import { MemoryClient, type MemoryClientConfig, type ApiResponse, type PaginatedResponse } from './client';
+import { CLIIntegration, type CLIAuthStatus, type CLIMCPStatus } from './cli-integration';
 import type {
   MemoryEntry,
   MemoryTopic,
@@ -14,7 +14,8 @@ import type {
   UpdateMemoryRequest,
   SearchMemoryRequest,
   MemorySearchResult,
-  UserMemoryStats
+  UserMemoryStats,
+  CreateTopicRequest
 } from './types';
 
 export interface EnhancedMemoryClientConfig extends MemoryClientConfig {
@@ -48,6 +49,15 @@ export class EnhancedMemoryClient {
   private config: Required<EnhancedMemoryClientConfig>;
   private capabilities: Awaited<ReturnType<CLIIntegration['getCapabilities']>> | null = null;
 
+  private createDefaultCapabilities(): Awaited<ReturnType<CLIIntegration['getCapabilities']>> {
+    return {
+      cliAvailable: false,
+      mcpSupport: false,
+      authenticated: false,
+      goldenContract: false
+    };
+  }
+
   constructor(config: EnhancedMemoryClientConfig) {
     this.config = {
       preferCLI: true,
@@ -73,18 +83,38 @@ export class EnhancedMemoryClient {
    */
   async initialize(): Promise<void> {
     try {
-        // Determine CLI name for login suggestion
-        const cliName = (this.capabilities.cliName) ? this.capabilities.cliName : (this.capabilities.lanonasisAvailable ? 'lanonasis' : 'onasis');
-        console.warn(`CLI is available but not authenticated. Consider running: ${cliName} login`);
+      const detectionPromise = this.cliIntegration.getCapabilities();
+      const capabilities = this.config.cliDetectionTimeout > 0
+        ? await Promise.race([
+            detectionPromise,
+            new Promise<null>((resolve) => {
+              setTimeout(() => resolve(null), this.config.cliDetectionTimeout);
+            })
+          ])
+        : await detectionPromise;
+
+      if (capabilities) {
+        this.capabilities = capabilities;
+
+        if (this.config.verbose && capabilities.cliAvailable && !capabilities.authenticated) {
+          const suggestedCommand = capabilities.goldenContract ? 'onasis login' : 'lanonasis login';
+          console.warn(
+            `CLI detected but not authenticated. Run '${suggestedCommand}' to enable enhanced SDK features.`
+          );
+        }
+      } else {
+        this.capabilities = this.createDefaultCapabilities();
+        if (this.config.verbose) {
+          console.warn(
+            `CLI detection timed out after ${this.config.cliDetectionTimeout}ms. Falling back to API mode.`
+          );
+        }
       }
     } catch (error) {
-      console.warn('CLI detection failed:', error);
-      this.capabilities = {
-        cliAvailable: false,
-        mcpSupport: false,
-        authenticated: false,
-        goldenContract: false
-      };
+      if (this.config.verbose) {
+        console.warn('CLI detection failed:', error);
+      }
+      this.capabilities = this.createDefaultCapabilities();
     }
   }
 
@@ -95,7 +125,10 @@ export class EnhancedMemoryClient {
     if (!this.capabilities) {
       await this.initialize();
     }
-    return this.capabilities!;
+    if (!this.capabilities) {
+      this.capabilities = this.createDefaultCapabilities();
+    }
+    return this.capabilities;
   }
 
   /**
@@ -214,7 +247,7 @@ export class EnhancedMemoryClient {
     tags?: string[];
     sort?: string;
     order?: 'asc' | 'desc';
-  } = {}): Promise<OperationResult<any>> {
+  } = {}): Promise<OperationResult<PaginatedResponse<MemoryEntry>>> {
     return this.executeOperation(
       'list memories',
       () => this.cliIntegration.listMemoriesViaCLI({
@@ -289,7 +322,7 @@ export class EnhancedMemoryClient {
 
   // Topic Operations (API only for now)
 
-  async createTopic(topic: any): Promise<OperationResult<MemoryTopic>> {
+  async createTopic(topic: CreateTopicRequest): Promise<OperationResult<MemoryTopic>> {
     const result = await this.directClient.createTopic(topic);
     return { ...result, source: 'api', mcpUsed: false };
   }
@@ -304,7 +337,7 @@ export class EnhancedMemoryClient {
     return { ...result, source: 'api', mcpUsed: false };
   }
 
-  async updateTopic(id: string, updates: any): Promise<OperationResult<MemoryTopic>> {
+  async updateTopic(id: string, updates: Partial<CreateTopicRequest>): Promise<OperationResult<MemoryTopic>> {
     const result = await this.directClient.updateTopic(id, updates);
     return { ...result, source: 'api', mcpUsed: false };
   }
@@ -336,7 +369,7 @@ export class EnhancedMemoryClient {
   /**
    * Get authentication status from CLI
    */
-  async getAuthStatus(): Promise<OperationResult<any>> {
+  async getAuthStatus(): Promise<OperationResult<CLIAuthStatus>> {
     try {
       const result = await this.cliIntegration.getAuthStatus();
       return { ...result, source: 'cli', mcpUsed: false };
@@ -352,7 +385,7 @@ export class EnhancedMemoryClient {
   /**
    * Get MCP status when available
    */
-  async getMCPStatus(): Promise<OperationResult<any>> {
+  async getMCPStatus(): Promise<OperationResult<CLIMCPStatus>> {
     const capabilities = await this.getCapabilities();
     
     if (!capabilities.mcpSupport) {

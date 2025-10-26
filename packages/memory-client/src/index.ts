@@ -25,7 +25,7 @@ export type { SmartConfigOptions } from './config';
 export * from './types';
 
 // Constants
-export const VERSION = '1.3.0';
+export const VERSION = '1.0.0';
 export const CLIENT_NAME = '@lanonasis/memory-client';
 
 // Environment detection
