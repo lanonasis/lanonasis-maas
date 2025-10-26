@@ -36,7 +36,7 @@ jobs:
           fi
 
       - name: Install deps
-        run: npm ci
+        run: npm install --ignore-scripts --no-audit --no-fund
 
       - name: Lint
         run: npm run lint --if-present
