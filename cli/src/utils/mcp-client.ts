@@ -174,9 +174,11 @@ export class MCPClient {
           
         default: {
           // Local MCP server connection (default)
+          // Prefer the CLI-bundled MCP server; fall back to configured path
+          const defaultBundledServer = path.join(__dirname, '../mcp/server/lanonasis-server.js');
           const serverPathValue = options.serverPath ?? 
                       this.config.get<string>('mcpServerPath') ?? 
-                      path.join(path.resolve(), '../../../../onasis-gateway/mcp-server/server.js');
+                      defaultBundledServer;
           serverPath = serverPathValue;
           // Check if the server file exists
           if (!fs.existsSync(serverPath)) {
