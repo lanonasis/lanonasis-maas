@@ -158,21 +158,28 @@
         }
       ]
     },
-    "views": {
-      "explorer": [
-        {
-          "id": "lanonasisMemories",
-          "name": "Memories",
-          "when": "lanonasis.enabled"
-        }
-      ]
-    },
     "viewsContainers": {
       "activitybar": [
         {
           "id": "lanonasis",
           "title": "Lanonasis Memory",
-          "icon": "$(database)"
+          "icon": "images/icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "lanonasis": [
+        {
+          "type": "webview",
+          "id": "lanonasis.sidebar",
+          "name": "Memory Assistant",
+          "icon": "images/icon.svg",
+          "contextualTitle": "Lanonasis Memory"
+        },
+        {
+          "id": "lanonasisMemories",
+          "name": "Tree View",
+          "when": "lanonasis.enabled && config.lanonasis.showTreeView"
         }
       ]
     },

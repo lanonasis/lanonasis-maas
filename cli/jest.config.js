@@ -38,6 +38,9 @@ export default {
       tsconfig: 'tsconfig.json'
     }]
   },
+  transformIgnorePatterns: [
+    'node_modules/(?!(chalk)/)'
+  ],
   // Mock console methods to reduce noise in tests
   setupFilesAfterEnv: ['<rootDir>/src/__tests__/setup.ts']
 };

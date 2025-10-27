@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { MemoryTreeProvider } from './providers/MemoryTreeProvider';
 import { MemoryCompletionProvider } from './providers/MemoryCompletionProvider';
 import { ApiKeyTreeProvider } from './providers/ApiKeyTreeProvider';
+import { MemorySidebarProvider } from './panels/MemorySidebarProvider';
 import { MemoryService } from './services/MemoryService';
 import { EnhancedMemoryService } from './services/EnhancedMemoryService';
 import { ApiKeyService } from './services/ApiKeyService';
@@ -28,7 +29,16 @@ export async function activate(context: vscode.ExtensionContext) {
     }
     const apiKeyService = new ApiKeyService();
     
-    // Initialize tree providers
+    // Initialize sidebar provider (modern UI)
+    const sidebarProvider = new MemorySidebarProvider(context.extensionUri, memoryService);
+    context.subscriptions.push(
+        vscode.window.registerWebviewViewProvider(
+            MemorySidebarProvider.viewType,
+            sidebarProvider
+        )
+    );
+    
+    // Initialize tree providers (optional legacy view)
     const memoryTreeProvider = new MemoryTreeProvider(memoryService as any, authService);
     const apiKeyTreeProvider = new ApiKeyTreeProvider(apiKeyService);
     vscode.window.registerTreeDataProvider('lanonasisMemories', memoryTreeProvider);
