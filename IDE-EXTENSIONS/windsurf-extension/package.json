@@ -278,7 +278,8 @@
     "webpack-cli": "^6.0.1"
   },
   "dependencies": {
-    "zod": "^3.23.8"
+    "zod": "^3.23.8",
+    "@lanonasis/memory-client": "^1.0.0"
   },
   "author": "Lanonasis Team",
   "license": "MIT"
