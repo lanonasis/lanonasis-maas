@@ -2,10 +2,11 @@ import * as vscode from 'vscode';
 import { MemoryTreeProvider } from './providers/MemoryTreeProvider';
 import { MemoryCompletionProvider } from './providers/MemoryCompletionProvider';
 import { ApiKeyTreeProvider } from './providers/ApiKeyTreeProvider';
+import { MemorySidebarProvider } from './panels/MemorySidebarProvider';
 import { MemoryService } from './services/MemoryService';
 import { ApiKeyService } from './services/ApiKeyService';
-import { AuthenticationService } from './auth/AuthenticationService';
 import { WindsurfAiAssistant } from './utils/WindsurfAiAssistant';
+import { AuthenticationService } from './auth/AuthenticationService';
 import { MemoryType } from './types/memory';
 
 export function activate(context: vscode.ExtensionContext) {
@@ -21,7 +22,16 @@ export function activate(context: vscode.ExtensionContext) {
     // Initialize Windsurf AI Assistant
     const aiAssistant = new WindsurfAiAssistant(memoryService);
     
-    // Initialize tree providers
+    // Initialize sidebar provider (modern UI)
+    const sidebarProvider = new MemorySidebarProvider(context.extensionUri, memoryService);
+    context.subscriptions.push(
+        vscode.window.registerWebviewViewProvider(
+            MemorySidebarProvider.viewType,
+            sidebarProvider
+        )
+    );
+    
+    // Initialize tree providers (optional legacy view)
     const memoryTreeProvider = new MemoryTreeProvider(memoryService, authService);
     const apiKeyTreeProvider = new ApiKeyTreeProvider(apiKeyService);
     vscode.window.registerTreeDataProvider('lanonasisMemories', memoryTreeProvider);

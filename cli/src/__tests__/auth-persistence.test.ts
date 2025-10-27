@@ -5,14 +5,15 @@ import * as path from 'path';
 import * as os from 'os';
 
 // Mock axios for network calls
-const mockAxiosGet = jest.fn();
-const mockAxiosPost = jest.fn();
+const mockAxios = {
+  get: jest.fn() as jest.Mock,
+  post: jest.fn() as jest.Mock
+};
 
 jest.mock('axios', () => ({
-  default: {
-    get: mockAxiosGet,
-    post: mockAxiosPost
-  }
+  default: mockAxios,
+  get: mockAxios.get,
+  post: mockAxios.post
 }));
 
 describe('Authentication Persistence Tests', () => {
@@ -25,7 +26,7 @@ describe('Authentication Persistence Tests', () => {
     await fs.mkdir(testConfigDir, { recursive: true });
     
     // Create a new config instance with test directory
-    config = new (CLIConfig as any)();
+    config = new CLIConfig();
     (config as any).configDir = testConfigDir;
     (config as any).configPath = path.join(testConfigDir, 'config.json');
     (config as any).lockFile = path.join(testConfigDir, 'config.lock');
@@ -33,8 +34,8 @@ describe('Authentication Persistence Tests', () => {
     await config.init();
 
     // Clear axios mocks
-    mockAxiosGet.mockClear();
-    mockAxiosPost.mockClear();
+    mockAxios.get.mockClear();
+    mockAxios.post.mockClear();
   });
 
   afterEach(async () => {
@@ -51,7 +52,7 @@ describe('Authentication Persistence Tests', () => {
       const testVendorKey = 'pk_test123456789.sk_test123456789012345';
       
       // Mock successful server validation
-      mockAxiosGet.mockResolvedValueOnce({ status: 200, data: { status: 'ok' } });
+      mockAxios.get.mockResolvedValueOnce({ status: 200, data: { status: 'ok' } } as any);
       
       // Store vendor key
       await config.setVendorKey(testVendorKey);
@@ -62,132 +63,244 @@ describe('Authentication Persistence Tests', () => {
       expect(config.get('lastValidated')).toBeDefined();
       
       // Simulate new CLI session by creating new config instance
-      const newConfig = new (CLIConfig as any)();
-      (newConfig as any).conf });
-});});
- (0);
-    BeCount()).toetFailureg.g(confi   expect45');
-   3456789012389.sk_test124567pk_test123rKey('g.setVendoait confi  awlures
-    eset fai rshouldting y setvendor kel cessfu// Suc
-         
-   ' } });us: 'ok stat0, data: {s: 20 statueOnce({lukResolvedVa.mocxiosGetckA    mo  validation
-ul server uccessf  // Mock s   ;
+      const newConfig = new CLIConfig();
+      (newConfig as any).configDir = testConfigDir;
+      (newConfig as any).configPath = path.join(testConfigDir, 'config.json');
+      (newConfig as any).lockFile = path.join(testConfigDir, 'config.lock');
       
- t()).toBe(2)tFailureCoungeconfig.     expect(t();
- FailureCouncrement config.inawait     ;
- t()ounFailureCcrementfig.inawait con
-       failuresdd some    // A  ) => {
-ync (on', ashenticatiul autessfount on succailure cd reset f  it('shoul  });
+      await newConfig.init();
+      
+      // Verify credentials persist across sessions
+      expect(newConfig.getVendorKey()).toBe(testVendorKey);
+      expect(newConfig.get('authMethod')).toBe('vendor_key');
+    });
 
-  ds
-  econ 2 s2000); //Ms()).toBe(DelayetAuth.gconfigct(pe   ex);
-   ).toBe(trueh()ayAutDeluldshopect(config.   ex
-   e(3);Count()).toBilureetFafig.g expect(con     reCount();
-entFailug.incremnfiwait co     a 
- 
-     false);uth()).toBe(ayADelg.shouldnfixpect(co      efailures
-until 3 lay ould not de Sh
-      //;
-      ()).toBe(2)untgetFailureCoect(config.    exp);
-  Count(ailurentFemencr.iait config aw    
-     
-  ned();toBeDefi).uthFailure()etLastAct(config.g      expee(1);
-.toBount())etFailureCnfig.g expect(co
-     nt();CouFailure.incrementawait configs
-      ilurement fa // Incre    
-     se);
-  e(faltoB)).layAuth(Deg.shouldnfiexpect(co  Be(0);
-    nt()).toureCoutFail.geonfig    expect(c
-  () => {ly', async res correctation failuuthenticould track a'sh {
-    it( =>ng', ()re Trackiation Failuhenticbe('Aut
-  descri
+    it('should store and retrieve JWT token credentials across CLI sessions', async () => {
+      const testToken = 'REDACTED_JWT';
+      
+      // Store JWT token
+      await config.setToken(testToken);
+      
+      // Verify storage
+      expect(config.getToken()).toBe(testToken);
+      expect(config.get('authMethod')).toBe('jwt');
+      expect(config.get('lastValidated')).toBeDefined();
+      
+      // Simulate new CLI session
+      const newConfig = new CLIConfig();
+      (newConfig as any).configDir = testConfigDir;
+      (newConfig as any).configPath = path.join(testConfigDir, 'config.json');
+      (newConfig as any).lockFile = path.join(testConfigDir, 'config.lock');
+      
+      await newConfig.init();
+      
+      // Verify token persists across sessions
+      expect(newConfig.getToken()).toBe(testToken);
+      expect(newConfig.get('authMethod')).toBe('jwt');
+    });
   });
 
-    }); });     r message
-urn errod ret'); // Shoulstring('toBeult).f respeo   expect(tye);
-     ruBe(ttolt).not. expect(resu   
-    mat(key);eyFororKidateVend= config.valonst result 
-        c(key => {achidKeys.forE   inval     
-      ];
-  
-  characters// invalid lid', sk_test@invast123456789.te'pk_      rt
-  hooo sret part t// secshort', pk_test.sk_      'rt
-   pa secret_', // empty123456789.skk_test        'ppart
-ic  empty publ9012345', //st12345678k_.sk_te     'p  er
- rong ord/ w', /_testest.pk   'sk_tpart
-     ret  sec/ missing'pk_test', /     
-   // no dotd-key', ali'inv     empty
-    //         '',Keys = [
-nvalid i  const    => {
- ats', () key formvalid vendord reject int('shoul    i    });
-
-     });
-e);
- ruoBe(t.tect(result)exp
-        rmat(key);orKeyFoteVendalidaonfig.v ct =nst resul     co => {
-   rEach(key.folidKeys 
-      va     ];
-6'
-      34556789012_12345678.sk    'pk_1234  HI',
-  123DEF456G789ABC456.sk_XYZBC123DEF      'pk_A012345',
-  89st12345676789.sk_te12345pk_test     '   s = [
-validKey     const  () => {
- format',dor key  venrrectvalidate coit('should     ) => {
-', (y Validation Keribe('Vendordesc });
-
-  
+  describe('Authentication Failure Tracking', () => {
+    it('should track authentication failure count and last failure time', async () => {
+      // Initially no failures
+      expect(config.getFailureCount()).toBe(0);
+      expect(config.getLastAuthFailure()).toBeUndefined();
+      
+      // Increment failure count
+      await config.incrementFailureCount();
+      
+      // Verify failure count increased
+      expect(config.getFailureCount()).toBe(1);
+      expect(config.getLastAuthFailure()).toBeDefined();
+      
+      // Increment again
+      await config.incrementFailureCount();
+      
+      // Verify count is now 2
+      expect(config.getFailureCount()).toBe(2);
     });
- oBe(true);cated).tisAuthentipect(    exated();
-  ic.isAuthentconfigit icated = awa isAuthentst
-      conen as validtoktect  deld     // Shou    
- 
-  en);lidTokken(va.setToait configaw
-      
-      YgR6c';aqt7Rwu7dEh5ZUlCbCKJW8P8h6SWp-38RKzJll9.L5OTk5OTOTkHAiOjk5MDIyLCJlejM5WF0IjoxNTE2MiaG9lIiwIkpvaG4gRI6ZSODkwIiwibmFt0NTY3IiOiIxMjMeyJzdWI6IkpXVCJ9.nR5cCI1NiIsIiOiJIUz = 'eyJhbGckenidTost valcon     future)
- ar in the  (exp fd JWT tokenreate a vali
-      // Cync () => {, asT tokens'alid JWect vd det('shoul  it
-  
-   });
- ;lse)d).toBe(faicateuthentpect(isA    exated();
-  nticfig.isAutheawait conticated = nst isAuthen      coas expired
-ect token uld det  // Sho    );
-      
-okeniredTken(expig.setTot conf      awai
-      
-Q';wFzzht-KlaQD8A9V8b6RFmMazPUVaVF43UFY4Adcj39.MzkwMjJ1MTYyHAiOjEJlejM5MDIyLCoxNTE2MiwiaWF0IjG4gRG9lIkpvaZSI6IODkwIiwibmFtMjM0NTY3IxzdWIiOiyJVCJ9.eCI6IkpXI1NiIsInR5cOiJIUzGciken = 'eyJhbToonst expiredt)
-      cpashe in texp T token (ed JWirate an exp   // Cre => {
-   sync ()tokens', axpired JWT d detect ehoul
-    it('s> {ing', () =piry Handl Exbe('Tokenescri;
 
-  d  });
-  })
-  deviceId1);Be(toceId2).pect(devi     ex
- vice IDame deld be the s   // Shou   
-  d();
-    tDeviceIonfig.ge newC2 = awaitst deviceId    con
-  ssionond sen sec ievice ID  // Get d   ;
+    it('should reset failure count when authentication succeeds', async () => {
+      // Add some failures
+      await config.incrementFailureCount();
+      await config.incrementFailureCount();
       
- t()g.iniit newConfi awa     g.lock');
-r, 'confiestConfigDin(tpath.joilockFile = as any).newConfig   (  
-  .json');nfig'configDir, testCon(th.joipaath = configPny).as anewConfig 
-      (ir;testConfigD = gDirnficoany).nfig as      (newCo;
- s any)()CLIConfig aig = new (Conf newonst    cssion
-  new CLI seSimulate // 
-           0);
- han(reaterTgth).toBeGd1.leneviceIct(d      expe);
-g'('strinceId1).toBe devieofpect(typ ex
-     Defined();).toBeeId1pect(devic;
-      exeId().getDevicnfig= await cod1 eInst devicco     sion
- st sesn firdevice ID i// Get 
-       () => {ons', asyncss sessiency acroonsistevice ID cn daid maint   it('shoul;
+      expect(config.getFailureCount()).toBe(2);
+      
+      // Reset failure count (simulating successful auth)
+      await config.resetFailureCount();
+      
+      // Verify reset
+      expect(config.getFailureCount()).toBe(0);
+      expect(config.getLastAuthFailure()).toBeUndefined();
+    });
 
- );
-    })eDefined(toB')).lidatedtVafig.get('laswCont(ne  expecey');
-    e('vendor_kd')).toBetho('authMonfig.getexpect(newC
-      );ndorKeyoBe(testVe()).tVendorKeyig.getConfct(newexpe   ssions
-   ss sestence acropersiify     // Ver   
-();
-     itwConfig.inawait ne
-      lock');g.Dir, 'confiConfigestath.join(tckFile = pg as any).loewConfi);
-      (ng.json'gDir, 'confi(testConfi path.jointh =figPa).connyg as anfiwCo
-      (neir;ConfigD testigDir =
+    it('should apply progressive delays based on failure count', async () => {
+      // Initially no delay
+      expect(config.shouldDelayAuth()).toBe(false);
+      expect(config.getAuthDelayMs()).toBe(0);
+      
+      // After 3 failures, should delay
+      await config.incrementFailureCount(); // 1
+      await config.incrementFailureCount(); // 2
+      await config.incrementFailureCount(); // 3
+      
+      expect(config.shouldDelayAuth()).toBe(true);
+      expect(config.getAuthDelayMs()).toBeGreaterThanOrEqual(1500); // 2000ms ± 25%
+      expect(config.getAuthDelayMs()).toBeLessThanOrEqual(2500);
+      
+      // After 4 failures, delay should increase
+      await config.incrementFailureCount(); // 4
+      
+      expect(config.getAuthDelayMs()).toBeGreaterThanOrEqual(3000); // 4000ms ± 25%
+      expect(config.getAuthDelayMs()).toBeLessThanOrEqual(5000);
+    });
+  });
+
+  describe('Vendor Key Validation', () => {
+    it('should validate correct vendor key format', () => {
+      const validKey = 'pk_test123456789.sk_test123456789012345';
+      const result = config.validateVendorKeyFormat(validKey);
+      expect(result).toBe(true);
+    });
+
+    it('should reject invalid vendor key formats', () => {
+      const invalidKeys = [
+        'invalid-key', // no dot
+        'pk_.sk_test123456789012345', // empty public part
+        'pk_test123456789.sk_', // empty secret part
+        'pk_test.sk_test', // too short
+        'pk_test123456789', // missing secret part
+        'sk_test123456789.pk_test123456789', // wrong order
+        'pk_test@invalid.sk_test123456789012345', // invalid chars
+      ];
+
+      invalidKeys.forEach(key => {
+        const result = config.validateVendorKeyFormat(key);
+        expect(result).not.toBe(true);
+        expect(typeof result).toBe('string'); // Should return error message
+      });
+    });
+
+    it('should accept valid vendor key formats', () => {
+      const validKeys = [
+        'pk_123456789ABCDEF.sk_1234567890123456789012345',
+        'pk_A0123456789ABC.sk_XYZ123456789012345',
+      ];
+
+      validKeys.forEach(key => {
+        const result = config.validateVendorKeyFormat(key);
+        expect(result).toBe(true);
+      });
+    });
+  });
+
+ describe('Token Expiry Handling', () => {
+    it('should detect if JWT token is authenticated', async () => {
+      // Valid token (in the future)
+      const validToken = 'REDACTED_JWT';
+      
+      await config.setToken(validToken);
+      const isAuthenticated = await config.isAuthenticated();
+      expect(isAuthenticated).toBe(true);
+    });
+
+    it('should detect if JWT token is expired', async () => {
+      // Expired token (in the past)
+      const expiredToken = 'REDACTED_JWT';
+      
+      await config.setToken(expiredToken);
+      const isAuthenticated = await config.isAuthenticated();
+      expect(isAuthenticated).toBe(false);
+    });
+  });
+
+  describe('Device ID Management', () => {
+    it('should generate and maintain consistent device ID across sessions', async () => {
+      // Get first device ID
+      const deviceId1 = await config.getDeviceId();
+      expect(deviceId1).toBeDefined();
+      expect(typeof deviceId1).toBe('string');
+      expect(deviceId1.length).toBeGreaterThan(0);
+      
+      // Get device ID again - should be the same
+      const deviceId2 = await config.getDeviceId();
+      expect(deviceId1).toBe(deviceId2);
+      
+      // Simulate new session
+      const newConfig = new CLIConfig();
+      (newConfig as any).configDir = testConfigDir;
+      (newConfig as any).configPath = path.join(testConfigDir, 'config.json');
+      (newConfig as any).lockFile = path.join(testConfigDir, 'config.lock');
+      
+      await newConfig.init();
+      
+      // Device ID should persist across sessions
+      const deviceId3 = await newConfig.getDeviceId();
+      expect(deviceId1).toBe(deviceId3);
+    });
+  });
+
+  describe('Configuration Versioning and Migration', () => {
+    it('should maintain configuration version compatibility', async () => {
+      // Check that config has version
+      const version = config.get('version');
+      expect(version).toBeDefined();
+      expect(version).toBe('1.0.0');
+    });
+
+    it('should handle atomic configuration saves', async () => {
+      // Set some data
+      await config.setAndSave('testKey', 'testValue');
+      
+      // Verify it was saved
+      expect(config.get('testKey')).toBe('testValue');
+      
+      // Create new config instance and verify data persists
+      const newConfig = new CLIConfig();
+      (newConfig as any).configDir = testConfigDir;
+      (newConfig as any).configPath = path.join(testConfigDir, 'config.json');
+      (newConfig as any).lockFile = path.join(testConfigDir, 'config.lock');
+      
+      await newConfig.init();
+      
+      expect(newConfig.get('testKey')).toBe('testValue');
+    });
+  });
+
+  describe('Credential Validation Against Server', () => {
+    it('should validate stored credentials against server', async () => {
+      const testVendorKey = 'pk_test123456789.sk_test123456789012345';
+      
+      // Mock successful server validation
+      mockAxios.get.mockResolvedValue({ status: 200, data: { status: 'ok' } } as any);
+      
+      // Set vendor key
+      await config.setVendorKey(testVendorKey);
+      
+      // Validate credentials
+      const isValid = await config.validateStoredCredentials();
+      expect(isValid).toBe(true);
+      
+      // Verify server was called
+      expect(mockAxios.get).toHaveBeenCalledTimes(1);
+    });
+
+    it('should return false when credentials are invalid', async () => {
+      const testVendorKey = 'pk_test123456789.sk_test123456789012345';
+      
+      // Mock failed server validation
+      mockAxios.get.mockRejectedValue({ response: { status: 401 } } as any);
+      
+      // Set vendor key
+      await config.setVendorKey(testVendorKey);
+      
+      // Validate credentials
+      const isValid = await config.validateStoredCredentials();
+      expect(isValid).toBe(false);
+      
+      // Verify server was called
+      expect(mockAxios.get).toHaveBeenCalledTimes(1);
+    });
+  });
+});

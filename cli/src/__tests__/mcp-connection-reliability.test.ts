@@ -10,11 +10,28 @@ import { EventSource } from 'eventsource';
 // Mock dependencies
 jest.mock('ws');
 jest.mock('eventsource');
-jest.mock('axios', () => ({
+jest.mock('chalk', () => ({
   default: {
-    get: jest.fn(),
-    post: jest.fn()
+    blue: {
+      bold: (str: string) => str,
+    },
+    cyan: (str: string) => str,
+    gray: (str: string) => str,
+    green: (str: string) => str,
+    red: (str: string) => str,
+    yellow: (str: string) => str,
   }
+}));
+
+const mockAxios = {
+  get: jest.fn(),
+  post: jest.fn()
+};
+
+jest.mock('axios', () => ({
+  default: mockAxios,
+  get: mockAxios.get,
+  post: mockAxios.post
 }));
 
 // Mock MCP SDK
@@ -101,7 +118,7 @@ describe('MCP Connection Reliability Tests', () => {
       mockEventSource.mockImplementation(() => mockSSEInstance);
       
       // Spy on console to verify retry messages
-      const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
+      const consoleSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
       
       // Attempt connection with remote mode
       const connected = await mcpClient.connect({ connectionMode: 'remote' });
@@ -124,7 +141,7 @@ describe('MCP Connection Reliability Tests', () => {
       // Mock persistent network failure
       mockAxios.get.mockRejectedValue(new Error('ECONNREFUSED'));
       
-      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
       
       // Attempt connection
       const connected = await mcpClient.connect({ connectionMode: 'remote' });
@@ -150,7 +167,7 @@ describe('MCP Connection Reliability Tests', () => {
         message: 'Unauthorized'
       });
       
-      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
       
       // Attempt connection
       const connected = await mcpClient.connect({ connectionMode: 'remote' });
@@ -261,7 +278,7 @@ describe('MCP Connection Reliability Tests', () => {
         .mockRejectedValueOnce(new Error('Health check failed'))
         .mockResolvedValueOnce({ status: 200, data: { status: 'ok' } });
       
-      const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
+      const consoleSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
       
       // Trigger health check failure
       const performHealthCheck = (mcpClient as any).performHealthCheck.bind(mcpClient);
@@ -307,7 +324,7 @@ describe('MCP Connection Reliability Tests', () => {
         on: jest.fn((event, callback) => {
           if (event === 'error') {
             // Simulate immediate error
-            setTimeout(() => callback(new Error('WebSocket connection failed')), 10);
+            setTimeout(() => (callback as any)(new Error('WebSocket connection failed')), 10);
           }
         }),
         close: jest.fn(),
@@ -316,7 +333,7 @@ describe('MCP Connection Reliability Tests', () => {
       };
       mockWebSocket.mockImplementation(() => mockWSInstance);
       
-      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
       
       // Attempt WebSocket connection
       const connected = await mcpClient.connect({ connectionMode: 'websocket' });
@@ -352,7 +369,7 @@ describe('MCP Connection Reliability Tests', () => {
         return instance;
       });
       
-      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
       
       // Connect in remote mode
       const connected = await mcpClient.connect({ connectionMode: 'remote' });
@@ -372,7 +389,7 @@ describe('MCP Connection Reliability Tests', () => {
     });
 
     it('should handle local MCP server not found', async () => {
-      const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
+      const consoleSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
       
       // Attempt local connection (server file won't exist in test)
       const connected = await mcpClient.connect({ 
@@ -407,15 +424,15 @@ describe('MCP Connection Reliability Tests', () => {
       
       mockWSInstance.on.mockImplementation((event, callback) => {
         if (event === 'open') {
-          setTimeout(() => callback(), 10);
+          setTimeout(() => (callback as any)(), 10);
         } else if (event === 'close') {
-          onCloseCallback = callback;
+          onCloseCallback = callback as (code: number, reason: string) => void;
         }
       });
       
       mockWebSocket.mockImplementation(() => mockWSInstance);
       
-      const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
+      const consoleSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
       
       // Connect
       const connected = await mcpClient.connect({ connectionMode: 'websocket' });
@@ -443,7 +460,7 @@ describe('MCP Connection Reliability Tests', () => {
         message: 'AUTHENTICATION_REQUIRED'
       });
       
-      const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
+      const consoleSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
       
       // Attempt connection
       await mcpClient.connect({ connectionMode: 'remote' });
@@ -466,7 +483,7 @@ describe('MCP Connection Reliability Tests', () => {
         message: 'connect ECONNREFUSED'
       });
       
-      const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
+      const consoleSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
       
       // Attempt connection
       await mcpClient.connect({ connectionMode: 'remote' });
@@ -489,7 +506,7 @@ describe('MCP Connection Reliability Tests', () => {
         message: 'timeout'
       });
       
-      const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
+      const consoleSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
       
       // Attempt connection
       await mcpClient.connect({ connectionMode: 'remote' });
@@ -511,7 +528,7 @@ describe('MCP Connection Reliability Tests', () => {
         message: 'certificate verify failed'
       });
       
-      const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
+      const consoleSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
       
       // Attempt connection
       await mcpClient.connect({ connectionMode: 'remote' });
@@ -532,7 +549,7 @@ describe('MCP Connection Reliability Tests', () => {
       const config = (mcpClient as any).config;
       await config.clearInvalidCredentials();
       
-      const consoleSpy = jest.spyOn(console, 'error').mockImplementation();
+      const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
       
       // Attempt connection
       const connected = await mcpClient.connect({ connectionMode: 'remote' });

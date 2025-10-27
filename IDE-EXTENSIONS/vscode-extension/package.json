@@ -149,26 +149,33 @@
         }
       ]
     },
-    "views": {
-      "explorer": [
-        {
-          "id": "lanonasisMemories",
-          "name": "Memories",
-          "when": "lanonasis.enabled"
-        },
-        {
-          "id": "lanonasisApiKeys",
-          "name": "API Keys",
-          "when": "lanonasis.enabled && lanonasis.enableApiKeyManagement"
-        }
-      ]
-    },
     "viewsContainers": {
       "activitybar": [
         {
           "id": "lanonasis",
           "title": "Lanonasis Memory",
-          "icon": "$(database)"
+          "icon": "images/icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "lanonasis": [
+        {
+          "type": "webview",
+          "id": "lanonasis.sidebar",
+          "name": "Memory Assistant",
+          "icon": "images/icon.svg",
+          "contextualTitle": "Lanonasis Memory"
+        },
+        {
+          "id": "lanonasisMemories",
+          "name": "Tree View",
+          "when": "lanonasis.enabled && config.lanonasis.showTreeView"
+        },
+        {
+          "id": "lanonasisApiKeys",
+          "name": "API Keys",
+          "when": "lanonasis.enabled && lanonasis.enableApiKeyManagement"
         }
       ]
     },
@@ -265,6 +272,11 @@
           "type": "boolean",
           "default": false,
           "description": "Show brief performance feedback (CLI vs API usage)"
+        },
+        "lanonasis.showTreeView": {
+          "type": "boolean",
+          "default": false,
+          "description": "Show traditional tree view alongside modern sidebar (for advanced users)"
         }
       }
     }
