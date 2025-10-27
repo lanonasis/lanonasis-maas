@@ -1,6 +1,6 @@
 {
   "name": "@lanonasis/cli",
-  "version": "3.0.13",
+  "version": "3.2.13",
   "description": "LanOnasis Enterprise CLI - Memory as a Service, API Key Management, and Infrastructure Orchestration",
   "main": "dist/index-simple.js",
   "bin": {
@@ -21,8 +21,8 @@
     "build:mcp-client": "tsc src/mcp/client/enhanced-client.ts --outDir dist/mcp/client",
     "start": "node dist/index.js",
     "start:mcp-server": "node dist/mcp/server/lanonasis-server.js",
-    "test": "jest",
-    "test:mcp": "jest --testPathPattern=mcp",
+    "test": "NODE_OPTIONS=--experimental-vm-modules jest",
+    "test:mcp": "NODE_OPTIONS=--experimental-vm-modules jest --testPathPattern=mcp",
     "test:integration": "npm run build:mcp && npm run test:mcp",
     "lint": "eslint src/**/*.ts",
     "type-check": "tsc --noEmit",
@@ -55,7 +55,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/lanonasis/lanonasis-maas.git",
+    "url": "git+https://github.com/lanonasis/lanonasis-maas.git",
     "directory": "cli"
   },
   "bugs": {
@@ -84,6 +84,7 @@
     "ws": "^8.18.3"
   },
   "devDependencies": {
+    "@jest/globals": "^29.7.0",
     "@types/inquirer": "^9.0.7",
     "@types/jest": "^29.5.14",
     "@types/node": "^22.10.2",
