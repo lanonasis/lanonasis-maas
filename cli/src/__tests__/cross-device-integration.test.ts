@@ -6,9 +6,10 @@ import * as path from 'path';
 import * as os from 'os';
 
 // Mock dependencies
-const mockAxios = {
-  get: jest.fn() as jest.Mock,
-  post: jest.fn() as jest.Mock
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const mockAxios: any = {
+  get: jest.fn(),
+  post: jest.fn()
 };
 
 jest.mock('axios', () => ({
@@ -39,7 +40,6 @@ describe('Cross-Device Integration Tests', () => {
   let device1Dir: string;
   let device2Dir: string;
   let device3Dir: string;
-  let mockAxios: { get: jest.Mock; post: jest.Mock; };
 
   beforeEach(async () => {
     // Create separate test directories for each "device"

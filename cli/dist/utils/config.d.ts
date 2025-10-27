@@ -40,6 +40,8 @@ export declare class CLIConfig {
     private config;
     private lockFile;
     private static readonly CONFIG_VERSION;
+    private authCheckCache;
+    private readonly AUTH_CACHE_TTL;
     constructor();
     init(): Promise<void>;
     load(): Promise<void>;

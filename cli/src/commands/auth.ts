@@ -287,7 +287,7 @@ export async function diagnoseCommand(): Promise<void> {
   // Step 3: Check authentication failures
   console.log(chalk.cyan('\n3. Authentication History'));
   diagnostics.authFailures = config.getFailureCount();
-  diagnostics.lastFailure = config.getLastAuthFailure();
+  diagnostics.lastFailure = config.getLastAuthFailure() ?? null;
 
   if (diagnostics.authFailures === 0) {
     console.log(chalk.green('   ✓ No recent authentication failures'));
@@ -614,17 +614,17 @@ async function handleOAuthFlow(config: CLIConfig): Promise<void> {
   console.log(chalk.gray('This will open your browser for secure authentication'));
   console.log();
   
-  const { proceed } = await inquirer.prompt<{ proceed: boolean }>([
+  const { openBrowser } = await inquirer.prompt<{ openBrowser: boolean }>([
     {
       type: 'confirm',
-      name: 'proceed',
+      name: 'openBrowser',
       message: 'Open browser for authentication?',
       default: true
     }
   ]);
   
-  if (!proceed) {
-    console.log(chalk.yellow('Authentication cancelled'));
+  if (!openBrowser) {
+    console.log(chalk.yellow('⚠️  Authentication cancelled'));
     return;
   }
   
@@ -648,10 +648,34 @@ async function handleOAuthFlow(config: CLIConfig): Promise<void> {
         type: 'input',
         name: 'token',
         message: 'Paste the authentication token from browser:',
-        validate: (input: string) => {
+        validate: async (input: string) => {
           if (!input || input.trim().length === 0) {
             return 'Token is required';
           }
+          
+          const trimmed = input.trim();
+          
+          // Reject if user pasted a URL instead of token
+          if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+            return 'Please paste the TOKEN from the page, not the URL';
+          }
+          
+          // Check token format - should start with 'cli_' or be a JWT
+          if (!trimmed.startsWith('cli_') && !trimmed.match(/^[\w-]+\.[\w-]+\.[\w-]+$/)) {
+            return 'Invalid token format. Expected format: cli_xxx or JWT token';
+          }
+          
+          // Verify token with server
+          try {
+            const response = await apiClient.post('/auth/verify', { token: trimmed });
+            if (!response.valid) {
+              return 'Token verification failed. Please try again.';
+            }
+          } catch (error: unknown) {
+            const errorMessage = error instanceof Error ? error.message : 'Server verification failed';
+            return `Token verification error: ${errorMessage}`;
+          }
+          
           return true;
         }
       }

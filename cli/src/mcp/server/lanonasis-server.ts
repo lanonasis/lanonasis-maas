@@ -121,8 +121,9 @@ export class LanonasisMCPServer {
       console.log(chalk.gray(`Authenticated: ${token ? 'Yes' : 'No'}`));
       console.log(chalk.gray(`Max connections: ${this.maxConnections}`));
     }
-  }  /
-**
+  }
+
+  /**
    * Register MCP tools
    */
   private async registerTools(): Promise<void> {
