@@ -53,6 +53,8 @@ export class CLIConfig {
   private config: CLIConfigData = {};
   private lockFile: string;
   private static readonly CONFIG_VERSION = '1.0.0';
+  private authCheckCache: { isValid: boolean; timestamp: number } | null = null;
+  private readonly AUTH_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
   constructor() {
     this.configDir = path.join(os.homedir(), '.maas');
@@ -558,6 +560,14 @@ export class CLIConfig {
     const token = this.getToken();
     if (!token) return false;
 
+    // Check cache first
+    if (this.authCheckCache && (Date.now() - this.authCheckCache.timestamp) < this.AUTH_CACHE_TTL) {
+      return this.authCheckCache.isValid;
+    }
+
+    // Local expiry check first (fast)
+    let locallyValid = false;
+    
     // Handle simple CLI tokens (format: cli_xxx_timestamp)
     if (token.startsWith('cli_')) {
       // Extract timestamp from CLI token
@@ -568,20 +578,65 @@ export class CLIConfig {
         if (!isNaN(timestamp)) {
           // CLI tokens are valid for 30 days
           const thirtyDaysInMs = 30 * 24 * 60 * 60 * 1000;
-          return (Date.now() - timestamp) < thirtyDaysInMs;
+          locallyValid = (Date.now() - timestamp) < thirtyDaysInMs;
         }
+      } else {
+        locallyValid = true; // Fallback for old format
       }
-      // If we can't parse timestamp, assume valid (fallback)
-      return true;
+    } else {
+      // Handle JWT tokens
+      try {
+        const decoded = jwtDecode(token) as Record<string, unknown>;
+        const now = Date.now() / 1000;
+        locallyValid = typeof decoded.exp === 'number' && decoded.exp > now;
+      } catch {
+        locallyValid = false;
+      }
     }
 
-    // Handle JWT tokens
-    try {
-      const decoded = jwtDecode(token) as Record<string, unknown>;
-      const now = Date.now() / 1000;
-      return typeof decoded.exp === 'number' && decoded.exp > now;
-    } catch {
+    // If expired locally, no need to check server
+    if (!locallyValid) {
+      this.authCheckCache = { isValid: false, timestamp: Date.now() };
       return false;
+    }
+
+    // Verify with server (security check)
+    try {
+      const axios = (await import('axios')).default;
+      
+      // Try auth-gateway first (port 4000), then fall back to Netlify function
+      const endpoints = [
+        'http://localhost:4000/v1/auth/verify-token',
+        'https://auth.lanonasis.com/v1/auth/verify-token', 
+        'https://api.lanonasis.com/auth/verify'
+      ];
+      
+      let response = null;
+      for (const endpoint of endpoints) {
+        try {
+          response = await axios.post(endpoint, { token }, { timeout: 3000 });
+          if (response.data.valid === true) {
+            break;
+          }
+        } catch (err) {
+          // Try next endpoint
+          continue;
+        }
+      }
+      
+      if (!response || response.data.valid !== true) {
+        this.authCheckCache = { isValid: false, timestamp: Date.now() };
+        return false;
+      }
+      
+      this.authCheckCache = { isValid: true, timestamp: Date.now() };
+      return true;
+    } catch (error: unknown) {
+      // If all server checks fail, fall back to local validation
+      // This allows offline usage but is less secure
+      console.warn('⚠️  Unable to verify token with server, using local validation');
+      this.authCheckCache = { isValid: locallyValid, timestamp: Date.now() };
+      return locallyValid;
     }
   }
 
