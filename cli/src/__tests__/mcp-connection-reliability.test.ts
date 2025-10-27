@@ -23,7 +23,8 @@ jest.mock('chalk', () => ({
   }
 }));
 
-const mockAxios = {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const mockAxios: any = {
   get: jest.fn(),
   post: jest.fn()
 };
@@ -51,7 +52,6 @@ jest.mock('@modelcontextprotocol/sdk/client/stdio.js', () => ({
 describe('MCP Connection Reliability Tests', () => {
   let mcpClient: MCPClient;
   let testConfigDir: string;
-  let mockAxios: any;
   let mockWebSocket: any;
   let mockEventSource: any;
   let mockMCPClient: any;
@@ -76,7 +76,6 @@ describe('MCP Connection Reliability Tests', () => {
     await config.setAndSave('vendorKey', 'pk_test123456789.sk_test123456789012345');
     
     // Setup mocks
-    mockAxios = (await import('axios')).default;
     mockWebSocket = WebSocket as jest.MockedClass<typeof WebSocket>;
     mockEventSource = EventSource as jest.MockedClass<typeof EventSource>;
     mockMCPClient = (await import('@modelcontextprotocol/sdk/client/index.js')).Client;
@@ -353,7 +352,8 @@ describe('MCP Connection Reliability Tests', () => {
       // Mock successful HTTP connection but SSE failure
       mockAxios.get.mockResolvedValue({ status: 200, data: { status: 'ok' } });
       
-      const mockSSEInstance = {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const mockSSEInstance: any = {
         onmessage: null,
         onerror: null,
         close: jest.fn()
@@ -420,13 +420,14 @@ describe('MCP Connection Reliability Tests', () => {
         readyState: WebSocket.OPEN
       };
       
-      let onCloseCallback: ((code: number, reason: string) => void) | null = null;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      let onCloseCallback: any = null;
       
       mockWSInstance.on.mockImplementation((event, callback) => {
         if (event === 'open') {
           setTimeout(() => (callback as any)(), 10);
         } else if (event === 'close') {
-          onCloseCallback = callback as (code: number, reason: string) => void;
+          onCloseCallback = callback;
         }
       });
       

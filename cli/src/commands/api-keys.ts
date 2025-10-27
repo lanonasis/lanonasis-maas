@@ -254,7 +254,8 @@ apiKeysCommand
       console.log(colors.info('━'.repeat(50)));
       console.log(colors.warning('⚠️  The key value is securely encrypted and cannot be retrieved later.'));
     } catch (error) {
-      console.error(colors.error('✖ Failed to create API key:'), colors.muted(error.message));
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error(colors.error('✖ Failed to create API key:'), colors.muted(errorMessage));
       process.exit(1);
     }
   });
@@ -312,7 +313,8 @@ apiKeysCommand
       console.log(colors.info('═'.repeat(80)));
       console.log(colors.muted(`🔢 Total: ${colors.highlight(apiKeys.length)} API keys`));
     } catch (error) {
-      console.error(colors.error('✖ Failed to list API keys:'), colors.muted(error.message));
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error(colors.error('✖ Failed to list API keys:'), colors.muted(errorMessage));
       process.exit(1);
     }
   });
@@ -356,7 +358,8 @@ apiKeysCommand
       }
       console.log(colors.info('═'.repeat(60)));
     } catch (error) {
-      console.error(colors.error('✖ Failed to get API key:'), colors.muted(error.message));
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error(colors.error('✖ Failed to get API key details:'), colors.muted(errorMessage));
       process.exit(1);
     }
   });
@@ -436,7 +439,8 @@ apiKeysCommand
       }
       console.log(colors.info('━'.repeat(40)));
     } catch (error) {
-      console.error(colors.error('✖ Failed to update API key:'), colors.muted(error.message));
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error(colors.error('✖ Failed to update API key:'), colors.muted(errorMessage));
       process.exit(1);
     }
   });
@@ -816,7 +820,8 @@ analyticsCommand
       console.log(colors.info('═'.repeat(80)));
       console.log(colors.muted(`📈 Total: ${colors.highlight(analytics.length)} events`));
     } catch (error) {
-      console.error(colors.error('✖ Failed to get usage analytics:'), colors.muted(error.message));
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error(colors.error('✖ Failed to get usage analytics:'), colors.muted(errorMessage));
       process.exit(1);
     }
   });
@@ -871,7 +876,8 @@ analyticsCommand
       console.log(colors.info('═'.repeat(80)));
       console.log(colors.muted(`🛡️  Total: ${colors.highlight(events.length)} security events`));
     } catch (error) {
-      console.error(colors.error('✖ Failed to get security events:'), colors.muted(error.message));
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error(colors.error('✖ Failed to get security events:'), colors.muted(errorMessage));
       process.exit(1);
     }
   });
