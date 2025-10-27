@@ -60,7 +60,11 @@ program
     process.env.CLI_OUTPUT_FORMAT = opts.output;
     
     // Auto-initialize MCP unless disabled
-    if (opts.mcp !== false && !['init', 'auth', 'login', 'mcp', 'health', 'status'].includes(actionCommand.name())) {
+    const isMcpFlow = actionCommand.name() === 'mcp' ||
+                     actionCommand.parent?.name?.() === 'mcp' ||
+                     actionCommand.name() === 'mcp-server' ||
+                     actionCommand.parent?.name?.() === 'mcp-server';
+    if (opts.mcp !== false && !isMcpFlow && !['init', 'auth', 'login', 'health', 'status'].includes(actionCommand.name())) {
       try {
         const client = getMCPClient();
         if (!client.isConnectedToServer()) {
