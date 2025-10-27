@@ -1,0 +1,354 @@
+:root {
+    --container-padding: 16px;
+    --input-padding: 8px 12px;
+    --button-padding: 8px 16px;
+    --border-radius: 6px;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    padding: 0;
+    margin: 0;
+    font-family: var(--vscode-font-family);
+    font-size: var(--vscode-font-size);
+    color: var(--vscode-foreground);
+    background-color: var(--vscode-sideBar-background);
+}
+
+#root {
+    padding: var(--container-padding);
+}
+
+/* Loading State */
+.loading-state,
+.empty-state,
+.error-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 32px 16px;
+    text-align: center;
+}
+
+.spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid var(--vscode-progressBar-background);
+    border-top-color: var(--vscode-progressBar-foreground);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Header */
+.sidebar-header {
+    margin-bottom: 16px;
+}
+
+.header-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.header-title h2 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    font-size: 11px;
+    background-color: var(--vscode-badge-background);
+    color: var(--vscode-badge-foreground);
+    border-radius: 10px;
+}
+
+.status-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background-color: var(--vscode-charts-green);
+}
+
+.status-dot.disconnected {
+    background-color: var(--vscode-charts-red);
+}
+
+/* Search Box */
+.search-container {
+    position: relative;
+    margin-bottom: 16px;
+}
+
+.search-box {
+    width: 100%;
+    padding: var(--input-padding);
+    padding-left: 32px;
+    background-color: var(--vscode-input-background);
+    color: var(--vscode-input-foreground);
+    border: 1px solid var(--vscode-input-border);
+    border-radius: var(--border-radius);
+    font-family: var(--vscode-font-family);
+    font-size: var(--vscode-font-size);
+}
+
+.search-box:focus {
+    outline: 1px solid var(--vscode-focusBorder);
+}
+
+.search-icon {
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    opacity: 0.6;
+}
+
+/* Action Buttons */
+.action-buttons {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+
+.btn {
+    padding: var(--button-padding);
+    background-color: var(--vscode-button-background);
+    color: var(--vscode-button-foreground);
+    border: none;
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    font-family: var(--vscode-font-family);
+    font-size: 13px;
+    transition: background-color 0.2s;
+}
+
+.btn:hover {
+    background-color: var(--vscode-button-hoverBackground);
+}
+
+.btn-secondary {
+    background-color: var(--vscode-button-secondaryBackground);
+    color: var(--vscode-button-secondaryForeground);
+}
+
+.btn-secondary:hover {
+    background-color: var(--vscode-button-secondaryHoverBackground);
+}
+
+.btn-icon {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+/* Memory List */
+.memories-container {
+    margin-top: 16px;
+}
+
+.section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 0;
+    margin-bottom: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    opacity: 0.8;
+}
+
+.memory-group {
+    margin-bottom: 16px;
+}
+
+.memory-type-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px;
+    background-color: var(--vscode-sideBarSectionHeader-background);
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 500;
+    margin-bottom: 4px;
+}
+
+.memory-type-header:hover {
+    background-color: var(--vscode-list-hoverBackground);
+}
+
+.memory-type-icon {
+    font-size: 16px;
+}
+
+.memory-count {
+    margin-left: auto;
+    opacity: 0.7;
+    font-size: 11px;
+}
+
+.memory-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.memory-item {
+    padding: 10px 12px;
+    margin: 2px 0;
+    background-color: var(--vscode-list-inactiveSelectionBackground);
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.memory-item:hover {
+    background-color: var(--vscode-list-hoverBackground);
+}
+
+.memory-item.active {
+    background-color: var(--vscode-list-activeSelectionBackground);
+    color: var(--vscode-list-activeSelectionForeground);
+}
+
+.memory-title {
+    font-size: 13px;
+    font-weight: 500;
+    margin-bottom: 4px;
+}
+
+.memory-meta {
+    display: flex;
+    gap: 12px;
+    font-size: 11px;
+    opacity: 0.7;
+}
+
+/* Empty States */
+.empty-state {
+    padding: 48px 24px;
+}
+
+.empty-icon {
+    font-size: 48px;
+    opacity: 0.3;
+    margin-bottom: 16px;
+}
+
+.empty-state h3 {
+    margin: 0 0 8px 0;
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.empty-state p {
+    margin: 0 0 24px 0;
+    opacity: 0.8;
+    line-height: 1.5;
+}
+
+/* Authentication State */
+.auth-state {
+    padding: 32px 16px;
+    text-align: center;
+}
+
+.auth-icon {
+    font-size: 64px;
+    opacity: 0.3;
+    margin-bottom: 16px;
+}
+
+.auth-state h3 {
+    margin: 0 0 12px 0;
+    font-size: 18px;
+    font-weight: 600;
+}
+
+.auth-state p {
+    margin: 0 0 24px 0;
+    opacity: 0.8;
+    line-height: 1.6;
+}
+
+.auth-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    max-width: 280px;
+    margin: 0 auto;
+}
+
+/* Enhanced Mode Banner */
+.enhanced-banner {
+    padding: 12px;
+    margin-bottom: 16px;
+    background: linear-gradient(135deg, var(--vscode-charts-blue) 0%, var(--vscode-charts-purple) 100%);
+    border-radius: var(--border-radius);
+    color: white;
+    font-size: 12px;
+}
+
+.enhanced-banner-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 4px;
+    font-weight: 600;
+}
+
+.enhanced-banner-text {
+    opacity: 0.9;
+}
+
+/* Error State */
+.error-state {
+    padding: 32px 16px;
+    text-align: center;
+}
+
+.error-icon {
+    font-size: 48px;
+    color: var(--vscode-errorForeground);
+    margin-bottom: 16px;
+}
+
+.error-message {
+    padding: 12px;
+    background-color: var(--vscode-inputValidation-errorBackground);
+    border: 1px solid var(--vscode-inputValidation-errorBorder);
+    border-radius: var(--border-radius);
+    margin-bottom: 16px;
+    font-size: 12px;
+}
+
+/* Utilities */
+.hidden {
+    display: none !important;
+}
+
+.text-center {
+    text-align: center;
+}
+
+.mt-1 { margin-top: 8px; }
+.mt-2 { margin-top: 16px; }
+.mb-1 { margin-bottom: 8px; }
+.mb-2 { margin-bottom: 16px; }

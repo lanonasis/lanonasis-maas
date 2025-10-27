@@ -8,8 +8,6 @@ import { EventSource } from 'eventsource';
 import { fileURLToPath } from 'url';
 import WebSocket from 'ws';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 interface MCPConnectionOptions {
   serverPath?: string;
@@ -178,7 +176,7 @@ export class MCPClient {
           // Local MCP server connection (default)
           const serverPathValue = options.serverPath ?? 
                       this.config.get<string>('mcpServerPath') ?? 
-                      path.join(__dirname, '../../../../onasis-gateway/mcp-server/server.js');
+                      path.join(path.resolve(), '../../../../onasis-gateway/mcp-server/server.js');
           serverPath = serverPathValue;
           // Check if the server file exists
           if (!fs.existsSync(serverPath)) {
