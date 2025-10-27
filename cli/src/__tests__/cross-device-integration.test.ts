@@ -6,11 +6,15 @@ import * as path from 'path';
 import * as os from 'os';
 
 // Mock dependencies
+const mockAxios = {
+  get: jest.fn() as jest.Mock,
+  post: jest.fn() as jest.Mock
+};
+
 jest.mock('axios', () => ({
-  default: {
-    get: jest.fn(),
-    post: jest.fn()
-  }
+  default: mockAxios,
+  get: mockAxios.get,
+  post: mockAxios.post
 }));
 
 jest.mock('eventsource');
@@ -35,7 +39,7 @@ describe('Cross-Device Integration Tests', () => {
   let device1Dir: string;
   let device2Dir: string;
   let device3Dir: string;
-  let mockAxios: any;
+  let mockAxios: { get: jest.Mock; post: jest.Mock; };
 
   beforeEach(async () => {
     // Create separate test directories for each "device"
@@ -68,8 +72,7 @@ describe('Cross-Device Integration Tests', () => {
     await device2Config.init();
     await device3Config.init();
 
-    // Setup axios mock
-    mockAxios = (await import('axios')).default;
+    // Clear axios mocks
     mockAxios.get.mockClear();
     mockAxios.post.mockClear();
   });
@@ -90,7 +93,7 @@ describe('Cross-Device Integration Tests', () => {
       const sharedVendorKey = 'pk_shared123456789.sk_shared123456789012345';
       
       // Mock successful server validation for all devices
-      mockAxios.get.mockResolvedValue({ status: 200, data: { status: 'ok' } });
+      mockAxios.get.mockResolvedValue({ status: 200, data: { status: 'ok' } } as any);
       
       // Set same vendor key on all devices
       await device1Config.setVendorKey(sharedVendorKey);
@@ -115,7 +118,7 @@ describe('Cross-Device Integration Tests', () => {
       const sharedVendorKey = 'pk_shared123456789.sk_shared123456789012345';
       
       // Mock successful server validation
-      mockAxios.get.mockResolvedValue({ status: 200, data: { status: 'ok' } });
+      mockAxios.get.mockResolvedValue({ status: 200, data: { status: 'ok' } } as any);
       
       // Set same vendor key on all devices
       await device1Config.setVendorKey(sharedVendorKey);
@@ -151,7 +154,7 @@ describe('Cross-Device Integration Tests', () => {
         }
       };
       
-      mockAxios.get.mockResolvedValue({ data: mockDiscoveryResponse });
+      mockAxios.get.mockResolvedValue({ data: mockDiscoveryResponse } as any);
       
       // Perform service discovery on all devices
       await device1Config.discoverServices();
@@ -159,9 +162,9 @@ describe('Cross-Device Integration Tests', () => {
       await device3Config.discoverServices();
       
       // All devices should have discovered the same endpoints
-      const services1 = device1Config.get('discoveredServices');
-      const services2 = device2Config.get('discoveredServices');
-      const services3 = device3Config.get('discoveredServices');
+      const services1 = device1Config.get('discoveredServices') as any;
+      const services2 = device2Config.get('discoveredServices') as any;
+      const services3 = device3Config.get('discoveredServices') as any;
       
       expect(services1).toEqual(services2);
       expect(services1).toEqual(services3);
@@ -175,9 +178,9 @@ describe('Cross-Device Integration Tests', () => {
 
     it('should handle service discovery failures consistently', async () => {
       // Mock service discovery failure
-      mockAxios.get.mockRejectedValue(new Error('Service discovery failed'));
+      mockAxios.get.mockRejectedValue(new Error('Service discovery failed') as any);
       
-      const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
+      const consoleSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
       
       // Attempt service discovery on all devices
       await device1Config.discoverServices(true);
@@ -185,9 +188,9 @@ describe('Cross-Device Integration Tests', () => {
       await device3Config.discoverServices(true);
       
       // All devices should fall back to same default endpoints
-      const services1 = device1Config.get('discoveredServices');
-      const services2 = device2Config.get('discoveredServices');
-      const services3 = device3Config.get('discoveredServices');
+      const services1 = device1Config.get('discoveredServices') as any;
+      const services2 = device2Config.get('discoveredServices') as any;
+      const services3 = device3Config.get('discoveredServices') as any;
       
       expect(services1).toEqual(services2);
       expect(services1).toEqual(services3);
@@ -267,7 +270,7 @@ describe('Cross-Device Integration Tests', () => {
       // Mock authentication failure
       mockAxios.get.mockRejectedValue({
         response: { status: 401, data: { error: 'invalid vendor key' } }
-      });
+      } as any);
       
       // Attempt to set invalid vendor key on all devices
       const errors: string[] = [];
@@ -324,7 +327,7 @@ describe('Cross-Device Integration Tests', () => {
       const sharedVendorKey = 'pk_shared123456789.sk_shared123456789012345';
       
       // Mock successful initial setup
-      mockAxios.get.mockResolvedValue({ status: 200, data: { status: 'ok' } });
+      mockAxios.get.mockResolvedValue({ status: 200, data: { status: 'ok' } } as any);
       
       // Set vendor key on all devices
       await device1Config.setVendorKey(sharedVendorKey);
@@ -334,7 +337,7 @@ describe('Cross-Device Integration Tests', () => {
       // Mock validation failure
       mockAxios.get.mockRejectedValue({
         response: { status: 401, data: { error: 'invalid credentials' } }
-      });
+      } as any);
       
       // Validate credentials on all devices (should fail)
       await device1Config.validateStoredCredentials();
