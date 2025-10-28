@@ -1,7 +1,6 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as os from 'os';
-import { fileURLToPath } from 'url';
 import { jwtDecode } from 'jwt-decode';
 import { randomUUID } from 'crypto';
 
@@ -855,16 +854,9 @@ export class CLIConfig {
 
   // MCP-specific helpers
   getMCPServerPath(): string {
-    // Resolve CLI-bundled MCP server path relative to this module
-    try {
-      const __filename = fileURLToPath(import.meta.url);
-      const __dirname = path.dirname(__filename);
-      const bundled = path.join(__dirname, '../mcp/server/lanonasis-server.js');
-      return this.config.mcpServerPath || bundled;
-    } catch {
-      // Fallback to user-provided path if resolution fails
-      return this.config.mcpServerPath || 'lanonasis-mcp-server';
-    }
+    // Only return an explicitly configured path. No implicit bundled defaults.
+    // Returning an empty string if unset helps callers decide how to proceed safely.
+    return this.config.mcpServerPath || '';
   }
 
   getMCPServerUrl(): string {

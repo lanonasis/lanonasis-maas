@@ -3,7 +3,7 @@
     "hostinger-api": {
       "command": "node",
       "args": [
-        "/Users/seyederick/DevOps/_project_folders/hostinger-api-mcp-server/server.js"
+        "./servers/hostinger/server.js"
       ],
       "env": {
         "APITOKEN": "YOUR_HOSTINGER_API_TOKEN_HERE"
@@ -127,7 +127,7 @@
     "picsart": {
       "command": "node",
       "args": [
-        "/Users/seyederick/DevOps/_project_folders/picsart-mcp-server/dist/index.js"
+        "./servers/picsart/index.js"
       ],
       "env": {
         "PICSART_API_KEY": "YOUR_PICSART_API_KEY_HERE"
