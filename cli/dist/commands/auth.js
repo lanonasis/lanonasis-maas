@@ -536,9 +536,9 @@ async function handleOAuthFlow(config) {
         console.log(chalk.yellow('⚠️  Authentication cancelled'));
         return;
     }
-    // Use the browser-based CLI login endpoint from MCP service
-    // The discovery JSON points to mcp.lanonasis.com/auth/cli-login
-    const authUrl = 'https://mcp.lanonasis.com/auth/cli-login';
+    // Use the browser-based CLI login endpoint discovered from auth_base
+    const authBase = config.getDiscoveredApiUrl();
+    const authUrl = `${authBase.replace(/\/$/, '')}/auth/cli-login`;
     try {
         console.log(colors.info('Opening browser...'));
         await open(authUrl);

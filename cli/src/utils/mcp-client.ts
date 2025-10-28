@@ -111,18 +111,18 @@ export class MCPClient {
       // Validate authentication before attempting connection
       await this.validateAuthBeforeConnect();
 
-  // Determine connection mode with clear precedence and safe defaults
-  // 1) explicit option
-  // 2) explicit flags
-  // 3) configured preference
-  // 4) default to 'websocket' (production-ready pm2 mcp-core)
-  const configuredMode = this.config.get<string>('mcpConnectionMode');
-  const preferRemote = this.config.get<boolean>('mcpUseRemote');
-  const connectionMode = options.connectionMode
-            ?? (options.useWebSocket ? 'websocket' : undefined)
-            ?? (options.useRemote ? 'remote' : undefined)
-            ?? configuredMode
-            ?? (preferRemote ? 'remote' : 'websocket');
+      // Determine connection mode with clear precedence and safe defaults
+      // 1) explicit option
+      // 2) explicit flags
+      // 3) configured preference
+      // 4) default to 'websocket' (production-ready pm2 mcp-core)
+      const configuredMode = this.config.get<string>('mcpConnectionMode');
+      const preferRemote = this.config.get<boolean>('mcpUseRemote');
+      const connectionMode = options.connectionMode
+        ?? (options.useWebSocket ? 'websocket' : undefined)
+        ?? (options.useRemote ? 'remote' : undefined)
+        ?? configuredMode
+        ?? (preferRemote ? 'remote' : 'websocket');
 
       let wsUrl: string;
       let serverUrl: string;
@@ -219,10 +219,10 @@ export class MCPClient {
 
         default: {
           // Safety: if we reach default, fall back to remote (HTTP) rather than brittle local
-          const serverUrlValue = options.serverUrl 
-                                ?? this.config.get<string>('mcpServerUrl') 
-                                ?? this.config.getMCPRestUrl() 
-                                ?? 'https://mcp.lanonasis.com/api/v1';
+          const serverUrlValue = options.serverUrl
+            ?? this.config.get<string>('mcpServerUrl')
+            ?? this.config.getMCPRestUrl()
+            ?? 'https://mcp.lanonasis.com/api/v1';
           serverUrl = serverUrlValue;
           console.log(chalk.yellow(`Unknown connection mode '${String(connectionMode)}', falling back to remote at ${serverUrl}`));
           await this.initializeSSE(serverUrl);
@@ -262,8 +262,8 @@ export class MCPClient {
     // For network errors, retry with exponential backoff
     const delay = await this.exponentialBackoff(this.retryAttempts);
     console.log(chalk.yellow(`Network error, retrying in ${delay}ms... (${this.retryAttempts}/${this.maxRetries})`));
-  const message = (error as { message?: string })?.message ?? String(error);
-  console.log(chalk.gray(`Error: ${message}`));
+    const message = (error as { message?: string })?.message ?? String(error);
+    console.log(chalk.gray(`Error: ${message}`));
 
     await new Promise(resolve => setTimeout(resolve, delay));
     return this.connectWithRetry(options);
@@ -282,8 +282,8 @@ export class MCPClient {
       errorMessage.includes('token is invalid') ||
       errorMessage.includes('401') ||
       errorMessage.includes('403') ||
-           (((error as { response?: { status?: number } }).response?.status ?? 0) >= 401 &&
-            ((error as { response?: { status?: number } }).response?.status ?? 0) <= 403);
+      (((error as { response?: { status?: number } }).response?.status ?? 0) >= 401 &&
+        ((error as { response?: { status?: number } }).response?.status ?? 0) <= 403);
   }
 
   /**

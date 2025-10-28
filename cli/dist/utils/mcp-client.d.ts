@@ -24,10 +24,10 @@ export interface MCPToolResponse {
     title?: string;
     memory_type?: string;
     length?: number;
-    forEach?: (callback: (item: any, index: number) => void) => void;
+    forEach?: (callback: (item: unknown, index: number) => void) => void;
     code?: number;
     message?: string;
-    response?: any;
+    response?: unknown;
 }
 /**
  * Interface for MCP WebSocket messages

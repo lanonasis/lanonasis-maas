@@ -44,12 +44,12 @@ export class LanonasisMCPServer {
   private apiClient: APIClient;
   private transport: StdioServerTransport | null = null;
   private options: LanonasisServerOptions;
-  
+
   // Connection pool management
   private connectionPool: Map<string, ConnectionHealth> = new Map();
   private maxConnections: number = 10;
   private connectionCleanupInterval: NodeJS.Timeout | null = null;
-  
+
   // Transport protocol management
   private supportedTransports: ('stdio' | 'websocket' | 'http')[] = ['stdio', 'websocket', 'http'];
   private transportFailures: Map<string, { count: number; lastFailure: Date }> = new Map();
@@ -57,10 +57,10 @@ export class LanonasisMCPServer {
 
   constructor(options: LanonasisServerOptions = {}) {
     this.options = options;
-    
+
     // Initialize transport settings
     this.enableFallback = options.enableTransportFallback !== false; // Default to true
-    
+
     // Initialize server with metadata
     this.server = new Server({
       name: options.name || "lanonasis-maas-server",
@@ -76,7 +76,7 @@ export class LanonasisMCPServer {
     // Initialize config and API client
     this.config = new CLIConfig();
     this.apiClient = new APIClient();
-    
+
     // Note: registerTools is now async and called in initialize()
     // Setup error handling
     this.setupErrorHandling();
@@ -88,12 +88,12 @@ export class LanonasisMCPServer {
   async initialize(): Promise<void> {
     // Initialize configuration
     await this.config.init();
-    
+
     // Override with options if provided
     if (this.options.apiUrl) {
       await this.config.setApiUrl(this.options.apiUrl);
     }
-    
+
     if (this.options.token) {
       await this.config.setToken(this.options.token);
     }
@@ -101,7 +101,7 @@ export class LanonasisMCPServer {
     // Initialize API client with config
     const apiUrl = this.config.getApiUrl();
     const token = this.config.getToken();
-    
+
     if (apiUrl) {
       this.apiClient = new APIClient();
       // APIClient will use the config internally
@@ -129,7 +129,7 @@ export class LanonasisMCPServer {
   private async registerTools(): Promise<void> {
     // Import request schemas dynamically for ES modules
     const { ListToolsRequestSchema, CallToolRequestSchema } = await import('@modelcontextprotocol/sdk/types.js');
-    
+
     // List available tools
     this.server.setRequestHandler(ListToolsRequestSchema, async () => ({
       tools: [
@@ -140,15 +140,15 @@ export class LanonasisMCPServer {
           inputSchema: {
             type: 'object',
             properties: {
-              title: { 
+              title: {
                 type: 'string',
                 description: 'Memory title'
               },
-              content: { 
+              content: {
                 type: 'string',
                 description: 'Memory content'
               },
-              memory_type: { 
+              memory_type: {
                 type: 'string',
                 enum: ['context', 'reference', 'note'],
                 default: 'context',
@@ -169,11 +169,11 @@ export class LanonasisMCPServer {
           inputSchema: {
             type: 'object',
             properties: {
-              query: { 
+              query: {
                 type: 'string',
                 description: 'Search query'
               },
-              limit: { 
+              limit: {
                 type: 'number',
                 default: 10,
                 description: 'Maximum number of results'
@@ -195,7 +195,7 @@ export class LanonasisMCPServer {
           inputSchema: {
             type: 'object',
             properties: {
-              limit: { 
+              limit: {
                 type: 'number',
                 default: 20,
                 description: 'Maximum number of results'
@@ -267,7 +267,7 @@ export class LanonasisMCPServer {
             required: ['memory_id']
           }
         },
-        
+
         // Topic tools
         {
           name: 'topic_create',
@@ -300,7 +300,7 @@ export class LanonasisMCPServer {
             }
           }
         },
-        
+
         // API Key tools
         {
           name: 'apikey_create',
@@ -332,7 +332,7 @@ export class LanonasisMCPServer {
             properties: {}
           }
         },
-        
+
         // System tools
         {
           name: 'system_health',
@@ -370,7 +370,7 @@ export class LanonasisMCPServer {
             }
           }
         },
-        
+
         // Connection management tools
         {
           name: 'connection_stats',
@@ -402,7 +402,7 @@ export class LanonasisMCPServer {
             required: ['clientId']
           }
         },
-        
+
         // Transport management tools
         {
           name: 'transport_status',
@@ -447,10 +447,10 @@ export class LanonasisMCPServer {
     // Tool call handler (CallToolRequestSchema already imported above)
     this.server.setRequestHandler(CallToolRequestSchema, async (request: any) => {
       const { name, arguments: args } = request.params;
-      
+
       // Generate or extract client ID for connection tracking
       const clientId = this.extractClientId(request) || this.generateClientId();
-      
+
       // Authenticate the connection before processing the request
       try {
         await this.authenticateRequest(request, clientId);
@@ -465,9 +465,9 @@ export class LanonasisMCPServer {
           isError: true
         };
       }
-      
+
       this.updateConnectionActivity(clientId);
-      
+
       try {
         const result = await this.handleToolCall(name, args, clientId);
         return {
@@ -490,13 +490,13 @@ export class LanonasisMCPServer {
         };
       }
     });
-  } 
- /**
-   * Register MCP resources
-   */
+  }
+  /**
+    * Register MCP resources
+    */
   private async registerResources(): Promise<void> {
     const { ListResourcesRequestSchema, ReadResourceRequestSchema } = await import('@modelcontextprotocol/sdk/types.js');
-    
+
     this.server.setRequestHandler(ListResourcesRequestSchema, async () => ({
       resources: [
         {
@@ -540,7 +540,7 @@ export class LanonasisMCPServer {
 
     this.server.setRequestHandler(ReadResourceRequestSchema, async (request: any) => {
       const { uri } = request.params;
-      
+
       try {
         const content = await this.handleResourceRead(uri);
         return {
@@ -563,7 +563,7 @@ export class LanonasisMCPServer {
    */
   private async registerPrompts(): Promise<void> {
     const { ListPromptsRequestSchema, GetPromptRequestSchema } = await import('@modelcontextprotocol/sdk/types.js');
-    
+
     this.server.setRequestHandler(ListPromptsRequestSchema, async () => ({
       prompts: [
         {
@@ -598,7 +598,7 @@ export class LanonasisMCPServer {
 
     this.server.setRequestHandler(GetPromptRequestSchema, async (request: any) => {
       const { name, arguments: args } = request.params;
-      
+
       const prompts: Record<string, any> = {
         create_memory: {
           description: 'Create a new memory entry',
@@ -676,59 +676,59 @@ Please choose an option (1-4):`
       // Memory operations
       case 'memory_create':
         return await this.apiClient.createMemory(args);
-      
+
       case 'memory_search':
         return await this.apiClient.searchMemories(args.query, {
           limit: args.limit,
           threshold: args.threshold
         });
-      
+
       case 'memory_list':
         return await this.apiClient.getMemories({
           limit: args.limit,
           offset: args.offset,
           topic_id: args.topic_id
         });
-      
+
       case 'memory_get':
         return await this.apiClient.getMemory(args.memory_id);
-      
+
       case 'memory_update':
         return await this.apiClient.updateMemory(args.memory_id, args);
-      
+
       case 'memory_delete':
         return await this.apiClient.deleteMemory(args.memory_id);
-      
+
       // Topic operations
       case 'topic_create':
         return await this.apiClient.createTopic(args);
-      
+
       case 'topic_list':
         return await this.apiClient.getTopics();
-      
+
       // API Key operations
       case 'apikey_create':
         // API keys not directly supported in current APIClient
         return { error: 'API key creation not yet implemented' };
-      
+
       case 'apikey_list':
         // API keys not directly supported in current APIClient
         return { error: 'API key listing not yet implemented' };
-      
+
       // System operations
       case 'system_health':
         return await this.handleSystemHealth(args.verbose);
-      
+
       case 'system_config':
         return await this.handleSystemConfig(args);
-      
+
       // Connection management operations
       case 'connection_stats':
         return this.getConnectionPoolStats();
-      
+
       case 'connection_auth_status':
         return this.getAuthenticationStatus();
-      
+
       case 'connection_validate_auth':
         if (!args.clientId) {
           throw new Error('clientId is required');
@@ -742,11 +742,11 @@ Please choose an option (1-4):`
             lastActivity: this.getConnection(args.clientId)!.lastActivity.toISOString()
           } : null
         };
-      
+
       // Transport management operations
       case 'transport_status':
         return this.getTransportStatus();
-      
+
       case 'transport_test':
         if (!args.transport) {
           throw new Error('transport is required');
@@ -757,7 +757,7 @@ Please choose an option (1-4):`
           available: isAvailable,
           tested_at: new Date().toISOString()
         };
-      
+
       case 'transport_reset_failures':
         if (args.transport) {
           this.transportFailures.delete(args.transport);
@@ -772,7 +772,7 @@ Please choose an option (1-4):`
             message: 'Reset failures for all transports'
           };
         }
-      
+
       default:
         throw new Error(`Unknown tool: ${name}`);
     }
@@ -783,19 +783,19 @@ Please choose an option (1-4):`
    */
   private async handleResourceRead(uri: string): Promise<any> {
     const [protocol, path] = uri.split('://');
-    
+
     switch (protocol) {
       case 'memory':
         if (path === 'recent') {
           return await this.apiClient.getMemories({ limit: 10 });
         } else if (path === 'search') {
-          return { 
+          return {
             message: 'Use memory_search tool to search memories',
             example: { query: 'your search query', limit: 10 }
           };
         }
         break;
-      
+
       case 'config':
         if (path === 'current') {
           await this.config.init();
@@ -806,7 +806,7 @@ Please choose an option (1-4):`
           };
         }
         break;
-      
+
       case 'stats':
         if (path === 'usage') {
           // TODO: Implement actual stats collection
@@ -818,7 +818,7 @@ Please choose an option (1-4):`
           };
         }
         break;
-      
+
       case 'connections':
         if (path === 'pool') {
           return {
@@ -835,14 +835,14 @@ Please choose an option (1-4):`
           };
         }
         break;
-      
+
       case 'transport':
         if (path === 'status') {
           return this.getTransportStatus();
         }
         break;
     }
-    
+
     throw new Error(`Unknown resource: ${uri}`);
   }
 
@@ -864,7 +864,7 @@ Please choose an option (1-4):`
         url: this.config.getApiUrl(),
         authenticated: await this.config.isAuthenticated()
       };
-      
+
       try {
         const apiHealth = await this.apiClient.getHealth();
         health.api.status = apiHealth.status;
@@ -911,7 +911,7 @@ Please choose an option (1-4):`
       if (!args.key || !args.value) {
         throw new Error('Key and value required for set action');
       }
-      
+
       // Handle special configuration keys
       if (args.key === 'maxConnections') {
         const newMax = parseInt(args.value);
@@ -919,27 +919,27 @@ Please choose an option (1-4):`
           throw new Error('maxConnections must be a number between 1 and 100');
         }
         this.maxConnections = newMax;
-        return { 
-          success: true, 
-          message: `Set ${args.key} to ${args.value}` 
+        return {
+          success: true,
+          message: `Set ${args.key} to ${args.value}`
         };
       }
-      
+
       this.config.set(args.key, args.value);
       await this.config.save();
-      
-      return { 
-        success: true, 
-        message: `Set ${args.key} to ${args.value}` 
+
+      return {
+        success: true,
+        message: `Set ${args.key} to ${args.value}`
       };
     }
-    
+
     throw new Error('Invalid action');
   }  /**
 
    * Connection pool management methods
    */
-  
+
   /**
    * Add a new connection to the pool
    */
@@ -962,7 +962,7 @@ Please choose an option (1-4):`
     };
 
     this.connectionPool.set(clientId, connection);
-    
+
     if (this.options.verbose) {
       console.log(chalk.cyan(`✅ Added connection ${clientId} (${transport}) - Total: ${this.connectionPool.size}`));
     }
@@ -977,7 +977,7 @@ Please choose an option (1-4):`
     const connection = this.connectionPool.get(clientId);
     if (connection) {
       this.connectionPool.delete(clientId);
-      
+
       if (this.options.verbose) {
         const uptime = Date.now() - connection.connectedAt.getTime();
         console.log(chalk.gray(`🔌 Removed connection ${clientId} (uptime: ${Math.round(uptime / 1000)}s) - Total: ${this.connectionPool.size}`));
@@ -1002,7 +1002,7 @@ Please choose an option (1-4):`
     const connection = this.connectionPool.get(clientId);
     if (connection) {
       connection.authenticated = true;
-      
+
       if (this.options.verbose) {
         console.log(chalk.green(`🔐 Connection ${clientId} authenticated`));
       }
@@ -1032,7 +1032,7 @@ Please choose an option (1-4):`
         stats.authenticatedConnections++;
       }
 
-      stats.connectionsByTransport[connection.transport] = 
+      stats.connectionsByTransport[connection.transport] =
         (stats.connectionsByTransport[connection.transport] || 0) + 1;
     }
 
@@ -1074,7 +1074,7 @@ Please choose an option (1-4):`
 
     for (const clientId of staleConnections) {
       this.removeConnection(clientId);
-      
+
       if (this.options.verbose) {
         console.log(chalk.yellow(`🧹 Cleaned up stale connection: ${clientId}`));
       }
@@ -1109,7 +1109,7 @@ Please choose an option (1-4):`
 
     // Extract authentication information from request
     const authInfo = this.extractAuthInfo(request);
-    
+
     if (!authInfo.token && !authInfo.vendorKey) {
       // For stdio connections, use the CLI's stored credentials
       if (this.isStdioConnection(request)) {
@@ -1120,7 +1120,7 @@ Please choose an option (1-4):`
           return;
         }
       }
-      
+
       throw new Error('Authentication required. No valid credentials provided.');
     }
 
@@ -1150,14 +1150,14 @@ Please choose an option (1-4):`
     const params = request.params || {};
 
     return {
-      token: headers.authorization?.replace('Bearer ', '') || 
-             headers['x-auth-token'] || 
-             meta.token || 
-             params.token,
-      vendorKey: headers['x-api-key'] || 
-                 headers['x-vendor-key'] || 
-                 meta.vendorKey || 
-                 params.vendorKey,
+      token: headers.authorization?.replace('Bearer ', '') ||
+        headers['x-auth-token'] ||
+        meta.token ||
+        params.token,
+      vendorKey: headers['x-api-key'] ||
+        headers['x-vendor-key'] ||
+        meta.vendorKey ||
+        params.vendorKey,
       clientInfo: {
         name: headers['x-client-name'] || meta.clientName || 'unknown',
         version: headers['x-client-version'] || meta.clientVersion || '1.0.0'
@@ -1180,12 +1180,12 @@ Please choose an option (1-4):`
     if (this.isStdioConnection(request)) {
       return 'stdio';
     }
-    
+
     const headers = request.headers || {};
     if (headers.upgrade === 'websocket' || headers.connection?.includes('Upgrade')) {
       return 'websocket';
     }
-    
+
     return 'http';
   }
 
@@ -1226,15 +1226,15 @@ Please choose an option (1-4):`
     try {
       // Import axios dynamically to avoid circular dependency
       const axios = (await import('axios')).default;
-      
+
       // Ensure service discovery is done
       await this.config.discoverServices();
-      
+
       const authBase = this.config.getDiscoveredApiUrl();
       const headers: Record<string, string> = {
         'X-Project-Scope': 'lanonasis-maas'
       };
-      
+
       if (vendorKey) {
         headers['X-API-Key'] = vendorKey;
         headers['X-Auth-Method'] = 'vendor_key';
@@ -1242,13 +1242,13 @@ Please choose an option (1-4):`
         headers['Authorization'] = `Bearer ${token}`;
         headers['X-Auth-Method'] = 'jwt';
       }
-      
+
       // Validate against server with health endpoint
       await axios.get(`${authBase}/api/v1/health`, {
         headers,
         timeout: 10000
       });
-      
+
       return true;
     } catch (error: any) {
       if (this.options.verbose) {
@@ -1295,15 +1295,15 @@ Please choose an option (1-4):`
         case 'stdio':
           // Stdio is always available if we can start the process
           return true;
-        
+
         case 'websocket':
           // Check if WebSocket server can be started
           return await this.testWebSocketAvailability();
-        
+
         case 'http':
           // Check if HTTP server can be started
           return await this.testHttpAvailability();
-        
+
         default:
           return false;
       }
@@ -1364,9 +1364,9 @@ Please choose an option (1-4):`
       count: existing ? existing.count + 1 : 1,
       lastFailure: new Date()
     };
-    
+
     this.transportFailures.set(transport, failure);
-    
+
     if (this.options.verbose) {
       console.log(chalk.yellow(`⚠️ Transport ${transport} failure #${failure.count}: ${error instanceof Error ? error.message : 'Unknown error'}`));
     }
@@ -1377,7 +1377,7 @@ Please choose an option (1-4):`
    */
   private async getBestAvailableTransport(): Promise<'stdio' | 'websocket' | 'http' | null> {
     const preferred = this.options.preferredTransport || 'stdio';
-    
+
     // Try preferred transport first
     if (await this.checkTransportAvailability(preferred)) {
       return preferred;
@@ -1388,7 +1388,7 @@ Please choose an option (1-4):`
     }
 
     // Try other transports in order of preference
-    const fallbackOrder: ('stdio' | 'websocket' | 'http')[] = 
+    const fallbackOrder: ('stdio' | 'websocket' | 'http')[] =
       this.supportedTransports.filter(t => t !== preferred);
 
     for (const transport of fallbackOrder) {
@@ -1408,7 +1408,7 @@ Please choose an option (1-4):`
    */
   private handleTransportError(transport: 'stdio' | 'websocket' | 'http', error: any): Error {
     this.recordTransportFailure(transport, error);
-    
+
     const baseMessage = `${transport.toUpperCase()} transport failed`;
     let specificMessage = '';
     let troubleshooting = '';
@@ -1469,12 +1469,12 @@ Please choose an option (1-4):`
    */
   private async startWithTransportFallback(): Promise<'stdio' | 'websocket' | 'http'> {
     const availableTransport = await this.getBestAvailableTransport();
-    
+
     if (!availableTransport) {
       const failureMessages = Array.from(this.transportFailures.entries())
         .map(([transport, failure]) => `${transport}: ${failure.count} failures`)
         .join(', ');
-      
+
       throw new Error(
         `No available transports. All transports have failed: ${failureMessages}. ` +
         'Please check your configuration and network connectivity.'
@@ -1486,14 +1486,14 @@ Please choose an option (1-4):`
       return availableTransport;
     } catch (error) {
       const transportError = this.handleTransportError(availableTransport, error);
-      
+
       if (this.enableFallback && this.supportedTransports.length > 1) {
         // Try next available transport
         const nextTransport = await this.getBestAvailableTransport();
         if (nextTransport && nextTransport !== availableTransport) {
           console.log(chalk.yellow(`⚠️ ${transportError.message}`));
           console.log(chalk.cyan(`🔄 Attempting fallback to ${nextTransport} transport...`));
-          
+
           try {
             await this.startTransport(nextTransport);
             return nextTransport;
@@ -1503,7 +1503,7 @@ Please choose an option (1-4):`
           }
         }
       }
-      
+
       throw transportError;
     }
   }
@@ -1517,17 +1517,17 @@ Please choose an option (1-4):`
         this.transport = new StdioServerTransport();
         await this.server.connect(this.transport);
         break;
-      
+
       case 'websocket':
         // WebSocket transport would be implemented here
         // For now, we'll simulate it
         throw new Error('WebSocket transport not yet implemented');
-      
+
       case 'http':
         // HTTP transport would be implemented here
         // For now, we'll simulate it
         throw new Error('HTTP transport not yet implemented');
-      
+
       default:
         throw new Error(`Unsupported transport: ${transport}`);
     }
@@ -1543,7 +1543,7 @@ Please choose an option (1-4):`
     transportFailures: Record<string, { count: number; lastFailure: string }>;
   } {
     const failures: Record<string, { count: number; lastFailure: string }> = {};
-    
+
     for (const [transport, failure] of this.transportFailures.entries()) {
       failures[transport] = {
         count: failure.count,
@@ -1598,42 +1598,42 @@ Please choose an option (1-4):`
    */
   async start(): Promise<void> {
     await this.initialize();
-    
+
     try {
       // Start server with transport fallback
       const activeTransport = await this.startWithTransportFallback();
-      
+
       // Add the initial connection to the pool
       const initialClientId = this.generateClientId();
       this.addConnection(initialClientId, activeTransport, {
         name: `${activeTransport}-client`,
         version: '1.0.0'
       });
-      
+
       if (this.options.verbose) {
         console.log(chalk.green('✅ Lanonasis MCP Server started'));
         console.log(chalk.gray(`Active transport: ${activeTransport}`));
         console.log(chalk.gray('Waiting for client connections...'));
-        
+
         if (this.enableFallback) {
           console.log(chalk.gray('Transport fallback: enabled'));
         }
       }
-      
+
       // Keep the process alive
       process.stdin.resume();
-      
+
     } catch (error) {
       console.error(chalk.red('❌ Failed to start MCP Server:'));
       console.error(chalk.red(error instanceof Error ? error.message : 'Unknown error'));
-      
+
       if (this.options.verbose) {
         console.log(chalk.yellow('\n🔧 Troubleshooting tips:'));
         console.log(chalk.cyan('• Check if all required dependencies are installed'));
         console.log(chalk.cyan('• Verify network connectivity and firewall settings'));
         console.log(chalk.cyan('• Try enabling transport fallback: --enable-fallback'));
         console.log(chalk.cyan('• Use --verbose for detailed error information'));
-        
+
         const transportStatus = this.getTransportStatus();
         if (Object.keys(transportStatus.transportFailures).length > 0) {
           console.log(chalk.yellow('\n📊 Transport failure history:'));
@@ -1642,7 +1642,7 @@ Please choose an option (1-4):`
           }
         }
       }
-      
+
       throw error;
     }
   }
@@ -1653,15 +1653,15 @@ Please choose an option (1-4):`
   async stop(): Promise<void> {
     // Stop connection cleanup
     this.stopConnectionCleanup();
-    
+
     // Clear all connections
     this.connectionPool.clear();
-    
+
     if (this.transport) {
       await this.server.close();
       this.transport = null;
     }
-    
+
     if (this.options.verbose) {
       console.log(chalk.gray('MCP Server stopped'));
     }

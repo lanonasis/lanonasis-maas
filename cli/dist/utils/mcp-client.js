@@ -2,7 +2,6 @@ import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 import chalk from 'chalk';
 import { CLIConfig } from './config.js';
-import * as path from 'path';
 import * as fs from 'fs';
 import { EventSource } from 'eventsource';
 import WebSocket from 'ws';
@@ -43,13 +42,18 @@ export class MCPClient {
             await this.init();
             // Validate authentication before attempting connection
             await this.validateAuthBeforeConnect();
-            // Determine connection mode with priority to explicit mode option
-            // Default to 'remote' for better user experience
-            const connectionMode = options.connectionMode ??
-                (options.useWebSocket ? 'websocket' :
-                    options.useRemote ? 'remote' :
-                        this.config.get('mcpConnectionMode') ??
-                            this.config.get('mcpUseRemote') ? 'remote' : 'remote');
+            // Determine connection mode with clear precedence and safe defaults
+            // 1) explicit option
+            // 2) explicit flags
+            // 3) configured preference
+            // 4) default to 'websocket' (production-ready pm2 mcp-core)
+            const configuredMode = this.config.get('mcpConnectionMode');
+            const preferRemote = this.config.get('mcpUseRemote');
+            const connectionMode = options.connectionMode
+                ?? (options.useWebSocket ? 'websocket' : undefined)
+                ?? (options.useRemote ? 'remote' : undefined)
+                ?? configuredMode
+                ?? (preferRemote ? 'remote' : 'websocket');
             let wsUrl;
             let serverUrl;
             let serverPath;
@@ -94,17 +98,20 @@ export class MCPClient {
                     this.startHealthMonitoring();
                     return true;
                 }
-                default: {
-                    // Local MCP server connection (default)
-                    const serverPathValue = options.serverPath ??
-                        this.config.get('mcpServerPath') ??
-                        path.join(path.resolve(), '../../../../onasis-gateway/mcp-server/server.js');
+                case 'local': {
+                    // Local MCP server connection requires explicit path via option or config
+                    const serverPathValue = options.serverPath ?? this.config.get('mcpServerPath');
                     serverPath = serverPathValue;
+                    if (!serverPath) {
+                        console.log(chalk.yellow('⚠️  No local MCP server path configured.'));
+                        console.log(chalk.cyan('💡 Prefer using WebSocket mode (default). Or configure a local path via:'));
+                        console.log(chalk.cyan('   lanonasis config set mcpServerPath /absolute/path/to/server.js'));
+                        throw new Error('Local MCP server path not provided');
+                    }
                     // Check if the server file exists
                     if (!fs.existsSync(serverPath)) {
                         console.log(chalk.yellow(`⚠️  Local MCP server not found at ${serverPath}`));
-                        console.log(chalk.cyan('💡 For remote connection, use: onasis mcp connect --url wss://mcp.lanonasis.com/ws'));
-                        console.log(chalk.cyan('💡 Or install local server: npm install -g @lanonasis/mcp-server'));
+                        console.log(chalk.cyan('💡 For remote use WebSocket: lanonasis mcp connect --mode websocket --url wss://mcp.lanonasis.com/ws'));
                         throw new Error(`MCP server not found at ${serverPath}`);
                     }
                     if (this.retryAttempts === 0) {
@@ -128,6 +135,20 @@ export class MCPClient {
                     this.startHealthMonitoring();
                     return true;
                 }
+                default: {
+                    // Safety: if we reach default, fall back to remote (HTTP) rather than brittle local
+                    const serverUrlValue = options.serverUrl
+                        ?? this.config.get('mcpServerUrl')
+                        ?? this.config.getMCPRestUrl()
+                        ?? 'https://mcp.lanonasis.com/api/v1';
+                    serverUrl = serverUrlValue;
+                    console.log(chalk.yellow(`Unknown connection mode '${String(connectionMode)}', falling back to remote at ${serverUrl}`));
+                    await this.initializeSSE(serverUrl);
+                    this.isConnected = true;
+                    this.retryAttempts = 0;
+                    this.startHealthMonitoring();
+                    return true;
+                }
             }
         }
         catch (error) {
@@ -140,7 +161,8 @@ export class MCPClient {
     async handleConnectionFailure(error, options) {
         // Check if this is an authentication error (don't retry these)
         if (this.isAuthenticationError(error)) {
-            console.error(chalk.red('Authentication failed:'), error.message);
+            const authMsg = error?.message ?? '';
+            console.error(chalk.red('Authentication failed:'), authMsg);
             this.provideAuthenticationGuidance(error);
             this.isConnected = false;
             return false;
@@ -155,7 +177,8 @@ export class MCPClient {
         // For network errors, retry with exponential backoff
         const delay = await this.exponentialBackoff(this.retryAttempts);
         console.log(chalk.yellow(`Network error, retrying in ${delay}ms... (${this.retryAttempts}/${this.maxRetries})`));
-        console.log(chalk.gray(`Error: ${error.message}`));
+        const message = error?.message ?? String(error);
+        console.log(chalk.gray(`Error: ${message}`));
         await new Promise(resolve => setTimeout(resolve, delay));
         return this.connectWithRetry(options);
     }
@@ -163,7 +186,7 @@ export class MCPClient {
      * Check if error is authentication-related
      */
     isAuthenticationError(error) {
-        const errorMessage = error.message?.toLowerCase() || '';
+        const errorMessage = error?.message?.toLowerCase() || '';
         return errorMessage.includes('authentication_required') ||
             errorMessage.includes('authentication_invalid') ||
             errorMessage.includes('unauthorized') ||
@@ -171,23 +194,25 @@ export class MCPClient {
             errorMessage.includes('token is invalid') ||
             errorMessage.includes('401') ||
             errorMessage.includes('403') ||
-            (error.response?.status >= 401 && error.response?.status <= 403);
+            ((error.response?.status ?? 0) >= 401 &&
+                (error.response?.status ?? 0) <= 403);
     }
     /**
      * Provide authentication-specific guidance
      */
     provideAuthenticationGuidance(error) {
         console.log(chalk.yellow('\n🔐 Authentication Issue Detected:'));
-        if (error.message?.includes('AUTHENTICATION_REQUIRED')) {
+        const msg = error?.message ?? '';
+        if (msg.includes('AUTHENTICATION_REQUIRED')) {
             console.log(chalk.cyan('• No credentials found. Run: lanonasis auth login'));
             console.log(chalk.cyan('• Or set vendor key: lanonasis auth login --vendor-key pk_xxx.sk_xxx'));
         }
-        else if (error.message?.includes('AUTHENTICATION_INVALID')) {
+        else if (msg.includes('AUTHENTICATION_INVALID')) {
             console.log(chalk.cyan('• Invalid credentials. Check your vendor key format'));
             console.log(chalk.cyan('• Expected format: pk_xxx.sk_xxx'));
             console.log(chalk.cyan('• Try: lanonasis auth logout && lanonasis auth login'));
         }
-        else if (error.message?.includes('expired')) {
+        else if (msg.includes('expired')) {
             console.log(chalk.cyan('• Token expired. Re-authenticate: lanonasis auth login'));
             console.log(chalk.cyan('• Or refresh: lanonasis auth refresh (if available)'));
         }
@@ -200,27 +225,28 @@ export class MCPClient {
     /**
      * Provide network troubleshooting guidance
      */
-    provideNetworkTroubleshootingGuidance(error) {
+    provideNetworkTroubleshootingGuidance(_error) {
         console.log(chalk.yellow('\n🌐 Network Issue Detected:'));
-        if (error.message?.includes('ECONNREFUSED') || error.message?.includes('connect ECONNREFUSED')) {
+        const msg = _error?.message ?? '';
+        if (msg.includes('ECONNREFUSED') || msg.includes('connect ECONNREFUSED')) {
             console.log(chalk.cyan('• Connection refused. Service may be down:'));
             console.log(chalk.cyan('  - For remote: Check https://mcp.lanonasis.com/health'));
             console.log(chalk.cyan('  - For WebSocket: Check wss://mcp.lanonasis.com/ws'));
             console.log(chalk.cyan('  - For local: Install local MCP server'));
         }
-        else if (error.message?.includes('timeout') || error.message?.includes('ETIMEDOUT')) {
+        else if (msg.includes('timeout') || msg.includes('ETIMEDOUT')) {
             console.log(chalk.cyan('• Connection timeout. Check network:'));
             console.log(chalk.cyan('  - Verify internet connectivity'));
             console.log(chalk.cyan('  - Check firewall settings'));
             console.log(chalk.cyan('  - Try different connection mode: --mode remote'));
         }
-        else if (error.message?.includes('ENOTFOUND') || error.message?.includes('getaddrinfo')) {
+        else if (msg.includes('ENOTFOUND') || msg.includes('getaddrinfo')) {
             console.log(chalk.cyan('• DNS resolution failed:'));
             console.log(chalk.cyan('  - Check DNS settings'));
             console.log(chalk.cyan('  - Verify server URL is correct'));
             console.log(chalk.cyan('  - Try using IP address instead of hostname'));
         }
-        else if (error.message?.includes('certificate') || error.message?.includes('SSL') || error.message?.includes('TLS')) {
+        else if (msg.includes('certificate') || msg.includes('SSL') || msg.includes('TLS')) {
             console.log(chalk.cyan('• SSL/TLS certificate issue:'));
             console.log(chalk.cyan('  - Check system time and date'));
             console.log(chalk.cyan('  - Update CA certificates'));
@@ -297,7 +323,7 @@ export class MCPClient {
                 }
             }
         }
-        catch (error) {
+        catch {
             // If we can't decode the token, try to validate it with the server
             await this.validateTokenWithServer(token);
         }
@@ -323,7 +349,7 @@ export class MCPClient {
                 console.log(chalk.green('✓ Token refreshed successfully'));
             }
         }
-        catch (error) {
+        catch {
             throw new Error('Failed to refresh token. Please re-authenticate.');
         }
     }
@@ -343,10 +369,12 @@ export class MCPClient {
             });
         }
         catch (error) {
-            if (error.response?.status === 401 || error.response?.status === 403) {
+            const status = error.response?.status;
+            if (status === 401 || status === 403) {
                 throw new Error('Token is invalid or expired. Please re-authenticate.');
             }
-            throw new Error(`Token validation failed: ${error.message}`);
+            const msg = error?.message || 'Unknown error';
+            throw new Error(`Token validation failed: ${msg}`);
         }
     }
     /**
@@ -498,7 +526,7 @@ export class MCPClient {
                     break;
             }
         }
-        catch (error) {
+        catch {
             console.log(chalk.yellow('⚠️  Health check failed, attempting reconnection...'));
             await this.handleHealthCheckFailure();
         }
@@ -536,8 +564,9 @@ export class MCPClient {
                 timeout: 5000
             });
         }
-        catch (error) {
-            throw new Error(`Remote health check failed: ${error}`);
+        catch (e) {
+            const msg = e?.message ?? String(e);
+            throw new Error(`Remote health check failed: ${msg}`);
         }
     }
     /**
@@ -551,8 +580,9 @@ export class MCPClient {
         try {
             await this.client.listTools();
         }
-        catch (error) {
-            throw new Error(`Local health check failed: ${error}`);
+        catch (e) {
+            const msg = e?.message ?? String(e);
+            throw new Error(`Local health check failed: ${msg}`);
         }
     }
     /**
@@ -712,8 +742,7 @@ export class MCPClient {
         catch (error) {
             // Safely handle errors with type checking
             const errorObj = error;
-            const errorMsg = errorObj.response?.data?.error ||
-                (errorObj.message ? errorObj.message : 'Unknown error');
+            const errorMsg = errorObj.response?.data?.error || (errorObj.message ?? 'Unknown error');
             throw new Error(`Remote tool call failed: ${errorMsg}`);
         }
     }

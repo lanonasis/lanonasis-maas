@@ -76,7 +76,7 @@ export class CLIConfig {
     try {
       const data = await fs.readFile(this.configPath, 'utf-8');
       this.config = JSON.parse(data);
-      
+
       // Handle version migration if needed
       await this.migrateConfigIfNeeded();
     } catch {
@@ -88,11 +88,11 @@ export class CLIConfig {
 
   private async migrateConfigIfNeeded(): Promise<void> {
     const currentVersion = this.config.version;
-    
+
     if (!currentVersion) {
       // Legacy config without version, migrate to current version
       this.config.version = CLIConfig.CONFIG_VERSION;
-      
+
       // Perform any necessary migrations for legacy configs
       // For now, just ensure the version is set
       await this.save();
@@ -110,7 +110,7 @@ export class CLIConfig {
 
   async atomicSave(): Promise<void> {
     await fs.mkdir(this.configDir, { recursive: true });
-    
+
     // Acquire file lock to prevent concurrent access
     const lockAcquired = await this.acquireLock();
     if (!lockAcquired) {
@@ -124,10 +124,10 @@ export class CLIConfig {
 
       // Create temporary file with unique name
       const tempPath = `${this.configPath}.tmp.${randomUUID()}`;
-      
+
       // Write to temporary file first
       await fs.writeFile(tempPath, JSON.stringify(this.config, null, 2), 'utf-8');
-      
+
       // Atomic rename - this is the critical atomic operation
       await fs.rename(tempPath, this.configPath);
     } finally {
@@ -139,7 +139,7 @@ export class CLIConfig {
   async backupConfig(): Promise<string> {
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
     const backupPath = path.join(this.configDir, `config.backup.${timestamp}.json`);
-    
+
     try {
       // Check if config exists before backing up
       await fs.access(this.configPath);
@@ -157,7 +157,7 @@ export class CLIConfig {
 
   private async acquireLock(timeoutMs: number = 5000): Promise<boolean> {
     const startTime = Date.now();
-    
+
     while (Date.now() - startTime < timeoutMs) {
       try {
         // Try to create lock file exclusively
@@ -169,7 +169,7 @@ export class CLIConfig {
           try {
             const pidStr = await fs.readFile(this.lockFile, 'utf-8');
             const pid = parseInt(pidStr.trim());
-            
+
             if (!isNaN(pid)) {
               try {
                 // Check if process is still running (works on Unix-like systems)
@@ -179,13 +179,13 @@ export class CLIConfig {
                 continue;
               } catch {
                 // Process is not running, remove stale lock
-                await fs.unlink(this.lockFile).catch(() => {});
+                await fs.unlink(this.lockFile).catch(() => { });
                 continue;
               }
             }
           } catch {
             // Can't read lock file, remove it and retry
-            await fs.unlink(this.lockFile).catch(() => {});
+            await fs.unlink(this.lockFile).catch(() => { });
             continue;
           }
         } else {
@@ -193,7 +193,7 @@ export class CLIConfig {
         }
       }
     }
-    
+
     return false;
   }
 
@@ -206,30 +206,30 @@ export class CLIConfig {
   }
 
   getApiUrl(): string {
-    return process.env.MEMORY_API_URL || 
-           this.config.apiUrl || 
-           'https://api.lanonasis.com/api/v1';
+    return process.env.MEMORY_API_URL ||
+      this.config.apiUrl ||
+      'https://api.lanonasis.com/api/v1';
   }
 
   // Enhanced Service Discovery Integration
   async discoverServices(verbose: boolean = false): Promise<void> {
     const discoveryUrl = 'https://mcp.lanonasis.com/.well-known/onasis.json';
-    
+
     try {
       // Use axios instead of fetch for consistency
       const axios = (await import('axios')).default;
-      
+
       if (verbose) {
         console.log(`🔍 Discovering services from ${discoveryUrl}...`);
       }
-      
+
       const response = await axios.get(discoveryUrl, {
         timeout: 10000,
         headers: {
           'User-Agent': 'Lanonasis-CLI/3.0.13'
         }
       });
-      
+
       // Map discovery response to our config format
       const discovered = response.data;
       this.config.discoveredServices = {
@@ -240,18 +240,18 @@ export class CLIConfig {
         mcp_sse_base: discovered.endpoints?.sse || 'https://mcp.lanonasis.com/api/v1/events',
         project_scope: 'lanonasis-maas'
       };
-      
+
       // Mark discovery as successful
       this.config.lastServiceDiscovery = new Date().toISOString();
       await this.save();
-      
+
       if (verbose) {
         console.log('✓ Service discovery completed successfully');
         console.log(`  Auth: ${this.config.discoveredServices.auth_base}`);
         console.log(`  MCP: ${this.config.discoveredServices.mcp_base}`);
         console.log(`  WebSocket: ${this.config.discoveredServices.mcp_ws_base}`);
       }
-      
+
     } catch (error: any) {
       // Enhanced error handling with user-visible messages
       await this.handleServiceDiscoveryFailure(error, verbose);
@@ -260,10 +260,10 @@ export class CLIConfig {
 
   private async handleServiceDiscoveryFailure(error: any, verbose: boolean): Promise<void> {
     const errorType = this.categorizeServiceDiscoveryError(error);
-    
+
     if (verbose || process.env.CLI_VERBOSE === 'true') {
       console.log('⚠️  Service discovery failed, using cached/fallback endpoints');
-      
+
       switch (errorType) {
         case 'network_error':
           console.log('   Reason: Network connection failed');
@@ -285,12 +285,12 @@ export class CLIConfig {
           console.log(`   Reason: ${error.message || 'Unknown error'}`);
       }
     }
-    
+
     // Use cached endpoints if available and recent (within 24 hours)
     if (this.config.discoveredServices && this.config.lastServiceDiscovery) {
       const lastDiscovery = new Date(this.config.lastServiceDiscovery);
       const hoursSinceDiscovery = (Date.now() - lastDiscovery.getTime()) / (1000 * 60 * 60);
-      
+
       if (hoursSinceDiscovery < 24) {
         if (verbose) {
           console.log('✓ Using cached service endpoints (less than 24 hours old)');
@@ -298,7 +298,7 @@ export class CLIConfig {
         return;
       }
     }
-    
+
     // Set fallback service endpoints
     this.config.discoveredServices = {
       auth_base: 'https://api.lanonasis.com',  // CLI auth goes to central auth system
@@ -308,10 +308,10 @@ export class CLIConfig {
       mcp_sse_base: 'https://mcp.lanonasis.com/api/v1/events',  // MCP SSE
       project_scope: 'lanonasis-maas'  // Correct project scope
     };
-    
+
     // Mark as fallback (don't set lastServiceDiscovery)
     await this.save();
-    
+
     if (verbose) {
       console.log('✓ Using fallback service endpoints');
       console.log('   These are the standard production endpoints');
@@ -330,15 +330,15 @@ export class CLIConfig {
           return 'timeout';
       }
     }
-    
+
     if (error.response?.status >= 500) {
       return 'server_error';
     }
-    
+
     if (error.response?.status === 404) {
       return 'invalid_response';
     }
-    
+
     const message = error.message?.toLowerCase() || '';
     if (message.includes('timeout')) {
       return 'timeout';
@@ -346,7 +346,7 @@ export class CLIConfig {
     if (message.includes('network') || message.includes('connection')) {
       return 'network_error';
     }
-    
+
     return 'unknown';
   }
 
@@ -356,17 +356,17 @@ export class CLIConfig {
       // Initialize with defaults first
       await this.discoverServices();
     }
-    
+
     // Merge manual overrides with existing endpoints
     this.config.discoveredServices = {
       ...this.config.discoveredServices!,
       ...endpoints
     };
-    
+
     // Mark as manually configured
     this.config.manualEndpointOverrides = true;
     this.config.lastManualEndpointUpdate = new Date().toISOString();
-    
+
     await this.save();
   }
 
@@ -377,7 +377,7 @@ export class CLIConfig {
   async clearManualEndpointOverrides(): Promise<void> {
     this.config.manualEndpointOverrides = undefined;
     this.config.lastManualEndpointUpdate = undefined;
-    
+
     // Rediscover services
     await this.discoverServices();
   }
@@ -393,10 +393,10 @@ export class CLIConfig {
     if (formatValidation !== true) {
       throw new Error(typeof formatValidation === 'string' ? formatValidation : 'Invalid vendor key format');
     }
-    
+
     // Server-side validation
     await this.validateVendorKeyWithServer(vendorKey);
-    
+
     this.config.vendorKey = vendorKey;
     this.config.authMethod = 'vendor_key';
     this.config.lastValidated = new Date().toISOString();
@@ -408,49 +408,49 @@ export class CLIConfig {
     if (!vendorKey || vendorKey.trim().length === 0) {
       return 'Vendor key is required';
     }
-    
+
     const trimmed = vendorKey.trim();
-    
+
     // Check basic format
     if (!trimmed.includes('.')) {
       return 'Invalid vendor key format: Must contain a dot (.) separator. Expected format: pk_xxx.sk_xxx';
     }
-    
+
     const parts = trimmed.split('.');
     if (parts.length !== 2) {
       return 'Invalid vendor key format: Must have exactly two parts separated by a dot. Expected format: pk_xxx.sk_xxx';
     }
-    
+
     const [publicPart, secretPart] = parts;
-    
+
     // Validate public key part
     if (!publicPart.startsWith('pk_')) {
       return 'Invalid vendor key format: First part must start with "pk_". Expected format: pk_xxx.sk_xxx';
     }
-    
+
     if (publicPart.length < 11) { // pk_ + minimum 8 chars
       return 'Invalid vendor key format: Public key part is too short. Expected format: pk_xxx.sk_xxx (minimum 8 characters after "pk_")';
     }
-    
+
     const publicKeyContent = publicPart.substring(3); // Remove 'pk_'
     if (!/^[a-zA-Z0-9]+$/.test(publicKeyContent)) {
       return 'Invalid vendor key format: Public key part contains invalid characters. Only letters and numbers are allowed after "pk_"';
     }
-    
+
     // Validate secret key part
     if (!secretPart.startsWith('sk_')) {
       return 'Invalid vendor key format: Second part must start with "sk_". Expected format: pk_xxx.sk_xxx';
     }
-    
+
     if (secretPart.length < 19) { // sk_ + minimum 16 chars
       return 'Invalid vendor key format: Secret key part is too short. Expected format: pk_xxx.sk_xxx (minimum 16 characters after "sk_")';
     }
-    
+
     const secretKeyContent = secretPart.substring(3); // Remove 'sk_'
     if (!/^[a-zA-Z0-9]+$/.test(secretKeyContent)) {
       return 'Invalid vendor key format: Secret key part contains invalid characters. Only letters and numbers are allowed after "sk_"';
     }
-    
+
     return true;
   }
 
@@ -458,12 +458,12 @@ export class CLIConfig {
     try {
       // Import axios dynamically to avoid circular dependency
       const axios = (await import('axios')).default;
-      
+
       // Ensure service discovery is done
       await this.discoverServices();
-      
+
       const authBase = this.config.discoveredServices?.auth_base || 'https://api.lanonasis.com';
-      
+
       // Test vendor key with health endpoint
       await axios.get(`${authBase}/api/v1/health`, {
         headers: {
@@ -524,16 +524,16 @@ export class CLIConfig {
     this.config.authMethod = 'jwt';
     this.config.lastValidated = new Date().toISOString();
     await this.resetFailureCount(); // Reset failure count on successful auth
-    
+
     // Decode token to get user info and expiry
     try {
       const decoded = jwtDecode(token) as Record<string, unknown>;
-      
+
       // Store token expiry
       if (typeof decoded.exp === 'number') {
         this.config.tokenExpiry = decoded.exp;
       }
-      
+
       // Store user info
       this.config.user = {
         email: String(decoded.email || ''),
@@ -547,7 +547,7 @@ export class CLIConfig {
       // Mark as non-JWT (e.g., OAuth/CLI token)
       this.config.authMethod = this.config.authMethod || 'oauth';
     }
-    
+
     await this.save();
   }
 
@@ -570,7 +570,7 @@ export class CLIConfig {
 
     // Local expiry check first (fast)
     let locallyValid = false;
-    
+
     // Handle simple CLI tokens (format: cli_xxx_timestamp)
     if (token.startsWith('cli_')) {
       // Extract timestamp from CLI token
@@ -628,14 +628,14 @@ export class CLIConfig {
     // Verify with server (security check)
     try {
       const axios = (await import('axios')).default;
-      
+
       // Try auth-gateway first (port 4000), then fall back to Netlify function
       const endpoints = [
         'http://localhost:4000/v1/auth/verify-token',
-        'https://auth.lanonasis.com/v1/auth/verify-token', 
+        'https://auth.lanonasis.com/v1/auth/verify-token',
         'https://api.lanonasis.com/auth/verify'
       ];
-      
+
       let response = null;
       for (const endpoint of endpoints) {
         try {
@@ -648,12 +648,12 @@ export class CLIConfig {
           continue;
         }
       }
-      
+
       if (!response || response.data.valid !== true) {
         this.authCheckCache = { isValid: false, timestamp: Date.now() };
         return false;
       }
-      
+
       this.authCheckCache = { isValid: true, timestamp: Date.now() };
       return true;
     } catch (error: unknown) {
@@ -694,22 +694,22 @@ export class CLIConfig {
     try {
       const vendorKey = this.getVendorKey();
       const token = this.getToken();
-      
+
       if (!vendorKey && !token) {
         return false;
       }
-      
+
       // Import axios dynamically to avoid circular dependency
       const axios = (await import('axios')).default;
-      
+
       // Ensure service discovery is done
       await this.discoverServices();
-      
+
       const authBase = this.config.discoveredServices?.auth_base || 'https://api.lanonasis.com';
       const headers: Record<string, string> = {
         'X-Project-Scope': 'lanonasis-maas'
       };
-      
+
       if (vendorKey) {
         headers['X-API-Key'] = vendorKey;
         headers['X-Auth-Method'] = 'vendor_key';
@@ -717,23 +717,23 @@ export class CLIConfig {
         headers['Authorization'] = `Bearer ${token}`;
         headers['X-Auth-Method'] = 'jwt';
       }
-      
+
       // Validate against server with health endpoint
       await axios.get(`${authBase}/api/v1/health`, {
         headers,
         timeout: 10000
       });
-      
+
       // Update last validated timestamp
       this.config.lastValidated = new Date().toISOString();
       await this.resetFailureCount();
       await this.save();
-      
+
       return true;
     } catch (error: any) {
       // Increment failure count
       await this.incrementFailureCount();
-      
+
       return false;
     }
   }
@@ -743,26 +743,26 @@ export class CLIConfig {
     if (!token) {
       return;
     }
-    
+
     try {
       // Check if token is JWT and if it's close to expiry
       if (token.startsWith('cli_')) {
         // CLI tokens don't need refresh, they're long-lived
         return;
       }
-      
+
       const decoded = jwtDecode(token) as Record<string, unknown>;
       const now = Date.now() / 1000;
       const exp = typeof decoded.exp === 'number' ? decoded.exp : 0;
-      
+
       // Refresh if token expires within 5 minutes
       if (exp > 0 && (exp - now) < 300) {
         // Import axios dynamically
         const axios = (await import('axios')).default;
-        
+
         await this.discoverServices();
         const authBase = this.config.discoveredServices?.auth_base || 'https://api.lanonasis.com';
-        
+
         // Attempt token refresh
         const response = await axios.post(`${authBase}/v1/auth/refresh`, {}, {
           headers: {
@@ -771,7 +771,7 @@ export class CLIConfig {
           },
           timeout: 10000
         });
-        
+
         if (response.data.token) {
           await this.setToken(response.data.token);
         }
@@ -822,7 +822,7 @@ export class CLIConfig {
   getAuthDelayMs(): number {
     const failureCount = this.getFailureCount();
     if (failureCount < 3) return 0;
-    
+
     // Progressive delays: 3 failures = 2s, 4 = 4s, 5 = 8s, 6+ = 16s max
     const baseDelay = 2000; // 2 seconds
     const maxDelay = 16000; // 16 seconds max
@@ -868,24 +868,24 @@ export class CLIConfig {
   }
 
   getMCPServerUrl(): string {
-    return this.config.discoveredServices?.mcp_ws_base || 
-           this.config.mcpServerUrl || 
-           'wss://mcp.lanonasis.com/ws';
+    return this.config.discoveredServices?.mcp_ws_base ||
+      this.config.mcpServerUrl ||
+      'wss://mcp.lanonasis.com/ws';
   }
-  
+
   getMCPRestUrl(): string {
-    return this.config.discoveredServices?.mcp_base || 
-           'https://mcp.lanonasis.com/api/v1';
+    return this.config.discoveredServices?.mcp_base ||
+      'https://mcp.lanonasis.com/api/v1';
   }
-  
+
   getMCPSSEUrl(): string {
-    return this.config.discoveredServices?.mcp_sse_base || 
-           'https://mcp.lanonasis.com/api/v1/events';
+    return this.config.discoveredServices?.mcp_sse_base ||
+      'https://mcp.lanonasis.com/api/v1/events';
   }
 
   shouldUseRemoteMCP(): boolean {
     const preference = this.config.mcpPreference || 'auto';
-    
+
     switch (preference) {
       case 'remote':
         return true;
