@@ -1,6 +1,7 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as os from 'os';
+import { fileURLToPath } from 'url';
 import { jwtDecode } from 'jwt-decode';
 import { randomUUID } from 'crypto';
 export class CLIConfig {
@@ -446,6 +447,8 @@ export class CLIConfig {
         catch {
             // Invalid token, don't store user info or expiry
             this.config.tokenExpiry = undefined;
+            // Mark as non-JWT (e.g., OAuth/CLI token)
+            this.config.authMethod = this.config.authMethod || 'oauth';
         }
         await this.save();
     }
@@ -493,8 +496,32 @@ export class CLIConfig {
                 locallyValid = false;
             }
         }
-        // If expired locally, no need to check server
+        // If not locally valid, attempt server verification before failing
         if (!locallyValid) {
+            try {
+                const axios = (await import('axios')).default;
+                const endpoints = [
+                    'http://localhost:4000/v1/auth/verify-token',
+                    'https://auth.lanonasis.com/v1/auth/verify-token',
+                    'https://api.lanonasis.com/auth/verify'
+                ];
+                for (const endpoint of endpoints) {
+                    try {
+                        const resp = await axios.post(endpoint, { token }, { timeout: 3000 });
+                        if (resp.data?.valid === true) {
+                            this.authCheckCache = { isValid: true, timestamp: Date.now() };
+                            return true;
+                        }
+                    }
+                    catch {
+                        // try next endpoint
+                        continue;
+                    }
+                }
+            }
+            catch {
+                // ignore, will fall back to failure below
+            }
             this.authCheckCache = { isValid: false, timestamp: Date.now() };
             return false;
         }
@@ -697,7 +724,17 @@ export class CLIConfig {
     }
     // MCP-specific helpers
     getMCPServerPath() {
-        return this.config.mcpServerPath || path.join(process.cwd(), 'onasis-gateway/mcp-server/server.js');
+        // Resolve CLI-bundled MCP server path relative to this module
+        try {
+            const __filename = fileURLToPath(import.meta.url);
+            const __dirname = path.dirname(__filename);
+            const bundled = path.join(__dirname, '../mcp/server/lanonasis-server.js');
+            return this.config.mcpServerPath || bundled;
+        }
+        catch {
+            // Fallback to user-provided path if resolution fails
+            return this.config.mcpServerPath || 'lanonasis-mcp-server';
+        }
     }
     getMCPServerUrl() {
         return this.config.discoveredServices?.mcp_ws_base ||
