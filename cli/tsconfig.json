@@ -13,14 +13,18 @@
     "declaration": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
-    "types": ["node"]
+    "types": [
+      "node"
+    ]
   },
   "include": [
-    "src/**/*.ts"
+    "src/**/*.ts",
+    "src/types/**/*.d.ts"
   ],
   "exclude": [
     "node_modules",
     "dist",
+    "src/__tests__/**",
     "../src/**/*",
     "../**/*.tsx",
     "../**/*.jsx"
