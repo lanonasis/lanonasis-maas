@@ -3,6 +3,7 @@
 ## VS Code Marketplace Publishing (CLI)
 
 ### Prerequisites
+
 ✅ vsce installed: `npm install -g vsce`
 ✅ Publisher account: "lanonasis" (confirmed)
 ✅ Personal Access Token (PAT) from Azure DevOps
@@ -10,6 +11,7 @@
 ### Publishing Commands
 
 #### 1. **Publish VS Code Extension Update**
+
 ```bash
 cd vscode-extension
 
@@ -29,7 +31,8 @@ vsce publish major  # 1.3.1 -> 2.0.0
 ```
 
 #### 2. **Get Personal Access Token (if needed)**
-1. Go to: https://dev.azure.com/lanonasis/_usersSettings/tokens
+
+1. Go to: <https://dev.azure.com/lanonasis/_usersSettings/tokens>
 2. Click "New Token"
 3. Name: "vsce-publishing"
 4. Organization: Select your org
@@ -37,6 +40,7 @@ vsce publish major  # 1.3.1 -> 2.0.0
 6. Click "Create" and copy the token
 
 #### 3. **Login with PAT (one-time setup)**
+
 ```bash
 vsce login lanonasis
 # Enter your PAT when prompted
@@ -49,16 +53,19 @@ vsce login lanonasis
 Cursor uses OpenVSX Registry (alternative to VS Code Marketplace):
 
 ### 1. **Create OpenVSX Account**
-- Go to: https://open-vsx.org/
+
+- Go to: <https://open-vsx.org/>
 - Sign in with GitHub
-- Get access token from: https://open-vsx.org/user-settings/tokens
+- Get access token from: <https://open-vsx.org/user-settings/tokens>
 
 ### 2. **Install OpenVSX CLI**
+
 ```bash
 npm install -g ovsx
 ```
 
 ### 3. **Publish to OpenVSX**
+
 ```bash
 cd cursor-extension
 
@@ -76,6 +83,7 @@ ovsx publish lanonasis-memory-cursor-1.3.1.vsix -p YOUR_OPENVSX_TOKEN
 Windsurf currently doesn't have a public marketplace. Options:
 
 ### 1. **GitHub Releases (Recommended)**
+
 ```bash
 # Create a GitHub release
 gh release create v1.3.1 \
@@ -85,10 +93,12 @@ gh release create v1.3.1 \
 ```
 
 ### 2. **Direct Distribution**
+
 - Host the `.vsix` file on your website
 - Users install via: Extensions → Install from VSIX
 
 ### 3. **NPM Registry**
+
 ```bash
 cd windsurf-extension
 npm publish
@@ -99,6 +109,7 @@ npm publish
 ## Publishing All Extensions Script
 
 Create `publish-all.sh`:
+
 ```bash
 #!/bin/bash
 
@@ -132,6 +143,7 @@ echo "✅ All extensions published!"
 ## Version Update Checklist
 
 Before publishing, ensure:
+
 - [ ] Version bumped in all `package.json` files
 - [ ] CHANGELOG.md updated
 - [ ] README.md updated
@@ -144,11 +156,13 @@ Before publishing, ensure:
 ## Post-Publishing
 
 ### Verify Publication
-- VS Code: https://marketplace.visualstudio.com/items?itemName=lanonasis.lanonasis-memory
-- OpenVSX: https://open-vsx.org/extension/lanonasis/lanonasis-memory-cursor
-- GitHub: https://github.com/lanonasis/lanonasis-maas/releases
+
+- VS Code: <https://marketplace.visualstudio.com/items?itemName=lanonasis.lanonasis-memory>
+- OpenVSX: <https://open-vsx.org/extension/lanonasis/lanonasis-memory-cursor>
+- GitHub: <https://github.com/lanonasis/lanonasis-maas/releases>
 
 ### Monitor
+
 - Check reviews and ratings
 - Monitor error reports
 - Respond to user feedback
