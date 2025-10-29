@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { SecureApiKeyService } from './SecureApiKeyService';
 
 export interface ApiKey {
     id: string;
@@ -47,8 +48,10 @@ export interface CreateProjectRequest {
 export class ApiKeyService {
     private config: vscode.WorkspaceConfiguration;
     private baseUrl: string = 'https://api.lanonasis.com';
+    private secureApiKeyService: SecureApiKeyService;
 
-    constructor() {
+    constructor(secureApiKeyService: SecureApiKeyService) {
+        this.secureApiKeyService = secureApiKeyService;
         this.config = vscode.workspace.getConfiguration('lanonasis');
         this.updateConfig();
     }
@@ -57,7 +60,7 @@ export class ApiKeyService {
         const useGateway = this.config.get<boolean>('useGateway', true);
         const apiUrl = this.config.get<string>('apiUrl', 'https://api.lanonasis.com');
         const gatewayUrl = this.config.get<string>('gatewayUrl', 'https://api.lanonasis.com');
-        
+
         this.baseUrl = useGateway ? gatewayUrl : apiUrl;
     }
 
@@ -67,9 +70,9 @@ export class ApiKeyService {
     }
 
     private async makeRequest<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-        const apiKey = this.config.get<string>('apiKey');
+        const apiKey = await this.secureApiKeyService.getApiKeyOrPrompt();
         if (!apiKey) {
-            throw new Error('API key not configured. Please set your API key in settings.');
+            throw new Error('API key not configured. Please configure your API key to use Lanonasis services.');
         }
 
         const url = `${this.baseUrl}${endpoint}`;

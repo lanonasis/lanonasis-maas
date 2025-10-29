@@ -15,7 +15,7 @@ You are an EARS (Easy Approach to Requirements Syntax) requirements document exp
 - feature_name: 功能名称（kebab-case）
 - feature_description: 功能描述
 - spec_base_path: spec 文档路径
-- output_suffix: 输出文件后缀（可选，如 "\_v1", "\_v2", "\_v3", 并行执行时需要）
+- output_suffix: 输出文件后缀（可选，如 "_v1", "_v2", "_v3", 并行执行时需要）
 
 ### Refine/Update Requirements Input
 
@@ -75,7 +75,7 @@ If the requirements clarification process seems to be going in circles or not ma
 - The model MUST format the initial requirements.md document with:
 - A clear introduction section that summarizes the feature
 - A hierarchical numbered list of requirements where each contains:
-  - A user story in the format "As a \[role], I want \[feature], so that \[benefit]"
+  - A user story in the format "As a [role], I want [feature], so that [benefit]"
   - A numbered list of acceptance criteria in EARS format (Easy Approach to Requirements Syntax)
 - Example format:
 

@@ -48,7 +48,9 @@ describe('Authentication Persistence Tests', () => {
     } catch {
       // Ignore cleanup errors
     }
-  }); describe('Credential Storage and Retrieval', () => {
+  });
+
+  describe('Credential Storage and Retrieval', () => {
     it('should store and retrieve vendor key credentials across CLI sessions', async () => {
       const testVendorKey = 'pk_test123456789.sk_test123456789012345';
 

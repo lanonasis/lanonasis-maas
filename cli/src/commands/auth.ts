@@ -276,8 +276,11 @@ export async function diagnoseCommand(): Promise<void> {
       } else {
         console.log(chalk.green('   ✓ Token is not expired'));
       }
-    } catch {
+    } catch (error) {
       console.log(chalk.yellow('   ⚠ Could not validate token expiry'));
+      if (process.env.CLI_VERBOSE === 'true' && error instanceof Error) {
+        console.log(chalk.gray(`     ${error.message}`));
+      }
     }
   } else {
     console.log(chalk.red('   ✖ No credentials found'));
@@ -360,8 +363,11 @@ export async function diagnoseCommand(): Promise<void> {
     const deviceId = await config.getDeviceId();
     diagnostics.deviceId = deviceId;
     console.log(chalk.green('   ✓ Device ID:'), chalk.gray(deviceId));
-  } catch {
+  } catch (error) {
     console.log(chalk.yellow('   ⚠ Could not get device ID'));
+    if (process.env.CLI_VERBOSE === 'true' && error instanceof Error) {
+      console.log(chalk.gray(`     ${error.message}`));
+    }
   }
 
   // Summary and recommendations

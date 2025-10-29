@@ -113,12 +113,20 @@ export class MemoryService implements IMemoryService {
             throw new Error('Not authenticated. Please configure your API key.');
         }
 
-        const response = await this.client.listMemories({ 
-            limit,
+        // Type validation for limit parameter
+        if (typeof limit !== 'number' || limit < 0) {
+            throw new Error('limit must be a non-negative number');
+        }
+
+        // Ensure limit is within reasonable bounds
+        const validatedLimit = Math.min(Math.max(1, Math.floor(limit)), 1000);
+
+        const response = await this.client.listMemories({
+            limit: validatedLimit,
             sort: 'updated_at',
             order: 'desc'
         });
-        
+
         if (response.error || !response.data) {
             throw new Error(response.error || 'Failed to fetch memories');
         }

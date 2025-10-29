@@ -43,6 +43,14 @@ export declare class CLIConfig {
     private authCheckCache;
     private readonly AUTH_CACHE_TTL;
     constructor();
+    /**
+     * Overrides the configuration storage directory. Primarily used for tests.
+     */
+    setConfigDirectory(configDir: string): void;
+    /**
+     * Exposes the current config path for tests and diagnostics.
+     */
+    getConfigPath(): string;
     init(): Promise<void>;
     load(): Promise<void>;
     private migrateConfigIfNeeded;
@@ -55,13 +63,13 @@ export declare class CLIConfig {
     discoverServices(verbose?: boolean): Promise<void>;
     private handleServiceDiscoveryFailure;
     private categorizeServiceDiscoveryError;
+    private resolveFallbackEndpoints;
+    private logFallbackUsage;
     setManualEndpoints(endpoints: Partial<CLIConfigData['discoveredServices']>): Promise<void>;
     hasManualEndpointOverrides(): boolean;
     clearManualEndpointOverrides(): Promise<void>;
     getDiscoveredApiUrl(): string;
-    setVendorKey(vendorKey: string, options?: {
-        skipServerValidation?: boolean;
-    }): Promise<void>;
+    setVendorKey(vendorKey: string): Promise<void>;
     validateVendorKeyFormat(vendorKey: string): string | boolean;
     private validateVendorKeyWithServer;
     getVendorKey(): string | undefined;
@@ -73,7 +81,6 @@ export declare class CLIConfig {
     isAuthenticated(): Promise<boolean>;
     logout(): Promise<void>;
     clear(): Promise<void>;
-    getConfigPath(): string;
     exists(): Promise<boolean>;
     validateStoredCredentials(): Promise<boolean>;
     refreshTokenIfNeeded(): Promise<void>;

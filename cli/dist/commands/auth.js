@@ -231,8 +231,11 @@ export async function diagnoseCommand() {
                 console.log(chalk.green('   ✓ Token is not expired'));
             }
         }
-        catch {
+        catch (error) {
             console.log(chalk.yellow('   ⚠ Could not validate token expiry'));
+            if (process.env.CLI_VERBOSE === 'true' && error instanceof Error) {
+                console.log(chalk.gray(`     ${error.message}`));
+            }
         }
     }
     else {
@@ -315,8 +318,11 @@ export async function diagnoseCommand() {
         diagnostics.deviceId = deviceId;
         console.log(chalk.green('   ✓ Device ID:'), chalk.gray(deviceId));
     }
-    catch {
+    catch (error) {
         console.log(chalk.yellow('   ⚠ Could not get device ID'));
+        if (process.env.CLI_VERBOSE === 'true' && error instanceof Error) {
+            console.log(chalk.gray(`     ${error.message}`));
+        }
     }
     // Summary and recommendations
     console.log(chalk.blue.bold('\n📋 Diagnostic Summary'));

@@ -8,11 +8,14 @@
 
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
+import { existsSync } from 'fs';
+import { createRequire } from 'module';
 import { spawn } from 'child_process';
 import { CLIConfig } from './utils/config.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
+const nodeRequire = createRequire(import.meta.url);
 
 interface MCPServerOptions {
   mode?: 'stdio' | 'http';
@@ -45,14 +48,48 @@ export class CLIMCPServer {
     }
   }
 
+  private resolveMCPServerPath(): string {
+    const candidates = new Set<string>();
+
+    if (process.env.MCP_SERVER_PATH) {
+      candidates.add(process.env.MCP_SERVER_PATH);
+    }
+
+    const packageRequests = [
+      '@lanonasis/mcp-server/dist/cli-aligned-mcp-server.js',
+      'lanonasis-mcp-server/dist/cli-aligned-mcp-server.js'
+    ];
+
+    for (const request of packageRequests) {
+      try {
+        const resolved = nodeRequire.resolve(request);
+        candidates.add(resolved);
+      } catch {
+        // Ignore resolution failures and continue through fallbacks
+      }
+    }
+
+    candidates.add(join(process.cwd(), 'mcp-server/dist/cli-aligned-mcp-server.js'));
+    candidates.add(join(__dirname, '../../../mcp-server/dist/cli-aligned-mcp-server.js'));
+
+    for (const candidate of candidates) {
+      if (candidate && existsSync(candidate)) {
+        return candidate;
+      }
+    }
+
+    throw new Error(
+      'Unable to locate the CLI-aligned MCP server. Set MCP_SERVER_PATH or install @lanonasis/mcp-server.'
+    );
+  }
+
   /**
    * Start local MCP server using CLI auth config
    */
   private async startLocalMCP(options: MCPServerOptions): Promise<void> {
     const { mode, port, verbose } = options;
 
-    // Path to CLI-aligned MCP server in submodule
-    const mcpServerPath = join(__dirname, '../../../mcp-server/dist/cli-aligned-mcp-server.js');
+    const mcpServerPath = this.resolveMCPServerPath();
 
     const args = mode === 'http' ? ['--http'] : ['--stdio'];
 
@@ -63,10 +100,13 @@ export class CLIMCPServer {
       console.error(`Auth: ${this.config.hasVendorKey() ? 'Vendor Key' : 'JWT Token'}`);
     }
 
+    const resolvedPort =
+      typeof port === 'number' && !Number.isNaN(port) ? port : 3001;
+
     // Set environment variables from CLI config
     const env = {
       ...process.env,
-      PORT: port?.toString(),
+      PORT: resolvedPort.toString(),
       MEMORY_API_URL: this.config.getApiUrl(),
       LANONASIS_VENDOR_KEY: this.config.getVendorKey(),
       LANONASIS_TOKEN: this.config.getToken(),
@@ -112,16 +152,15 @@ export class CLIMCPServer {
    */
   private async startRemoteMCP(options: MCPServerOptions): Promise<void> {
     const { verbose } = options;
+    const message = 'Remote MCP not implemented; remove --remote or use local mode.';
 
     if (verbose) {
       console.error('🌐 Connecting to remote MCP server...');
       console.error(`URL: ${this.config.getMCPServerUrl()}`);
     }
 
-    // For remote MCP, we'd need to implement a proxy or client
-    // For now, fall back to local mode
-    console.error('⚠️  Remote MCP not yet implemented, falling back to local mode');
-    await this.startLocalMCP({ ...options, useRemote: false });
+    console.error(`❌ ${message}`);
+    throw new Error(message);
   }
 
   /**
@@ -192,7 +231,11 @@ Examples:
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
-  main().catch(console.error);
+  main().catch(error => {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error(message);
+    process.exit(1);
+  });
 }
 
 export default CLIMCPServer;
