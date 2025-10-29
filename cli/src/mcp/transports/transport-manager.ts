@@ -46,7 +46,7 @@ class StdioTransport extends EventEmitter implements Transport {
 
   constructor(config: TransportConfig) {
     super();
-
+    
     if (!config.command) {
       throw new Error('Command required for stdio transport');
     }
@@ -89,11 +89,10 @@ class HttpTransport extends EventEmitter implements Transport {
   private headers: Record<string, string>;
   private connected: boolean = false;
   private auth?: TransportConfig['auth'];
-  private timeout?: number;
 
   constructor(config: TransportConfig) {
     super();
-
+    
     if (!config.url) {
       throw new Error('URL required for HTTP transport');
     }
@@ -101,8 +100,7 @@ class HttpTransport extends EventEmitter implements Transport {
     this.url = config.url;
     this.headers = config.headers || {};
     this.auth = config.auth;
-    this.timeout = config.timeout;
-
+    
     if (this.auth) {
       this.setupAuthentication();
     }
@@ -131,31 +129,15 @@ class HttpTransport extends EventEmitter implements Transport {
       throw new Error('Transport not connected');
     }
 
-    const timeoutDuration = this.timeout ?? 0;
-    const supportsAbort = typeof AbortController !== 'undefined';
-    const controller = timeoutDuration > 0 && supportsAbort ? new AbortController() : undefined;
-    let timeoutHandle: NodeJS.Timeout | undefined;
-
     try {
-      if (controller && timeoutDuration > 0) {
-        timeoutHandle = setTimeout(() => {
-          controller.abort();
-        }, timeoutDuration);
-      }
-
       const response = await fetch(this.url, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           ...this.headers
         },
-        body: JSON.stringify(data),
-        signal: controller?.signal
+        body: JSON.stringify(data)
       });
-
-      if (timeoutHandle) {
-        clearTimeout(timeoutHandle);
-      }
 
       if (!response.ok) {
         throw new Error(`HTTP error: ${response.status} ${response.statusText}`);
@@ -164,24 +146,8 @@ class HttpTransport extends EventEmitter implements Transport {
       const result = await response.json();
       this.emit('message', result);
     } catch (error) {
-      if (timeoutHandle) {
-        clearTimeout(timeoutHandle);
-      }
-
-      if (controller?.signal.aborted) {
-        const timeoutError = new Error(
-          `HTTP transport request to ${this.url} timed out after ${timeoutDuration}ms`
-        );
-        this.emit('error', timeoutError);
-        throw timeoutError;
-      }
-
       this.emit('error', error);
       throw error;
-    } finally {
-      if (timeoutHandle) {
-        clearTimeout(timeoutHandle);
-      }
     }
   }
 
@@ -209,7 +175,7 @@ class WebSocketTransport extends EventEmitter implements Transport {
 
   constructor(config: TransportConfig) {
     super();
-
+    
     if (!config.url) {
       throw new Error('URL required for WebSocket transport');
     }
@@ -221,210 +187,130 @@ class WebSocketTransport extends EventEmitter implements Transport {
     if (config.auth) {
       this.setupAuthentication(config.auth);
     }
-  } catch(error) {
-    this.emit('error', new Error(`Failed to parse WebSocket message: ${error instanceof Error ? error.message : String(error)}`));
   }
-  if(!auth) return;
 
-  switch(auth.type) {
+  private setupAuthentication(auth: TransportConfig['auth']): void {
+    if (!auth) return;
+
+    switch (auth.type) {
       case 'bearer':
-    this.headers['Authorization'] = `Bearer ${auth.value}`;
-    break;
+        this.headers['Authorization'] = `Bearer ${auth.value}`;
+        break;
       case 'apikey':
-    this.headers['X-API-Key'] = auth.value;
-    break;
-  }
-}
-
-  async connect(): Promise < void> {
-  return new Promise((resolve, reject) => {
-    const self = this;
-    let connectionTimer: NodeJS.Timeout | undefined;
-    let settled = false;
-
-    const detachListener = (event: string, handler: (...args: any[]) => void) => {
-      if (!self.ws) return;
-      const wsAny = self.ws as any;
-      if (typeof wsAny.off === 'function') {
-        wsAny.off(event, handler);
-      } else if (typeof wsAny.removeListener === 'function') {
-        wsAny.removeListener(event, handler);
-      }
-    };
-
-    const clearTimer = () => {
-      if (connectionTimer) {
-        clearTimeout(connectionTimer);
-        connectionTimer = undefined;
-      }
-    };
-
-    const removeListeners = () => {
-      detachListener('open', handleOpen);
-      detachListener('message', handleMessage);
-      detachListener('error', handleError);
-      detachListener('close', handleClose);
-    };
-
-    const failConnection = (error: Error, terminate: boolean = true, emitDisconnect: boolean = true) => {
-      if (settled) return;
-      settled = true;
-
-      clearTimer();
-      removeListeners();
-
-      if (self.ws) {
-        if (terminate) {
-          try {
-            if (typeof (self.ws as any).terminate === 'function') {
-              (self.ws as any).terminate();
-            } else {
-              self.ws.close();
-            }
-          } catch {
-            // ignore termination errors
-          }
-        }
-        self.ws = null;
-      }
-
-      self.connected = false;
-      if (emitDisconnect) {
-        self.emit('disconnected', { code: 1006, reason: error.message });
-      }
-      reject(error);
-    };
-
-    const handleOpen = () => {
-      clearTimer();
-      this.connected = true;
-      this.reconnectAttempts = 0;
-      this.emit('connected');
-      console.log(chalk.green(`✅ WebSocket connected to ${this.url}`));
-      if (!settled) {
-        settled = true;
-        resolve();
-      }
-    };
-
-    const handleMessage = (data: WebSocket.RawData) => {
-      try {
-        const message = JSON.parse(data.toString());
-        this.emit('message', message);
-      } catch {
-        this.emit('error', new Error('Failed to parse WebSocket message'));
-      }
-    };
-
-    const handleError = (error: Error) => {
-      this.emit('error', error);
-      if (!this.connected) {
-        const normalizedError = error instanceof Error ? error : new Error(String(error));
-        failConnection(normalizedError);
-      }
-    };
-
-    const handleClose = (code: number, reason: Buffer) => {
-      clearTimer();
-      this.connected = false;
-      const reasonText = typeof reason?.toString === 'function' ? reason.toString() : '';
-      this.emit('disconnected', { code, reason: reasonText });
-
-      if (!settled) {
-        const closeError = new Error('WebSocket connection closed before it was established');
-        failConnection(closeError, false, false);
-        return;
-      }
-
-      removeListeners();
-      this.ws = null;
-
-      if (this.shouldReconnect()) {
-        this.scheduleReconnect();
-      }
-    };
-
-    try {
-      this.ws = new WebSocket(this.url, {
-        headers: this.headers
-      });
-
-      this.ws.on('open', handleOpen);
-      this.ws.on('message', handleMessage);
-    } catch (error) {
-      this.emit('error', new Error(`Failed to parse SSE message: ${error instanceof Error ? error.message : String(error)}`));
+        this.headers['X-API-Key'] = auth.value;
+        break;
     }
-    connectionTimer = setTimeout(() => {
-      if (!this.connected) {
-        const timeoutError = new Error('WebSocket connection timeout');
-        this.emit('error', timeoutError);
-        failConnection(timeoutError);
-      }
-    }, 10000);
-
-  } catch(error: unknown) {
-    const normalizedError = error instanceof Error ? error : new Error(String(error));
-    failConnection(normalizedError);
   }
-});
-}
+
+  async connect(): Promise<void> {
+    return new Promise((resolve, reject) => {
+      try {
+        this.ws = new WebSocket(this.url, {
+          headers: this.headers
+        });
+
+        this.ws.on('open', () => {
+          this.connected = true;
+          this.reconnectAttempts = 0;
+          this.emit('connected');
+          console.log(chalk.green(`✅ WebSocket connected to ${this.url}`));
+          resolve();
+        });
+
+        this.ws.on('message', (data) => {
+          try {
+            const message = JSON.parse(data.toString());
+            this.emit('message', message);
+          } catch {
+            this.emit('error', new Error('Failed to parse WebSocket message'));
+          }
+        });
+
+        this.ws.on('error', (error) => {
+          this.emit('error', error);
+          if (!this.connected) {
+            reject(error);
+          }
+        });
+
+        this.ws.on('close', (code, reason) => {
+          this.connected = false;
+          this.emit('disconnected', { code, reason: reason.toString() });
+          
+          if (this.shouldReconnect()) {
+            this.scheduleReconnect();
+          }
+        });
+
+        // Set connection timeout
+        setTimeout(() => {
+          if (!this.connected) {
+            reject(new Error('WebSocket connection timeout'));
+          }
+        }, 10000);
+
+      } catch (error) {
+        reject(error);
+      }
+    });
+  }
 
   private shouldReconnect(): boolean {
-  if (!this.reconnectConfig?.enabled) return false;
-
-  const maxAttempts = this.reconnectConfig.maxAttempts || 5;
-  return this.reconnectAttempts < maxAttempts;
-}
+    if (!this.reconnectConfig?.enabled) return false;
+    
+    const maxAttempts = this.reconnectConfig.maxAttempts || 5;
+    return this.reconnectAttempts < maxAttempts;
+  }
 
   private scheduleReconnect(): void {
-  const delay = this.reconnectConfig?.delay || 5000;
-  const backoff = Math.min(delay * Math.pow(2, this.reconnectAttempts), 30000);
+    const delay = this.reconnectConfig?.delay || 5000;
+    const backoff = Math.min(delay * Math.pow(2, this.reconnectAttempts), 30000);
+    
+    this.reconnectAttempts++;
+    console.log(chalk.yellow(
+      `⏳ Reconnecting WebSocket in ${backoff}ms (attempt ${this.reconnectAttempts})...`
+    ));
 
-  this.reconnectAttempts++;
-  console.log(chalk.yellow(
-    `⏳ Reconnecting WebSocket in ${backoff}ms (attempt ${this.reconnectAttempts})...`
-  ));
+    this.reconnectTimer = setTimeout(() => {
+      this.connect().catch(error => {
+        console.error(chalk.red('Reconnection failed:'), error);
+      });
+    }, backoff);
+  }
 
-  this.reconnectTimer = setTimeout(() => {
-    this.connect().catch(error => {
-      console.error(chalk.red('Reconnection failed:'), error);
-    });
-  }, backoff);
-}
-
-  async send(data: any): Promise < void> {
-  if(!this.connected || !this.ws) {
-  throw new Error('WebSocket not connected');
-}
-
-return new Promise((resolve, reject) => {
-  this.ws!.send(JSON.stringify(data), (error) => {
-    if (error) {
-      reject(error);
-    } else {
-      resolve();
+  async send(data: any): Promise<void> {
+    if (!this.connected || !this.ws) {
+      throw new Error('WebSocket not connected');
     }
-  });
-});
+
+    return new Promise((resolve, reject) => {
+      this.ws!.send(JSON.stringify(data), (error) => {
+        if (error) {
+          reject(error);
+        } else {
+          resolve();
+        }
+      });
+    });
   }
 
-  async close(): Promise < void> {
-  if(this.reconnectTimer) {
-  clearTimeout(this.reconnectTimer);
-}
-
-if (this.ws) {
-  this.ws.close();
-  this.ws = null;
-}
-
-this.connected = false;
-this.removeAllListeners();
+  async close(): Promise<void> {
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+    }
+    
+    if (this.ws) {
+      this.ws.close();
+      this.ws = null;
+    }
+    
+    this.connected = false;
+    this.removeAllListeners();
   }
 
-isConnected(): boolean {
-  return this.connected;
-}
+  isConnected(): boolean {
+    return this.connected;
+  }
 }
 
 /**
@@ -438,7 +324,7 @@ class SSETransport extends EventEmitter implements Transport {
 
   constructor(config: TransportConfig) {
     super();
-
+    
     if (!config.url) {
       throw new Error('URL required for SSE transport');
     }
@@ -450,7 +336,7 @@ class SSETransport extends EventEmitter implements Transport {
   async connect(): Promise<void> {
     // Dynamic import for EventSource
     const { EventSource } = await import('eventsource');
-
+    
     // EventSource doesn't support headers directly
     this.eventSource = new EventSource(this.url);
 
@@ -509,7 +395,7 @@ export class MCPTransportManager {
    * Create a transport based on configuration
    */
   async createTransport(
-    name: string,
+    name: string, 
     config: TransportConfig
   ): Promise<Transport> {
     // Store config for potential reconnection
@@ -541,7 +427,7 @@ export class MCPTransportManager {
     }
 
     this.transports.set(name, transport);
-
+    
     // Setup event forwarding
     this.setupEventForwarding(name, transport);
 
@@ -576,7 +462,7 @@ export class MCPTransportManager {
    * Create stdio transport helper
    */
   async createStdioTransport(
-    command: string,
+    command: string, 
     args: string[] = []
   ): Promise<StdioClientTransport> {
     const transport = new StdioTransport({
@@ -584,7 +470,7 @@ export class MCPTransportManager {
       command,
       args
     });
-
+    
     return transport.getInternalTransport();
   }
 
@@ -629,7 +515,7 @@ export class MCPTransportManager {
     const closePromises = Array.from(this.transports.values()).map(
       transport => transport.close()
     );
-
+    
     await Promise.all(closePromises);
     this.transports.clear();
     this.configs.clear();
@@ -652,11 +538,11 @@ export class MCPTransportManager {
    */
   getStatuses(): Record<string, boolean> {
     const statuses: Record<string, boolean> = {};
-
+    
     for (const [name, transport] of this.transports) {
       statuses[name] = transport.isConnected();
     }
-
+    
     return statuses;
   }
 
@@ -671,7 +557,7 @@ export class MCPTransportManager {
 
     // Close existing if any
     await this.closeTransport(name);
-
+    
     // Create new transport
     return this.createTransport(name, config);
   }

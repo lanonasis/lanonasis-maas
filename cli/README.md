@@ -1,4 +1,4 @@
-# @lanonasis/cli v3.0.1 - Enhanced MCP & Interactive CLI Experience
+# @lanonasis/cli v3.4.15 - Enhanced MCP & Interactive CLI Experience
 
 [![NPM Version](https://img.shields.io/npm/v/@lanonasis/cli)](https://www.npmjs.com/package/@lanonasis/cli)
 [![Downloads](https://img.shields.io/npm/dt/@lanonasis/cli)](https://www.npmjs.com/package/@lanonasis/cli)
@@ -10,6 +10,7 @@
 ## 🚀 Quick Start
 
 ### Installation
+
 ```bash
 # Global installation (recommended)
 npm install -g @lanonasis/cli
@@ -19,6 +20,7 @@ lanonasis --version  # or onasis --version
 ```
 
 ### First Steps
+
 ```bash
 # Interactive guided setup (recommended for new users)
 onasis guide
@@ -36,12 +38,12 @@ onasis memory create --title "Welcome" --content "My first memory"
 
 The CLI supports multiple command aliases for different use cases:
 
-| Command | Purpose | Golden Contract |
-|---------|---------|-----------------|
-| `onasis` | Golden Contract compliant interface | ✅ Yes |
-| `lanonasis` | Standard LanOnasis interface | ✅ Yes |
-| `memory` | Memory-focused operations | ✅ Yes |
-| `maas` | Memory as a Service operations | ✅ Yes |
+| Command     | Purpose                             | Golden Contract |
+| ----------- | ----------------------------------- | --------------- |
+| `onasis`    | Golden Contract compliant interface | ✅ Yes          |
+| `lanonasis` | Standard LanOnasis interface        | ✅ Yes          |
+| `memory`    | Memory-focused operations           | ✅ Yes          |
+| `maas`      | Memory as a Service operations      | ✅ Yes          |
 
 ```bash
 # All of these are equivalent:
@@ -54,24 +56,31 @@ maas memory list
 ## 🔐 Authentication Methods
 
 ### 1. Vendor Key Authentication (Recommended)
+
 Best for API integrations and automation:
+
 ```bash
 onasis login --vendor-key pk_xxxxx.sk_xxxxx
 ```
 
 ### 2. OAuth Browser Authentication
+
 Secure browser-based authentication:
+
 ```bash
 onasis login --oauth
 ```
 
 ### 3. Interactive Credentials
+
 Traditional username/password authentication:
+
 ```bash
 onasis login  # Will prompt for email and password
 ```
 
 ### Authentication Status
+
 ```bash
 onasis auth status    # Check current authentication
 onasis auth logout    # Logout from current session
@@ -80,11 +89,13 @@ onasis auth logout    # Logout from current session
 ## 💻 Shell Completions
 
 ### Installation Guide
+
 ```bash
 onasis completion  # Shows installation instructions for all shells
 ```
 
 ### Direct Installation
+
 ```bash
 # Bash
 echo 'source <(onasis --completion bash)' >> ~/.bashrc
@@ -97,8 +108,9 @@ echo 'onasis --completion fish | source' >> ~/.config/fish/config.fish
 ```
 
 ### Features
+
 - ✅ Command and subcommand completion
-- ✅ Option and flag completion  
+- ✅ Option and flag completion
 - ✅ Context-aware suggestions
 - ✅ Dynamic completion data via JSON API
 - ✅ Support for all command aliases
@@ -106,15 +118,17 @@ echo 'onasis --completion fish | source' >> ~/.config/fish/config.fish
 ## 📚 Core Commands
 
 ### System Management
+
 ```bash
 onasis health           # Comprehensive system health check
-onasis status          # Quick status overview  
+onasis status          # Quick status overview
 onasis init            # Initialize CLI configuration
 onasis guide           # Interactive setup guide
 onasis quickstart      # Essential commands reference
 ```
 
 ### Memory Management
+
 ```bash
 # List memories
 onasis memory list
@@ -136,6 +150,7 @@ onasis memory stats                       # Memory statistics
 ```
 
 ### Topic Management
+
 ```bash
 onasis topic list                         # List all topics
 onasis topic create --name "Development" --color blue --icon "💻"
@@ -145,6 +160,7 @@ onasis topic delete <id>                  # Delete topic
 ```
 
 ### API Key Management
+
 ```bash
 onasis api-keys list                      # List API keys
 onasis api-keys create --name "Integration Key" --scope "memory:read"
@@ -153,6 +169,7 @@ onasis api-keys rotate <id>               # Rotate API key
 ```
 
 ### MCP Integration (Enhanced in v2.0.9)
+
 ```bash
 # Connection Management
 onasis mcp status                         # MCP server status with health info
@@ -161,7 +178,7 @@ onasis mcp connect --local               # Connect to local MCP server
 onasis mcp disconnect                     # Disconnect from MCP
 onasis mcp list-servers                   # List all connected servers
 
-# Tool & Resource Management  
+# Tool & Resource Management
 onasis mcp tools                          # List available MCP tools
 onasis mcp resources                      # List MCP resources
 onasis mcp call <tool> --args             # Execute MCP tool directly
@@ -173,7 +190,9 @@ onasis mcp server stop                    # Stop local MCP server
 ```
 
 ### 🆕 MCP Server Mode (v3.0)
+
 Run the CLI as a standalone MCP server:
+
 ```bash
 # Start MCP server for IDE integrations
 lanonasis-mcp-server --verbose
@@ -184,7 +203,8 @@ LANONASIS_TOKEN=your-token \
 lanonasis-mcp-server
 ```
 
-### Configuration Management  
+### Configuration Management
+
 ```bash
 onasis config list                        # List all configuration
 onasis config get <key>                   # Get configuration value
@@ -193,6 +213,7 @@ onasis config reset                       # Reset configuration
 ```
 
 ### Service Management
+
 ```bash
 onasis service list                       # List all services
 onasis service status                     # Service status overview
@@ -216,12 +237,14 @@ onasis deploy health                      # Deployment health check
 ## 🎯 Advanced Usage
 
 ### JSON Output for Automation
+
 ```bash
 onasis memory list --output json | jq '.data[].title'
 onasis health --output json | jq '.status'
 ```
 
 ### Environment Variables
+
 ```bash
 export MEMORY_API_URL="https://api.lanonasis.com/api/v1"
 export CLI_OUTPUT_FORMAT="json"
@@ -229,7 +252,9 @@ export CLI_VERBOSE="true"
 ```
 
 ### Configuration File
+
 Location: `~/.maas/config.json`
+
 ```json
 {
   "apiUrl": "https://api.lanonasis.com/api/v1",
@@ -242,12 +267,14 @@ Location: `~/.maas/config.json`
 ## 🔧 Development & Debugging
 
 ### Verbose Mode
+
 ```bash
 onasis --verbose memory list    # Detailed operation logs
 onasis -V health               # Short flag version
 ```
 
 ### Configuration Debugging
+
 ```bash
 onasis config list             # Check current configuration
 onasis auth status            # Verify authentication
@@ -255,6 +282,7 @@ onasis health --verbose       # Detailed health information
 ```
 
 ### MCP Debugging
+
 ```bash
 onasis mcp status --verbose    # Detailed MCP diagnostics
 onasis --no-mcp memory list   # Bypass MCP, use direct API
@@ -263,6 +291,7 @@ onasis --no-mcp memory list   # Bypass MCP, use direct API
 ## 🌐 Golden Contract Compliance
 
 ### Onasis-Core v0.1 Standards
+
 - ✅ Service discovery via `/.well-known/onasis.json`
 - ✅ Vendor key authentication (`pk_*.sk_*` format)
 - ✅ Request correlation with UUID tracking
@@ -271,14 +300,18 @@ onasis --no-mcp memory list   # Bypass MCP, use direct API
 - ✅ WebSocket path alignment (`/mcp/ws`)
 
 ### Service Discovery Integration
+
 The CLI automatically discovers service endpoints:
+
 ```bash
 # Service discovery happens automatically
 onasis health  # Uses discovered endpoints for health checks
 ```
 
 ### Request Correlation
+
 Every API request includes correlation headers:
+
 - `X-Request-ID`: UUID for request tracking
 - `X-Project-Scope`: Project scope validation
 - `X-Auth-Method`: Authentication method used
@@ -286,6 +319,7 @@ Every API request includes correlation headers:
 ## 🧪 Testing & Quality
 
 ### Command Validation
+
 ```bash
 onasis --help                  # Validate CLI installation
 onasis completion              # Test completion system
@@ -293,6 +327,7 @@ onasis guide                   # Test interactive guidance
 ```
 
 ### API Integration Testing
+
 ```bash
 onasis health                  # Test API connectivity
 onasis memory list --limit 1  # Test memory service
@@ -304,6 +339,7 @@ onasis mcp status             # Test MCP integration
 ### Common Issues
 
 #### Authentication Failures
+
 ```bash
 # Check authentication status
 onasis auth status
@@ -314,6 +350,7 @@ onasis login --vendor-key pk_xxx.sk_xxx
 ```
 
 #### Connection Issues
+
 ```bash
 # Check system health
 onasis health --verbose
@@ -323,6 +360,7 @@ onasis --api-url https://api.lanonasis.com/api/v1 health
 ```
 
 #### MCP Connection Issues
+
 ```bash
 # Check MCP status
 onasis mcp status --verbose
@@ -332,6 +370,7 @@ onasis --no-mcp memory list
 ```
 
 ### Debug Mode
+
 ```bash
 # Enable maximum verbosity
 CLI_VERBOSE=true onasis --verbose health
@@ -340,6 +379,7 @@ CLI_VERBOSE=true onasis --verbose health
 ## 🤝 Contributing
 
 ### Development Setup
+
 ```bash
 # Clone CLI source
 git clone https://github.com/lanonasis/lanonasis-maas.git
@@ -356,6 +396,7 @@ npm link
 ```
 
 ### Testing Changes
+
 ```bash
 # Test build
 npm run build
@@ -368,8 +409,9 @@ onasis health
 ## 📝 Version History
 
 ### v2.0.0 (Current)
+
 - 🎯 **Interactive Dashboard**: Central command center for all operations
-- 🎉 **Welcome Experience**: Guided onboarding for new users  
+- 🎉 **Welcome Experience**: Guided onboarding for new users
 - ⚡ **Power Mode**: Streamlined interface for expert users
 - 🤖 **Smart Suggestions**: Context-aware command recommendations
 - 🏆 **Achievement System**: Gamification to track progress
@@ -377,6 +419,7 @@ onasis health
 - 📊 **Progress Indicators**: Visual feedback for operations
 
 ### v1.5.2
+
 - ✅ Golden Contract compliance (Onasis-Core v0.1)
 - ✅ Professional shell completions (bash/zsh/fish)
 - ✅ Enhanced authentication (vendor keys, OAuth, credentials)
@@ -386,6 +429,7 @@ onasis health
 - ✅ Request correlation and enhanced security
 
 ### Previous Versions
+
 - v1.4.x: Basic CLI functionality
 - v1.3.x: MCP integration
 - v1.2.x: Memory management
@@ -407,4 +451,4 @@ MIT License - see [LICENSE](../LICENSE) for details.
 
 ---
 
-*Professional CLI for Enterprise Memory as a Service - Golden Contract Compliant*
+_Professional CLI for Enterprise Memory as a Service - Golden Contract Compliant_
