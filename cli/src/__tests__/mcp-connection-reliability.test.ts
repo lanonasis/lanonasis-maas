@@ -626,7 +626,7 @@ describe('MCP Connection Reliability Tests', () => {
       await mcpClient.connect({ connectionMode: 'remote' });
 
       // Mock tool execution failure
-      mockAxios.mockRejectedValue({
+      mockAxios.post.mockRejectedValue({
         response: {
           status: 500,
           data: { error: 'Internal server error' }

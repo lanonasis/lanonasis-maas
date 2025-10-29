@@ -55,7 +55,25 @@ export declare class MCPClient {
     private healthCheckInterval;
     private connectionStartTime;
     private lastHealthCheck;
+    private activeConnectionMode;
     constructor();
+    /**
+     * Overrides the configuration directory used by the underlying CLI config.
+     * Useful for tests that need isolated config state.
+     */
+    setConfigDirectory(configDir: string): void;
+    /**
+     * Returns the current config file path. Primarily used for test introspection.
+     */
+    getConfigPath(): string;
+    /**
+     * Helper for tests to seed authentication tokens without accessing internals.
+     */
+    setTokenForTesting(token: string): Promise<void>;
+    /**
+     * Helper for tests to seed vendor keys without accessing internals.
+     */
+    setVendorKeyForTesting(vendorKey: string): Promise<void>;
     /**
      * Initialize the MCP client configuration
      */

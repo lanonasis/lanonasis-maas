@@ -4,6 +4,7 @@ import { MemoryCompletionProvider } from './providers/MemoryCompletionProvider';
 import { ApiKeyTreeProvider } from './providers/ApiKeyTreeProvider';
 import { EnhancedMemoryService } from './services/EnhancedMemoryService';
 import { ApiKeyService } from './services/ApiKeyService';
+import { SecureApiKeyService } from './services/SecureApiKeyService';
 import { MemoryType } from './types/memory-aligned';
 
 let enhancedMemoryService: EnhancedMemoryService;
@@ -11,16 +12,23 @@ let enhancedMemoryService: EnhancedMemoryService;
 export async function activate(context: vscode.ExtensionContext) {
     console.log('Lanonasis Memory Extension (Enhanced) is now active');
 
+    // Create output channel for logging
+    const outputChannel = vscode.window.createOutputChannel('Lanonasis');
+
+    // Initialize secure API key service
+    const secureApiKeyService = new SecureApiKeyService(context, outputChannel);
+    await secureApiKeyService.initialize();
+
     // Initialize enhanced memory service
-    enhancedMemoryService = new EnhancedMemoryService();
-    
+    enhancedMemoryService = new EnhancedMemoryService(secureApiKeyService);
+
     // Initialize API key service
-    const apiKeyService = new ApiKeyService();
-    
+    const apiKeyService = new ApiKeyService(secureApiKeyService);
+
     // Initialize tree providers
     const memoryTreeProvider = new MemoryTreeProvider(enhancedMemoryService as any);
     const apiKeyTreeProvider = new ApiKeyTreeProvider(apiKeyService);
-    
+
     vscode.window.registerTreeDataProvider('lanonasisMemories', memoryTreeProvider);
     vscode.window.registerTreeDataProvider('lanonasisApiKeys', apiKeyTreeProvider);
 
@@ -36,7 +44,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
     // Set context variables
     vscode.commands.executeCommand('setContext', 'lanonasis.enabled', true);
-    
+
     // Check authentication status and CLI capabilities
     await checkEnhancedAuthenticationStatus();
 
@@ -94,7 +102,7 @@ export async function activate(context: vscode.ExtensionContext) {
     ];
 
     context.subscriptions.push(...commands);
-    
+
     // Add enhanced service to subscriptions for proper cleanup
     context.subscriptions.push(enhancedMemoryService);
 
@@ -117,15 +125,15 @@ async function checkEnhancedAuthenticationStatus() {
     const config = vscode.workspace.getConfiguration('lanonasis');
     const apiKey = config.get<string>('apiKey');
     const authenticated = !!apiKey && apiKey.trim().length > 0;
-    
+
     vscode.commands.executeCommand('setContext', 'lanonasis.authenticated', authenticated);
-    
+
     if (!authenticated) {
         const result = await vscode.window.showInformationMessage(
             'Lanonasis Memory: No API key configured. Would you like to set it up now?',
             'Configure', 'Later'
         );
-        
+
         if (result === 'Configure') {
             vscode.commands.executeCommand('lanonasis.authenticate');
         }
@@ -148,7 +156,7 @@ async function checkEnhancedAuthenticationStatus() {
             '💡 Lanonasis Memory: Install CLI v1.5.2+ for enhanced performance.',
             'Install CLI', 'Learn More', 'Later'
         );
-        
+
         if (installCLI === 'Install CLI') {
             vscode.env.openExternal(vscode.Uri.parse('https://www.npmjs.com/package/@lanonasis/cli'));
         } else if (installCLI === 'Learn More') {
@@ -309,23 +317,23 @@ async function authenticate() {
     try {
         // Test the API key with enhanced service
         await enhancedMemoryService.testConnection(apiKey);
-        
+
         // Save to configuration
         const config = vscode.workspace.getConfiguration('lanonasis');
         await config.update('apiKey', apiKey, vscode.ConfigurationTarget.Global);
-        
+
         // Refresh the client to pick up new configuration
         await enhancedMemoryService.refreshClient();
-        
+
         vscode.commands.executeCommand('setContext', 'lanonasis.authenticated', true);
         vscode.window.showInformationMessage('Successfully authenticated with Lanonasis Memory Service');
         vscode.commands.executeCommand('lanonasis.refreshMemories');
-        
+
         // Check CLI capabilities after authentication
         setTimeout(async () => {
             await checkEnhancedAuthenticationStatus();
         }, 1000);
-        
+
     } catch (error) {
         vscode.window.showErrorMessage(`Authentication failed: ${error instanceof Error ? error.message : 'Invalid API key'}`);
     }
@@ -333,12 +341,12 @@ async function authenticate() {
 
 function openMemoryInEditor(memory: any) {
     const capabilities = enhancedMemoryService.getCapabilities();
-    const connectionInfo = capabilities?.cliAvailable ? 
-        (capabilities.mcpSupport ? 'CLI+MCP' : 'CLI') : 
+    const connectionInfo = capabilities?.cliAvailable ?
+        (capabilities.mcpSupport ? 'CLI+MCP' : 'CLI') :
         'API';
-        
+
     const content = `# ${memory.title}\n\n**Type:** ${memory.type}\n**Created:** ${new Date(memory.created_at).toLocaleString()}\n**Connection:** ${connectionInfo}\n\n---\n\n${memory.content}`;
-    
+
     vscode.workspace.openTextDocument({
         content,
         language: 'markdown'
@@ -359,9 +367,9 @@ async function showEnhancedWelcomeMessage() {
 Get your API key from api.lanonasis.com to get started.`;
 
     const selection = await vscode.window.showInformationMessage(
-        message, 
-        'Get API Key', 
-        'Install CLI', 
+        message,
+        'Get API Key',
+        'Install CLI',
         'Configure'
     );
 
@@ -393,7 +401,7 @@ async function switchConnectionMode() {
     const config = vscode.workspace.getConfiguration('lanonasis');
     const currentUseGateway = config.get<boolean>('useGateway', true);
     const currentPreferCLI = config.get<boolean>('preferCLI', true);
-    
+
     const options = [
         {
             label: '🚀 Auto (CLI + Gateway)',
@@ -431,22 +439,22 @@ async function switchConnectionMode() {
     try {
         await config.update('useGateway', selected.value.useGateway, vscode.ConfigurationTarget.Global);
         await config.update('preferCLI', selected.value.preferCLI, vscode.ConfigurationTarget.Global);
-        
+
         await enhancedMemoryService.refreshClient();
-        
+
         vscode.window.showInformationMessage(`Updated connection preferences. Testing...`);
-        
+
         // Test the new connection
         await enhancedMemoryService.testConnection();
         vscode.window.showInformationMessage(`✅ Connection mode updated successfully`);
-        
+
         vscode.commands.executeCommand('lanonasis.refreshMemories');
-        
+
         // Show updated connection info
         setTimeout(() => {
             vscode.commands.executeCommand('lanonasis.showConnectionInfo');
         }, 1000);
-        
+
     } catch (error) {
         vscode.window.showErrorMessage(`Failed to switch mode: ${error instanceof Error ? error.message : 'Unknown error'}`);
         // Revert the settings

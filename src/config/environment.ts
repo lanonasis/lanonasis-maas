@@ -160,37 +160,28 @@ const validateConditionalRequirements = (config: z.infer<typeof envSchema>) => {
     throw new Error('Production API key prefix should not contain "test"');
   }
 
-  const redisDependentFeatures: string[] = [];
-
-  if (config.PROXY_TOKEN_ENABLED) {
-    redisDependentFeatures.push('PROXY_TOKEN_ENABLED');
-  }
-
-  if (config.REDIS_SESSION_TTL > 0) {
-    redisDependentFeatures.push('REDIS_SESSION_TTL');
-  }
-
-  if (config.RATE_LIMIT_MAX_REQUESTS > 0) {
-    redisDependentFeatures.push('RATE_LIMIT_MAX_REQUESTS');
-  }
-
   if (!config.REDIS_URL) {
     if (config.NODE_ENV !== 'development') {
       throw new Error('Redis configuration required: set REDIS_URL when running outside development to enable shared caching and rate limiting');
     }
 
-    const explicitlyConfiguredDistributedFeatures = redisDependentFeatures.filter(feature => {
-      switch (feature) {
-        case 'PROXY_TOKEN_ENABLED':
-          return typeof process.env.PROXY_TOKEN_ENABLED !== 'undefined';
-        case 'REDIS_SESSION_TTL':
-          return typeof process.env.REDIS_SESSION_TTL !== 'undefined';
-        case 'RATE_LIMIT_MAX_REQUESTS':
-          return typeof process.env.RATE_LIMIT_MAX_REQUESTS !== 'undefined';
-        default:
-          return false;
+    const explicitlyConfiguredDistributedFeatures: string[] = [];
+
+    if (typeof process.env.PROXY_TOKEN_ENABLED === 'string') {
+      const normalized = process.env.PROXY_TOKEN_ENABLED.trim().toLowerCase();
+      const truthyValues = new Set(['true', '1', 'yes', 'on']);
+      if (truthyValues.has(normalized)) {
+        explicitlyConfiguredDistributedFeatures.push('proxy token authentication (PROXY_TOKEN_ENABLED)');
       }
-    });
+    }
+
+    if (typeof process.env.REDIS_SESSION_TTL === 'string' && process.env.REDIS_SESSION_TTL.trim() !== '') {
+      explicitlyConfiguredDistributedFeatures.push('session TTL management (REDIS_SESSION_TTL)');
+    }
+
+    if (typeof process.env.RATE_LIMIT_MAX_REQUESTS === 'string' && process.env.RATE_LIMIT_MAX_REQUESTS.trim() !== '') {
+      explicitlyConfiguredDistributedFeatures.push('API rate limiting (RATE_LIMIT_MAX_REQUESTS)');
+    }
 
     if (explicitlyConfiguredDistributedFeatures.length > 0) {
       throw new Error(

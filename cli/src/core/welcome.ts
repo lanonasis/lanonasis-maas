@@ -467,7 +467,7 @@ export class InteractiveSetup {
       }
     ]);
 
-    void auth; // suppress unused until real auth wired
+    const spinner = ora('Signing in...').start();
     const spinner = ora('Signing in...').start();
     await this.simulateDelay(1000);
     spinner.succeed('Sign in successful!');

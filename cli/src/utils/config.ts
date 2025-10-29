@@ -62,6 +62,22 @@ export class CLIConfig {
     this.lockFile = path.join(this.configDir, 'config.lock');
   }
 
+  /**
+   * Overrides the configuration storage directory. Primarily used for tests.
+   */
+  setConfigDirectory(configDir: string): void {
+    this.configDir = configDir;
+    this.configPath = path.join(configDir, 'config.json');
+    this.lockFile = path.join(configDir, 'config.lock');
+  }
+
+  /**
+   * Exposes the current config path for tests and diagnostics.
+   */
+  getConfigPath(): string {
+    return this.configPath;
+  }
+
   async init(): Promise<void> {
     try {
       await fs.mkdir(this.configDir, { recursive: true });
@@ -298,22 +314,19 @@ export class CLIConfig {
       }
     }
 
-    // Set fallback service endpoints
+    const fallback = this.resolveFallbackEndpoints();
     this.config.discoveredServices = {
-      auth_base: 'https://api.lanonasis.com',  // CLI auth goes to central auth system
-      memory_base: 'https://api.lanonasis.com/api/v1',  // Memory via onasis-core
-      mcp_base: 'https://mcp.lanonasis.com/api/v1',  // MCP HTTP/REST
-      mcp_ws_base: 'wss://mcp.lanonasis.com/ws',  // MCP WebSocket
-      mcp_sse_base: 'https://mcp.lanonasis.com/api/v1/events',  // MCP SSE
-      project_scope: 'lanonasis-maas'  // Correct project scope
+      ...fallback.endpoints,
+      project_scope: 'lanonasis-maas'
     };
 
     // Mark as fallback (don't set lastServiceDiscovery)
     await this.save();
+    this.logFallbackUsage(fallback.source, this.config.discoveredServices);
 
     if (verbose) {
       console.log('✓ Using fallback service endpoints');
-      console.log('   These are the standard production endpoints');
+      console.log(`   Source: ${fallback.source === 'environment' ? 'environment overrides' : 'built-in defaults'}`);
     }
   }
 
@@ -347,6 +360,73 @@ export class CLIConfig {
     }
 
     return 'unknown';
+  }
+
+  private resolveFallbackEndpoints(): {
+    endpoints: {
+      auth_base: string;
+      memory_base: string;
+      mcp_base: string;
+      mcp_ws_base: string;
+      mcp_sse_base: string;
+    };
+    source: 'environment' | 'default';
+  } {
+    const envAuthBase = process.env.LANONASIS_FALLBACK_AUTH_BASE ?? process.env.AUTH_BASE;
+    const envMemoryBase = process.env.LANONASIS_FALLBACK_MEMORY_BASE ?? process.env.MEMORY_BASE;
+    const envMcpBase = process.env.LANONASIS_FALLBACK_MCP_BASE ?? process.env.MCP_BASE;
+    const envMcpWsBase = process.env.LANONASIS_FALLBACK_MCP_WS_BASE ?? process.env.MCP_WS_BASE;
+    const envMcpSseBase = process.env.LANONASIS_FALLBACK_MCP_SSE_BASE ?? process.env.MCP_SSE_BASE;
+
+    const hasEnvOverrides = Boolean(envAuthBase || envMemoryBase || envMcpBase || envMcpWsBase || envMcpSseBase);
+    const nodeEnv = (process.env.NODE_ENV ?? '').toLowerCase();
+    const isDevEnvironment = nodeEnv === 'development' || nodeEnv === 'test';
+
+    const defaultAuthBase = isDevEnvironment ? 'http://localhost:4000' : 'https://api.lanonasis.com';
+    const defaultMemoryBase = isDevEnvironment ? 'http://localhost:4000/api/v1' : 'https://api.lanonasis.com/api/v1';
+    const defaultMcpBase = isDevEnvironment ? 'http://localhost:4100/api/v1' : 'https://mcp.lanonasis.com/api/v1';
+    const defaultMcpWsBase = isDevEnvironment ? 'ws://localhost:4100/ws' : 'wss://mcp.lanonasis.com/ws';
+    const defaultMcpSseBase = isDevEnvironment ? 'http://localhost:4100/api/v1/events' : 'https://mcp.lanonasis.com/api/v1/events';
+
+    const endpoints = {
+      auth_base: envAuthBase ?? defaultAuthBase,
+      memory_base: envMemoryBase ?? defaultMemoryBase,
+      mcp_base: envMcpBase ?? defaultMcpBase,
+      mcp_ws_base: envMcpWsBase ?? defaultMcpWsBase,
+      mcp_sse_base: envMcpSseBase ?? defaultMcpSseBase
+    };
+
+    return {
+      endpoints,
+      source: hasEnvOverrides ? 'environment' : 'default'
+    };
+  }
+
+  private logFallbackUsage(
+    source: 'environment' | 'default',
+    endpoints: {
+      auth_base: string;
+      memory_base: string;
+      mcp_base?: string;
+      mcp_ws_base: string;
+      mcp_sse_base?: string;
+    }
+  ): void {
+    const summary = {
+      auth: endpoints.auth_base,
+      mcp: endpoints.mcp_base,
+      websocket: endpoints.mcp_ws_base,
+      sse: endpoints.mcp_sse_base,
+      source
+    };
+
+    const message = `Service discovery fallback activated using ${source === 'environment' ? 'environment overrides' : 'built-in defaults'}`;
+    console.warn(`⚠️  ${message}`);
+    console.info('📊 service_discovery_fallback', summary);
+
+    if (typeof process.emitWarning === 'function') {
+      process.emitWarning(message, 'ServiceDiscoveryFallback');
+    }
   }
 
   // Manual endpoint override functionality
@@ -675,10 +755,6 @@ export class CLIConfig {
     await this.save();
   }
 
-  getConfigPath(): string {
-    return this.configPath;
-  }
-
   async exists(): Promise<boolean> {
     try {
       await fs.access(this.configPath);
@@ -775,9 +851,13 @@ export class CLIConfig {
           await this.setToken(response.data.token);
         }
       }
-    } catch {
+    } catch (err) {
       // If refresh fails, mark credentials as potentially invalid
       await this.incrementFailureCount();
+
+      if (process.env.CLI_VERBOSE === 'true' || process.env.NODE_ENV !== 'production') {
+        console.debug('Token refresh failed:', (err as Error).message);
+      }
     }
   }
 

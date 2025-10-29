@@ -106,7 +106,7 @@ export class EnhancedMCPClient extends EventEmitter {
     const timeout = config.timeout || 30000;
     let attempts = 0;
 
-    while (attempts < maxRetries) {
+    while (true) {
       try {
         this.updateConnectionStatus(config.name, 'connecting');
 
@@ -133,8 +133,6 @@ export class EnhancedMCPClient extends EventEmitter {
         await this.delay(delay);
       }
     }
-
-    return false;
   }
 
   /**

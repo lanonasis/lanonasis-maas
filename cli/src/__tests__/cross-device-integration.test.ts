@@ -51,20 +51,14 @@ describe('Cross-Device Integration Tests', () => {
     await fs.mkdir(device3Dir, { recursive: true });
 
     // Create config instances for each "device"
-    device1Config = new (CLIConfig as any)();
-    (device1Config as any).configDir = device1Dir;
-    (device1Config as any).configPath = path.join(device1Dir, 'config.json');
-    (device1Config as any).lockFile = path.join(device1Dir, 'config.lock');
+    device1Config = new CLIConfig();
+    device1Config.setConfigDirectory(device1Dir);
 
-    device2Config = new (CLIConfig as any)();
-    (device2Config as any).configDir = device2Dir;
-    (device2Config as any).configPath = path.join(device2Dir, 'config.json');
-    (device2Config as any).lockFile = path.join(device2Dir, 'config.lock');
+    device2Config = new CLIConfig();
+    device2Config.setConfigDirectory(device2Dir);
 
-    device3Config = new (CLIConfig as any)();
-    (device3Config as any).configDir = device3Dir;
-    (device3Config as any).configPath = path.join(device3Dir, 'config.json');
-    (device3Config as any).lockFile = path.join(device3Dir, 'config.lock');
+    device3Config = new CLIConfig();
+    device3Config.setConfigDirectory(device3Dir);
 
     // Initialize all configs
     await device1Config.init();
@@ -189,33 +183,61 @@ describe('Cross-Device Integration Tests', () => {
       // Temporarily disable test mode to test actual failure handling
       delete process.env.SKIP_SERVER_VALIDATION;
 
+      const originalFallbackEnv = {
+        AUTH_BASE: process.env.AUTH_BASE,
+        MCP_BASE: process.env.MCP_BASE,
+        MCP_WS_BASE: process.env.MCP_WS_BASE,
+        MCP_SSE_BASE: process.env.MCP_SSE_BASE,
+        MEMORY_BASE: process.env.MEMORY_BASE
+      };
+
+      process.env.AUTH_BASE = 'https://fallback-auth.example.com';
+      process.env.MCP_BASE = 'https://fallback-mcp.example.com/api';
+      process.env.MCP_WS_BASE = 'wss://fallback-mcp.example.com/ws';
+      process.env.MCP_SSE_BASE = 'https://fallback-mcp.example.com/events';
+      process.env.MEMORY_BASE = 'https://fallback-memory.example.com/api/v1';
+
       // Mock discovery failure
       mockAxios.get.mockRejectedValue(new Error('Service discovery failed') as any);
 
       const consoleSpy = jest.spyOn(console, 'log').mockImplementation(() => { });
 
-      // Attempt service discovery on all devices
-      await device1Config.discoverServices(true);
-      await device2Config.discoverServices(true);
-      await device3Config.discoverServices(true);
+      try {
+        // Attempt service discovery on all devices
+        await device1Config.discoverServices(true);
+        await device2Config.discoverServices(true);
+        await device3Config.discoverServices(true);
 
-      // All devices should fall back to same default endpoints
-      const services1 = device1Config.get('discoveredServices') as any;
-      const services2 = device2Config.get('discoveredServices') as any;
-      const services3 = device3Config.get('discoveredServices') as any;
+        // All devices should fall back to same default endpoints
+        const services1 = device1Config.get('discoveredServices') as any;
+        const services2 = device2Config.get('discoveredServices') as any;
+        const services3 = device3Config.get('discoveredServices') as any;
 
-      expect(services1).toEqual(services2);
-      expect(services1).toEqual(services3);
+        expect(services1).toEqual(services2);
+        expect(services1).toEqual(services3);
 
-      // Should use fallback endpoints
-      expect(services1.auth_base).toBe('http://localhost:4000');
-      expect(services1.mcp_base).toBe('http://localhost:4000/api/v1');
-      expect(services1.mcp_ws_base).toBe('ws://localhost:4000/ws');
+        // Should use fallback endpoints
+        expect(services1.auth_base).toBe('https://fallback-auth.example.com');
+        expect(services1.mcp_base).toBe('https://fallback-mcp.example.com/api');
+        expect(services1.mcp_ws_base).toBe('wss://fallback-mcp.example.com/ws');
+        expect(services1.mcp_sse_base).toBe('https://fallback-mcp.example.com/events');
+        expect(services1.memory_base).toBe('https://fallback-memory.example.com/api/v1');
+      } finally {
+        consoleSpy.mockRestore();
 
-      consoleSpy.mockRestore();
+        // Restore test mode
+        process.env.SKIP_SERVER_VALIDATION = 'true';
 
-      // Restore test mode
-      process.env.SKIP_SERVER_VALIDATION = 'true';
+        // Restore fallback environment variables
+        const envEntries = Object.entries(originalFallbackEnv) as [keyof typeof originalFallbackEnv, string | undefined][];
+        for (const [key, value] of envEntries) {
+          if (typeof value === 'undefined') {
+            delete process.env[key];
+          } else {
+            process.env[key] = value;
+          }
+        }
+      }
     });
   });
 
@@ -230,10 +252,10 @@ describe('Cross-Device Integration Tests', () => {
       await device1Config.setAndSave('testData', 'test-value');
 
       // Read config file directly and apply to device 2
-      const configPath1 = (device1Config as any).configPath;
+      const configPath1 = device1Config.getConfigPath();
       const configData = JSON.parse(await fs.readFile(configPath1, 'utf-8'));
 
-      const configPath2 = (device2Config as any).configPath;
+      const configPath2 = device2Config.getConfigPath();
       await fs.writeFile(configPath2, JSON.stringify(configData, null, 2));
 
       // Reload device 2 config

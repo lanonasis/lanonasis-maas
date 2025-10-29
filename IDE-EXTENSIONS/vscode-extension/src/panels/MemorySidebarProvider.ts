@@ -11,7 +11,7 @@ export class MemorySidebarProvider implements vscode.WebviewViewProvider {
     constructor(
         private readonly _extensionUri: vscode.Uri,
         private readonly memoryService: IMemoryService
-    ) {}
+    ) { }
 
     public resolveWebviewView(
         webviewView: vscode.WebviewView,
@@ -61,7 +61,7 @@ export class MemorySidebarProvider implements vscode.WebviewViewProvider {
     public async refresh() {
         if (this._view) {
             const authenticated = await this.isAuthenticated();
-            
+
             if (!authenticated) {
                 this._view.webview.postMessage({
                     type: 'updateState',
@@ -81,7 +81,7 @@ export class MemorySidebarProvider implements vscode.WebviewViewProvider {
                 });
 
                 const memories = await this.memoryService.listMemories(50);
-                const enhancedInfo = this.memoryService instanceof EnhancedMemoryService 
+                const enhancedInfo = this.memoryService instanceof EnhancedMemoryService
                     ? this.memoryService.getCapabilities()
                     : null;
 
@@ -114,7 +114,7 @@ export class MemorySidebarProvider implements vscode.WebviewViewProvider {
             });
 
             const results = await this.memoryService.searchMemories(query);
-            
+
             this._view.webview.postMessage({
                 type: 'searchResults',
                 results,
@@ -149,7 +149,7 @@ export class MemorySidebarProvider implements vscode.WebviewViewProvider {
         <head>
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}';">
+            <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource}; script-src 'nonce-${nonce}'; img-src ${webview.cspSource} https:; font-src ${webview.cspSource};">
             <link href="${styleUri}" rel="stylesheet">
             <title>Lanonasis Memory</title>
         </head>
