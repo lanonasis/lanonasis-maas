@@ -53,9 +53,9 @@ export class CLIMCPServer {
 
     // Path to CLI-aligned MCP server in submodule
     const mcpServerPath = join(__dirname, '../../../mcp-server/dist/cli-aligned-mcp-server.js');
-    
+
     const args = mode === 'http' ? ['--http'] : ['--stdio'];
-    
+
     if (verbose) {
       console.error('🚀 Starting CLI-aligned MCP Server...');
       console.error(`Mode: ${mode}`);
@@ -112,7 +112,7 @@ export class CLIMCPServer {
    */
   private async startRemoteMCP(options: MCPServerOptions): Promise<void> {
     const { verbose } = options;
-    
+
     if (verbose) {
       console.error('🌐 Connecting to remote MCP server...');
       console.error(`URL: ${this.config.getMCPServerUrl()}`);
@@ -138,8 +138,8 @@ export class CLIMCPServer {
     return {
       available: true, // CLI always has MCP server available
       configured: this.config.hasVendorKey() || !!this.config.getToken(),
-      authMethod: this.config.hasVendorKey() ? 'vendor_key' : 
-                 this.config.getToken() ? 'jwt' : 'none',
+      authMethod: this.config.hasVendorKey() ? 'vendor_key' :
+        this.config.getToken() ? 'jwt' : 'none',
       mode: this.config.shouldUseRemoteMCP() ? 'remote' : 'local'
     };
   }

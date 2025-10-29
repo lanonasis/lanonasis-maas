@@ -92,7 +92,7 @@ export class MemorySidebarProvider implements vscode.WebviewViewProvider {
                         memories,
                         loading: false,
                         enhancedMode: enhancedInfo?.cliAvailable || false,
-                        cliVersion: enhancedInfo?.cliVersion || null
+                        cliVersion: enhancedInfo?.version || null
                     }
                 });
             } catch (error) {
