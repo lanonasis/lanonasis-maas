@@ -17,44 +17,105 @@
 
 import { describe, it, expect, beforeAll } from '@jest/globals';
 import { CLIConfig } from '../utils/config.js';
-import * as fs from 'fs/promises';
+import * as fsPromises from 'fs/promises';
+import { existsSync, readFileSync } from 'fs';
 import * as path from 'path';
 import * as os from 'os';
 
-describe('Authentication Integration Tests', () => {
-    let testConfigDir: string;
-    let config: CLIConfig;
-    let hasCredentials = false;
-    let testToken: string | undefined;
-    let testVendorKey: string | undefined;
+const userConfigPath = path.join(os.homedir(), '.maas', 'config.json');
+let testToken: string | undefined;
+let testVendorKey: string | undefined;
+let hasCredentials = false;
+let hasVendorKey = false;
+let hasToken = false;
+let credentialStatusMessage: string | null = null;
 
-    beforeAll(async () => {
-        // Try to load credentials from user's config
+if (typeof process.env.TEST_JWT_TOKEN === 'string' && process.env.TEST_JWT_TOKEN.trim().length > 0) {
+    testToken = process.env.TEST_JWT_TOKEN;
+    hasToken = true;
+}
+
+if (typeof process.env.TEST_VENDOR_KEY === 'string' && process.env.TEST_VENDOR_KEY.trim().length > 0) {
+    testVendorKey = process.env.TEST_VENDOR_KEY;
+    hasVendorKey = true;
+}
+
+if (existsSync(userConfigPath)) {
+    try {
+        const configData = readFileSync(userConfigPath, 'utf-8');
+        let userConfig: { token?: unknown; vendorKey?: unknown } = {};
+
         try {
-            const configPath = path.join(os.homedir(), '.maas', 'config.json');
-            const configData = await fs.readFile(configPath, 'utf-8');
-            const userConfig = JSON.parse(configData);
-
-            testToken = userConfig.token;
-            testVendorKey = userConfig.vendorKey;
-            hasCredentials = !!(testToken || testVendorKey);
-
-            if (hasCredentials) {
-                console.log('✓ Found test credentials in ~/.maas/config.json');
+            userConfig = JSON.parse(configData);
+        } catch (parseError) {
+            if (parseError instanceof SyntaxError) {
+                credentialStatusMessage = '⚠️  Malformed ~/.maas/config.json detected. Credential-based tests will be skipped until the file is fixed.';
+                console.warn(credentialStatusMessage);
+                userConfig = {};
+            } else {
+                throw parseError;
             }
-        } catch {
-            console.warn(`
+        }
+
+        if (!hasToken && typeof userConfig.token === 'string' && userConfig.token.trim().length > 0) {
+            testToken = userConfig.token;
+            hasToken = true;
+        }
+
+        if (!hasVendorKey && typeof userConfig.vendorKey === 'string' && userConfig.vendorKey.trim().length > 0) {
+            testVendorKey = userConfig.vendorKey;
+            hasVendorKey = true;
+        }
+    } catch (error) {
+        credentialStatusMessage = `
+⚠️  Unable to read ~/.maas/config.json (${error instanceof Error ? error.message : 'Unknown error'})
+   
+   To run integration tests:
+   1. Run: lanonasis auth login
+   2. Then run: npm test -- auth-integration.test.ts
+        `;
+
+        if (!(error instanceof SyntaxError) && (error as NodeJS.ErrnoException)?.code !== 'ENOENT') {
+            throw error;
+        }
+    }
+} else if (!hasCredentials) {
+    credentialStatusMessage = `
 ⚠️  No credentials found in ~/.maas/config.json
    
    To run integration tests:
    1. Run: lanonasis auth login
    2. Then run: npm test -- auth-integration.test.ts
-      `);
+    `;
+}
+
+hasCredentials = hasToken || hasVendorKey;
+
+if (!credentialStatusMessage) {
+    credentialStatusMessage = hasCredentials
+        ? '✓ Detected test credentials via environment variables or ~/.maas/config.json'
+        : `
+⚠️  No credentials found in environment or ~/.maas/config.json
+   
+   To run integration tests:
+   1. Run: lanonasis auth login
+   2. Then run: npm test -- auth-integration.test.ts
+    `;
+}
+
+describe('Authentication Integration Tests', () => {
+    let testConfigDir: string;
+    let config: CLIConfig;
+
+    beforeAll(async () => {
+        if (credentialStatusMessage) {
+            const log = hasCredentials ? console.log : console.warn;
+            log(credentialStatusMessage);
         }
 
         // Create temporary test directory
         testConfigDir = path.join(os.tmpdir(), `test-auth-integration-${Date.now()}`);
-        await fs.mkdir(testConfigDir, { recursive: true });
+        await fsPromises.mkdir(testConfigDir, { recursive: true });
 
         config = new CLIConfig();
         (config as any).configDir = testConfigDir;
@@ -64,13 +125,12 @@ describe('Authentication Integration Tests', () => {
         await config.init();
     });
 
-    describe('Service Discovery', () => {
-        it('should discover service endpoints from .well-known/onasis.json', async () => {
-            if (!hasCredentials) {
-                console.log('⊘ Skipping - no credentials');
-                return;
-            }
+    const serviceDiscoveryTest = hasCredentials ? it : it.skip;
+    const vendorKeyRequiredTest = hasVendorKey ? it : it.skip;
+    const tokenRequiredTest = hasToken ? it : it.skip;
 
+    describe('Service Discovery', () => {
+        serviceDiscoveryTest('should discover service endpoints from .well-known/onasis.json', async () => {
             await config.discoverServices(true);
 
             const services = config.get('discoveredServices') as any;
@@ -83,12 +143,7 @@ describe('Authentication Integration Tests', () => {
     });
 
     describe('Vendor Key Authentication', () => {
-        it('should validate vendor key against server', async () => {
-            if (!testVendorKey) {
-                console.log('⊘ Skipping - no vendor key');
-                return;
-            }
-
+        vendorKeyRequiredTest('should validate vendor key against server', async () => {
             // This will hit the real server
             await config.setVendorKey(testVendorKey);
 
@@ -104,12 +159,7 @@ describe('Authentication Integration Tests', () => {
     });
 
     describe('Token Authentication', () => {
-        it('should verify JWT token expiration', async () => {
-            if (!testToken) {
-                console.log('⊘ Skipping - no token');
-                return;
-            }
-
+        tokenRequiredTest('should verify JWT token expiration', async () => {
             await config.setToken(testToken);
 
             const isAuthenticated = await config.isAuthenticated();
@@ -119,12 +169,7 @@ describe('Authentication Integration Tests', () => {
     });
 
     describe('Credential Validation', () => {
-        it('should validate stored credentials against server', async () => {
-            if (!hasCredentials) {
-                console.log('⊘ Skipping - no credentials');
-                return;
-            }
-
+        serviceDiscoveryTest('should validate stored credentials against server', async () => {
             // Set credentials
             if (testToken) {
                 await config.setToken(testToken);

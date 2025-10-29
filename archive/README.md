@@ -27,8 +27,8 @@ Historical setup guides, configuration documents, and implementation plans that 
 - `DEVELOPMENT_WORKSPACE.md` → Now: `onasis init`
 - `MCP_CONFIGURATION_GUIDE.md` → Now: `onasis mcp status`
 - `MEMORY_TABLES_ACCESS_GUIDE.md` → Now: `onasis memory --help`
-- `SERVICE_ARCHITECTURE.md` → Now: `onasis service list`
-- `VERCEL_DEPLOYMENT_GUIDE.md` → Now: `onasis deploy status`
+- `SERVICE_ARCHITECTURE.md` → Now: `onasis status`
+- `VERCEL_DEPLOYMENT_GUIDE.md` → Now: `onasis health`
 - And other legacy setup documentation
 
 ### `/legacy-scripts/` - Archived Shell Scripts
@@ -39,7 +39,7 @@ Manual shell scripts that have been replaced by professional CLI commands.
 
 - `verify-services.sh` → Now: `onasis health`
 - `setup-essential-secrets.sh` → Now: `onasis init && onasis login`
-- `deploy.sh` → Now: `onasis deploy status`
+- `deploy.sh` → Now: `onasis health`
 - `confirm-all-services-intact.sh` → Now: `onasis status`
 - `commercial-security-cleanup.sh` → Now: Built into CLI security
 - Extension packaging and publishing scripts
@@ -92,15 +92,6 @@ Historical documentation for VSCode, Cursor, and Windsurf extensions.
 | Config file editing          | `onasis auth status`                      |
 | Manual credential management | `onasis auth logout`                      |
 
-### Service Management Migration
-
-| Archived Script                  | Current CLI v1.5.2 Command    |
-| -------------------------------- | ----------------------------- |
-| `verify-services.sh`             | `onasis health`               |
-| `confirm-all-services-intact.sh` | `onasis status`               |
-| `setup-essential-secrets.sh`     | `onasis init && onasis login` |
-| Manual service checks            | `onasis service list`         |
-
 ### Configuration Migration
 
 | Archived Method            | Current CLI v1.5.2 Command        |
@@ -109,13 +100,16 @@ Historical documentation for VSCode, Cursor, and Windsurf extensions.
 | Environment variable setup | `onasis config list`              |
 | Manual file management     | `onasis config reset`             |
 
-### Deployment Migration
+### Memory Management Migration
 
-| Archived Script          | Current CLI v1.5.2 Command      |
-| ------------------------ | ------------------------------- |
-| `deploy.sh`              | `onasis deploy status`          |
-| `deploy-separated.sh`    | `onasis deploy health`          |
-| Manual deployment checks | `onasis service restart <name>` |
+| Archived Workflow                | Current CLI v1.5.2 Command |
+| -------------------------------- | -------------------------- |
+| Manual memory inventory exports  | `onasis memory list`       |
+| Hand-crafted memory documents    | `onasis memory create`     |
+| Full-text search scripts         | `onasis memory search`     |
+| Manual record lookups            | `onasis memory get`        |
+| JSON patching utilities          | `onasis memory update`     |
+| Custom cleanup scripts           | `onasis memory delete`     |
 
 ## ⚠️ Important Notes
 
@@ -140,7 +134,6 @@ onasis login                             # Interactive credentials
 # System operations
 onasis health                  # Comprehensive health check
 onasis status                 # Quick status overview
-onasis service list           # Service management
 
 # Memory operations
 onasis memory list            # List memories

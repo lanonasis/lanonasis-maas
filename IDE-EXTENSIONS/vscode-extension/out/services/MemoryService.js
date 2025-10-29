@@ -123,8 +123,14 @@ class MemoryService {
         if (!this.client) {
             throw new Error('Not authenticated. Please configure your API key.');
         }
+        // Type validation for limit parameter
+        if (typeof limit !== 'number' || limit < 0) {
+            throw new Error('limit must be a non-negative number');
+        }
+        // Ensure limit is within reasonable bounds
+        const validatedLimit = Math.min(Math.max(1, Math.floor(limit)), 1000);
         const response = await this.client.listMemories({
-            limit,
+            limit: validatedLimit,
             sort: 'updated_at',
             order: 'desc'
         });
