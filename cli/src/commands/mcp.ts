@@ -5,6 +5,7 @@ import { table } from 'table';
 import { getMCPClient } from '../utils/mcp-client.js';
 import { EnhancedMCPClient } from '../mcp/client/enhanced-client.js';
 import { CLIConfig } from '../utils/config.js';
+import WebSocket from 'ws';
 
 export function mcpCommands(program: Command) {
   const mcp = program
@@ -21,10 +22,10 @@ export function mcpCommands(program: Command) {
     .action(async () => {
       console.log(chalk.cyan('🚀 Initializing MCP Server Configuration'));
       console.log('');
-      
+
       const config = new CLIConfig();
       const isAuthenticated = !!config.get('token');
-      
+
       if (isAuthenticated) {
         console.log(chalk.green('✓ Authenticated - Using remote MCP mode'));
         console.log('  Your memory operations will use mcp.lanonasis.com');
@@ -33,7 +34,7 @@ export function mcpCommands(program: Command) {
         console.log(chalk.yellow('⚠️  Not authenticated - Using local MCP mode'));
         console.log('  Run "lanonasis auth login" to enable remote mode');
       }
-      
+
       console.log('');
       console.log(chalk.cyan('Available MCP Commands:'));
       console.log('  lanonasis mcp connect       # Auto-connect to best mode');
@@ -43,7 +44,7 @@ export function mcpCommands(program: Command) {
       console.log('  lanonasis mcp tools         # List available tools');
       console.log('');
       console.log(chalk.cyan('Memory operations are MCP-powered by default!'));
-      
+
       // Auto-connect to MCP
       const spinner = ora('Auto-connecting to MCP...').start();
       try {
@@ -67,13 +68,14 @@ export function mcpCommands(program: Command) {
     .option('-w, --websocket', 'Connect using WebSocket mode for enterprise users')
     .option('-s, --server <path>', 'Local MCP server path')
     .option('-u, --url <url>', 'Remote/WebSocket server URL')
+    .option('--local-args <args>', 'Extra args for local server (e.g., "--stdio --port 3001")')
     .action(async (options) => {
       const spinner = ora('Connecting to MCP server...').start();
       const config = new CLIConfig();
-      
+
       try {
         let connectionMode: 'local' | 'remote' | 'websocket';
-        
+
         // Determine connection mode - WebSocket takes precedence over remote and local
         if (options.websocket) {
           connectionMode = 'websocket';
@@ -83,9 +85,9 @@ export function mcpCommands(program: Command) {
           connectionMode = 'local';
         } else {
           // Default to remote if authenticated, otherwise local
-          connectionMode = !!config.get('token') ? 'remote' : 'local';
+          connectionMode = config.get('token') ? 'remote' : 'local';
         }
-        
+
         // Save preferences
         config.set('mcpConnectionMode', connectionMode);
         if (options.server) {
@@ -98,12 +100,12 @@ export function mcpCommands(program: Command) {
             config.set('mcpServerUrl', options.url);
           }
         }
-        
+
         let connected = false;
-        
+
         // Use Enhanced MCP Client for better connection handling
         const enhancedClient = new EnhancedMCPClient();
-        
+
         if (options.url) {
           // Connect to specific URL (WebSocket or remote)
           const serverConfig = {
@@ -112,7 +114,7 @@ export function mcpCommands(program: Command) {
             url: options.url,
             priority: 1
           };
-          
+
           connected = await enhancedClient.connectSingle(serverConfig);
           if (connected) {
             spinner.succeed(chalk.green(`Connected to MCP server at ${options.url}`));
@@ -121,16 +123,20 @@ export function mcpCommands(program: Command) {
         } else {
           // Fall back to old client for local connections
           const client = getMCPClient();
+          const localArgs = typeof options.localArgs === 'string' && options.localArgs.trim().length > 0
+            ? options.localArgs.split(' ').map((s: string) => s.trim()).filter(Boolean)
+            : undefined;
           connected = await client.connect({
             connectionMode,
             serverPath: options.server,
-            serverUrl: options.url
+            serverUrl: options.url,
+            localArgs
           });
         }
-        
+
         if (connected) {
           spinner.succeed(chalk.green(`Connected to MCP server in ${connectionMode} mode`));
-          
+
           if (connectionMode === 'remote') {
             console.log(chalk.cyan('ℹ️  Using remote MCP via mcp.lanonasis.com'));
             console.log(chalk.cyan('📡 SSE endpoint active for real-time updates'));
@@ -162,13 +168,13 @@ export function mcpCommands(program: Command) {
     .action(async () => {
       const client = getMCPClient();
       const status = client.getConnectionStatus();
-      
+
       console.log(chalk.cyan('\n📊 MCP Connection Status'));
       console.log(chalk.cyan('========================'));
       console.log(`Status: ${status.connected ? chalk.green('Connected') : chalk.red('Disconnected')}`);
       console.log(`Mode: ${status.mode === 'remote' ? chalk.blue('Remote (API)') : chalk.yellow('Local')}`);
       console.log(`Server: ${status.server}`);
-      
+
       if (status.connected && status.mode === 'remote') {
         console.log(`\n${chalk.cyan('Features:')}`);
         console.log('• Real-time updates via SSE');
@@ -182,34 +188,34 @@ export function mcpCommands(program: Command) {
     .description('List available MCP tools')
     .action(async () => {
       const spinner = ora('Fetching available tools...').start();
-      
+
       try {
         const client = getMCPClient();
-        
+
         if (!client.isConnectedToServer()) {
           spinner.info('Not connected. Attempting auto-connect...');
           const config = new CLIConfig();
           const useRemote = !!config.get('token');
           await client.connect({ useRemote });
         }
-        
+
         const tools = await client.listTools();
         spinner.succeed('Tools fetched successfully');
-        
+
         console.log(chalk.cyan('\n🔧 Available MCP Tools'));
         console.log(chalk.cyan('====================='));
-        
+
         const tableData = [
           [chalk.bold('Tool Name'), chalk.bold('Description')]
         ];
-        
+
         tools.forEach(tool => {
           tableData.push([
             chalk.green(tool.name),
             tool.description
           ]);
         });
-        
+
         console.log(table(tableData, {
           border: {
             topBody: '─',
@@ -242,17 +248,17 @@ export function mcpCommands(program: Command) {
     .option('-a, --args <json>', 'Tool arguments as JSON')
     .action(async (toolName, options) => {
       const spinner = ora(`Calling tool: ${toolName}...`).start();
-      
+
       try {
         const client = getMCPClient();
-        
+
         if (!client.isConnectedToServer()) {
           spinner.info('Not connected. Attempting auto-connect...');
           const config = new CLIConfig();
           const useRemote = !!config.get('token');
           await client.connect({ useRemote });
         }
-        
+
         let args = {};
         if (options.args) {
           try {
@@ -262,10 +268,10 @@ export function mcpCommands(program: Command) {
             process.exit(1);
           }
         }
-        
+
         const result = await client.callTool(toolName, args);
         spinner.succeed(`Tool ${toolName} executed successfully`);
-        
+
         console.log(chalk.cyan('\n📤 Tool Result:'));
         console.log(JSON.stringify(result, null, 2));
       } catch (error) {
@@ -286,26 +292,26 @@ export function mcpCommands(program: Command) {
     .option('--tags <tags>', 'Comma-separated tags')
     .action(async (options) => {
       const spinner = ora('Creating memory via MCP...').start();
-      
+
       try {
         const client = getMCPClient();
-        
+
         if (!client.isConnectedToServer()) {
           spinner.info('Not connected. Attempting auto-connect...');
           const config = new CLIConfig();
           const useRemote = !!config.get('token');
           await client.connect({ useRemote });
         }
-        
+
         const result = await client.callTool('memory_create_memory', {
           title: options.title,
           content: options.content,
           memory_type: options.type,
           tags: options.tags ? options.tags.split(',').map((t: string) => t.trim()) : []
         });
-        
+
         spinner.succeed('Memory created successfully');
-        
+
         console.log(chalk.green('\n✓ Memory created'));
         console.log(`ID: ${chalk.cyan(result.id)}`);
         console.log(`Title: ${result.title}`);
@@ -323,32 +329,32 @@ export function mcpCommands(program: Command) {
     .option('-t, --threshold <number>', 'Similarity threshold (0-1)', '0.7')
     .action(async (query, options) => {
       const spinner = ora('Searching memories via MCP...').start();
-      
+
       try {
         const client = getMCPClient();
-        
+
         if (!client.isConnectedToServer()) {
           spinner.info('Not connected. Attempting auto-connect...');
           const config = new CLIConfig();
           const useRemote = !!config.get('token');
           await client.connect({ useRemote });
         }
-        
+
         const results = await client.callTool('memory_search_memories', {
           query,
           limit: parseInt(options.limit),
           threshold: parseFloat(options.threshold)
         });
-        
+
         spinner.succeed(`Found ${results.length} memories`);
-        
+
         if (results.length === 0) {
           console.log(chalk.yellow('\nNo memories found matching your query'));
           return;
         }
-        
+
         console.log(chalk.cyan('\n🔍 Search Results:'));
-        results.forEach((memory: any, index: number) => {
+        results.forEach((memory: { id: string; title: string; memory_type: string; relevance_score: number; content: string }, index: number) => {
           console.log(`\n${chalk.bold(`${index + 1}. ${memory.title}`)}`);
           console.log(`   ID: ${chalk.gray(memory.id)}`);
           console.log(`   Type: ${chalk.blue(memory.memory_type)}`);
@@ -369,7 +375,7 @@ export function mcpCommands(program: Command) {
     .option('--auto', 'Auto-detect best connection mode')
     .action(async (options) => {
       const config = new CLIConfig();
-      
+
       if (options.preferRemote) {
         config.set('mcpPreference', 'remote');
         console.log(chalk.green('✓ Set MCP preference to remote'));
@@ -401,6 +407,16 @@ export function mcpCommands(program: Command) {
       console.log(chalk.cyan('━'.repeat(50)));
       console.log();
 
+      type ConnectionStatus = {
+        connected: boolean;
+        mode: string;
+        server?: string;
+        latency?: number;
+        lastHealthCheck?: Date;
+        connectionUptime?: number;
+        failureCount: number;
+      };
+
       const diagnostics = {
         authenticationValid: false,
         endpointsReachable: false,
@@ -410,7 +426,7 @@ export function mcpCommands(program: Command) {
           sse: false
         },
         connectionLatency: {} as Record<string, number>,
-        currentConnection: null as any,
+        currentConnection: null as ConnectionStatus | null,
         toolsAvailable: false,
         healthCheckPassing: false
       };
@@ -419,7 +435,7 @@ export function mcpCommands(program: Command) {
       console.log(chalk.cyan('1. Authentication Status'));
       const token = config.getToken();
       const vendorKey = config.getVendorKey();
-      
+
       if (!token && !vendorKey) {
         console.log(chalk.red('   ✖ No authentication credentials found'));
         console.log(chalk.gray('   → Run: lanonasis auth login'));
@@ -428,7 +444,7 @@ export function mcpCommands(program: Command) {
         try {
           const isValid = await config.validateStoredCredentials();
           diagnostics.authenticationValid = isValid;
-          
+
           if (isValid) {
             console.log(chalk.green('   ✓ Authentication credentials are valid'));
           } else {
@@ -444,20 +460,22 @@ export function mcpCommands(program: Command) {
       // Step 2: Test endpoint availability
       console.log(chalk.cyan('\n2. Endpoint Availability'));
       const spinner1 = ora('Testing MCP endpoints...').start();
-      
+
       try {
         await config.discoverServices(options.verbose);
         const services = config.get('discoveredServices');
-        
+
         if (services) {
           spinner1.succeed('MCP endpoints discovered');
           diagnostics.endpointsReachable = true;
-          
+
           console.log(chalk.green('   ✓ Service discovery successful'));
           if (options.verbose) {
-            console.log(chalk.gray(`     HTTP: ${(services as any).mcp_base}`));
-            console.log(chalk.gray(`     WebSocket: ${(services as any).mcp_ws_base}`));
-            console.log(chalk.gray(`     SSE: ${(services as any).mcp_sse_base}`));
+            type Discovered = { mcp_base?: string; mcp_ws_base?: string; mcp_sse_base?: string };
+            const svc = services as Discovered;
+            console.log(chalk.gray(`     HTTP: ${svc.mcp_base}`));
+            console.log(chalk.gray(`     WebSocket: ${svc.mcp_ws_base}`));
+            console.log(chalk.gray(`     SSE: ${svc.mcp_sse_base}`));
           }
         } else {
           spinner1.warn('Using fallback endpoints');
@@ -472,7 +490,7 @@ export function mcpCommands(program: Command) {
 
       // Step 3: Test transport protocols
       console.log(chalk.cyan('\n3. Transport Protocol Tests'));
-      
+
       // Test HTTP/REST endpoint
       if (diagnostics.authenticationValid) {
         const httpSpinner = ora('Testing HTTP transport...').start();
@@ -480,7 +498,7 @@ export function mcpCommands(program: Command) {
           const startTime = Date.now();
           const axios = (await import('axios')).default;
           const httpUrl = config.getMCPRestUrl();
-          
+
           await axios.get(`${httpUrl}/health`, {
             headers: {
               'Authorization': `Bearer ${token}`,
@@ -488,18 +506,18 @@ export function mcpCommands(program: Command) {
             },
             timeout: 10000
           });
-          
+
           const latency = Date.now() - startTime;
           diagnostics.connectionLatency.http = latency;
           diagnostics.transportTests.http = true;
-          
+
           httpSpinner.succeed(`HTTP transport working (${latency}ms)`);
           console.log(chalk.green(`   ✓ HTTP/REST endpoint reachable`));
-        } catch (error: any) {
+        } catch (error: unknown) {
           httpSpinner.fail('HTTP transport failed');
           console.log(chalk.red('   ✖ HTTP/REST endpoint failed'));
           if (options.verbose) {
-            console.log(chalk.gray(`     Error: ${error.message}`));
+            console.log(chalk.gray(`     Error: ${error instanceof Error ? error.message : String(error)}`));
           }
         }
 
@@ -508,22 +526,21 @@ export function mcpCommands(program: Command) {
         try {
           const startTime = Date.now();
           const wsUrl = config.getMCPServerUrl();
-          
+
           // Create a test WebSocket connection
-          const WebSocket = (await import('ws')) as any;
           const ws = new WebSocket(wsUrl, [], {
             headers: {
               'Authorization': `Bearer ${token}`,
               'X-API-Key': String(token || vendorKey)
             }
           });
-          
+
           await new Promise((resolve, reject) => {
             const timeout = setTimeout(() => {
               ws.close();
               reject(new Error('WebSocket connection timeout'));
             }, 10000);
-            
+
             ws.on('open', () => {
               clearTimeout(timeout);
               const latency = Date.now() - startTime;
@@ -532,20 +549,20 @@ export function mcpCommands(program: Command) {
               ws.close();
               resolve(true);
             });
-            
+
             ws.on('error', (error) => {
               clearTimeout(timeout);
               reject(error);
             });
           });
-          
+
           wsSpinner.succeed(`WebSocket transport working (${diagnostics.connectionLatency.websocket}ms)`);
           console.log(chalk.green('   ✓ WebSocket endpoint reachable'));
-        } catch (error: any) {
+        } catch (error: unknown) {
           wsSpinner.fail('WebSocket transport failed');
           console.log(chalk.red('   ✖ WebSocket endpoint failed'));
           if (options.verbose) {
-            console.log(chalk.gray(`     Error: ${error.message}`));
+            console.log(chalk.gray(`     Error: ${error instanceof Error ? error.message : String(error)}`));
           }
         }
 
@@ -554,7 +571,7 @@ export function mcpCommands(program: Command) {
         try {
           const startTime = Date.now();
           const sseUrl = config.getMCPSSEUrl();
-          
+
           // Test SSE endpoint with a quick connection test
           const axios = (await import('axios')).default;
           await axios.get(sseUrl.replace('/events', '/health'), {
@@ -564,18 +581,18 @@ export function mcpCommands(program: Command) {
             },
             timeout: 10000
           });
-          
+
           const latency = Date.now() - startTime;
           diagnostics.connectionLatency.sse = latency;
           diagnostics.transportTests.sse = true;
-          
+
           sseSpinner.succeed(`SSE transport working (${latency}ms)`);
           console.log(chalk.green('   ✓ SSE endpoint reachable'));
-        } catch (error: any) {
+        } catch (error: unknown) {
           sseSpinner.fail('SSE transport failed');
           console.log(chalk.red('   ✖ SSE endpoint failed'));
           if (options.verbose) {
-            console.log(chalk.gray(`     Error: ${error.message}`));
+            console.log(chalk.gray(`     Error: ${error instanceof Error ? error.message : String(error)}`));
           }
         }
       } else {
@@ -586,17 +603,17 @@ export function mcpCommands(program: Command) {
       console.log(chalk.cyan('\n4. Current MCP Connection'));
       const client = getMCPClient();
       diagnostics.currentConnection = client.getConnectionStatus();
-      
+
       if (diagnostics.currentConnection.connected) {
         console.log(chalk.green('   ✓ MCP client is connected'));
         console.log(chalk.gray(`     Mode: ${diagnostics.currentConnection.mode}`));
         console.log(chalk.gray(`     Server: ${diagnostics.currentConnection.server}`));
-        
+
         if (diagnostics.currentConnection.connectionUptime) {
           const uptimeSeconds = Math.floor(diagnostics.currentConnection.connectionUptime / 1000);
           console.log(chalk.gray(`     Uptime: ${uptimeSeconds}s`));
         }
-        
+
         if (diagnostics.currentConnection.lastHealthCheck) {
           const healthCheckAge = Date.now() - diagnostics.currentConnection.lastHealthCheck.getTime();
           console.log(chalk.gray(`     Last health check: ${Math.floor(healthCheckAge / 1000)}s ago`));
@@ -613,10 +630,10 @@ export function mcpCommands(program: Command) {
         try {
           const tools = await client.listTools();
           diagnostics.toolsAvailable = tools.length > 0;
-          
+
           toolSpinner.succeed(`Found ${tools.length} available tools`);
           console.log(chalk.green(`   ✓ ${tools.length} MCP tools available`));
-          
+
           if (options.verbose && tools.length > 0) {
             console.log(chalk.gray('     Available tools:'));
             tools.slice(0, 5).forEach(tool => {
@@ -690,7 +707,7 @@ export function mcpCommands(program: Command) {
       if (issues.length === 0) {
         console.log(chalk.green('✅ All MCP connection checks passed!'));
         console.log(chalk.cyan('   Your MCP connection is working correctly.'));
-        
+
         if (Object.keys(diagnostics.connectionLatency).length > 0) {
           const avgLatency = Object.values(diagnostics.connectionLatency).reduce((a, b) => a + b, 0) / Object.values(diagnostics.connectionLatency).length;
           console.log(chalk.cyan(`   Average latency: ${Math.round(avgLatency)}ms`));

@@ -1,7 +1,6 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as os from 'os';
-import { fileURLToPath } from 'url';
 import { jwtDecode } from 'jwt-decode';
 import { randomUUID } from 'crypto';
 export class CLIConfig {
@@ -156,6 +155,13 @@ export class CLIConfig {
     }
     // Enhanced Service Discovery Integration
     async discoverServices(verbose = false) {
+        // Skip in test mode
+        if (process.env.SKIP_SERVER_VALIDATION === 'true') {
+            if (verbose) {
+                console.log('⚠ Service discovery skipped (test mode)');
+            }
+            return;
+        }
         const discoveryUrl = 'https://mcp.lanonasis.com/.well-known/onasis.json';
         try {
             // Use axios instead of fetch for consistency
@@ -302,14 +308,16 @@ export class CLIConfig {
         return this.config.discoveredServices?.auth_base || this.getApiUrl();
     }
     // Enhanced authentication support
-    async setVendorKey(vendorKey) {
+    async setVendorKey(vendorKey, options = {}) {
         // Enhanced format validation with detailed error messages
         const formatValidation = this.validateVendorKeyFormat(vendorKey);
         if (formatValidation !== true) {
             throw new Error(typeof formatValidation === 'string' ? formatValidation : 'Invalid vendor key format');
         }
-        // Server-side validation
-        await this.validateVendorKeyWithServer(vendorKey);
+        // Server-side validation (can be skipped for testing)
+        if (!options.skipServerValidation && process.env.SKIP_SERVER_VALIDATION !== 'true') {
+            await this.validateVendorKeyWithServer(vendorKey);
+        }
         this.config.vendorKey = vendorKey;
         this.config.authMethod = 'vendor_key';
         this.config.lastValidated = new Date().toISOString();
@@ -462,6 +470,32 @@ export class CLIConfig {
         const token = this.getToken();
         if (!token)
             return false;
+        // Skip server validation in test mode
+        if (process.env.SKIP_SERVER_VALIDATION === 'true') {
+            // Only do local validation in test mode
+            if (token.startsWith('cli_')) {
+                const parts = token.split('_');
+                if (parts.length >= 3) {
+                    const lastPart = parts[parts.length - 1];
+                    const timestamp = lastPart ? parseInt(lastPart) : NaN;
+                    if (!isNaN(timestamp)) {
+                        const thirtyDaysInMs = 30 * 24 * 60 * 60 * 1000;
+                        return (Date.now() - timestamp) < thirtyDaysInMs;
+                    }
+                }
+                return true;
+            }
+            else {
+                try {
+                    const decoded = jwtDecode(token);
+                    const now = Date.now() / 1000;
+                    return typeof decoded.exp === 'number' && decoded.exp > now;
+                }
+                catch {
+                    return false;
+                }
+            }
+        }
         // Check cache first
         if (this.authCheckCache && (Date.now() - this.authCheckCache.timestamp) < this.AUTH_CACHE_TTL) {
             return this.authCheckCache.isValid;
@@ -542,7 +576,7 @@ export class CLIConfig {
                         break;
                     }
                 }
-                catch (err) {
+                catch {
                     // Try next endpoint
                     continue;
                 }
@@ -554,7 +588,7 @@ export class CLIConfig {
             this.authCheckCache = { isValid: true, timestamp: Date.now() };
             return true;
         }
-        catch (error) {
+        catch {
             // If all server checks fail, fall back to local validation
             // This allows offline usage but is less secure
             console.warn('⚠️  Unable to verify token with server, using local validation');
@@ -591,6 +625,10 @@ export class CLIConfig {
             if (!vendorKey && !token) {
                 return false;
             }
+            // Skip server validation in test mode
+            if (process.env.SKIP_SERVER_VALIDATION === 'true') {
+                return true; // Just return true if credentials exist
+            }
             // Import axios dynamically to avoid circular dependency
             const axios = (await import('axios')).default;
             // Ensure service discovery is done
@@ -618,7 +656,7 @@ export class CLIConfig {
             await this.save();
             return true;
         }
-        catch (error) {
+        catch {
             // Increment failure count
             await this.incrementFailureCount();
             return false;
@@ -657,7 +695,7 @@ export class CLIConfig {
                 }
             }
         }
-        catch (error) {
+        catch {
             // If refresh fails, mark credentials as potentially invalid
             await this.incrementFailureCount();
         }
@@ -724,17 +762,9 @@ export class CLIConfig {
     }
     // MCP-specific helpers
     getMCPServerPath() {
-        // Resolve CLI-bundled MCP server path relative to this module
-        try {
-            const __filename = fileURLToPath(import.meta.url);
-            const __dirname = path.dirname(__filename);
-            const bundled = path.join(__dirname, '../mcp/server/lanonasis-server.js');
-            return this.config.mcpServerPath || bundled;
-        }
-        catch {
-            // Fallback to user-provided path if resolution fails
-            return this.config.mcpServerPath || 'lanonasis-mcp-server';
-        }
+        // Only return an explicitly configured path. No implicit bundled defaults.
+        // Returning an empty string if unset helps callers decide how to proceed safely.
+        return this.config.mcpServerPath || '';
     }
     getMCPServerUrl() {
         return this.config.discoveredServices?.mcp_ws_base ||

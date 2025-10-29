@@ -59,7 +59,9 @@ export declare class CLIConfig {
     hasManualEndpointOverrides(): boolean;
     clearManualEndpointOverrides(): Promise<void>;
     getDiscoveredApiUrl(): string;
-    setVendorKey(vendorKey: string): Promise<void>;
+    setVendorKey(vendorKey: string, options?: {
+        skipServerValidation?: boolean;
+    }): Promise<void>;
     validateVendorKeyFormat(vendorKey: string): string | boolean;
     private validateVendorKeyWithServer;
     getVendorKey(): string | undefined;

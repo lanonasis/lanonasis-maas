@@ -13,6 +13,7 @@ interface MCPConnectionOptions {
   useRemote?: boolean;
   useWebSocket?: boolean;
   connectionMode?: 'local' | 'remote' | 'websocket';
+  localArgs?: string[]; // extra args for stdio-friendly servers (e.g., --stdio)
 }
 
 /**
@@ -79,6 +80,7 @@ export class MCPClient {
   private healthCheckInterval: NodeJS.Timeout | null = null;
   private connectionStartTime: number = 0;
   private lastHealthCheck: Date | null = null;
+  private activeConnectionMode: string = 'local'; // Track actual connection mode
 
   constructor() {
     this.config = new CLIConfig();
@@ -147,6 +149,7 @@ export class MCPClient {
           await this.initializeWebSocket(wsUrl);
 
           this.isConnected = true;
+          this.activeConnectionMode = 'websocket';
           this.retryAttempts = 0;
           this.startHealthMonitoring();
           return true;
@@ -170,6 +173,7 @@ export class MCPClient {
           await this.initializeSSE(serverUrl);
 
           this.isConnected = true;
+          this.activeConnectionMode = 'remote';
           this.retryAttempts = 0;
           this.startHealthMonitoring();
           return true;
@@ -177,8 +181,7 @@ export class MCPClient {
 
         case 'local': {
           // Local MCP server connection requires explicit path via option or config
-          const serverPathValue = options.serverPath ?? this.config.get<string>('mcpServerPath');
-          serverPath = serverPathValue as string;
+          serverPath = options.serverPath ?? this.config.get<string>('mcpServerPath');
           if (!serverPath) {
             console.log(chalk.yellow('⚠️  No local MCP server path configured.'));
             console.log(chalk.cyan('💡 Prefer using WebSocket mode (default). Or configure a local path via:'));
@@ -198,9 +201,22 @@ export class MCPClient {
             console.log(chalk.yellow(`Retry ${this.retryAttempts}/${this.maxRetries}: Connecting to local MCP server...`));
           }
 
+          // Allow passing extra args to local server (e.g., --stdio) via options or env/config
+          // Precedence: options.localArgs -> env.MCP_LOCAL_SERVER_ARGS -> config.mcpLocalArgs -> none
+          const envArgs = (process.env.MCP_LOCAL_SERVER_ARGS || '')
+            .split(' ')
+            .map(s => s.trim())
+            .filter(Boolean);
+          const configArgs = (this.config.get<string[]>('mcpLocalArgs') || []) as string[];
+          const extraArgs = (options.localArgs && options.localArgs.length > 0)
+            ? options.localArgs
+            : (envArgs.length > 0 ? envArgs : configArgs);
+
+          const args = [serverPath, ...extraArgs];
+
           const localTransport = new StdioClientTransport({
             command: 'node',
-            args: [serverPath]
+            args
           });
 
           this.client = new Client({
@@ -211,6 +227,7 @@ export class MCPClient {
           await this.client.connect(localTransport);
 
           this.isConnected = true;
+          this.activeConnectionMode = 'local';
           this.retryAttempts = 0;
           console.log(chalk.green('✓ Connected to MCP server'));
           this.startHealthMonitoring();
@@ -227,6 +244,7 @@ export class MCPClient {
           console.log(chalk.yellow(`Unknown connection mode '${String(connectionMode)}', falling back to remote at ${serverUrl}`));
           await this.initializeSSE(serverUrl);
           this.isConnected = true;
+          this.activeConnectionMode = 'remote';
           this.retryAttempts = 0;
           this.startHealthMonitoring();
           return true;
@@ -764,6 +782,7 @@ export class MCPClient {
     }
 
     this.isConnected = false;
+    this.activeConnectionMode = 'local'; // Reset to default
   }
 
   /**
@@ -940,8 +959,7 @@ export class MCPClient {
     connectionUptime?: number;
     failureCount: number;
   } {
-    const connectionMode = this.config.get<string>('mcpConnectionMode') ??
-      (this.config.get<boolean>('mcpUseRemote') ? 'remote' : 'local');
+    const connectionMode = this.activeConnectionMode;
 
     let server: string;
     switch (connectionMode) {

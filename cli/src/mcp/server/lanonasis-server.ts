@@ -664,9 +664,10 @@ Please choose an option (1-4):`
     });
   }  /**
   
- * Handle tool calls
+  /**
+   * Handle tool calls
    */
-  private async handleToolCall(name: string, args: any, clientId?: string): Promise<any> {
+  private async handleToolCall(name: string, args: any, _clientId?: string): Promise<any> {
     // Ensure we're initialized
     if (!this.apiClient) {
       await this.initialize();
@@ -747,7 +748,7 @@ Please choose an option (1-4):`
       case 'transport_status':
         return this.getTransportStatus();
 
-      case 'transport_test':
+      case 'transport_test': {
         if (!args.transport) {
           throw new Error('transport is required');
         }
@@ -757,6 +758,7 @@ Please choose an option (1-4):`
           available: isAvailable,
           tested_at: new Date().toISOString()
         };
+      }
 
       case 'transport_reset_failures':
         if (args.transport) {
@@ -1329,7 +1331,7 @@ Please choose an option (1-4):`
         }
       }
       return true;
-    } catch (error) {
+    } catch {
       return false;
     }
   }
@@ -1350,7 +1352,7 @@ Please choose an option (1-4):`
         }
       }
       return true;
-    } catch (error) {
+    } catch {
       return false;
     }
   }

@@ -47,7 +47,7 @@ export class AchievementSystem extends EventEmitter {
     this.achievements = new Map();
     this.unlockedAchievements = new Set();
     this.userStats = this.loadUserStats();
-    
+
     this.initializeAchievements();
     this.loadUnlockedAchievements();
   }
@@ -92,7 +92,7 @@ export class AchievementSystem extends EventEmitter {
         maxProgress: 1000,
         condition: (stats) => stats.totalMemories >= 1000
       },
-      
+
       // Search achievements
       {
         id: 'first_search',
@@ -126,7 +126,7 @@ export class AchievementSystem extends EventEmitter {
         unlocked: false,
         condition: (stats) => stats.searchAccuracy >= 90
       },
-      
+
       // Streak achievements
       {
         id: 'week_streak',
@@ -152,7 +152,7 @@ export class AchievementSystem extends EventEmitter {
         maxProgress: 30,
         condition: (stats) => stats.currentStreak >= 30
       },
-      
+
       // API achievements
       {
         id: 'api_integrated',
@@ -176,7 +176,7 @@ export class AchievementSystem extends EventEmitter {
         maxProgress: 1000,
         condition: (stats) => stats.totalApiCalls >= 1000
       },
-      
+
       // Special achievements
       {
         id: 'night_owl',
@@ -210,7 +210,7 @@ export class AchievementSystem extends EventEmitter {
         maxProgress: 50,
         condition: (stats) => stats.powerModeUsage >= 50
       },
-      
+
       // Hidden achievements
       {
         id: 'secret_finder',
@@ -244,14 +244,14 @@ export class AchievementSystem extends EventEmitter {
    */
   checkAchievements(): Achievement[] {
     const newlyUnlocked: Achievement[] = [];
-    
+
     this.achievements.forEach((achievement, id) => {
       if (!achievement.unlocked && !this.unlockedAchievements.has(id)) {
         // Update progress if applicable
         if (achievement.maxProgress) {
           this.updateProgress(achievement);
         }
-        
+
         // Check if condition is met
         if (achievement.condition(this.userStats)) {
           this.unlockAchievement(achievement);
@@ -259,7 +259,7 @@ export class AchievementSystem extends EventEmitter {
         }
       }
     });
-    
+
     return newlyUnlocked;
   }
 
@@ -299,13 +299,13 @@ export class AchievementSystem extends EventEmitter {
     achievement.unlocked = true;
     achievement.unlockedAt = new Date();
     this.unlockedAchievements.add(achievement.id);
-    
+
     // Emit event
     this.emit('achievement:unlocked', achievement);
-    
+
     // Save to storage
     this.saveUnlockedAchievements();
-    
+
     // Show celebration
     this.celebrate(achievement);
   }
@@ -323,10 +323,10 @@ export class AchievementSystem extends EventEmitter {
         padding: 1,
         borderStyle: 'double',
         borderColor: 'yellow',
-        align: 'center'
+        textAlignment: 'center'
       }
     );
-    
+
     console.log('\n' + celebration + '\n');
   }
 
@@ -336,11 +336,11 @@ export class AchievementSystem extends EventEmitter {
   showAchievements(): void {
     console.clear();
     console.log(chalk.bold.yellow('🏆 Achievements\n'));
-    
+
     const categories = ['usage', 'milestone', 'special', 'hidden'];
     const totalPoints = this.getTotalPoints();
     const unlockedPoints = this.getUnlockedPoints();
-    
+
     // Summary
     console.log(boxen(
       `Points: ${chalk.bold.green(unlockedPoints)} / ${totalPoints}\n` +
@@ -352,16 +352,16 @@ export class AchievementSystem extends EventEmitter {
         borderColor: 'cyan'
       }
     ));
-    
+
     // Achievements by category
     categories.forEach(category => {
       const categoryAchievements = Array.from(this.achievements.values())
         .filter(a => a.category === category);
-      
+
       if (categoryAchievements.length === 0) return;
-      
+
       console.log(`\n${chalk.bold(this.getCategoryTitle(category))}\n`);
-      
+
       categoryAchievements.forEach(achievement => {
         this.displayAchievement(achievement);
       });
@@ -377,7 +377,7 @@ export class AchievementSystem extends EventEmitter {
     const name = unlocked ? chalk.bold(achievement.name) : chalk.dim(achievement.name);
     const description = unlocked ? achievement.description : chalk.dim(achievement.description);
     const points = chalk.green(`${achievement.points}pts`);
-    
+
     let progressBar = '';
     if (achievement.maxProgress && !unlocked) {
       const progress = achievement.progress || 0;
@@ -387,14 +387,14 @@ export class AchievementSystem extends EventEmitter {
       const bar = '█'.repeat(filled) + '░'.repeat(barLength - filled);
       progressBar = `\n     ${chalk.cyan(bar)} ${percentage}% (${progress}/${achievement.maxProgress})`;
     }
-    
+
     console.log(`  ${icon} ${name} ${points}`);
     console.log(`     ${description}${progressBar}`);
-    
+
     if (unlocked && achievement.unlockedAt) {
       console.log(chalk.dim(`     Unlocked: ${achievement.unlockedAt.toLocaleDateString()}`));
     }
-    
+
     console.log();
   }
 
@@ -434,10 +434,10 @@ export class AchievementSystem extends EventEmitter {
   updateStats(updates: Partial<UserStats>): void {
     this.userStats = { ...this.userStats, ...updates };
     this.saveUserStats();
-    
+
     // Check for new achievements
     const newAchievements = this.checkAchievements();
-    
+
     // Show subtle notification for new achievements
     if (newAchievements.length > 0 && !this.stateManager.getPreferences().expertMode) {
       newAchievements.forEach(achievement => {

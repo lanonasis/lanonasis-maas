@@ -5,6 +5,7 @@
 
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 import { EventEmitter } from 'events';
+import { EventSource } from 'eventsource';
 import WebSocket from 'ws';
 import chalk from 'chalk';
 
@@ -220,7 +221,7 @@ class WebSocketTransport extends EventEmitter implements Transport {
           try {
             const message = JSON.parse(data.toString());
             this.emit('message', message);
-          } catch (error) {
+          } catch {
             this.emit('error', new Error('Failed to parse WebSocket message'));
           }
         });
@@ -350,7 +351,7 @@ class SSETransport extends EventEmitter implements Transport {
         try {
           const data = JSON.parse(event.data);
           this.emit('message', data);
-        } catch (error) {
+        } catch {
           this.emit('error', new Error('Failed to parse SSE message'));
         }
       };
@@ -364,7 +365,7 @@ class SSETransport extends EventEmitter implements Transport {
     });
   }
 
-  async send(data: any): Promise<void> {
+  async send(_data: any): Promise<void> {
     // SSE is receive-only, but we can send data via HTTP POST
     throw new Error('SSE transport is read-only. Use HTTP for sending data.');
   }

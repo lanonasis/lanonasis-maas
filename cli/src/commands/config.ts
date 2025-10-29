@@ -53,7 +53,7 @@ export function configCommands(program: Command): void {
           await config.setApiUrl(value);
           console.log(chalk.green('✓ API URL updated:'), value);
           break;
-        
+
         case 'ai-integration':
           if (value === 'claude-mcp') {
             config.set('mcpEnabled', true);
@@ -66,22 +66,22 @@ export function configCommands(program: Command): void {
             console.log(chalk.gray('  Currently supported: claude-mcp'));
           }
           break;
-        
+
         case 'mcp-use-remote':
           config.set('mcpUseRemote', value === 'true');
           console.log(chalk.green('✓ MCP remote mode:'), value === 'true' ? 'enabled' : 'disabled');
           break;
-        
+
         case 'mcp-server-path':
           config.set('mcpServerPath', value);
           console.log(chalk.green('✓ MCP server path updated:'), value);
           break;
-        
+
         case 'mcp-server-url':
           config.set('mcpServerUrl', value);
           console.log(chalk.green('✓ MCP server URL updated:'), value);
           break;
-        
+
         default:
           // Generic config set
           config.set(key, value);
@@ -96,7 +96,7 @@ export function configCommands(program: Command): void {
     .action(async (key: string) => {
       const config = new CLIConfig();
       await config.init();
-      
+
       const value = config.get(key);
       if (value !== undefined) {
         console.log(chalk.green(`${key}:`), value);
@@ -117,10 +117,10 @@ export function configCommands(program: Command): void {
       console.log();
       console.log(chalk.green('API URL:'), config.getApiUrl());
       console.log(chalk.green('Config Path:'), config.getConfigPath());
-      
+
       const isAuth = await config.isAuthenticated();
       console.log(chalk.green('Authenticated:'), isAuth ? chalk.green('Yes') : chalk.red('No'));
-      
+
       if (isAuth) {
         const user = await config.getCurrentUser();
         if (user) {
@@ -142,7 +142,7 @@ export function configCommands(program: Command): void {
 
       console.log(chalk.blue.bold('📋 Configuration Options'));
       console.log();
-      
+
       const configOptions = [
         { key: 'api-url', description: 'API endpoint URL', current: config.getApiUrl() },
         { key: 'ai-integration', description: 'AI integration mode', current: config.get('aiIntegration') || 'none' },
@@ -207,11 +207,11 @@ export function configCommands(program: Command): void {
 
       try {
         const health = await apiClient.getHealth();
-        
+
         console.log(chalk.green('✓ Connection successful'));
         console.log(`Status: ${health.status}`);
         console.log(`Version: ${health.version}`);
-        
+
         if (health.dependencies) {
           console.log();
           console.log(chalk.yellow('Dependencies:'));
@@ -221,19 +221,19 @@ export function configCommands(program: Command): void {
             console.log(`  ${status} ${name}: ${info.status} (${responseTime}ms)`);
           });
         }
-        
+
       } catch (error: unknown) {
         console.log(chalk.red('✖ Connection failed'));
         const errorCode = error && typeof error === 'object' && 'code' in error ? (error as Record<string, unknown>).code : null;
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-        
+
         if (errorCode === 'ECONNREFUSED') {
           console.error(chalk.red('Cannot connect to API server'));
           console.log(chalk.yellow('Make sure the API server is running'));
         } else {
           console.error(chalk.red('Error:'), errorMessage);
         }
-        
+
         process.exit(1);
       }
     });
@@ -252,7 +252,7 @@ export function configCommands(program: Command): void {
 
       try {
         await config.discoverServices(options.verbose);
-        
+
         const services = config.get<CLIConfigData['discoveredServices']>('discoveredServices');
         if (services) {
           console.log(chalk.green('✓ Service discovery completed'));
@@ -265,7 +265,7 @@ export function configCommands(program: Command): void {
           console.log(`  MCP SSE: ${services.mcp_sse_base}`);
           console.log(`  Project: ${services.project_scope}`);
         }
-      } catch (error) {
+      } catch {
         console.log(chalk.red('✖ Service discovery failed'));
         console.log(chalk.gray('Using fallback endpoints'));
       }
@@ -402,15 +402,15 @@ export function configCommands(program: Command): void {
       console.log(chalk.cyan('1. Configuration File'));
       try {
         validation.configExists = await config.exists();
-        
+
         if (validation.configExists) {
           console.log(chalk.green('   ✓ Config file exists at'), config.getConfigPath());
-          
+
           // Try to read the config
           await config.load();
           validation.configReadable = true;
           console.log(chalk.green('   ✓ Config file is readable'));
-          
+
           // Check config version
           validation.configVersion = config.get<string>('version');
           if (validation.configVersion) {
@@ -418,19 +418,19 @@ export function configCommands(program: Command): void {
           } else {
             console.log(chalk.yellow('   ⚠ Config version missing (legacy config)'));
             validation.issues.push('Config version missing');
-            
+
             if (options.repair) {
               await config.save(); // This will add the version
               validation.repairs.push('Added config version');
               console.log(chalk.cyan('   → Repaired: Added config version'));
             }
           }
-          
+
           validation.configFormat = true;
         } else {
           console.log(chalk.red('   ✖ Config file not found'));
           validation.issues.push('Config file does not exist');
-          
+
           if (options.repair) {
             await config.save(); // Create empty config
             validation.repairs.push('Created config file');
@@ -441,19 +441,19 @@ export function configCommands(program: Command): void {
         console.log(chalk.red('   ✖ Config file is corrupted or unreadable'));
         console.log(chalk.gray(`     Error: ${error instanceof Error ? error.message : 'Unknown error'}`));
         validation.issues.push('Config file is corrupted');
-        
+
         if (options.repair) {
           try {
             // Try to backup the corrupted config
             const backupPath = await config.backupConfig();
             console.log(chalk.cyan(`   → Backed up corrupted config to: ${backupPath}`));
-            
+
             // Create new config
             await config.clear();
             await config.save();
             validation.repairs.push('Recreated corrupted config file');
             console.log(chalk.cyan('   → Repaired: Recreated config file'));
-          } catch (repairError) {
+          } catch {
             console.log(chalk.red('   ✖ Could not repair corrupted config'));
           }
         }
@@ -464,18 +464,18 @@ export function configCommands(program: Command): void {
       const token = config.getToken();
       const vendorKey = config.getVendorKey();
       const authMethod = config.get<string>('authMethod');
-      
+
       if (!token && !vendorKey) {
         console.log(chalk.yellow('   ⚠ No authentication credentials configured'));
         validation.issues.push('No authentication credentials');
       } else {
         console.log(chalk.green('   ✓ Authentication credentials found'));
-        
+
         // Validate auth method consistency
         if (vendorKey && authMethod !== 'vendor_key') {
           console.log(chalk.yellow('   ⚠ Auth method mismatch (has vendor key but method is not vendor_key)'));
           validation.issues.push('Auth method mismatch');
-          
+
           if (options.repair) {
             config.set('authMethod', 'vendor_key');
             await config.save();
@@ -485,7 +485,7 @@ export function configCommands(program: Command): void {
         } else if (token && !vendorKey && authMethod !== 'jwt' && authMethod !== 'oauth') {
           console.log(chalk.yellow('   ⚠ Auth method mismatch (has token but method is not jwt/oauth)'));
           validation.issues.push('Auth method mismatch');
-          
+
           if (options.repair) {
             config.set('authMethod', 'jwt');
             await config.save();
@@ -493,7 +493,7 @@ export function configCommands(program: Command): void {
             console.log(chalk.cyan('   → Repaired: Set auth method to jwt'));
           }
         }
-        
+
         // Validate vendor key format if present
         if (vendorKey) {
           const formatValidation = config.validateVendorKeyFormat(vendorKey);
@@ -504,12 +504,12 @@ export function configCommands(program: Command): void {
             validation.issues.push('Invalid vendor key format');
           }
         }
-        
+
         // Test authentication validity
         try {
           const isValid = await config.validateStoredCredentials();
           validation.authenticationValid = isValid;
-          
+
           if (isValid) {
             console.log(chalk.green('   ✓ Authentication credentials are valid'));
           } else {
@@ -529,11 +529,11 @@ export function configCommands(program: Command): void {
       try {
         await config.discoverServices(options.verbose);
         const services = config.get<CLIConfigData['discoveredServices']>('discoveredServices');
-        
+
         if (services) {
           validation.endpointsValid = true;
           console.log(chalk.green('   ✓ Service endpoints are configured'));
-          
+
           // Validate endpoint URLs
           const endpoints = [
             { name: 'Auth', url: services.auth_base },
@@ -542,7 +542,7 @@ export function configCommands(program: Command): void {
             { name: 'MCP WebSocket', url: services.mcp_ws_base },
             { name: 'MCP SSE', url: services.mcp_sse_base }
           ];
-          
+
           for (const endpoint of endpoints) {
             if (endpoint.url) {
               try {
@@ -556,7 +556,7 @@ export function configCommands(program: Command): void {
               }
             }
           }
-          
+
           // Check for manual overrides
           if (config.hasManualEndpointOverrides()) {
             console.log(chalk.cyan('   ℹ Manual endpoint overrides are active'));
@@ -570,10 +570,10 @@ export function configCommands(program: Command): void {
           console.log(chalk.red('   ✖ Service endpoints are not configured'));
           validation.issues.push('Service endpoints not configured');
         }
-      } catch (error) {
+      } catch {
         console.log(chalk.red('   ✖ Service endpoint discovery failed'));
         validation.issues.push('Service endpoint discovery failed');
-        
+
         if (options.repair) {
           // Set fallback endpoints
           await config.setManualEndpoints({
@@ -591,9 +591,9 @@ export function configCommands(program: Command): void {
       // Step 4: Validate MCP configuration
       console.log(chalk.cyan('\n4. MCP Configuration'));
       const mcpPreference = config.get<string>('mcpPreference');
-      const mcpServerPath = config.get<string>('mcpServerPath');
+      // const mcpServerPath = config.get<string>('mcpServerPath');
       const mcpServerUrl = config.get<string>('mcpServerUrl');
-      
+
       if (mcpPreference) {
         if (['local', 'remote', 'auto'].includes(mcpPreference)) {
           console.log(chalk.green(`   ✓ MCP preference: ${mcpPreference}`));
@@ -601,7 +601,7 @@ export function configCommands(program: Command): void {
         } else {
           console.log(chalk.red(`   ✖ Invalid MCP preference: ${mcpPreference}`));
           validation.issues.push('Invalid MCP preference');
-          
+
           if (options.repair) {
             config.set('mcpPreference', 'auto');
             await config.save();
@@ -611,7 +611,7 @@ export function configCommands(program: Command): void {
         }
       } else {
         console.log(chalk.yellow('   ⚠ MCP preference not set (using default: auto)'));
-        
+
         if (options.repair) {
           config.set('mcpPreference', 'auto');
           await config.save();
@@ -619,7 +619,7 @@ export function configCommands(program: Command): void {
           console.log(chalk.cyan('   → Repaired: Set MCP preference to auto'));
         }
       }
-      
+
       // Validate MCP URLs if present
       if (mcpServerUrl) {
         try {
@@ -638,18 +638,18 @@ export function configCommands(program: Command): void {
         const fs = await import('fs/promises');
         const files = await fs.readdir(configDir);
         const backupFiles = files.filter(f => f.startsWith('config.backup.'));
-        
+
         if (backupFiles.length > 0) {
           validation.backupExists = true;
           console.log(chalk.green(`   ✓ Found ${backupFiles.length} configuration backup(s)`));
-          
+
           if (options.verbose) {
             const latestBackup = backupFiles.sort().reverse()[0];
             console.log(chalk.gray(`     Latest backup: ${latestBackup}`));
           }
         } else {
           console.log(chalk.yellow('   ⚠ No configuration backups found'));
-          
+
           if (options.repair) {
             const backupPath = await config.backupConfig();
             validation.repairs.push('Created configuration backup');
@@ -686,19 +686,19 @@ export function configCommands(program: Command): void {
 
       // Recommendations
       const recommendations: string[] = [];
-      
+
       if (!validation.configExists && !options.repair) {
         recommendations.push('Run: lanonasis config validate --repair');
       }
-      
+
       if (!validation.authenticationValid) {
         recommendations.push('Run: lanonasis auth login');
       }
-      
+
       if (!validation.endpointsValid && !options.repair) {
         recommendations.push('Run: lanonasis config discover');
       }
-      
+
       if (!validation.backupExists && !options.repair) {
         recommendations.push('Run: lanonasis config validate --repair (to create backup)');
       }
@@ -742,9 +742,9 @@ export function configCommands(program: Command): void {
       try {
         const configDir = path.dirname(config.getConfigPath());
         const fs = await import('fs/promises');
-        
+
         let backupPath: string;
-        
+
         if (backupFile) {
           // Use specified backup file
           backupPath = path.isAbsolute(backupFile) ? backupFile : path.join(configDir, backupFile);
@@ -752,20 +752,20 @@ export function configCommands(program: Command): void {
           // Find latest backup
           const files = await fs.readdir(configDir);
           const backupFiles = files.filter(f => f.startsWith('config.backup.')).sort().reverse();
-          
+
           if (backupFiles.length === 0) {
             console.log(chalk.red('✖ No backup files found'));
             console.log(chalk.gray('  Run: lanonasis config backup'));
             process.exit(1);
           }
-          
+
           backupPath = path.join(configDir, backupFiles[0]);
           console.log(chalk.cyan(`Using latest backup: ${backupFiles[0]}`));
         }
-        
+
         // Verify backup file exists
         await fs.access(backupPath);
-        
+
         // Confirm restoration
         const answer = await inquirer.prompt<{ confirm: boolean }>([
           {
@@ -775,22 +775,22 @@ export function configCommands(program: Command): void {
             default: false
           }
         ]);
-        
+
         if (!answer.confirm) {
           console.log(chalk.yellow('Restore cancelled'));
           return;
         }
-        
+
         // Create backup of current config before restoring
         const currentBackupPath = await config.backupConfig();
         console.log(chalk.cyan(`Current config backed up to: ${path.basename(currentBackupPath)}`));
-        
+
         // Restore from backup
         await fs.copyFile(backupPath, config.getConfigPath());
-        
+
         console.log(chalk.green('✓ Configuration restored from backup'));
         console.log(chalk.cyan('  You may need to re-authenticate if credentials were changed'));
-        
+
       } catch (error) {
         console.log(chalk.red('✖ Failed to restore from backup:'));
         console.log(chalk.gray(`  ${error instanceof Error ? error.message : 'Unknown error'}`));
@@ -821,7 +821,7 @@ export function configCommands(program: Command): void {
       }
 
       const config = new CLIConfig();
-      
+
       // Create backup before reset
       try {
         const backupPath = await config.backupConfig();
@@ -829,9 +829,9 @@ export function configCommands(program: Command): void {
       } catch {
         // Ignore backup errors during reset
       }
-      
+
       await config.clear();
-      
+
       console.log(chalk.green('✓ Configuration reset'));
       console.log(chalk.yellow('Run'), chalk.white('lanonasis auth login'), chalk.yellow('to reconfigure'));
     });

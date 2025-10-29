@@ -642,7 +642,7 @@ export class CLIConfig {
           if (response.data.valid === true) {
             break;
           }
-        } catch (err) {
+        } catch {
           // Try next endpoint
           continue;
         }
@@ -655,7 +655,7 @@ export class CLIConfig {
 
       this.authCheckCache = { isValid: true, timestamp: Date.now() };
       return true;
-    } catch (error: unknown) {
+    } catch {
       // If all server checks fail, fall back to local validation
       // This allows offline usage but is less secure
       console.warn('⚠️  Unable to verify token with server, using local validation');
@@ -729,7 +729,7 @@ export class CLIConfig {
       await this.save();
 
       return true;
-    } catch (error: any) {
+    } catch {
       // Increment failure count
       await this.incrementFailureCount();
 
@@ -775,7 +775,7 @@ export class CLIConfig {
           await this.setToken(response.data.token);
         }
       }
-    } catch (error) {
+    } catch {
       // If refresh fails, mark credentials as potentially invalid
       await this.incrementFailureCount();
     }

@@ -52,7 +52,7 @@ export async function generateCompletionData(): Promise<CompletionData> {
   // Dynamic data that might come from API or config
   let memoryTypes = ['context', 'project', 'knowledge', 'reference', 'personal', 'workflow'];
   let topics: string[] = [];
-  
+
   try {
     // Try to fetch dynamic data if authenticated
     if (await config.isAuthenticated()) {
@@ -62,6 +62,9 @@ export async function generateCompletionData(): Promise<CompletionData> {
   } catch {
     // Ignore errors in completion generation
   }
+
+  // Enrich contextual data using fetched topics if available (reserved for future use)
+  void topics; // suppress until we wire topic-based completions
 
   const completionData: CompletionData = {
     commands: [
@@ -383,7 +386,7 @@ export async function completionCommand(): Promise<void> {
     const data = await generateCompletionData();
     console.log(JSON.stringify(data, null, 2));
   } catch (error) {
-    console.error(chalk.red('✖ Failed to generate completion data:'), 
+    console.error(chalk.red('✖ Failed to generate completion data:'),
       error instanceof Error ? error.message : String(error));
     process.exit(1);
   }
@@ -393,30 +396,30 @@ export async function installCompletionsCommand(): Promise<void> {
   console.log(chalk.blue.bold('🔧 Installing Shell Completions'));
   console.log(colors.info('═'.repeat(40)));
   console.log();
-  
+
   console.log(chalk.yellow('📋 Installation Instructions:'));
   console.log();
-  
+
   console.log(chalk.white('Bash:'));
   console.log(chalk.gray('  # Add to ~/.bashrc or ~/.bash_profile:'));
   console.log(chalk.cyan('  source <(lanonasis --completion bash)'));
   console.log();
-  
+
   console.log(chalk.white('Zsh:'));
   console.log(chalk.gray('  # Add to ~/.zshrc:'));
   console.log(chalk.cyan('  source <(lanonasis --completion zsh)'));
   console.log(chalk.gray('  # Or for Oh My Zsh, create ~/.oh-my-zsh/completions/_lanonasis'));
   console.log();
-  
+
   console.log(chalk.white('Fish:'));
   console.log(chalk.gray('  # Add to ~/.config/fish/config.fish:'));
   console.log(chalk.cyan('  lanonasis --completion fish | source'));
   console.log(chalk.gray('  # Or save to ~/.config/fish/completions/lanonasis.fish'));
   console.log();
-  
+
   console.log(colors.info('💡 Completions support all command aliases:'));
   console.log(chalk.gray('   • lanonasis, onasis, memory, maas'));
   console.log();
-  
+
   console.log(colors.success('✅ Run the appropriate command above for your shell'));
 }

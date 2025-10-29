@@ -35,9 +35,6 @@ export class CLIMCPServer {
     await this.config.init();
 
     const {
-      mode = 'stdio',
-      port = 3001,
-      verbose = false,
       useRemote = this.config.shouldUseRemoteMCP()
     } = options;
 
