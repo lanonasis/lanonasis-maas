@@ -15,9 +15,9 @@ export function enhancedMemoryCommands(program: Command) {
   memory.command('bulk-pause')
     .description('Pause multiple memories by criteria')
     .option('--category <category>', 'Category to pause')
-    .action(async (options) => {
+    .action(async (_options) => {
       const spinner = ora('Processing bulk pause...').start();
-      
+
       try {
         const client = getMCPClient();
         if (!client.isConnectedToServer()) {
@@ -28,7 +28,7 @@ export function enhancedMemoryCommands(program: Command) {
         // Simplified implementation
         spinner.succeed('Bulk pause operation completed');
         console.log(chalk.green('✓ Enhanced memory operations are available'));
-        
+
       } catch (error) {
         spinner.fail(`Operation failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
       }

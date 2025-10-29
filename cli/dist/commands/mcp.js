@@ -4,6 +4,7 @@ import { table } from 'table';
 import { getMCPClient } from '../utils/mcp-client.js';
 import { EnhancedMCPClient } from '../mcp/client/enhanced-client.js';
 import { CLIConfig } from '../utils/config.js';
+import WebSocket from 'ws';
 export function mcpCommands(program) {
     const mcp = program
         .command('mcp')
@@ -61,6 +62,7 @@ export function mcpCommands(program) {
         .option('-w, --websocket', 'Connect using WebSocket mode for enterprise users')
         .option('-s, --server <path>', 'Local MCP server path')
         .option('-u, --url <url>', 'Remote/WebSocket server URL')
+        .option('--local-args <args>', 'Extra args for local server (e.g., "--stdio --port 3001")')
         .action(async (options) => {
         const spinner = ora('Connecting to MCP server...').start();
         const config = new CLIConfig();
@@ -78,7 +80,7 @@ export function mcpCommands(program) {
             }
             else {
                 // Default to remote if authenticated, otherwise local
-                connectionMode = !!config.get('token') ? 'remote' : 'local';
+                connectionMode = config.get('token') ? 'remote' : 'local';
             }
             // Save preferences
             config.set('mcpConnectionMode', connectionMode);
@@ -113,10 +115,14 @@ export function mcpCommands(program) {
             else {
                 // Fall back to old client for local connections
                 const client = getMCPClient();
+                const localArgs = typeof options.localArgs === 'string' && options.localArgs.trim().length > 0
+                    ? options.localArgs.split(' ').map((s) => s.trim()).filter(Boolean)
+                    : undefined;
                 connected = await client.connect({
                     connectionMode,
                     serverPath: options.server,
-                    serverUrl: options.url
+                    serverUrl: options.url,
+                    localArgs
                 });
             }
             if (connected) {
@@ -415,9 +421,10 @@ export function mcpCommands(program) {
                 diagnostics.endpointsReachable = true;
                 console.log(chalk.green('   ✓ Service discovery successful'));
                 if (options.verbose) {
-                    console.log(chalk.gray(`     HTTP: ${services.mcp_base}`));
-                    console.log(chalk.gray(`     WebSocket: ${services.mcp_ws_base}`));
-                    console.log(chalk.gray(`     SSE: ${services.mcp_sse_base}`));
+                    const svc = services;
+                    console.log(chalk.gray(`     HTTP: ${svc.mcp_base}`));
+                    console.log(chalk.gray(`     WebSocket: ${svc.mcp_ws_base}`));
+                    console.log(chalk.gray(`     SSE: ${svc.mcp_sse_base}`));
                 }
             }
             else {
@@ -457,7 +464,7 @@ export function mcpCommands(program) {
                 httpSpinner.fail('HTTP transport failed');
                 console.log(chalk.red('   ✖ HTTP/REST endpoint failed'));
                 if (options.verbose) {
-                    console.log(chalk.gray(`     Error: ${error.message}`));
+                    console.log(chalk.gray(`     Error: ${error instanceof Error ? error.message : String(error)}`));
                 }
             }
             // Test WebSocket endpoint
@@ -466,7 +473,6 @@ export function mcpCommands(program) {
                 const startTime = Date.now();
                 const wsUrl = config.getMCPServerUrl();
                 // Create a test WebSocket connection
-                const WebSocket = (await import('ws'));
                 const ws = new WebSocket(wsUrl, [], {
                     headers: {
                         'Authorization': `Bearer ${token}`,
@@ -498,7 +504,7 @@ export function mcpCommands(program) {
                 wsSpinner.fail('WebSocket transport failed');
                 console.log(chalk.red('   ✖ WebSocket endpoint failed'));
                 if (options.verbose) {
-                    console.log(chalk.gray(`     Error: ${error.message}`));
+                    console.log(chalk.gray(`     Error: ${error instanceof Error ? error.message : String(error)}`));
                 }
             }
             // Test SSE endpoint
@@ -525,7 +531,7 @@ export function mcpCommands(program) {
                 sseSpinner.fail('SSE transport failed');
                 console.log(chalk.red('   ✖ SSE endpoint failed'));
                 if (options.verbose) {
-                    console.log(chalk.gray(`     Error: ${error.message}`));
+                    console.log(chalk.gray(`     Error: ${error instanceof Error ? error.message : String(error)}`));
                 }
             }
         }

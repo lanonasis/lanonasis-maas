@@ -6,7 +6,7 @@
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 import chalk from 'chalk';
-import ora, { Ora } from 'ora';
+import { Ora } from 'ora';
 import { EventEmitter } from 'events';
 
 export interface MCPServerConfig {
@@ -176,7 +176,6 @@ export class EnhancedMCPClient extends EventEmitter {
         // HTTP transport is not directly supported by MCP SDK
         // Use stdio or websocket instead
         throw new Error('HTTP transport not directly supported. Use websocket or stdio transport.');
-        break;
 
       case 'websocket':
         if (!config.url) {
@@ -308,7 +307,7 @@ export class EnhancedMCPClient extends EventEmitter {
   /**
    * Select the best server for a tool based on availability and latency
    */
-  private async selectBestServer(toolName: string): Promise<string | null> {
+  private async selectBestServer(_toolName: string): Promise<string | null> {
     const availableServers = Array.from(this.clients.keys()).filter(name => {
       const status = this.connectionStatus.get(name);
       return status?.status === 'connected';
@@ -328,7 +327,7 @@ export class EnhancedMCPClient extends EventEmitter {
    */
   private async selectFailoverServer(
     excludeServer: string, 
-    toolName: string
+    _toolName: string
   ): Promise<string | null> {
     const availableServers = Array.from(this.clients.keys()).filter(name => {
       const status = this.connectionStatus.get(name);
@@ -427,7 +426,7 @@ export class EnhancedMCPClient extends EventEmitter {
   /**
    * Get server configuration (placeholder - should be stored during connect)
    */
-  private getServerConfig(serverName: string): MCPServerConfig | null {
+  private getServerConfig(_serverName: string): MCPServerConfig | null {
     // TODO: Store and retrieve server configs
     return null;
   }
@@ -454,7 +453,7 @@ export class EnhancedMCPClient extends EventEmitter {
       try {
         await client.close();
         console.log(chalk.gray(`Disconnected from ${name}`));
-      } catch (error) {
+      } catch {
         console.log(chalk.yellow(`Warning: Error disconnecting from ${name}`));
       }
     }

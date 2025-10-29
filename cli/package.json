@@ -24,7 +24,7 @@
     "test": "NODE_OPTIONS=--experimental-vm-modules jest",
     "test:mcp": "NODE_OPTIONS=--experimental-vm-modules jest --testPathPattern=mcp",
     "test:integration": "npm run build:mcp && npm run test:mcp",
-    "lint": "eslint src/**/*.ts",
+    "lint": "eslint .",
     "type-check": "tsc --noEmit",
     "prepare": "npm run build",
     "publish:with-mcp": "npm run build:mcp && npm publish"
