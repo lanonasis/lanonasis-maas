@@ -8,8 +8,17 @@
         "**/dist": true,
         "**/.DS_Store": true,
         "**/.cache": true,
-        "**/package-lock.json": true,
-        "**/bun.lock": true
+        "**/package-lock.json": false,
+        "**/bun.lock": false
+    },
+    "search.exclude": {
+        "**/node_modules": true,
+        "**/dist": true,
+        "**/.cache": true
+    },
+    "files.watcherExclude": {
+        "**/node_modules/**": true,
+        "**/dist/**": true
     },
     "explorer.fileNesting.enabled": true,
     "explorer.fileNesting.patterns": {

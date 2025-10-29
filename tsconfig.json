@@ -1,9 +1,14 @@
 {
   "compilerOptions": {
     "target": "ES2022",
-    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "lib": [
+      "ES2022",
+      "DOM",
+      "DOM.Iterable"
+    ],
     "module": "ESNext",
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
+    "ignoreDeprecations": "6.0",
     "allowSyntheticDefaultImports": true,
     "esModuleInterop": true,
     "allowJs": true,
@@ -20,23 +25,24 @@
     "noUncheckedIndexedAccess": true,
     "noImplicitOverride": true,
     "exactOptionalPropertyTypes": true,
-    "baseUrl": "./src",
-    "paths": {
-      "@/*": ["./*"],
-      "@/types/*": ["./types/*"],
-      "@/config/*": ["./config/*"],
-      "@/middleware/*": ["./middleware/*"],
-      "@/routes/*": ["./routes/*"],
-      "@/services/*": ["./services/*"],
-      "@/utils/*": ["./utils/*"],
-      "@/db/*": ["./db/*"]
-    },
     "resolveJsonModule": true,
     "declaration": true,
     "declarationMap": true,
     "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true
+    "forceConsistentCasingInFileNames": true,
+    "composite": true
   },
+  "references": [
+    {
+      "path": "./packages/lanonasis-sdk"
+    },
+    {
+      "path": "./packages/memory-client"
+    },
+    {
+      "path": "./packages/memory-engine"
+    }
+  ],
   "include": [
     "src/**/*"
   ],
@@ -45,6 +51,8 @@
     "dist",
     "**/*.test.ts",
     "**/*.spec.ts",
-    "supabase/**/*"
+    "supabase/**/*",
+    "src/archive/**",
+    "archive/**"
   ]
 }

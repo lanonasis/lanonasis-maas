@@ -342,11 +342,11 @@ export class SchemaValidator {
    * Validate data and return result with errors
    */
   static safeParse<T>(
-    schema: z.ZodSchema<T>, 
+    schema: z.ZodSchema<T>,
     data: unknown
   ): { success: true; data: T } | { success: false; errors: string[] } {
     const result = schema.safeParse(data);
-    
+
     if (result.success) {
       return { success: true, data: result.data };
     } else {

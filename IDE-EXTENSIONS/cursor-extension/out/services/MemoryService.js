@@ -49,6 +49,12 @@ class MemoryService {
             config.get('gatewayUrl', apiUrl) :
             apiUrl;
     }
+    refreshClient() {
+        this.updateConfiguration();
+    }
+    isAuthenticated() {
+        return this.authService.isAuthenticated();
+    }
     async createMemory(request) {
         const response = await this.makeAuthenticatedRequest('/api/v1/memory', {
             method: 'POST',
@@ -91,29 +97,38 @@ class MemoryService {
             throw new Error(`Failed to delete memory: ${response.status} ${error}`);
         }
     }
-    async listMemories(options = {}) {
-        const params = new URLSearchParams();
-        if (options.page)
-            params.set('page', options.page.toString());
-        if (options.limit)
-            params.set('limit', options.limit.toString());
-        if (options.memory_type)
-            params.set('memory_type', options.memory_type);
-        if (options.tags?.length)
-            params.set('tags', options.tags.join(','));
-        if (options.sort)
-            params.set('sort', options.sort);
-        if (options.order)
-            params.set('order', options.order);
-        const url = `/api/v1/memory${params.toString() ? '?' + params.toString() : ''}`;
-        const response = await this.makeAuthenticatedRequest(url);
+    async listMemories(limit = 50) {
+        const params = new URLSearchParams({
+            limit: limit.toString(),
+            sort: 'updated_at',
+            order: 'desc'
+        });
+        const response = await this.makeAuthenticatedRequest(`/api/v1/memory?${params.toString()}`);
         if (!response.ok) {
             const error = await response.text();
             throw new Error(`Failed to list memories: ${response.status} ${error}`);
         }
-        return await response.json();
+        const data = await response.json();
+        if (Array.isArray(data)) {
+            return data;
+        }
+        if ('memories' in data && Array.isArray(data.memories)) {
+            return data.memories;
+        }
+        if ('data' in data && data.data && Array.isArray(data.data.data)) {
+            return data.data.data;
+        }
+        return [];
     }
-    async searchMemories(request) {
+    async searchMemories(query, options = {}) {
+        const request = {
+            query,
+            limit: options.limit ?? 20,
+            threshold: options.threshold ?? 0.7,
+            memory_types: options.memory_types,
+            tags: options.tags,
+            topic_id: options.topic_id
+        };
         const response = await this.makeAuthenticatedRequest('/api/v1/memory/search', {
             method: 'POST',
             body: JSON.stringify(request)

@@ -39,6 +39,7 @@ const vscode = __importStar(require("vscode"));
 const MemoryTreeProvider_1 = require("./providers/MemoryTreeProvider");
 const MemoryCompletionProvider_1 = require("./providers/MemoryCompletionProvider");
 const ApiKeyTreeProvider_1 = require("./providers/ApiKeyTreeProvider");
+const MemorySidebarProvider_1 = require("./panels/MemorySidebarProvider");
 const MemoryService_1 = require("./services/MemoryService");
 const EnhancedMemoryService_1 = require("./services/EnhancedMemoryService");
 const ApiKeyService_1 = require("./services/ApiKeyService");
@@ -57,7 +58,10 @@ async function activate(context) {
         memoryService = new MemoryService_1.MemoryService();
     }
     const apiKeyService = new ApiKeyService_1.ApiKeyService();
-    // Initialize tree providers
+    // Initialize sidebar provider (modern UI)
+    const sidebarProvider = new MemorySidebarProvider_1.MemorySidebarProvider(context.extensionUri, memoryService);
+    context.subscriptions.push(vscode.window.registerWebviewViewProvider(MemorySidebarProvider_1.MemorySidebarProvider.viewType, sidebarProvider));
+    // Initialize tree providers (optional legacy view)
     const memoryTreeProvider = new MemoryTreeProvider_1.MemoryTreeProvider(memoryService);
     const apiKeyTreeProvider = new ApiKeyTreeProvider_1.ApiKeyTreeProvider(apiKeyService);
     vscode.window.registerTreeDataProvider('lanonasisMemories', memoryTreeProvider);
@@ -90,6 +94,7 @@ async function activate(context) {
         }),
         vscode.commands.registerCommand('lanonasis.refreshMemories', async () => {
             memoryTreeProvider.refresh();
+            await sidebarProvider.refresh();
         }),
         vscode.commands.registerCommand('lanonasis.openMemory', (memory) => {
             openMemoryInEditor(memory);
