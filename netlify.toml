@@ -1,10 +1,7 @@
 [build]
-  # Build command includes dashboard and functions using Bun
-  command = "bun install && bun run build && cd dashboard && bun install && bun run build"
-  # Directory to publish
-  publish = "dashboard/dist"
-  # Functions directory
+  command = "bun install && bun run build"
   functions = "netlify/functions"
+  publish = "dashboard/dist"
 
 [build.environment]
   # Node.js version for Netlify functions compatibility
@@ -33,9 +30,19 @@
   from = "/mcp/sse"
   to = "/.netlify/functions/mcp-sse"
   status = 200
+  force = true
 
+# Domain-specific redirects for MCP and Dashboard domains
+
+# MCP domain configuration
 [[redirects]]
-  from = "/sse"
+  from = "https://mcp.lanonasis.com/sse"
+  to = "/.netlify/functions/mcp-sse"
+  status = 200
+  force = true
+  
+[[redirects]]
+  from = "https://mcp.lanonasis.com/*"
   to = "/.netlify/functions/mcp-sse"
   status = 200
 
@@ -53,16 +60,18 @@
 
 # API routes handled by Netlify functions (MUST come before catch-all)
 [[redirects]]
-  from = "/api/v1/orchestrate"
-  to = "/.netlify/functions/orchestrate"
+  from = "https://dashboard.lanonasis.com/*"
+  to = "/index.html"
   status = 200
 
+# API redirects - fixed paths
 [[redirects]]
   from = "/api/v1/*"
   to = "/.netlify/functions/api-new/:splat"
   status = 200
+  force = true
 
-[[redirects]]  
+[[redirects]]
   from = "/api/*"
   to = "/.netlify/functions/api-new/:splat"
   status = 200
