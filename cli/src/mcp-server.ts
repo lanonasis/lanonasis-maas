@@ -51,8 +51,8 @@ export class CLIMCPServer {
   private async startLocalMCP(options: MCPServerOptions): Promise<void> {
     const { mode, port, verbose } = options;
 
-    // Path to CLI-aligned MCP server in submodule
-    const mcpServerPath = join(__dirname, '../../../mcp-server/dist/cli-aligned-mcp-server.js');
+    // Path to production MCP server (uses CommonJS, no build needed)
+    const mcpServerPath = join(__dirname, '../../../mcp-server/src/production-mcp-server.cjs');
 
     const args = mode === 'http' ? ['--http'] : ['--stdio'];
 
