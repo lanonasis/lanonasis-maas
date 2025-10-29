@@ -1,7 +1,6 @@
 {
     "postman.settings.dotenv-detection-notification-visibility": false,
     "lanonasis.defaultEnvironment": "production",
-    "editor.aiStats.enabled": true,
     "git.ignoreLimitWarning": true,
     "files.exclude": {
         "**/node_modules": true,
@@ -26,7 +25,7 @@
         "tsconfig.json": "tsconfig.*.json",
         ".env": ".env.*",
         "docker-compose.yml": "docker-compose.*.yml",
-        "README.md": "*.md"
+        "README.md": "README.*.md,README-*.md,README_*.md"
     },
     "markdown.validate.enabled": true
 }

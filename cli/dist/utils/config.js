@@ -16,6 +16,20 @@ export class CLIConfig {
         this.configPath = path.join(this.configDir, 'config.json');
         this.lockFile = path.join(this.configDir, 'config.lock');
     }
+    /**
+     * Overrides the configuration storage directory. Primarily used for tests.
+     */
+    setConfigDirectory(configDir) {
+        this.configDir = configDir;
+        this.configPath = path.join(configDir, 'config.json');
+        this.lockFile = path.join(configDir, 'config.lock');
+    }
+    /**
+     * Exposes the current config path for tests and diagnostics.
+     */
+    getConfigPath() {
+        return this.configPath;
+    }
     async init() {
         try {
             await fs.mkdir(this.configDir, { recursive: true });
@@ -155,13 +169,6 @@ export class CLIConfig {
     }
     // Enhanced Service Discovery Integration
     async discoverServices(verbose = false) {
-        // Skip in test mode
-        if (process.env.SKIP_SERVER_VALIDATION === 'true') {
-            if (verbose) {
-                console.log('⚠ Service discovery skipped (test mode)');
-            }
-            return;
-        }
         const discoveryUrl = 'https://mcp.lanonasis.com/.well-known/onasis.json';
         try {
             // Use axios instead of fetch for consistency
@@ -236,20 +243,17 @@ export class CLIConfig {
                 return;
             }
         }
-        // Set fallback service endpoints
+        const fallback = this.resolveFallbackEndpoints();
         this.config.discoveredServices = {
-            auth_base: 'https://api.lanonasis.com', // CLI auth goes to central auth system
-            memory_base: 'https://api.lanonasis.com/api/v1', // Memory via onasis-core
-            mcp_base: 'https://mcp.lanonasis.com/api/v1', // MCP HTTP/REST
-            mcp_ws_base: 'wss://mcp.lanonasis.com/ws', // MCP WebSocket
-            mcp_sse_base: 'https://mcp.lanonasis.com/api/v1/events', // MCP SSE
-            project_scope: 'lanonasis-maas' // Correct project scope
+            ...fallback.endpoints,
+            project_scope: 'lanonasis-maas'
         };
         // Mark as fallback (don't set lastServiceDiscovery)
         await this.save();
+        this.logFallbackUsage(fallback.source, this.config.discoveredServices);
         if (verbose) {
             console.log('✓ Using fallback service endpoints');
-            console.log('   These are the standard production endpoints');
+            console.log(`   Source: ${fallback.source === 'environment' ? 'environment overrides' : 'built-in defaults'}`);
         }
     }
     categorizeServiceDiscoveryError(error) {
@@ -278,6 +282,47 @@ export class CLIConfig {
             return 'network_error';
         }
         return 'unknown';
+    }
+    resolveFallbackEndpoints() {
+        const envAuthBase = process.env.LANONASIS_FALLBACK_AUTH_BASE ?? process.env.AUTH_BASE;
+        const envMemoryBase = process.env.LANONASIS_FALLBACK_MEMORY_BASE ?? process.env.MEMORY_BASE;
+        const envMcpBase = process.env.LANONASIS_FALLBACK_MCP_BASE ?? process.env.MCP_BASE;
+        const envMcpWsBase = process.env.LANONASIS_FALLBACK_MCP_WS_BASE ?? process.env.MCP_WS_BASE;
+        const envMcpSseBase = process.env.LANONASIS_FALLBACK_MCP_SSE_BASE ?? process.env.MCP_SSE_BASE;
+        const hasEnvOverrides = Boolean(envAuthBase || envMemoryBase || envMcpBase || envMcpWsBase || envMcpSseBase);
+        const nodeEnv = (process.env.NODE_ENV ?? '').toLowerCase();
+        const isDevEnvironment = nodeEnv === 'development' || nodeEnv === 'test';
+        const defaultAuthBase = isDevEnvironment ? 'http://localhost:4000' : 'https://api.lanonasis.com';
+        const defaultMemoryBase = isDevEnvironment ? 'http://localhost:4000/api/v1' : 'https://api.lanonasis.com/api/v1';
+        const defaultMcpBase = isDevEnvironment ? 'http://localhost:4100/api/v1' : 'https://mcp.lanonasis.com/api/v1';
+        const defaultMcpWsBase = isDevEnvironment ? 'ws://localhost:4100/ws' : 'wss://mcp.lanonasis.com/ws';
+        const defaultMcpSseBase = isDevEnvironment ? 'http://localhost:4100/api/v1/events' : 'https://mcp.lanonasis.com/api/v1/events';
+        const endpoints = {
+            auth_base: envAuthBase ?? defaultAuthBase,
+            memory_base: envMemoryBase ?? defaultMemoryBase,
+            mcp_base: envMcpBase ?? defaultMcpBase,
+            mcp_ws_base: envMcpWsBase ?? defaultMcpWsBase,
+            mcp_sse_base: envMcpSseBase ?? defaultMcpSseBase
+        };
+        return {
+            endpoints,
+            source: hasEnvOverrides ? 'environment' : 'default'
+        };
+    }
+    logFallbackUsage(source, endpoints) {
+        const summary = {
+            auth: endpoints.auth_base,
+            mcp: endpoints.mcp_base,
+            websocket: endpoints.mcp_ws_base,
+            sse: endpoints.mcp_sse_base,
+            source
+        };
+        const message = `Service discovery fallback activated using ${source === 'environment' ? 'environment overrides' : 'built-in defaults'}`;
+        console.warn(`⚠️  ${message}`);
+        console.info('📊 service_discovery_fallback', summary);
+        if (typeof process.emitWarning === 'function') {
+            process.emitWarning(message, 'ServiceDiscoveryFallback');
+        }
     }
     // Manual endpoint override functionality
     async setManualEndpoints(endpoints) {
@@ -308,16 +353,14 @@ export class CLIConfig {
         return this.config.discoveredServices?.auth_base || this.getApiUrl();
     }
     // Enhanced authentication support
-    async setVendorKey(vendorKey, options = {}) {
+    async setVendorKey(vendorKey) {
         // Enhanced format validation with detailed error messages
         const formatValidation = this.validateVendorKeyFormat(vendorKey);
         if (formatValidation !== true) {
             throw new Error(typeof formatValidation === 'string' ? formatValidation : 'Invalid vendor key format');
         }
-        // Server-side validation (can be skipped for testing)
-        if (!options.skipServerValidation && process.env.SKIP_SERVER_VALIDATION !== 'true') {
-            await this.validateVendorKeyWithServer(vendorKey);
-        }
+        // Server-side validation
+        await this.validateVendorKeyWithServer(vendorKey);
         this.config.vendorKey = vendorKey;
         this.config.authMethod = 'vendor_key';
         this.config.lastValidated = new Date().toISOString();
@@ -470,32 +513,6 @@ export class CLIConfig {
         const token = this.getToken();
         if (!token)
             return false;
-        // Skip server validation in test mode
-        if (process.env.SKIP_SERVER_VALIDATION === 'true') {
-            // Only do local validation in test mode
-            if (token.startsWith('cli_')) {
-                const parts = token.split('_');
-                if (parts.length >= 3) {
-                    const lastPart = parts[parts.length - 1];
-                    const timestamp = lastPart ? parseInt(lastPart) : NaN;
-                    if (!isNaN(timestamp)) {
-                        const thirtyDaysInMs = 30 * 24 * 60 * 60 * 1000;
-                        return (Date.now() - timestamp) < thirtyDaysInMs;
-                    }
-                }
-                return true;
-            }
-            else {
-                try {
-                    const decoded = jwtDecode(token);
-                    const now = Date.now() / 1000;
-                    return typeof decoded.exp === 'number' && decoded.exp > now;
-                }
-                catch {
-                    return false;
-                }
-            }
-        }
         // Check cache first
         if (this.authCheckCache && (Date.now() - this.authCheckCache.timestamp) < this.AUTH_CACHE_TTL) {
             return this.authCheckCache.isValid;
@@ -605,9 +622,6 @@ export class CLIConfig {
         this.config = {};
         await this.save();
     }
-    getConfigPath() {
-        return this.configPath;
-    }
     async exists() {
         try {
             await fs.access(this.configPath);
@@ -624,10 +638,6 @@ export class CLIConfig {
             const token = this.getToken();
             if (!vendorKey && !token) {
                 return false;
-            }
-            // Skip server validation in test mode
-            if (process.env.SKIP_SERVER_VALIDATION === 'true') {
-                return true; // Just return true if credentials exist
             }
             // Import axios dynamically to avoid circular dependency
             const axios = (await import('axios')).default;
@@ -695,9 +705,12 @@ export class CLIConfig {
                 }
             }
         }
-        catch {
+        catch (err) {
             // If refresh fails, mark credentials as potentially invalid
             await this.incrementFailureCount();
+            if (process.env.CLI_VERBOSE === 'true' || process.env.NODE_ENV !== 'production') {
+                console.debug('Token refresh failed:', err.message);
+            }
         }
     }
     async clearInvalidCredentials() {

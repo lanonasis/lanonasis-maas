@@ -52,7 +52,11 @@ export async function getTestCredentials(): Promise<TestCredentials> {
     };
 }
 
-export function skipIfNoCredentials(testCredentials: TestCredentials): void {
+/**
+ * Logs guidance for enabling credential-dependent tests when credentials are unavailable.
+ * This helper does not skip tests; callers must decide whether to skip or continue.
+ */
+export function logIfNoCredentials(testCredentials: TestCredentials): void {
     if (!testCredentials.hasCredentials) {
         console.warn(`
 ⚠️  Skipping server validation tests - no credentials available

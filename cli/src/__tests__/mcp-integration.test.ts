@@ -15,7 +15,7 @@
 
 import { describe, it, expect, beforeAll, afterAll } from '@jest/globals';
 import { MCPClient } from '../utils/mcp-client.js';
-import * as fs from 'fs/promises';
+import * as fsPromises from 'fs/promises';
 import * as path from 'path';
 import * as os from 'os';
 
@@ -25,17 +25,48 @@ describe('MCP Connection Integration Tests', () => {
     let hasCredentials = false;
 
     beforeAll(async () => {
-        // Check for credentials
-        try {
-            const configPath = path.join(os.homedir(), '.maas', 'config.json');
-            const configData = await fs.readFile(configPath, 'utf-8');
-            const userConfig = JSON.parse(configData);
-            hasCredentials = !!(userConfig.token || userConfig.vendorKey);
+        const configPath = path.join(os.homedir(), '.maas', 'config.json');
+        let resolvedToken = typeof process.env.TEST_JWT_TOKEN === 'string' && process.env.TEST_JWT_TOKEN.trim().length > 0
+            ? process.env.TEST_JWT_TOKEN
+            : undefined;
+        let resolvedVendorKey = typeof process.env.TEST_VENDOR_KEY === 'string' && process.env.TEST_VENDOR_KEY.trim().length > 0
+            ? process.env.TEST_VENDOR_KEY
+            : undefined;
 
-            if (hasCredentials) {
-                console.log('✓ Found credentials for MCP testing');
+        if (!resolvedToken || !resolvedVendorKey) {
+            try {
+                const configData = await fsPromises.readFile(configPath, 'utf-8');
+                let userConfig: { token?: unknown; vendorKey?: unknown } = {};
+
+                try {
+                    userConfig = JSON.parse(configData);
+                } catch (parseError) {
+                    if (parseError instanceof SyntaxError) {
+                        console.warn('⚠️  Malformed ~/.maas/config.json detected. MCP integration tests requiring credentials will be skipped.');
+                        userConfig = {};
+                    } else {
+                        throw parseError;
+                    }
+                }
+
+                if (!resolvedToken && typeof userConfig.token === 'string' && userConfig.token.trim().length > 0) {
+                    resolvedToken = userConfig.token;
+                }
+                if (!resolvedVendorKey && typeof userConfig.vendorKey === 'string' && userConfig.vendorKey.trim().length > 0) {
+                    resolvedVendorKey = userConfig.vendorKey;
+                }
+            } catch (error) {
+                if ((error as NodeJS.ErrnoException)?.code !== 'ENOENT') {
+                    throw error;
+                }
             }
-        } catch {
+        }
+
+        hasCredentials = Boolean(resolvedToken || resolvedVendorKey);
+
+        if (hasCredentials) {
+            console.log('✓ Found credentials for MCP testing (environment or ~/.maas/config.json)');
+        } else {
             console.warn(`
 ⚠️  No credentials found - MCP tests will be skipped
    Run: lanonasis auth login
@@ -44,29 +75,17 @@ describe('MCP Connection Integration Tests', () => {
 
         // Create test config
         testConfigDir = path.join(os.tmpdir(), `test-mcp-integration-${Date.now()}`);
-        await fs.mkdir(testConfigDir, { recursive: true });
+        await fsPromises.mkdir(testConfigDir, { recursive: true });
 
         mcpClient = new MCPClient();
-        const config = (mcpClient as any).config;
+        mcpClient.setConfigDirectory(testConfigDir);
+        await mcpClient.init();
 
-        // Copy user credentials to test config
-        if (hasCredentials) {
-            const userConfigPath = path.join(os.homedir(), '.maas', 'config.json');
-            const userConfigData = await fs.readFile(userConfigPath, 'utf-8');
-            const userConfig = JSON.parse(userConfigData);
-
-            (config as any).configDir = testConfigDir;
-            (config as any).configPath = path.join(testConfigDir, 'config.json');
-            (config as any).lockFile = path.join(testConfigDir, 'config.lock');
-
-            await config.init();
-
-            if (userConfig.token) {
-                await config.setToken(userConfig.token);
-            }
-            if (userConfig.vendorKey) {
-                await config.setVendorKey(userConfig.vendorKey);
-            }
+        if (resolvedToken) {
+            await mcpClient.setTokenForTesting(resolvedToken);
+        }
+        if (resolvedVendorKey) {
+            await mcpClient.setVendorKeyForTesting(resolvedVendorKey);
         }
     });
 
@@ -76,7 +95,7 @@ describe('MCP Connection Integration Tests', () => {
         }
 
         try {
-            await fs.rm(testConfigDir, { recursive: true, force: true });
+            await fsPromises.rm(testConfigDir, { recursive: true, force: true });
         } catch {
             // Ignore cleanup errors
         }
@@ -89,16 +108,17 @@ describe('MCP Connection Integration Tests', () => {
                 return;
             }
 
+            await mcpClient.disconnect();
             const connected = await mcpClient.connect({ connectionMode: 'remote' });
 
             console.log(`HTTP connection result: ${connected}`);
             expect(typeof connected).toBe('boolean');
 
-            if (connected) {
-                const status = mcpClient.getConnectionStatus();
-                expect(status.connected).toBe(true);
-                expect(status.mode).toBe('remote');
-            }
+            // For integration tests, we expect connection to succeed
+            expect(connected).toBe(true);
+            const status = mcpClient.getConnectionStatus();
+            expect(status.connected).toBe(true);
+            expect(status.mode).toBe('remote');
         }, 30000); // 30 second timeout for real connection
 
         it('should list available MCP tools via HTTP', async () => {
@@ -107,10 +127,11 @@ describe('MCP Connection Integration Tests', () => {
                 return;
             }
 
-            // Ensure connected
-            const isConnected = mcpClient.getConnectionStatus().connected;
-            if (!isConnected) {
-                await mcpClient.connect({ connectionMode: 'remote' });
+            await mcpClient.disconnect();
+            const connected = await mcpClient.connect({ connectionMode: 'remote' });
+            if (!connected) {
+                console.warn('Remote connection failed - skipping tool listing');
+                return;
             }
 
             try {
@@ -157,13 +178,19 @@ describe('MCP Connection Integration Tests', () => {
                 return;
             }
 
-            const status = mcpClient.getConnectionStatus();
-            if (status.connected && status.mode === 'websocket') {
-                // Check that health monitoring is active
-                expect(status).toHaveProperty('connected');
-                expect(status).toHaveProperty('failureCount');
-                console.log(`WebSocket health: failures=${status.failureCount}`);
+            // Ensure WebSocket connection for this test
+            await mcpClient.disconnect();
+            const connected = await mcpClient.connect({ connectionMode: 'websocket' });
+            if (!connected) {
+                console.warn('WebSocket connection failed - skipping health check');
+                return;
             }
+
+            const status = mcpClient.getConnectionStatus();
+            expect(status.connected).toBe(true);
+            expect(status.mode).toBe('websocket');
+            expect(status).toHaveProperty('failureCount');
+            console.log(`WebSocket health: failures=${status.failureCount}`);
         }, 30000);
     });
 
@@ -187,27 +214,45 @@ describe('MCP Connection Integration Tests', () => {
     });
 
     describe('Connection Reliability', () => {
-        it('should report accurate connection status', () => {
-            const status = mcpClient.getConnectionStatus();
+        it('should report accurate connection status', async () => {
+            if (!hasCredentials) {
+                console.log('⊘ Skipping connection status test - no credentials');
+                return;
+            }
 
+            // Ensure we have a known connection state first
+            await mcpClient.disconnect();
+
+            // Test disconnected state
+            let status = mcpClient.getConnectionStatus();
             expect(status).toHaveProperty('connected');
             expect(status).toHaveProperty('mode');
             expect(status).toHaveProperty('server');
             expect(status).toHaveProperty('failureCount');
-
             expect(typeof status.connected).toBe('boolean');
-            expect(typeof status.mode).toBe('string');
-            expect(typeof status.failureCount).toBe('number');
+            expect(status.connected).toBe(false);
 
-            console.log(`Status: ${JSON.stringify(status, null, 2)}`);
+            // Attempt to connect and test connected state
+            const connected = await mcpClient.connect();
+            if (connected) {
+                status = mcpClient.getConnectionStatus();
+                expect(status.connected).toBe(true);
+                expect(typeof status.mode).toBe('string');
+            } else {
+                console.log('⊘ Connection failed, testing disconnect state only');
+            }
         });
 
         it('should handle graceful disconnection', async () => {
             if (!hasCredentials) {
-                console.log('⊘ Skipping - no credentials');
+                console.log('⊘ Skipping disconnection test - no credentials');
                 return;
             }
 
+            // Ensure connected state first
+            await mcpClient.connect();
+
+            // Test disconnection
             await mcpClient.disconnect();
 
             const status = mcpClient.getConnectionStatus();

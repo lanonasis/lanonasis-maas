@@ -1,0 +1,7 @@
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Lanonasis "L" icon optimized for VS Code activity bar -->
+  <!-- Single color for VS Code theming compatibility -->
+  <path d="M6 4v14h10v-2H8V4H6z" fill="currentColor"/>
+  <!-- Optional corner accent for better recognition -->
+  <path d="M15 18h1v1h-1v-1z" fill="currentColor" opacity="0.7"/>
+</svg>
