@@ -93,12 +93,12 @@ program
   .option('--interactive', 'use interactive mode')
   .action(errorBoundary.wrapAsync(async (action, options) => {
     const { InteractiveMemoryCreator, InteractiveSearch } = await import('./core/dashboard.js');
-    
+
     // Update stats for achievements
-    achievementSystem.updateStats({ 
-      totalMemories: (achievementSystem as any).userStats.totalMemories + 1 
+    achievementSystem.updateStats({
+      totalMemories: (achievementSystem as any).userStats.totalMemories + 1
     });
-    
+
     switch (action) {
       case 'create':
         if (options.interactive || (!options.title && !options.content)) {
@@ -114,16 +114,16 @@ program
           );
         }
         break;
-        
+
       case 'search': {
         const search = new InteractiveSearch(stateManager);
         await search.search(options.query || '');
-        achievementSystem.updateStats({ 
-          totalSearches: (achievementSystem as any).userStats.totalSearches + 1 
+        achievementSystem.updateStats({
+          totalSearches: (achievementSystem as any).userStats.totalSearches + 1
         });
         break;
       }
-        
+
       case 'list':
         await progressIndicator.withSpinner(
           async () => {
@@ -133,7 +133,7 @@ program
           'Loading memories...'
         );
         break;
-        
+
       default: {
         // If no action specified, go to interactive mode
         const dashboard = new DashboardCommandCenter(stateManager);
@@ -167,18 +167,18 @@ program
         }
         console.log(chalk.green(`✓ Topic "${name}" created`));
         break;
-        
+
       case 'list':
         console.log(chalk.bold('📁 Topics:'));
         console.log('  • Architecture');
         console.log('  • API Documentation');
         console.log('  • Meeting Notes');
         break;
-        
+
       case 'delete':
         console.log(chalk.red(`✓ Topic "${name}" deleted`));
         break;
-        
+
       default:
         console.log(chalk.yellow('Usage: onasis topic [create|list|delete] [name]'));
     }
@@ -262,7 +262,7 @@ program
   .description('Check service status and connectivity')
   .action(errorBoundary.wrapAsync(async () => {
     const spinner = progressIndicator;
-    
+
     await spinner.withSpinner(
       async () => {
         // Check API connection
@@ -270,7 +270,7 @@ program
       },
       'Checking service status...'
     );
-    
+
     console.log(chalk.green('✓ Service: Online'));
     console.log(chalk.green('✓ API: Connected'));
     console.log(chalk.green('✓ Auth: Valid'));
@@ -284,7 +284,7 @@ if (process.argv.length === 2) {
     try {
       // Check if first run
       const isFirstRun = !(await cliConfig.isAuthenticated());
-      
+
       if (isFirstRun) {
         const welcome = new WelcomeExperience(stateManager);
         await welcome.show();

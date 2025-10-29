@@ -72,14 +72,14 @@ export class EnhancedMCPClient extends EventEmitter {
    */
   async connectMultiple(servers: MCPServerConfig[]): Promise<Map<string, boolean>> {
     const results = new Map<string, boolean>();
-    
+
     // Sort servers by priority
-    const sortedServers = servers.sort((a, b) => 
+    const sortedServers = servers.sort((a, b) =>
       (a.priority || 999) - (b.priority || 999)
     );
 
     // Connect in parallel with controlled concurrency
-    const connectionPromises = sortedServers.map(server => 
+    const connectionPromises = sortedServers.map(server =>
       this.connectSingle(server).then(success => {
         results.set(server.name, success);
         return { server: server.name, success };
@@ -87,7 +87,7 @@ export class EnhancedMCPClient extends EventEmitter {
     );
 
     await Promise.allSettled(connectionPromises);
-    
+
     // Start health monitoring for connected servers
     for (const [name, success] of results) {
       if (success) {
@@ -109,18 +109,18 @@ export class EnhancedMCPClient extends EventEmitter {
     while (attempts < maxRetries) {
       try {
         this.updateConnectionStatus(config.name, 'connecting');
-        
+
         const client = await this.createClientWithTimeout(config, timeout);
-        
+
         this.clients.set(config.name, client);
         this.updateConnectionStatus(config.name, 'connected');
         this.emit('connection:established', config.name);
-        
+
         return true;
       } catch (error) {
         attempts++;
         this.retryAttempts.set(config.name, attempts);
-        
+
         if (attempts >= maxRetries) {
           this.updateConnectionStatus(config.name, 'error', error as Error);
           this.emit('connection:error', config.name, error);
@@ -141,12 +141,12 @@ export class EnhancedMCPClient extends EventEmitter {
    * Create client with timeout
    */
   private async createClientWithTimeout(
-    config: MCPServerConfig, 
+    config: MCPServerConfig,
     timeout: number
   ): Promise<Client> {
     return Promise.race([
       this.createClient(config),
-      new Promise<never>((_, reject) => 
+      new Promise<never>((_, reject) =>
         setTimeout(() => reject(new Error(`Connection timeout after ${timeout}ms`)), timeout)
       )
     ]);
@@ -211,10 +211,10 @@ export class EnhancedMCPClient extends EventEmitter {
   private async createWebSocketTransport(url: string): Promise<any> {
     // Custom WebSocket transport implementation
     const WebSocket = (await import('ws')).default;
-    
+
     return new Promise((resolve, reject) => {
       const ws = new WebSocket(url);
-      
+
       ws.on('open', () => {
         resolve({
           send: (data: any) => ws.send(JSON.stringify(data)),
@@ -237,18 +237,18 @@ export class EnhancedMCPClient extends EventEmitter {
       for (const tool of chain.tools) {
         const result = await this.executeTool(tool.name, tool.args);
         results.push(result);
-        
+
         if (tool.waitForCompletion) {
           await this.waitForToolCompletion(tool.name, result);
         }
       }
     } else {
       // Parallel execution
-      const promises = chain.tools.map(tool => 
+      const promises = chain.tools.map(tool =>
         this.executeTool(tool.name, tool.args)
       );
       const parallelResults = await Promise.allSettled(promises);
-      
+
       parallelResults.forEach((result, index) => {
         if (result.status === 'fulfilled') {
           results.push(result.value);
@@ -267,7 +267,7 @@ export class EnhancedMCPClient extends EventEmitter {
   async executeTool(toolName: string, args: Record<string, any>): Promise<any> {
     // Find the best available server for this tool
     const server = await this.selectBestServer(toolName);
-    
+
     if (!server) {
       throw new Error(`No available server for tool: ${toolName}`);
     }
@@ -282,16 +282,16 @@ export class EnhancedMCPClient extends EventEmitter {
         name: toolName,
         arguments: args
       });
-      
+
       return result;
     } catch (error) {
       // Try failover to another server
       const failoverServer = await this.selectFailoverServer(server, toolName);
-      
+
       if (failoverServer) {
         console.log(chalk.yellow(`⚠️ Failing over to ${failoverServer}...`));
         const failoverClient = this.clients.get(failoverServer);
-        
+
         if (failoverClient) {
           return failoverClient.callTool({
             name: toolName,
@@ -299,7 +299,7 @@ export class EnhancedMCPClient extends EventEmitter {
           });
         }
       }
-      
+
       throw error;
     }
   }
@@ -326,7 +326,7 @@ export class EnhancedMCPClient extends EventEmitter {
    * Select a failover server
    */
   private async selectFailoverServer(
-    excludeServer: string, 
+    excludeServer: string,
     _toolName: string
   ): Promise<string | null> {
     const availableServers = Array.from(this.clients.keys()).filter(name => {
@@ -341,7 +341,7 @@ export class EnhancedMCPClient extends EventEmitter {
    * Wait for tool completion (for async operations)
    */
   private async waitForToolCompletion(
-    toolName: string, 
+    toolName: string,
     initialResult: any
   ): Promise<void> {
     // Implementation depends on the specific tool
@@ -389,13 +389,13 @@ export class EnhancedMCPClient extends EventEmitter {
     try {
       // Use a simple tool call as a health check
       await client.listTools();
-      
+
       const latency = Date.now() - startTime;
-      
+
       this.updateConnectionStatus(serverName, 'connected', undefined, latency);
     } catch (error) {
       this.updateConnectionStatus(serverName, 'error', error as Error);
-      
+
       // Attempt reconnection
       const config = this.getServerConfig(serverName);
       if (config) {
@@ -409,8 +409,8 @@ export class EnhancedMCPClient extends EventEmitter {
    * Update connection status
    */
   private updateConnectionStatus(
-    server: string, 
-    status: ConnectionStatus['status'], 
+    server: string,
+    status: ConnectionStatus['status'],
     error?: Error,
     latency?: number
   ): void {
