@@ -32,7 +32,7 @@ const envSchema = z.object({
   // OpenAI
   OPENAI_API_KEY: z.string().min(1),
   
-  // Redis (OPTIONAL for API key caching - will use in-memory for dev)
+  // Redis (development can fall back to in-memory; production requires a Redis instance)
   REDIS_URL: z.string().url().optional(),
   REDIS_PASSWORD: z.string().optional(),
   REDIS_KEY_PREFIX: z.string().default('maas:'),
@@ -158,6 +158,45 @@ const validateConditionalRequirements = (config: z.infer<typeof envSchema>) => {
   // API key prefix validation for production
   if (config.NODE_ENV === 'production' && config.API_KEY_PREFIX_PRODUCTION.includes('test')) {
     throw new Error('Production API key prefix should not contain "test"');
+  }
+
+  const redisDependentFeatures: string[] = [];
+
+  if (config.PROXY_TOKEN_ENABLED) {
+    redisDependentFeatures.push('PROXY_TOKEN_ENABLED');
+  }
+
+  if (config.REDIS_SESSION_TTL > 0) {
+    redisDependentFeatures.push('REDIS_SESSION_TTL');
+  }
+
+  if (config.RATE_LIMIT_MAX_REQUESTS > 0) {
+    redisDependentFeatures.push('RATE_LIMIT_MAX_REQUESTS');
+  }
+
+  if (!config.REDIS_URL) {
+    if (config.NODE_ENV !== 'development') {
+      throw new Error('Redis configuration required: set REDIS_URL when running outside development to enable shared caching and rate limiting');
+    }
+
+    const explicitlyConfiguredDistributedFeatures = redisDependentFeatures.filter(feature => {
+      switch (feature) {
+        case 'PROXY_TOKEN_ENABLED':
+          return typeof process.env.PROXY_TOKEN_ENABLED !== 'undefined';
+        case 'REDIS_SESSION_TTL':
+          return typeof process.env.REDIS_SESSION_TTL !== 'undefined';
+        case 'RATE_LIMIT_MAX_REQUESTS':
+          return typeof process.env.RATE_LIMIT_MAX_REQUESTS !== 'undefined';
+        default:
+          return false;
+      }
+    });
+
+    if (explicitlyConfiguredDistributedFeatures.length > 0) {
+      throw new Error(
+        `Redis configuration required: REDIS_URL must be set when ${explicitlyConfiguredDistributedFeatures.join(', ')} is configured for distributed coordination`
+      );
+    }
   }
   
   return config;
