@@ -19,7 +19,7 @@ export class WelcomeExperience {
 
   async show(): Promise<void> {
     this.displayWelcomeBanner();
-    
+
     const choice = await this.showMainMenu();
     await this.handleMenuChoice(choice);
   }
@@ -33,10 +33,10 @@ export class WelcomeExperience {
         margin: 1,
         borderStyle: 'round',
         borderColor: 'cyan',
-        align: 'center'
+        textAlignment: 'center'
       }
     );
-    
+
     console.clear();
     console.log(banner);
   }
@@ -90,8 +90,8 @@ export class WelcomeExperience {
       {
         type: 'list',
         name: 'choice',
-        message: isAuthenticated ? 
-          'Welcome back! What would you like to do?' : 
+        message: isAuthenticated ?
+          'Welcome back! What would you like to do?' :
           'New here? Let me guide you through setup',
         choices,
         loop: false
@@ -208,7 +208,7 @@ export class InteractiveSetup {
 
   async run(): Promise<void> {
     console.clear();
-    
+
     // Show progress header
     this.showProgressHeader();
 
@@ -246,7 +246,6 @@ export class InteractiveSetup {
       'Setup Progress\n' +
       steps.map((step, i) => {
         const num = `[${i + 1}]`;
-        const status = step.done ? chalk.green('●') : chalk.gray('○');
         const name = step.done ? chalk.green(step.name) : chalk.gray(step.name);
         return `${num} ${name}`;
       }).join('  ') + '\n' +
@@ -260,13 +259,13 @@ export class InteractiveSetup {
     console.log();
   }
 
-  private renderProgressBar(steps: Array<{done: boolean}>): string {
+  private renderProgressBar(steps: Array<{ done: boolean }>): string {
     const completed = steps.filter(s => s.done).length;
     const total = steps.length;
     const percentage = Math.round((completed / total) * 100);
     const barLength = 40;
     const filled = Math.round((completed / total) * barLength);
-    
+
     const bar = '━'.repeat(filled) + '─'.repeat(barLength - filled);
     return chalk.cyan(bar) + ' ' + chalk.bold(`${percentage}%`);
   }
@@ -301,7 +300,7 @@ export class InteractiveSetup {
     ]);
 
     let serverUrl = 'https://api.lanonasis.com';
-    
+
     if (connectionType === 'self-hosted') {
       const { customUrl } = await inquirer.prompt([
         {
@@ -326,10 +325,10 @@ export class InteractiveSetup {
     const spinner = ora('Testing connection...').start();
     await this.simulateDelay(1500);
     spinner.succeed('Connection successful!');
-    
+
     // Save to state
-    this.stateManager.updateUserContext({ 
-      organization: serverUrl 
+    this.stateManager.updateUserContext({
+      organization: serverUrl
     });
   }
 
@@ -395,7 +394,7 @@ export class InteractiveSetup {
   }
 
   private async authenticateWithVendorKey(): Promise<void> {
-    const { publicKey, secretKey } = await inquirer.prompt([
+    const creds = await inquirer.prompt([
       {
         type: 'input',
         name: 'publicKey',
@@ -421,10 +420,11 @@ export class InteractiveSetup {
       }
     ]);
 
+    void creds; // collected for future use when hooking real auth
     const spinner = ora('Authenticating...').start();
     await this.simulateDelay(1000);
     spinner.succeed('Authentication successful!');
-    
+
     this.stateManager.updateUserContext({
       userId: 'vendor_user',
       email: 'vendor@example.com'
@@ -434,11 +434,11 @@ export class InteractiveSetup {
   private async authenticateWithBrowser(): Promise<void> {
     console.log(chalk.cyan('\n🌐 Opening browser for authentication...'));
     console.log(chalk.gray('Please complete the login in your browser'));
-    
+
     const spinner = ora('Waiting for browser authentication...').start();
     await this.simulateDelay(3000);
     spinner.succeed('Browser authentication successful!');
-    
+
     this.stateManager.updateUserContext({
       userId: 'browser_user',
       email: 'user@example.com'
@@ -446,7 +446,7 @@ export class InteractiveSetup {
   }
 
   private async authenticateWithEmail(): Promise<void> {
-    const { email, password } = await inquirer.prompt([
+    const auth = await inquirer.prompt([
       {
         type: 'input',
         name: 'email',
@@ -467,13 +467,14 @@ export class InteractiveSetup {
       }
     ]);
 
+    void auth; // suppress unused until real auth wired
     const spinner = ora('Signing in...').start();
     await this.simulateDelay(1000);
     spinner.succeed('Sign in successful!');
-    
+
     this.stateManager.updateUserContext({
       userId: 'email_user',
-      email
+      email: auth.email
     });
   }
 
@@ -506,7 +507,7 @@ export class InteractiveSetup {
         default: true
       }
     ]);
-    
+
     const preferences = {
       outputFormat: answers.outputFormat,
       expertMode: answers.expertMode,
@@ -516,7 +517,7 @@ export class InteractiveSetup {
     // Update preferences
     const currentPrefs = this.stateManager.getPreferences();
     Object.assign(currentPrefs, preferences);
-    
+
     console.log(chalk.green('\n✓ Configuration saved!'));
   }
 
@@ -533,7 +534,7 @@ export class InteractiveSetup {
         padding: 1,
         borderStyle: 'double',
         borderColor: 'green',
-        align: 'center'
+        textAlignment: 'center'
       }
     ));
 

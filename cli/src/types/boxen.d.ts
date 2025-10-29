@@ -1,11 +1,11 @@
 declare module 'boxen' {
     interface BoxenOptions {
-        padding?: number | { top?: number; bottom?: number; left?: number; right?: number };
-        margin?: number | { top?: number; bottom?: number; left?: number; right?: number };
-        borderStyle?: string | { topLeft: string; topRight: string; bottomLeft: string; bottomRight: string; horizontal: string; vertical: string };
+        padding?: number | { top?: number; right?: number; bottom?: number; left?: number };
+        margin?: number | { top?: number; right?: number; bottom?: number; left?: number };
+        borderStyle?: 'single' | 'double' | 'round' | 'bold' | 'singleDouble' | 'doubleSingle' | 'classic' | { topLeft: string; topRight: string; bottomLeft: string; bottomRight: string; horizontal: string; vertical: string };
         borderColor?: string;
         backgroundColor?: string;
-        align?: 'left' | 'center' | 'right';
+        textAlignment?: 'left' | 'center' | 'right';
         float?: 'left' | 'right' | 'center';
         dimBorder?: boolean;
         title?: string;

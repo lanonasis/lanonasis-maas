@@ -49,7 +49,7 @@ export class MemoryAccessControl {
 
       // Check explicit permissions
       const rules = this.getAccessRules(userId, appId);
-      return rules.some(rule => 
+      return rules.some(rule =>
         rule.permission === 'write' || rule.permission === 'admin'
       );
     } catch (error) {
@@ -65,7 +65,7 @@ export class MemoryAccessControl {
     try {
       const memory = await this.getMemoryInfo(memoryId);
       const currentUserId = await this.getCurrentUserId();
-      
+
       if (!memory) {
         return false;
       }
@@ -77,8 +77,8 @@ export class MemoryAccessControl {
 
       // Check app-level permissions using CURRENT user ID, not memory owner
       const rules = this.getAccessRules(currentUserId, appId);
-      return rules.some(rule => 
-        rule.granted && 
+      return rules.some(rule =>
+        rule.granted &&
         (!rule.expires_at || new Date(rule.expires_at) > new Date()) &&
         (rule.memory_id === memoryId || !rule.memory_id)
       );
@@ -95,13 +95,13 @@ export class MemoryAccessControl {
     try {
       // Get user's own memories
       const ownMemories = await this.getUserMemories(userId);
-      
+
       // Get shared memories based on permissions
       const sharedMemories = await this.getSharedMemories(userId, appId);
-      
+
       // Combine and deduplicate
       const allMemories = [...new Set([...ownMemories, ...sharedMemories])];
-      
+
       return allMemories;
     } catch (error) {
       logger.error('Failed to get accessible memories', { error, userId, appId });
@@ -120,7 +120,7 @@ export class MemoryAccessControl {
   ): Promise<void> {
     try {
       const userId = await this.getCurrentUserId();
-      
+
       const logEntry: AccessLog = {
         id: this.generateId(),
         user_id: userId,
@@ -133,10 +133,10 @@ export class MemoryAccessControl {
       };
 
       this.accessLogs.push(logEntry);
-      
+
       // In production, this would be persisted to database
       logger.debug('Memory access logged', logEntry);
-      
+
       // Keep only recent logs in memory (last 1000)
       if (this.accessLogs.length > 1000) {
         this.accessLogs = this.accessLogs.slice(-1000);
@@ -178,10 +178,10 @@ export class MemoryAccessControl {
   /**
    * Revoke access to a memory or app
    */
-  async revokeAccess(userId: string, appId: string, memoryId?: string): Promise<void> {
-    const key = `${userId}:${appId}`;
+  async revokeAccess(_userId: string, _appId: string, memoryId?: string): Promise<void> {
+    const key = `${_userId}:${_appId}`;
     const existingRules = this.accessRules.get(key) || [];
-    
+
     const updatedRules = existingRules.map(rule => {
       if (!memoryId || rule.memory_id === memoryId) {
         return { ...rule, granted: false };
@@ -190,7 +190,7 @@ export class MemoryAccessControl {
     });
 
     this.accessRules.set(key, updatedRules);
-    logger.info('Access revoked', { userId, appId, memoryId });
+    logger.info('Access revoked', { userId: _userId, appId: _appId, memoryId });
   }
 
   /**
@@ -253,7 +253,7 @@ export class MemoryAccessControl {
       const token = this.config.get('token');
 
       const axios = (await import('axios')).default;
-      
+
       const response = await axios.get(`${apiUrl}/api/v1/memory/${memoryId}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -274,7 +274,7 @@ export class MemoryAccessControl {
       const token = this.config.get('token');
 
       const axios = (await import('axios')).default;
-      
+
       const response = await axios.get(`${apiUrl}/api/v1/memory?user_id=${userId}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -289,7 +289,7 @@ export class MemoryAccessControl {
     }
   }
 
-  private async getSharedMemories(userId: string, appId: string): Promise<string[]> {
+  private async getSharedMemories(_userId: string, _appId: string): Promise<string[]> {
     // This would implement logic to find memories shared with the user
     // through explicit permissions or app-level sharing
     return [];

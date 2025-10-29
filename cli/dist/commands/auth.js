@@ -231,7 +231,7 @@ export async function diagnoseCommand() {
                 console.log(chalk.green('   ✓ Token is not expired'));
             }
         }
-        catch (error) {
+        catch {
             console.log(chalk.yellow('   ⚠ Could not validate token expiry'));
         }
     }
@@ -315,7 +315,7 @@ export async function diagnoseCommand() {
         diagnostics.deviceId = deviceId;
         console.log(chalk.green('   ✓ Device ID:'), chalk.gray(deviceId));
     }
-    catch (error) {
+    catch {
         console.log(chalk.yellow('   ⚠ Could not get device ID'));
     }
     // Summary and recommendations
@@ -435,7 +435,7 @@ async function handleVendorKeyAuth(vendorKey, config) {
     try {
         await config.setVendorKey(vendorKey);
         // Test the vendor key with a health check
-        const response = await apiClient.get('/health');
+        await apiClient.get('/health');
         spinner.succeed('Vendor key authentication successful');
         console.log();
         console.log(chalk.green('✓ Authenticated with vendor key'));
@@ -590,7 +590,7 @@ async function handleOAuthFlow(config) {
             console.log(chalk.yellow('⚠️  No token provided'));
         }
     }
-    catch (error) {
+    catch {
         console.error(chalk.red('✖ Failed to open browser'));
         console.log(colors.muted(`Please visit manually: ${authUrl}`));
     }

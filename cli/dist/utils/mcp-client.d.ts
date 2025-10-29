@@ -4,6 +4,7 @@ interface MCPConnectionOptions {
     useRemote?: boolean;
     useWebSocket?: boolean;
     connectionMode?: 'local' | 'remote' | 'websocket';
+    localArgs?: string[];
 }
 /**
  * Interface for MCP tool arguments

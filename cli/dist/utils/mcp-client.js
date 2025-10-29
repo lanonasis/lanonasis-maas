@@ -100,8 +100,7 @@ export class MCPClient {
                 }
                 case 'local': {
                     // Local MCP server connection requires explicit path via option or config
-                    const serverPathValue = options.serverPath ?? this.config.get('mcpServerPath');
-                    serverPath = serverPathValue;
+                    serverPath = options.serverPath ?? this.config.get('mcpServerPath');
                     if (!serverPath) {
                         console.log(chalk.yellow('⚠️  No local MCP server path configured.'));
                         console.log(chalk.cyan('💡 Prefer using WebSocket mode (default). Or configure a local path via:'));
@@ -120,9 +119,20 @@ export class MCPClient {
                     else {
                         console.log(chalk.yellow(`Retry ${this.retryAttempts}/${this.maxRetries}: Connecting to local MCP server...`));
                     }
+                    // Allow passing extra args to local server (e.g., --stdio) via options or env/config
+                    // Precedence: options.localArgs -> env.MCP_LOCAL_SERVER_ARGS -> config.mcpLocalArgs -> none
+                    const envArgs = (process.env.MCP_LOCAL_SERVER_ARGS || '')
+                        .split(' ')
+                        .map(s => s.trim())
+                        .filter(Boolean);
+                    const configArgs = (this.config.get('mcpLocalArgs') || []);
+                    const extraArgs = (options.localArgs && options.localArgs.length > 0)
+                        ? options.localArgs
+                        : (envArgs.length > 0 ? envArgs : configArgs);
+                    const args = [serverPath, ...extraArgs];
                     const localTransport = new StdioClientTransport({
                         command: 'node',
-                        args: [serverPath]
+                        args
                     });
                     this.client = new Client({
                         name: '@lanonasis/cli',

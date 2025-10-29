@@ -362,7 +362,7 @@ export class SchemaValidator {
   /**
    * Get schema as JSON Schema for documentation
    */
-  static toJsonSchema(schema: z.ZodSchema<any>): any {
+  static toJsonSchema(_schema: z.ZodSchema<any>): any {
     // This would require zodToJsonSchema package
     // For now, return a simplified version
     return {
