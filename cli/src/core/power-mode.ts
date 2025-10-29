@@ -28,7 +28,7 @@ export class PowerUserMode {
   async enter(): Promise<void> {
     console.clear();
     this.showBanner();
-    
+
     this.rl = readline.createInterface({
       input: process.stdin,
       output: process.stdout,
@@ -38,7 +38,7 @@ export class PowerUserMode {
 
     // Setup key bindings
     this.setupKeyBindings();
-    
+
     // Start REPL
     this.startREPL();
   }
@@ -110,7 +110,7 @@ export class PowerUserMode {
 
     this.rl.on('line', async (line: string) => {
       const trimmed = line.trim();
-      
+
       if (trimmed === '') {
         this.rl?.prompt();
         return;
@@ -118,7 +118,7 @@ export class PowerUserMode {
 
       // Process command
       await this.processCommand(trimmed);
-      
+
       // Show prompt again
       this.rl?.prompt();
     });
@@ -134,80 +134,80 @@ export class PowerUserMode {
   private async processCommand(command: string): Promise<void> {
     // Check for aliases
     const expandedCommand = this.expandAliases(command);
-    
+
     // Parse command and arguments
     const [cmd, ...args] = expandedCommand.split(/\s+/);
-    
+
     switch (cmd) {
       case 'exit':
       case 'quit':
         this.exit();
         break;
-        
+
       case 'clear':
       case 'cls':
         console.clear();
         this.showBanner();
         break;
-        
+
       case 'help':
       case '?':
         this.showHelp();
         break;
-        
+
       case 'alias':
         this.handleAlias(args);
         break;
-        
+
       case 'history':
       case 'h':
         this.showHistory();
         break;
-        
+
       case 'create':
       case 'c':
         await this.quickCreate(args);
         break;
-        
+
       case 'search':
       case 's':
       case '/':
         await this.quickSearch(args.join(' '));
         break;
-        
+
       case 'list':
       case 'ls':
         await this.quickList(args);
         break;
-        
+
       case 'delete':
       case 'rm':
         await this.quickDelete(args);
         break;
-        
+
       case 'update':
       case 'edit':
         await this.quickUpdate(args);
         break;
-        
+
       case 'topic':
       case 't':
         await this.handleTopic(args);
         break;
-        
+
       case 'api':
         await this.handleApi(args);
         break;
-        
+
       case 'pipe':
       case '|':
         await this.handlePipe(args);
         break;
-        
+
       case 'format':
         this.handleFormat(args);
         break;
-        
+
       default:
         // Try to execute as system command
         await this.executeSystemCommand(expandedCommand);
@@ -225,7 +225,8 @@ export class PowerUserMode {
 
     const params = this.parseArgs(args);
     const title = params.t || params.title || 'Quick Memory';
-    const content = params.c || params.content || args.filter(a => !a.startsWith('-')).join(' ');
+    const _content = params.c || params.content || args.filter(a => !a.startsWith('-')).join(' ');
+    void _content;
     const tags = params.tags ? params.tags.split(',') : [];
     const type = params.type || 'knowledge';
     const topic = params.topic;
@@ -247,7 +248,7 @@ export class PowerUserMode {
     }
 
     console.log(chalk.dim(`Searching for "${query}"...`));
-    
+
     // Simulate search results
     const results = [
       { id: 'mem_abc123', title: 'API Response Caching', score: 100 },
@@ -273,16 +274,16 @@ export class PowerUserMode {
     const params = this.parseArgs(args);
     const limit = params.limit || 10;
     const sortBy = params.sort || 'created';
-    
+
     console.log(chalk.dim(`Listing memories (limit: ${limit}, sort: ${sortBy})`));
-    
+
     // Simulate list
     const items = [
       'mem_abc123  API Documentation        2 hours ago',
       'mem_def456  Meeting Notes            1 day ago',
       'mem_ghi789  Architecture Decision    3 days ago'
     ];
-    
+
     items.forEach(item => console.log(`  ${item}`));
   }
 
@@ -294,7 +295,7 @@ export class PowerUserMode {
       console.log(chalk.yellow('Usage: delete <id>'));
       return;
     }
-    
+
     const id = args[0];
     console.log(chalk.red(`✓ Memory ${id} deleted`));
   }
@@ -307,10 +308,10 @@ export class PowerUserMode {
       console.log(chalk.yellow('Usage: update <id> [--title new-title] [--add-tag tag] [--remove-tag tag]'));
       return;
     }
-    
+
     const id = args[0];
     const params = this.parseArgs(args.slice(1));
-    
+
     console.log(chalk.green(`✓ Memory ${id} updated`));
     if (params.title) console.log(chalk.dim(`  New title: ${params.title}`));
     if (params['add-tag']) console.log(chalk.dim(`  Added tag: ${params['add-tag']}`));
@@ -322,7 +323,7 @@ export class PowerUserMode {
    */
   private async handleTopic(args: string[]): Promise<void> {
     const subCommand = args[0];
-    
+
     switch (subCommand) {
       case 'list':
         console.log('Topics: Architecture, API, Documentation, Projects');
@@ -340,7 +341,7 @@ export class PowerUserMode {
    */
   private async handleApi(args: string[]): Promise<void> {
     const subCommand = args[0];
-    
+
     switch (subCommand) {
       case 'keys':
         console.log('API Keys: pk_xxx...xxx (active), pk_yyy...yyy (revoked)');
@@ -356,7 +357,7 @@ export class PowerUserMode {
   /**
    * Handle pipe operations
    */
-  private async handlePipe(args: string[]): Promise<void> {
+  private async handlePipe(_args: string[]): Promise<void> {
     console.log(chalk.cyan('Pipe operations coming soon...'));
   }
 
@@ -366,7 +367,8 @@ export class PowerUserMode {
   private handleFormat(args: string[]): void {
     const format = args[0];
     if (['table', 'json', 'yaml', 'minimal'].includes(format)) {
-      this.stateManager.updatePreference('outputFormat', format as any);
+      const fmt = format as 'table' | 'json' | 'yaml' | 'minimal';
+      this.stateManager.updatePreference('outputFormat', fmt);
       console.log(chalk.green(`✓ Output format set to ${format}`));
     } else {
       console.log(chalk.yellow('Usage: format [table|json|yaml|minimal]'));
@@ -392,7 +394,7 @@ export class PowerUserMode {
    */
   private showHelp(): void {
     console.log(chalk.bold('\n📚 Power Mode Commands\n'));
-    
+
     const commands = [
       ['create, c', 'Create memory quickly'],
       ['search, s, /', 'Search memories'],
@@ -407,11 +409,11 @@ export class PowerUserMode {
       ['clear, cls', 'Clear screen'],
       ['exit, quit', 'Exit power mode']
     ];
-    
+
     commands.forEach(([cmd, desc]) => {
       console.log(`  ${chalk.cyan(cmd.padEnd(15))} ${desc}`);
     });
-    
+
     console.log(chalk.bold('\n⚡ Power Features\n'));
     console.log('  • Tab completion for commands and arguments');
     console.log('  • Pipe operations: search cache | format table');
@@ -443,10 +445,10 @@ export class PowerUserMode {
       });
       return;
     }
-    
+
     const aliasStr = args.join(' ');
     const match = aliasStr.match(/^(\w+)="(.+)"$/);
-    
+
     if (match) {
       const [, name, command] = match;
       this.aliases.set(name, command);
@@ -479,7 +481,7 @@ export class PowerUserMode {
       'topic', 'api', 'alias', 'history', 'format',
       'clear', 'exit', 'help'
     ];
-    
+
     const hits = commands.filter(cmd => cmd.startsWith(line));
     return [hits, line];
   }
@@ -489,7 +491,7 @@ export class PowerUserMode {
    */
   private parseArgs(args: string[]): Record<string, string> {
     const params: Record<string, string> = {};
-    
+
     for (let i = 0; i < args.length; i++) {
       if (args[i].startsWith('-')) {
         const key = args[i].replace(/^-+/, '');
@@ -497,7 +499,7 @@ export class PowerUserMode {
         params[key] = value;
       }
     }
-    
+
     return params;
   }
 

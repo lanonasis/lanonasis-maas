@@ -45,7 +45,32 @@ export default [
       'no-undef': 'error',
     },
   },
+  // Relaxed rules for test files
   {
-    ignores: ['dist/**', 'node_modules/**', '*.js'],
+    files: ['**/__tests__/**/*.ts', '**/*.test.ts', '**/*.spec.ts'],
+    languageOptions: {
+      parser: tsparser,
+      parserOptions: {
+        ecmaVersion: 'latest',
+        sourceType: 'module',
+      },
+    },
+    plugins: {
+      '@typescript-eslint': tseslint,
+    },
+    rules: {
+      '@typescript-eslint/no-explicit-any': 'off',
+      '@typescript-eslint/no-non-null-assertion': 'off',
+    },
+  },
+  {
+    ignores: [
+      'dist/**',
+      'node_modules/**',
+      '*.js',
+      '**/__tests__/**',
+      '**/*.test.ts',
+      '**/*.spec.ts',
+    ],
   },
 ];

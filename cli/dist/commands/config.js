@@ -204,7 +204,7 @@ export function configCommands(program) {
                 console.log(`  Project: ${services.project_scope}`);
             }
         }
-        catch (error) {
+        catch {
             console.log(chalk.red('✖ Service discovery failed'));
             console.log(chalk.gray('Using fallback endpoints'));
         }
@@ -374,7 +374,7 @@ export function configCommands(program) {
                     validation.repairs.push('Recreated corrupted config file');
                     console.log(chalk.cyan('   → Repaired: Recreated config file'));
                 }
-                catch (repairError) {
+                catch {
                     console.log(chalk.red('   ✖ Could not repair corrupted config'));
                 }
             }
@@ -486,7 +486,7 @@ export function configCommands(program) {
                 validation.issues.push('Service endpoints not configured');
             }
         }
-        catch (error) {
+        catch {
             console.log(chalk.red('   ✖ Service endpoint discovery failed'));
             validation.issues.push('Service endpoint discovery failed');
             if (options.repair) {
@@ -505,7 +505,7 @@ export function configCommands(program) {
         // Step 4: Validate MCP configuration
         console.log(chalk.cyan('\n4. MCP Configuration'));
         const mcpPreference = config.get('mcpPreference');
-        const mcpServerPath = config.get('mcpServerPath');
+        // const mcpServerPath = config.get<string>('mcpServerPath');
         const mcpServerUrl = config.get('mcpServerUrl');
         if (mcpPreference) {
             if (['local', 'remote', 'auto'].includes(mcpPreference)) {

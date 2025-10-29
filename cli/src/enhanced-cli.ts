@@ -25,7 +25,7 @@ config();
 
 // Initialize the enhanced architecture
 const architecture: CLIExperienceArchitecture = createCLIArchitecture();
-const { stateManager, interactionEngine, presentationLayer } = architecture;
+const { stateManager } = architecture;
 
 // Initialize systems
 const errorHandler = new ErrorHandler(stateManager);
@@ -115,13 +115,14 @@ program
         }
         break;
         
-      case 'search':
+      case 'search': {
         const search = new InteractiveSearch(stateManager);
         await search.search(options.query || '');
         achievementSystem.updateStats({ 
           totalSearches: (achievementSystem as any).userStats.totalSearches + 1 
         });
         break;
+      }
         
       case 'list':
         await progressIndicator.withSpinner(
@@ -133,10 +134,12 @@ program
         );
         break;
         
-      default:
+      default: {
         // If no action specified, go to interactive mode
         const dashboard = new DashboardCommandCenter(stateManager);
         await dashboard.show();
+        break;
+      }
     }
   }));
 
