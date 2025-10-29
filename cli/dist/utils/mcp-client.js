@@ -16,6 +16,7 @@ export class MCPClient {
     healthCheckInterval = null;
     connectionStartTime = 0;
     lastHealthCheck = null;
+    activeConnectionMode = 'local'; // Track actual connection mode
     constructor() {
         this.config = new CLIConfig();
     }
@@ -74,6 +75,7 @@ export class MCPClient {
                     // Initialize WebSocket connection
                     await this.initializeWebSocket(wsUrl);
                     this.isConnected = true;
+                    this.activeConnectionMode = 'websocket';
                     this.retryAttempts = 0;
                     this.startHealthMonitoring();
                     return true;
@@ -94,6 +96,7 @@ export class MCPClient {
                     // Initialize SSE connection for real-time updates
                     await this.initializeSSE(serverUrl);
                     this.isConnected = true;
+                    this.activeConnectionMode = 'remote';
                     this.retryAttempts = 0;
                     this.startHealthMonitoring();
                     return true;
@@ -140,6 +143,7 @@ export class MCPClient {
                     });
                     await this.client.connect(localTransport);
                     this.isConnected = true;
+                    this.activeConnectionMode = 'local';
                     this.retryAttempts = 0;
                     console.log(chalk.green('✓ Connected to MCP server'));
                     this.startHealthMonitoring();
@@ -155,6 +159,7 @@ export class MCPClient {
                     console.log(chalk.yellow(`Unknown connection mode '${String(connectionMode)}', falling back to remote at ${serverUrl}`));
                     await this.initializeSSE(serverUrl);
                     this.isConnected = true;
+                    this.activeConnectionMode = 'remote';
                     this.retryAttempts = 0;
                     this.startHealthMonitoring();
                     return true;
@@ -643,6 +648,7 @@ export class MCPClient {
             this.wsConnection = null;
         }
         this.isConnected = false;
+        this.activeConnectionMode = 'local'; // Reset to default
     }
     /**
      * Call an MCP tool
@@ -796,8 +802,7 @@ export class MCPClient {
      * Get connection status details with health information
      */
     getConnectionStatus() {
-        const connectionMode = this.config.get('mcpConnectionMode') ??
-            (this.config.get('mcpUseRemote') ? 'remote' : 'local');
+        const connectionMode = this.activeConnectionMode;
         let server;
         switch (connectionMode) {
             case 'websocket':

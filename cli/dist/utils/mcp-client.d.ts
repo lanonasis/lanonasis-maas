@@ -55,6 +55,7 @@ export declare class MCPClient {
     private healthCheckInterval;
     private connectionStartTime;
     private lastHealthCheck;
+    private activeConnectionMode;
     constructor();
     /**
      * Initialize the MCP client configuration
