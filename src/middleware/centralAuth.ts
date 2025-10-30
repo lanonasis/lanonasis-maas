@@ -1,26 +1,23 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { supabase } from '@/integrations/supabase/client';
-
-// Extend Request interface to include user info
-declare global {
-  namespace Express {
-    interface Request {
-      user?: {
-        id: string;
-        email?: string;
-        plan?: string;
-        organization_id?: string;
-        api_key_id?: string;
-        auth_type: 'jwt' | 'api_key';
-      };
-    }
-  }
-}
+import { UnifiedUser } from '@/middleware/auth-aligned';
 
 interface AuthError extends Error {
   status: number;
   code: string;
+}
+
+interface ApiKeyValidationResult {
+  id: string;
+  user_id: string;
+  email?: string;
+  plan?: string;
+  role?: string;
+  organization_id?: string;
+  last_used?: string;
+  rate_limit_remaining?: number;
+  project_scope?: string;
 }
 
 /**
@@ -36,9 +33,8 @@ const createAuthError = (message: string, code: string, status = 401): AuthError
 /**
  * Validate API key against Supabase
  */
-const validateApiKey = async (apiKey: string): Promise<any> => {
+const validateApiKey = async (apiKey: string): Promise<ApiKeyValidationResult> => {
   try {
-    // Call Supabase RPC function to validate API key
     const { data, error } = await supabase.rpc('validate_api_key', {
       api_key: apiKey
     });
@@ -52,7 +48,8 @@ const validateApiKey = async (apiKey: string): Promise<any> => {
       throw createAuthError('Invalid API key', 'INVALID_API_KEY');
     }
 
-    return data;
+    const { valid: _valid, ...result } = data as ApiKeyValidationResult & { valid?: boolean };
+    return result;
   } catch (error) {
     if (error instanceof Error && 'status' in error) {
       throw error;
@@ -65,17 +62,15 @@ const validateApiKey = async (apiKey: string): Promise<any> => {
 /**
  * Validate JWT token
  */
-const validateJWT = async (token: string): Promise<any> => {
+const validateJWT = async (token: string): Promise<Record<string, unknown>> => {
   try {
-    // First verify with local JWT secret
     const jwtSecret = process.env.JWT_SECRET=REDACTED_JWT_SECRET
     if (!jwtSecret) {
       throw createAuthError('JWT secret not configured', 'JWT_SECRET=REDACTED_JWT_SECRET
     }
 
-    const decoded = jwt.verify(token, jwtSecret) as any;
+    const decoded = jwt.verify(token, jwtSecret) as Record<string, unknown>;
 
-    // Optional: Additional validation against central auth service
     const centralAuthUrl = process.env.CENTRAL_AUTH_URL;
     if (centralAuthUrl) {
       const response = await fetch(`${centralAuthUrl}/validate`, {
@@ -121,52 +116,85 @@ export const centralAuth = async (req: Request, res: Response, next: NextFunctio
     const authHeader = req.headers['authorization'] as string;
     const projectScope = req.headers['x-project-scope'] as string;
 
-    // Validate project scope
     if (projectScope !== 'lanonasis-maas') {
       console.warn(`[${req.id}] Invalid project scope: ${projectScope}`);
       throw createAuthError('Invalid project scope', 'INVALID_PROJECT_SCOPE', 403);
     }
 
-    // API Key authentication (preferred for machine-to-machine)
     if (apiKey) {
       console.log(`[${req.id}] Authenticating with API key`);
       const keyData = await validateApiKey(apiKey);
-      
-      req.user = {
+      const organizationId = keyData.organization_id ?? keyData.user_id;
+
+      const unifiedUser: UnifiedUser = {
+        sub: keyData.user_id,
         id: keyData.user_id,
+        userId: keyData.user_id,
         plan: keyData.plan || 'free',
-        organization_id: keyData.organization_id,
+        role: keyData.role || 'user',
+        organization_id: organizationId,
+        organizationId,
         api_key_id: keyData.id,
-        auth_type: 'api_key'
+        auth_type: 'api_key',
+        ...(keyData.email ? { email: keyData.email } : {}),
+        ...(keyData.last_used ? { last_used: keyData.last_used } : {}),
+        ...(typeof keyData.rate_limit_remaining === 'number'
+          ? { rate_limit_remaining: keyData.rate_limit_remaining }
+          : {}),
+        ...(keyData.project_scope ? { project_scope: keyData.project_scope } : {})
       };
 
-      console.log(`[${req.id}] API key authentication successful for user ${req.user.id}`);
+      req.user = unifiedUser;
+      console.log(`[${req.id}] API key authentication successful for user ${unifiedUser.id}`);
       return next();
     }
 
-    // JWT authentication (for user sessions)
     if (authHeader && authHeader.startsWith('Bearer ')) {
       const token = authHeader.substring(7);
       console.log(`[${req.id}] Authenticating with JWT`);
-      
+
       const decoded = await validateJWT(token);
-      
-      req.user = {
-        id: decoded.sub || decoded.user_id || decoded.id,
-        email: decoded.email,
-        plan: decoded.plan || 'free',
-        organization_id: decoded.organization_id,
-        auth_type: 'jwt'
+      const userId = (decoded.sub as string | undefined)
+        || (decoded.user_id as string | undefined)
+        || (decoded.id as string | undefined);
+
+      if (!userId) {
+        throw createAuthError('Token missing subject identifier', 'TOKEN_SUBJECT_MISSING');
+      }
+
+      const organizationId = (decoded.organization_id as string | undefined) || userId;
+      const unifiedUser: UnifiedUser = {
+        sub: userId,
+        id: userId,
+        userId,
+        plan: (decoded.plan as string | undefined) || 'free',
+        role: (decoded.role as string | undefined) || 'user',
+        organization_id: organizationId,
+        organizationId,
+        auth_type: 'jwt',
+        ...(decoded.email ? { email: decoded.email as string } : {}),
+        ...(decoded.api_key_id ? { api_key_id: decoded.api_key_id as string } : {}),
+        ...(decoded.user_metadata
+          ? { user_metadata: decoded.user_metadata as Record<string, unknown> }
+          : {}),
+        ...(decoded.app_metadata
+          ? { app_metadata: decoded.app_metadata as Record<string, unknown> }
+          : {}),
+        ...(decoded.iat ? { iat: decoded.iat as number } : {}),
+        ...(decoded.exp ? { exp: decoded.exp as number } : {}),
+        ...(decoded.project_scope ? { project_scope: decoded.project_scope as string } : {}),
+        ...(decoded.platform
+          ? { platform: decoded.platform as 'mcp' | 'cli' | 'web' | 'api' }
+          : {})
       };
 
-      console.log(`[${req.id}] JWT authentication successful for user ${req.user.id}`);
+      req.user = unifiedUser;
+      console.log(`[${req.id}] JWT authentication successful for user ${unifiedUser.id}`);
       return next();
     }
 
-    // No authentication provided
     console.warn(`[${req.id}] No authentication provided`);
     throw createAuthError('Authentication required. Provide either X-API-Key header or Authorization: Bearer token', 'MISSING_AUTH');
-
   } catch (error) {
     console.error(`[${req.id}] Authentication failed:`, error);
     next(error);
@@ -177,13 +205,13 @@ export const centralAuth = async (req: Request, res: Response, next: NextFunctio
  * Plan-based authorization middleware
  */
 export const requirePlan = (requiredPlan: 'free' | 'pro' | 'enterprise') => {
-  return (req: Request, res: Response, next: NextFunction) => {
+  return (req: Request, _res: Response, next: NextFunction) => {
     if (!req.user) {
       return next(createAuthError('Authentication required', 'MISSING_AUTH'));
     }
 
-    const planHierarchy = { free: 0, pro: 1, enterprise: 2 };
-    const userPlanLevel = planHierarchy[req.user.plan as keyof typeof planHierarchy] || 0;
+    const planHierarchy = { free: 0, pro: 1, enterprise: 2 } as const;
+    const userPlanLevel = planHierarchy[(req.user.plan as keyof typeof planHierarchy) || 'free'] ?? 0;
     const requiredPlanLevel = planHierarchy[requiredPlan];
 
     if (userPlanLevel < requiredPlanLevel) {
@@ -207,29 +235,31 @@ export const planBasedRateLimit = () => {
       return next();
     }
 
-    const userId = req.user.id;
+    const userId = req.user.id || req.user.userId || req.user.user_id || req.user.sub;
+    if (!userId) {
+      console.warn(`[${req.id}] Rate limit skipped: missing user identifier`);
+      return next(createAuthError('Authenticated user is missing an identifier', 'USER_ID_MISSING'));
+    }
+
     const now = Date.now();
-    const windowMs = 60 * 1000; // 1 minute window
+    const windowMs = 60 * 1000;
 
-    // Plan-based limits
     const planLimits = {
-      free: 100,      // 100 requests per minute
-      pro: 1000,      // 1000 requests per minute
-      enterprise: 5000 // 5000 requests per minute
-    };
+      free: 100,
+      pro: 1000,
+      enterprise: 5000
+    } as const;
 
-    const limit = planLimits[req.user.plan as keyof typeof planLimits] || planLimits.free;
+    const limit = planLimits[(req.user.plan as keyof typeof planLimits) || 'free'] ?? planLimits.free;
 
-    // Get or create rate limit tracking
     let userTracking = requestCounts.get(userId);
     if (!userTracking || userTracking.resetTime <= now) {
       userTracking = { count: 0, resetTime: now + windowMs };
       requestCounts.set(userId, userTracking);
     }
 
-    userTracking.count++;
+    userTracking.count += 1;
 
-    // Set rate limit headers
     res.setHeader('X-RateLimit-Limit', limit.toString());
     res.setHeader('X-RateLimit-Remaining', Math.max(0, limit - userTracking.count).toString());
     res.setHeader('X-RateLimit-Reset', Math.ceil(userTracking.resetTime / 1000).toString());
@@ -250,15 +280,14 @@ export const planBasedRateLimit = () => {
 export const optionalAuth = async (req: Request, res: Response, next: NextFunction) => {
   try {
     await centralAuth(req, res, () => {
-      // Authentication successful
       next();
     });
   } catch (error) {
-    // Authentication failed, but allow anonymous access
     console.log(`[${req.id}] Optional auth failed, proceeding anonymously:`, error);
-    req.user = undefined;
+    delete req.user;
     next();
   }
 };
 
 export default centralAuth;
+

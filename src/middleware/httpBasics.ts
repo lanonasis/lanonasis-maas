@@ -13,23 +13,23 @@ declare global {
 /**
  * Attach unique request ID to every request for tracking and debugging
  */
-export const attachRequestId = (req: Request, res: Response, next: NextFunction) => {
+export const attachRequestId = (req: Request, res: Response, next: NextFunction): void => {
   // Generate unique request ID
   req.id = crypto.randomUUID();
-  
+
   // Add to response headers for client tracking
   res.setHeader('X-Request-ID', req.id);
-  
+
   // Log request with ID for debugging
   console.log(`[${req.id}] ${req.method} ${req.url} from ${req.ip}`);
-  
+
   next();
 };
 
 /**
  * CORS guard with environment-based origin allowlist
  */
-export const corsGuard = (req: Request, res: Response, next: NextFunction) => {
+export const corsGuard = (req: Request, res: Response, next: NextFunction): void => {
   const origin = req.get('Origin');
   const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',').map(o => o.trim()) || [
     'https://dashboard.lanonasis.com',
@@ -55,10 +55,11 @@ export const corsGuard = (req: Request, res: Response, next: NextFunction) => {
       res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, X-API-Key, X-Project-Scope, X-Request-ID');
       res.header('Access-Control-Allow-Credentials', 'true');
       res.header('Access-Control-Max-Age', '86400'); // 24 hours
-      return res.status(204).send();
+      res.status(204).send();
+      return;
     } else {
       console.warn(`[${req.id}] CORS preflight blocked for origin: ${origin}`);
-      return res.status(403).json({
+      res.status(403).json({
         error: {
           message: 'CORS policy violation',
           type: 'CORSError',
@@ -67,6 +68,7 @@ export const corsGuard = (req: Request, res: Response, next: NextFunction) => {
         request_id: req.id,
         timestamp: new Date().toISOString()
       });
+      return;
     }
   }
 
@@ -77,7 +79,7 @@ export const corsGuard = (req: Request, res: Response, next: NextFunction) => {
       res.header('Access-Control-Allow-Credentials', 'true');
     } else {
       console.warn(`[${req.id}] CORS blocked for origin: ${origin}`);
-      return res.status(403).json({
+      res.status(403).json({
         error: {
           message: 'CORS policy violation',
           type: 'CORSError',
@@ -86,6 +88,7 @@ export const corsGuard = (req: Request, res: Response, next: NextFunction) => {
         request_id: req.id,
         timestamp: new Date().toISOString()
       });
+      return;
     }
   }
 
@@ -94,35 +97,38 @@ export const corsGuard = (req: Request, res: Response, next: NextFunction) => {
   res.header('X-Frame-Options', 'DENY');
   res.header('Referrer-Policy', 'strict-origin-when-cross-origin');
   res.header('X-Privacy-Level', 'standard');
-  
+
   next();
 };
 
 /**
  * Uniform error envelope for all error responses
  */
-export const errorEnvelope = (error: any, req: Request, res: Response, next: NextFunction) => {
-  // If response already sent, delegate to default Express error handler
+export const errorEnvelope = (error: unknown, req: Request, res: Response, next: NextFunction): void => {
   if (res.headersSent) {
-    return next(error);
+    next(error);
+    return;
   }
 
-  // Extract error information
-  const status = error.status || error.statusCode || 500;
-  const message = error.message || 'Internal Server Error';
-  const type = error.constructor.name || 'Error';
-  const code = error.code || 'INTERNAL_ERROR';
+  const normalizedError = error as Partial<Error> & {
+    status?: number;
+    statusCode?: number;
+    code?: string;
+  };
 
-  // Log error for debugging
+  const status = normalizedError.status || normalizedError.statusCode || 500;
+  const message = normalizedError.message || 'Internal Server Error';
+  const type = normalizedError.constructor?.name || 'Error';
+  const code = normalizedError.code || 'INTERNAL_ERROR';
+
   console.error(`[${req.id}] Error ${status}: ${message}`, {
-    error: error.stack,
+    error: normalizedError.stack,
     url: req.url,
     method: req.method,
     ip: req.ip,
     userAgent: req.get('User-Agent')
   });
 
-  // Send uniform error response
   res.status(status).json({
     error: {
       message,
@@ -163,7 +169,11 @@ export const notFoundHandler = (req: Request, res: Response) => {
 /**
  * Success response envelope for consistent API responses
  */
-export const successEnvelope = (data: any, req: Request, meta?: any) => {
+export const successEnvelope = <TData, TMeta = Record<string, unknown> | undefined>(
+  data: TData,
+  req: Request,
+  meta?: TMeta
+) => {
   return {
     data,
     request_id: req.id,

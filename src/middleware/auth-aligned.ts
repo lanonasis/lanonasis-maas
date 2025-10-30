@@ -25,6 +25,7 @@ declare global {
 // ============================================
 export interface UnifiedUser extends JWTPayload {
   id?: string;
+  user_id?: string;
   email?: string;
   user_metadata?: Record<string, unknown>;
   app_metadata?: Record<string, unknown>;
@@ -33,6 +34,7 @@ export interface UnifiedUser extends JWTPayload {
   api_key_id?: string;
   last_used?: string;
   rate_limit_remaining?: number;
+  organization_id?: string;
 }
 
 // Type alias for backward compatibility
@@ -44,24 +46,24 @@ export type AlignedUser = UnifiedUser;
 export const attachRequestId = (req: Request, res: Response, next: NextFunction) => {
   // Generate unique request ID if not present
   req.id = req.id || crypto.randomUUID();
-  
+
   // Add to response headers for client tracking
   res.setHeader('X-Request-ID', req.id);
-  
+
   // Log request with ID for debugging
   logger.debug(`[${req.id}] ${req.method} ${req.url} from ${req.ip}`);
-  
+
   next();
 };
 
 // ============================================
 // CORE ALIGNMENT: Enhanced CORS Guard
 // ============================================
-export const corsGuard = (req: Request, res: Response, next: NextFunction) => {
+export const corsGuard = (req: Request, res: Response, next: NextFunction): void => {
   const origin = req.get('Origin');
   const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',').map(o => o.trim()) || [
     'https://dashboard.lanonasis.com',
-    'https://docs.lanonasis.com', 
+    'https://docs.lanonasis.com',
     'https://api.lanonasis.com'
   ];
 
@@ -82,9 +84,11 @@ export const corsGuard = (req: Request, res: Response, next: NextFunction) => {
       res.header('Access-Control-Allow-Headers', 'Origin, Content-Type, Accept, Authorization, X-API-Key, X-Project-Scope, X-Request-ID');
       res.header('Access-Control-Allow-Credentials', 'true');
       res.header('Access-Control-Max-Age', '86400');
-      return res.status(204).send();
+      res.status(204).send();
+      return;
     } else {
-      return res.status(403).json(createErrorEnvelope(req, 'CORS policy violation', 'CORSError', 'ORIGIN_NOT_ALLOWED'));
+      res.status(403).json(createErrorEnvelope(req, 'CORS policy violation', 'CORSError', 'ORIGIN_NOT_ALLOWED'));
+      return;
     }
   }
 
@@ -93,15 +97,16 @@ export const corsGuard = (req: Request, res: Response, next: NextFunction) => {
     res.header('Access-Control-Allow-Origin', origin);
     res.header('Access-Control-Allow-Credentials', 'true');
   } else if (origin) {
-    return res.status(403).json(createErrorEnvelope(req, 'CORS policy violation', 'CORSError', 'ORIGIN_NOT_ALLOWED'));
+    res.status(403).json(createErrorEnvelope(req, 'CORS policy violation', 'CORSError', 'ORIGIN_NOT_ALLOWED'));
+    return;
   }
 
   // Add security headers to all responses
   res.header('X-Content-Type-Options', 'nosniff');
-  res.header('X-Frame-Options', 'DENY'); 
+  res.header('X-Frame-Options', 'DENY');
   res.header('Referrer-Policy', 'strict-origin-when-cross-origin');
   res.header('X-Privacy-Level', 'standard');
-  
+
   next();
 };
 
@@ -155,9 +160,9 @@ export const alignedAuthMiddleware = async (
     }
 
     if (!token) {
-      res.status(401).json(createErrorEnvelope(req, 
+      res.status(401).json(createErrorEnvelope(req,
         'Authentication required. Provide either X-API-Key header or Authorization: Bearer token',
-        'AuthError', 
+        'AuthError',
         'MISSING_AUTH'
       ));
       return;
@@ -181,7 +186,7 @@ export const alignedAuthMiddleware = async (
         // Handle JWT token authentication with Supabase
         // For now, skip JWT validation and proceed with basic auth
         // TODO: Implement proper JWT validation with Supabase v2
-        const user = { 
+        const user = {
           id: 'jwt-user',
           email: 'jwt-user@example.com',
           user_metadata: {},
@@ -200,8 +205,8 @@ export const alignedAuthMiddleware = async (
           userId: user.id,
           organizationId: user.id, // For Supabase, use user ID as org ID
           role: 'user',
-          plan: (serviceConfig && Array.isArray(serviceConfig) && serviceConfig.length > 0) 
-            ? serviceConfig[0].plan 
+          plan: (serviceConfig && Array.isArray(serviceConfig) && serviceConfig.length > 0)
+            ? serviceConfig[0].plan
             : 'free',
           // Additional UnifiedUser properties
           id: user.id,
@@ -223,11 +228,11 @@ export const alignedAuthMiddleware = async (
 
       next();
     } catch (authError) {
-      logger.warn(`[${req.id}] Authentication error`, { 
+      logger.warn(`[${req.id}] Authentication error`, {
         error: authError instanceof Error ? authError.message : 'Unknown error',
         authMethod: isApiKey ? 'api_key' : 'jwt'
       });
-      
+
       res.status(401).json(createErrorEnvelope(req,
         'Unable to verify authentication credentials',
         'AuthError',
@@ -294,7 +299,7 @@ export async function authenticateApiKey(apiKey: string): Promise<AlignedUser | 
       user_metadata: {},
       app_metadata: {}
     };
-    
+
     return unifiedUser;
   } catch (error) {
     logger.error('API key authentication error', { error });
@@ -373,7 +378,7 @@ export const requireAdmin = (req: Request, res: Response, next: NextFunction): v
   // Check if user has admin role in app_metadata
   const appMetadata = req.user?.app_metadata as Record<string, unknown> | undefined;
   const isAdmin = appMetadata?.role === 'admin' ||
-                  (Array.isArray(appMetadata?.roles) && appMetadata?.roles?.includes('admin'));
+    (Array.isArray(appMetadata?.roles) && appMetadata?.roles?.includes('admin'));
 
   if (!isAdmin) {
     res.status(403).json({
@@ -407,7 +412,7 @@ export const planBasedRateLimit = () => {
 
     // Here you would implement the actual rate limiting logic
     // This is a simplified version - in production, use Redis or similar
-    
+
     // For now, just add the limit info to headers
     if (limit) {
       res.set({
@@ -452,19 +457,25 @@ export async function ensureUserServiceConfig(userId: string): Promise<void> {
 // ============================================
 // CORE ALIGNMENT: Global Error Handler
 // ============================================
-export const globalErrorHandler = (error: any, req: Request, res: Response, next: NextFunction) => {
+export const globalErrorHandler = (error: unknown, req: Request, res: Response, next: NextFunction): void => {
   // If response already sent, delegate to default Express error handler
   if (res.headersSent) {
     return next(error);
   }
 
-  const status = error.status || error.statusCode || 500;
-  const message = error.message || 'Internal Server Error';
-  const type = error.constructor.name || 'Error';
-  const code = error.code || 'INTERNAL_ERROR';
+  const normalizedError = error as Partial<Error> & {
+    status?: number;
+    statusCode?: number;
+    code?: string;
+  };
+
+  const status = normalizedError.status || normalizedError.statusCode || 500;
+  const message = normalizedError.message || 'Internal Server Error';
+  const type = normalizedError.constructor?.name || 'Error';
+  const code = normalizedError.code || 'INTERNAL_ERROR';
 
   logger.error(`[${req.id}] Global error handler`, {
-    error: error.stack,
+    error: normalizedError.stack,
     url: req.url,
     method: req.method,
     ip: req.ip,
@@ -484,7 +495,7 @@ export const notFoundHandler = (req: Request, res: Response) => {
     available_endpoints: [
       '/health',
       '/api/v1/*',
-      '/mcp/*', 
+      '/mcp/*',
       '/.well-known/onasis.json'
     ]
   });
@@ -493,7 +504,11 @@ export const notFoundHandler = (req: Request, res: Response) => {
 // ============================================
 // CORE ALIGNMENT: Success Response Helper
 // ============================================
-export const createSuccessEnvelope = (data: any, req: Request, meta?: any) => {
+export const createSuccessEnvelope = <TData, TMeta = Record<string, unknown> | undefined>(
+  data: TData,
+  req: Request,
+  meta?: TMeta
+) => {
   return {
     data,
     request_id: req.id,
@@ -505,13 +520,14 @@ export const createSuccessEnvelope = (data: any, req: Request, meta?: any) => {
 // ============================================
 // CORE ALIGNMENT: Project Scope Validation
 // ============================================
-export const validateProjectScope = (req: Request, res: Response, next: NextFunction) => {
+export const validateProjectScope = (req: Request, res: Response, next: NextFunction): void => {
   const projectScope = req.headers['x-project-scope'] as string;
-  
+
   if (projectScope !== 'lanonasis-maas') {
     logger.warn(`[${req.id}] Invalid project scope: ${projectScope}`);
-    return res.status(403).json(createErrorEnvelope(req, 'Invalid project scope', 'AuthError', 'INVALID_PROJECT_SCOPE'));
+    res.status(403).json(createErrorEnvelope(req, 'Invalid project scope', 'AuthError', 'INVALID_PROJECT_SCOPE'));
+    return;
   }
-  
+
   next();
 };
