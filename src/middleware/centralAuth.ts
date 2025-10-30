@@ -1,7 +1,9 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { supabase } from '@/integrations/supabase/client';
-import { UnifiedUser } from '@/middleware/auth-aligned';
+
+// Use centralized type definitions
+import '@/types/express-auth';
 
 interface AuthError extends Error {
   status: number;
@@ -124,10 +126,8 @@ export const centralAuth = async (req: Request, res: Response, next: NextFunctio
     if (apiKey) {
       console.log(`[${req.id}] Authenticating with API key`);
       const keyData = await validateApiKey(apiKey);
-      const organizationId = keyData.organization_id ?? keyData.user_id;
 
-      const unifiedUser: UnifiedUser = {
-        sub: keyData.user_id,
+      req.user = {
         id: keyData.user_id,
         userId: keyData.user_id,
         plan: keyData.plan || 'free',
@@ -154,42 +154,16 @@ export const centralAuth = async (req: Request, res: Response, next: NextFunctio
       console.log(`[${req.id}] Authenticating with JWT`);
 
       const decoded = await validateJWT(token);
-      const userId = (decoded.sub as string | undefined)
-        || (decoded.user_id as string | undefined)
-        || (decoded.id as string | undefined);
 
-      if (!userId) {
-        throw createAuthError('Token missing subject identifier', 'TOKEN_SUBJECT_MISSING');
-      }
-
-      const organizationId = (decoded.organization_id as string | undefined) || userId;
-      const unifiedUser: UnifiedUser = {
-        sub: userId,
-        id: userId,
-        userId,
-        plan: (decoded.plan as string | undefined) || 'free',
-        role: (decoded.role as string | undefined) || 'user',
-        organization_id: organizationId,
-        organizationId,
-        auth_type: 'jwt',
-        ...(decoded.email ? { email: decoded.email as string } : {}),
-        ...(decoded.api_key_id ? { api_key_id: decoded.api_key_id as string } : {}),
-        ...(decoded.user_metadata
-          ? { user_metadata: decoded.user_metadata as Record<string, unknown> }
-          : {}),
-        ...(decoded.app_metadata
-          ? { app_metadata: decoded.app_metadata as Record<string, unknown> }
-          : {}),
-        ...(decoded.iat ? { iat: decoded.iat as number } : {}),
-        ...(decoded.exp ? { exp: decoded.exp as number } : {}),
-        ...(decoded.project_scope ? { project_scope: decoded.project_scope as string } : {}),
-        ...(decoded.platform
-          ? { platform: decoded.platform as 'mcp' | 'cli' | 'web' | 'api' }
-          : {})
+      req.user = {
+        id: decoded.sub || decoded.user_id || decoded.id,
+        email: decoded.email,
+        plan: decoded.plan || 'free',
+        organization_id: decoded.organization_id,
+        auth_type: 'jwt'
       };
 
-      req.user = unifiedUser;
-      console.log(`[${req.id}] JWT authentication successful for user ${unifiedUser.id}`);
+      console.log(`[${req.id}] JWT authentication successful for user ${req.user.id}`);
       return next();
     }
 

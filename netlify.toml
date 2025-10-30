@@ -32,19 +32,10 @@
   status = 200
   force = true
 
-# Domain-specific redirects for MCP and Dashboard domains
+# Domain-specific redirects for Dashboard domain
 
-# MCP domain configuration
-[[redirects]]
-  from = "https://mcp.lanonasis.com/sse"
-  to = "/.netlify/functions/mcp-sse"
-  status = 200
-  force = true
-  
-[[redirects]]
-  from = "https://mcp.lanonasis.com/*"
-  to = "/.netlify/functions/mcp-sse"
-  status = 200
+# NOTE: MCP domain (mcp.lanonasis.com) routing is handled by the onasis-core project
+# This public repo should NOT interfere with MCP routing to avoid affecting other services
 
 # Legacy MCP path support (will be deprecated)
 [[redirects]]
