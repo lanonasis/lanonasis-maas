@@ -15,6 +15,12 @@
     "jsx": "react-jsx",
     "outDir": "./dist",
     "rootDir": "./src",
+    // NOTE: The '@/*' path alias requires corresponding configuration in bundlers/transpilers (e.g., webpack, vite, jest) to work correctly in all environments.
+    "paths": {
+      "@/*": [
+        "./src/*"
+      ]
+    },
     "strict": true,
     "noImplicitAny": true,
     "strictNullChecks": true,

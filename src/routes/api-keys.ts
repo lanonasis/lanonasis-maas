@@ -2,6 +2,7 @@ import express from 'express';
 import { body, param, query, validationResult } from 'express-validator';
 import { alignedAuthMiddleware } from '@/middleware/auth-aligned';
 import { apiKeyService } from '@/services/apiKeyService';
+import type { ApiKey } from '@/services/apiKeyService';
 import { logger } from '@/utils/logger';
 
 const router = express.Router();
@@ -224,7 +225,7 @@ router.post('/projects', [
     }
 
     const project = await apiKeyService.createProject(req.body, req.user.id);
-    
+
     logger.info('API key project created', {
       projectId: project.id,
       userId: req.user.id,
@@ -262,12 +263,17 @@ router.post('/projects', [
  */
 router.get('/projects', async (req: express.Request, res: express.Response): Promise<void> => {
   try {
-    if (!req.user?.id) {
+    const organizationId = req.user?.organizationId
+      ?? req.user?.organization_id
+      ?? req.user?.userId
+      ?? req.user?.sub;
+
+    if (!organizationId) {
       res.status(401).json({ error: 'User authentication required' });
       return;
     }
 
-    const projects = await apiKeyService.getProjects(req.user.organizationId);
+    const projects = await apiKeyService.getProjects(organizationId);
     res.json(projects);
   } catch (error: unknown) {
     logger.error('Failed to get API key projects', error);
@@ -367,7 +373,7 @@ router.post('/', [
     }
 
     const apiKey = await apiKeyService.createApiKey(req.body, req.user.id);
-    
+
     logger.info('API key created', {
       keyId: apiKey.id,
       keyName: apiKey.name,
@@ -376,8 +382,8 @@ router.post('/', [
     });
 
     // Remove sensitive data from response
-    const safeApiKey = { ...apiKey };
-    delete (safeApiKey as any).value;
+    const safeApiKey = { ...apiKey } as ApiKey & { value?: string };
+    delete safeApiKey.value;
 
     res.status(201).json(safeApiKey);
   } catch (error: unknown) {
@@ -419,13 +425,18 @@ router.get('/', [
   query('projectId').optional().isUUID()
 ], validateRequest, async (req: express.Request, res: express.Response): Promise<void> => {
   try {
-    if (!req.user?.id) {
+    const organizationId = req.user?.organizationId
+      ?? req.user?.organization_id
+      ?? req.user?.userId
+      ?? req.user?.sub;
+
+    if (!organizationId) {
       res.status(401).json({ error: 'User authentication required' });
       return;
     }
 
     const { projectId } = req.query;
-    const apiKeys = await apiKeyService.getApiKeys(req.user.organizationId, projectId as string | undefined);
+    const apiKeys = await apiKeyService.getApiKeys(organizationId, projectId as string | undefined);
     res.json(apiKeys);
   } catch (error: unknown) {
     logger.error('Failed to get API keys', error);
@@ -581,7 +592,7 @@ router.put('/:keyId', [
       return;
     }
     const apiKey = await apiKeyService.updateApiKey(keyId, req.body, req.user.id);
-    
+
     logger.info('API key updated', {
       keyId: apiKey.id,
       userId: req.user.id,
@@ -640,7 +651,7 @@ router.delete('/:keyId', [
       return;
     }
     await apiKeyService.deleteApiKey(keyId, req.user.id);
-    
+
     logger.info('API key deleted', {
       keyId: keyId,
       userId: req.user.id
@@ -758,7 +769,7 @@ router.post('/mcp/tools', [
     }
 
     const tool = await apiKeyService.registerMCPTool(req.body, req.user.id);
-    
+
     logger.info('MCP tool registered', {
       toolId: tool.toolId,
       userId: req.user.id,
@@ -796,12 +807,17 @@ router.post('/mcp/tools', [
  */
 router.get('/mcp/tools', async (req: express.Request, res: express.Response): Promise<void> => {
   try {
-    if (!req.user?.id) {
+    const organizationId = req.user?.organizationId
+      ?? req.user?.organization_id
+      ?? req.user?.userId
+      ?? req.user?.sub;
+
+    if (!organizationId) {
       res.status(401).json({ error: 'User authentication required' });
       return;
     }
 
-    const tools = await apiKeyService.getMCPTools(req.user.organizationId);
+    const tools = await apiKeyService.getMCPTools(organizationId);
     res.json(tools);
   } catch (error: unknown) {
     logger.error('Failed to get MCP tools', error);
@@ -895,7 +911,7 @@ router.post('/mcp/request-access', [
     }
 
     const requestId = await apiKeyService.createMCPAccessRequest(req.body);
-    
+
     logger.info('MCP access request created', {
       requestId,
       toolId: req.body.toolId,
@@ -981,7 +997,7 @@ router.post('/mcp/sessions/:sessionId/proxy-token', [
       sessionId,
       req.body.keyName
     );
-    
+
     logger.info('Proxy token generated', {
       sessionId: sessionId,
       keyName: req.body.keyName,
@@ -1045,16 +1061,21 @@ router.get('/analytics/usage', [
   query('days').optional().isInt({ min: 1, max: 365 })
 ], validateRequest, async (req: express.Request, res: express.Response): Promise<void> => {
   try {
-    if (!req.user?.id) {
+    const organizationId = req.user?.organizationId
+      ?? req.user?.organization_id
+      ?? req.user?.userId
+      ?? req.user?.sub;
+
+    if (!organizationId) {
       res.status(401).json({ error: 'User authentication required' });
       return;
     }
 
     const { keyId, days } = req.query;
     const analytics = await apiKeyService.getUsageAnalytics(
-      req.user.organizationId,
+      organizationId,
       keyId as string | undefined,
-      days ? parseInt(days as string) : 30
+      days ? parseInt(days as string, 10) : 30
     );
     res.json(analytics);
   } catch (error: unknown) {
@@ -1096,14 +1117,19 @@ router.get('/analytics/security-events', [
   query('severity').optional().isIn(['low', 'medium', 'high', 'critical'])
 ], validateRequest, async (req: express.Request, res: express.Response): Promise<void> => {
   try {
-    if (!req.user?.id) {
+    const organizationId = req.user?.organizationId
+      ?? req.user?.organization_id
+      ?? req.user?.userId
+      ?? req.user?.sub;
+
+    if (!organizationId) {
       res.status(401).json({ error: 'User authentication required' });
       return;
     }
 
     const { severity } = req.query;
     const events = await apiKeyService.getSecurityEvents(
-      req.user.organizationId,
+      organizationId,
       severity as string | undefined
     );
     res.json(events);
