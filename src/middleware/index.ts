@@ -9,8 +9,7 @@
  * - Plan-based authorization and rate limiting
  */
 
-// HTTP Basics
-export {
+import {
   attachRequestId,
   corsGuard,
   errorEnvelope,
@@ -18,16 +17,20 @@ export {
   successEnvelope
 } from './httpBasics';
 
-// Authentication & Authorization
-export {
-  centralAuth,
+import centralAuth, {
   requirePlan,
   planBasedRateLimit,
   optionalAuth
 } from './centralAuth';
 
+// HTTP Basics
+export { attachRequestId, corsGuard, errorEnvelope, notFoundHandler, successEnvelope };
+
+// Authentication & Authorization
+export { centralAuth, requirePlan, planBasedRateLimit, optionalAuth };
+
 // Default authentication middleware
-export { default as auth } from './centralAuth';
+export { centralAuth as auth };
 
 /**
  * Standard middleware chain for protected routes
@@ -61,30 +64,30 @@ export const middlewareConfig = {
     'attachRequestId',    // Must be first
     'corsGuard',          // CORS and security headers
   ],
-  
+
   // Protected API routes
   protected: [
     'centralAuth',        // JWT or API key required
     'planBasedRateLimit', // Plan-based rate limiting
   ],
-  
+
   // Public API routes (optional auth)
   public: [
     'optionalAuth',       // Optional authentication
   ],
-  
+
   // Admin routes (enterprise plan required)
   admin: [
     'centralAuth',
     'requirePlan("enterprise")',
   ],
-  
+
   // Pro features
   pro: [
     'centralAuth',
     'requirePlan("pro")',
   ],
-  
+
   // Error handling (apply last)
   error: [
     'errorEnvelope',      // Must be last
