@@ -6,7 +6,8 @@ import crypto from 'crypto';
 
 const supabase = createClient(config.SUPABASE_URL=https://<project-ref>.supabase.co
 
-import { JWTPayload } from '@/types/auth';
+// Import the proper types from our centralized type definitions
+import { UnifiedUser, AuthenticatedUser } from '@/types/express-auth';
 
 // ============================================
 // CORE ALIGNMENT: Request ID Extension
@@ -14,8 +15,7 @@ import { JWTPayload } from '@/types/auth';
 declare global {
   namespace Express {
     interface Request {
-      id?: string;
-      user?: UnifiedUser;
+      requestId?: string;
     }
   }
 }
@@ -23,19 +23,8 @@ declare global {
 // ============================================
 // CORE ALIGNMENT: Enhanced User Types
 // ============================================
-export interface UnifiedUser extends JWTPayload {
-  id?: string;
-  user_id?: string;
-  email?: string;
-  user_metadata?: Record<string, unknown>;
-  app_metadata?: Record<string, unknown>;
-  // Core alignment additions
-  auth_type?: 'jwt' | 'api_key';
-  api_key_id?: string;
-  last_used?: string;
-  rate_limit_remaining?: number;
-  organization_id?: string;
-}
+// Re-export for backward compatibility
+export { UnifiedUser, AuthenticatedUser };
 
 // Type alias for backward compatibility
 export type AlignedUser = UnifiedUser;
