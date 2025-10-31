@@ -48,6 +48,11 @@ coverage/
 *.key
 *.cert
 *.p12
+
+# Scripts with hardcoded credentials
+**/quick-auth-fix.sh
+**/emergency-*.sh
+**/*-fix.sh
 secrets/
 
 # Local configuration
