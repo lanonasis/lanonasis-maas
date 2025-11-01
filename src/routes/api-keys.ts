@@ -261,15 +261,33 @@ router.post('/projects', [
  *       500:
  *         description: Internal server error
  */
+/**
+ * Helper to extract organization ID from user context
+ */
+function getOrganizationId(req: express.Request): string | null {
+  // Try standard claims first
+  if (req.user?.organizationId) return req.user.organizationId;
+  if (req.user?.organization_id) return req.user.organization_id;
+  
+  // Try JWT sub claim (should be user ID, not org ID)
+  // Note: organizationId should come from user lookup in most cases
+  if (req.user?.sub && typeof req.user.sub === 'string') {
+    // If sub is a UUID, might be user ID - would need user lookup
+    // For now, return null to force proper org ID usage
+  }
+  
+  return null;
+}
+
 router.get('/projects', async (req: express.Request, res: express.Response): Promise<void> => {
   try {
-    const organizationId = req.user?.organizationId
-      ?? req.user?.organization_id
-      ?? req.user?.userId
-      ?? req.user?.sub;
+    const organizationId = getOrganizationId(req);
 
     if (!organizationId) {
-      res.status(401).json({ error: 'User authentication required' });
+      res.status(401).json({ 
+        error: 'User authentication required',
+        details: 'Organization ID not found in user context. Please ensure proper authentication.'
+      });
       return;
     }
 
@@ -425,13 +443,13 @@ router.get('/', [
   query('projectId').optional().isUUID()
 ], validateRequest, async (req: express.Request, res: express.Response): Promise<void> => {
   try {
-    const organizationId = req.user?.organizationId
-      ?? req.user?.organization_id
-      ?? req.user?.userId
-      ?? req.user?.sub;
+    const organizationId = getOrganizationId(req);
 
     if (!organizationId) {
-      res.status(401).json({ error: 'User authentication required' });
+      res.status(401).json({ 
+        error: 'User authentication required',
+        details: 'Organization ID not found in user context. Please ensure proper authentication.'
+      });
       return;
     }
 
@@ -807,13 +825,13 @@ router.post('/mcp/tools', [
  */
 router.get('/mcp/tools', async (req: express.Request, res: express.Response): Promise<void> => {
   try {
-    const organizationId = req.user?.organizationId
-      ?? req.user?.organization_id
-      ?? req.user?.userId
-      ?? req.user?.sub;
+    const organizationId = getOrganizationId(req);
 
     if (!organizationId) {
-      res.status(401).json({ error: 'User authentication required' });
+      res.status(401).json({ 
+        error: 'User authentication required',
+        details: 'Organization ID not found in user context. Please ensure proper authentication.'
+      });
       return;
     }
 
@@ -1061,13 +1079,13 @@ router.get('/analytics/usage', [
   query('days').optional().isInt({ min: 1, max: 365 })
 ], validateRequest, async (req: express.Request, res: express.Response): Promise<void> => {
   try {
-    const organizationId = req.user?.organizationId
-      ?? req.user?.organization_id
-      ?? req.user?.userId
-      ?? req.user?.sub;
+    const organizationId = getOrganizationId(req);
 
     if (!organizationId) {
-      res.status(401).json({ error: 'User authentication required' });
+      res.status(401).json({ 
+        error: 'User authentication required',
+        details: 'Organization ID not found in user context. Please ensure proper authentication.'
+      });
       return;
     }
 
@@ -1117,13 +1135,13 @@ router.get('/analytics/security-events', [
   query('severity').optional().isIn(['low', 'medium', 'high', 'critical'])
 ], validateRequest, async (req: express.Request, res: express.Response): Promise<void> => {
   try {
-    const organizationId = req.user?.organizationId
-      ?? req.user?.organization_id
-      ?? req.user?.userId
-      ?? req.user?.sub;
+    const organizationId = getOrganizationId(req);
 
     if (!organizationId) {
-      res.status(401).json({ error: 'User authentication required' });
+      res.status(401).json({ 
+        error: 'User authentication required',
+        details: 'Organization ID not found in user context. Please ensure proper authentication.'
+      });
       return;
     }
 
