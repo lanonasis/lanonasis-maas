@@ -258,7 +258,7 @@ export class ExtensionAuthHandler {
         // Use vscode.workspace.getConfiguration instead
         const config = vscode.workspace.getConfiguration('lanonasis');
         const authUrl = config.get<string>('authUrl') || 'https://auth.lanonasis.com';
-        const clientId = 'cursor-extension';
+        const clientId = config.get<string>('clientId') || 'cursor-extension';
         const redirectUri = 'http://localhost:8080/callback';
         const CALLBACK_PORT = 8080;
         
