@@ -146,6 +146,9 @@ export class SecureApiKeyService {
      */
     async authenticateOAuth(): Promise<boolean> {
         return new Promise((resolve, reject) => {
+            // Store timeout reference to clear it on success/error
+            let timeoutId: NodeJS.Timeout | undefined;
+
             try {
                 const config = vscode.workspace.getConfiguration('lanonasis');
                 const authUrl = config.get<string>('authUrl') || 'https://auth.lanonasis.com';
@@ -192,6 +195,7 @@ export class SecureApiKeyService {
                                 res.writeHead(400, { 'Content-Type': 'text/html' });
                                 res.end('<h1>Invalid state parameter</h1>');
                                 server.close();
+                                if (timeoutId) clearTimeout(timeoutId);
                                 reject(new Error('Invalid state parameter'));
                                 return;
                             }
@@ -200,6 +204,7 @@ export class SecureApiKeyService {
                                 res.writeHead(400, { 'Content-Type': 'text/html' });
                                 res.end(`<h1>OAuth Error: ${error}</h1>`);
                                 server.close();
+                                if (timeoutId) clearTimeout(timeoutId);
                                 reject(new Error(`OAuth error: ${error}`));
                                 return;
                             }
@@ -231,6 +236,7 @@ export class SecureApiKeyService {
                                 await this.context.secrets.delete('oauth_code_verifier');
                                 await this.context.secrets.delete('oauth_state');
                                 server.close();
+                                if (timeoutId) clearTimeout(timeoutId);
                                 resolve(true);
                             }
                         } else {
@@ -241,6 +247,7 @@ export class SecureApiKeyService {
                         res.writeHead(500, { 'Content-Type': 'text/html' });
                         res.end(`<h1>Error: ${err instanceof Error ? err.message : 'Unknown error'}</h1>`);
                         server.close();
+                        if (timeoutId) clearTimeout(timeoutId);
                         reject(err);
                     }
                 });
@@ -251,12 +258,13 @@ export class SecureApiKeyService {
                 });
 
                 // Timeout after 5 minutes
-                setTimeout(() => {
+                timeoutId = setTimeout(() => {
                     server.close();
                     reject(new Error('OAuth authentication timeout'));
                 }, 5 * 60 * 1000);
 
             } catch (error) {
+                if (timeoutId) clearTimeout(timeoutId);
                 reject(error);
             }
         });
