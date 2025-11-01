@@ -198,10 +198,23 @@ const healthCheck = async () => {
   process.stdout.write('MCP Server status: ');
   try {
     const client = getMCPClient();
+    const status = client.getConnectionStatus();
+    const mcpPreference = await cliConfig.get<string>('mcpPreference') || 'auto';
+
     if (client.isConnectedToServer()) {
       console.log(colors.success('✅ Connected'));
+      console.log(`  Mode: ${colors.highlight(status.mode)}`);
+      console.log(`  Server: ${colors.highlight(status.server || 'N/A')}`);
     } else {
       console.log(colors.warning('⚠️  Disconnected'));
+      console.log(`  Configured preference: ${colors.highlight(mcpPreference)}`);
+      if (mcpPreference === 'remote') {
+        const mcpUrl = cliConfig.getMCPServerUrl();
+        console.log(`  Remote server: ${colors.highlight(mcpUrl)}`);
+      } else if (mcpPreference === 'local') {
+        const mcpPath = cliConfig.getMCPServerPath();
+        console.log(`  Local server: ${colors.highlight(mcpPath || 'Not configured')}`);
+      }
     }
   } catch (error) {
     console.log(colors.error('❌ Error'));
@@ -277,13 +290,16 @@ authCmd
   .command('status')
   .description('Show authentication status')
   .action(async () => {
+    // Initialize config first
+    await cliConfig.init();
+
     const isAuth = await cliConfig.isAuthenticated();
     const user = await cliConfig.getCurrentUser();
     const failureCount = cliConfig.getFailureCount();
     const lastFailure = cliConfig.getLastAuthFailure();
     const authMethod = cliConfig.get<string>('authMethod');
     const lastValidated = cliConfig.get<string>('lastValidated');
-    
+
     console.log(chalk.blue.bold('🔐 Authentication Status'));
     console.log('━'.repeat(40));
     
@@ -600,13 +616,16 @@ program
   .command('status')
   .description('Show overall system status')
   .action(async () => {
+    // Initialize config first
+    await cliConfig.init();
+
     const isAuth = await cliConfig.isAuthenticated();
     const apiUrl = cliConfig.getApiUrl();
-    
+
     console.log(chalk.blue.bold('MaaS CLI Status'));
     console.log(`API URL: ${apiUrl}`);
     console.log(`Authenticated: ${isAuth ? chalk.green('Yes') : chalk.red('No')}`);
-    
+
     if (isAuth) {
       const user = await cliConfig.getCurrentUser();
       if (user) {
