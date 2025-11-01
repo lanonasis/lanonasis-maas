@@ -6,7 +6,6 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
 import { User, Mail, Lock, Shield, Building } from "lucide-react";
 
 export const UserProfile = () => {
@@ -17,7 +16,7 @@ export const UserProfile = () => {
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [displayName, setDisplayName] = useState(user?.user_metadata?.full_name || "");
+  const [displayName, setDisplayName] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
   const handlePasswordReset = async () => {
@@ -41,11 +40,23 @@ export const UserProfile = () => {
 
     setIsLoading(true);
     try {
-      const { error } = await supabase.auth.updateUser({
-        password: newPassword
+      const response = await fetch(`${import.meta.env.VITE_AUTH_GATEWAY_URL}/v1/auth/update-password`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-project-scope': 'maas'
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          new_password: newPassword,
+          current_password: currentPassword
+        })
       });
 
-      if (error) throw error;
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Failed to update password');
+      }
 
       toast({
         title: "Success",
@@ -56,7 +67,7 @@ export const UserProfile = () => {
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
-    } catch (error) {
+    } catch (error: any) {
       toast({
         title: "Error",
         description: error.message || "Failed to update password",
@@ -70,11 +81,22 @@ export const UserProfile = () => {
   const handleProfileUpdate = async () => {
     setIsLoading(true);
     try {
-      const { error } = await supabase.auth.updateUser({
-        data: { full_name: displayName }
+      const response = await fetch(`${import.meta.env.VITE_AUTH_GATEWAY_URL}/v1/auth/update-profile`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-project-scope': 'maas'
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          full_name: displayName
+        })
       });
 
-      if (error) throw error;
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Failed to update profile');
+      }
 
       toast({
         title: "Success",
@@ -82,7 +104,7 @@ export const UserProfile = () => {
       });
 
       setIsProfileDialogOpen(false);
-    } catch (error) {
+    } catch (error: any) {
       toast({
         title: "Error",
         description: error.message || "Failed to update profile",
@@ -116,7 +138,7 @@ export const UserProfile = () => {
             <div>
               <p className="text-sm font-medium">Display Name</p>
               <p className="text-sm text-muted-foreground">
-                {user.user_metadata?.full_name || "Not set"}
+                {user.role || "Not set"}
               </p>
             </div>
           </div>
@@ -134,7 +156,7 @@ export const UserProfile = () => {
             <div>
               <p className="text-sm font-medium">Role</p>
               <p className="text-sm text-muted-foreground">
-                {user.user_metadata?.role || "User"}
+                {user.project_scope || "maas"}
               </p>
             </div>
           </div>
@@ -192,6 +214,16 @@ export const UserProfile = () => {
                 </DialogDescription>
               </DialogHeader>
               <div className="grid gap-4 py-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="currentPassword">Current Password</Label>
+                  <Input
+                    id="currentPassword"
+                    type="password"
+                    value={currentPassword}
+                    onChange={(e) => setCurrentPassword(e.target.value)}
+                    placeholder="Enter current password"
+                  />
+                </div>
                 <div className="grid gap-2">
                   <Label htmlFor="newPassword">New Password</Label>
                   <Input

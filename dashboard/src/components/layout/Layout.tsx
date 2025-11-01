@@ -2,6 +2,7 @@
 import { ReactNode } from "react";
 import { Header } from "./Header";
 import { Footer } from "./Footer";
+import { FeedbackButton } from "@/components/feedback/FeedbackButton";
 import { useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 
@@ -25,6 +26,9 @@ export const Layout = ({ children }: LayoutProps) => {
         {children}
       </main>
       {!isDashboard && <Footer />}
+      
+      {/* Global Feedback Button */}
+      <FeedbackButton />
     </div>
   );
 };

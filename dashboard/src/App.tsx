@@ -9,6 +9,7 @@ import { ThemeProvider } from "@/hooks/useTheme";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
+import AuthCallback from "./pages/AuthCallback";
 import Dashboard from "./pages/Dashboard";
 import NotFound from "./pages/NotFound";
 import ApiDocs from "./pages/ApiDocs";

@@ -6,6 +6,7 @@
   "bin": {
     "lanonasis": "dist/index-simple.js",
     "lanonasis-mcp-server": "dist/mcp-server.js",
+    "onasis": "dist/index-simple.js",
     "memory": "dist/index-simple.js",
     "maas": "dist/index-simple.js"
   },

@@ -16,6 +16,14 @@ export default defineConfig(({ mode }) => ({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
+      // Enforce single React across monorepo
+      react: path.resolve(__dirname, '../../../node_modules/react'),
+      'react-dom': path.resolve(__dirname, '../../../node_modules/react-dom'),
+      'react/jsx-runtime': path.resolve(__dirname, '../../../node_modules/react/jsx-runtime.js'),
+      'react/jsx-dev-runtime': path.resolve(__dirname, '../../../node_modules/react/jsx-dev-runtime.js'),
+      'react-router-dom': path.resolve(__dirname, '../../../node_modules/react-router-dom'),
+      'react-router': path.resolve(__dirname, '../../../node_modules/react-router'),
     },
+    dedupe: ['react', 'react-dom', 'react-router', 'react-router-dom', 'react/jsx-runtime', 'react/jsx-dev-runtime'],
   },
 }));

@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Key, Copy, Eye, EyeOff, Check, Clock, ArrowUpDown, Shield, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
+import { apiClient, type ApiKey } from "@/lib/api-client";
 import { useAuth } from "@/hooks/useAuth";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
@@ -25,7 +25,7 @@ export const ApiKeyManager = () => {
   const [showKey, setShowKey] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [apiKeys, setApiKeys] = useState([]);
+  const [apiKeys, setApiKeys] = useState<ApiKey[]>([]);
   const [isLoadingKeys, setIsLoadingKeys] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
@@ -41,19 +41,17 @@ export const ApiKeyManager = () => {
     
     setIsLoadingKeys(true);
     try {
-      const { data, error } = await supabase
-        .from("api_keys")
-        .select("*")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false });
+      const response = await apiClient.getApiKeys();
       
-      if (error) throw error;
+      if (response.error) {
+        throw new Error(response.error);
+      }
       
-      setApiKeys(data || []);
-    } catch (error) {
+      setApiKeys(response.data || []);
+    } catch (error: any) {
       toast({
         title: "Error",
-        description: "Failed to fetch API keys",
+        description: error.message || "Failed to fetch API keys",
         variant: "destructive",
       });
     } finally {
@@ -80,34 +78,27 @@ export const ApiKeyManager = () => {
     setIsLoading(true);
     
     try {
-      // Generate a random API key
-      const randomKey = Array.from(
-        { length: 32 },
-        () => Math.floor(Math.random() * 36).toString(36)
-      ).join("");
+      const expirationDate = keyExpiration === "never" 
+        ? undefined 
+        : keyExpiration === "custom" 
+          ? new Date(customExpiration).toISOString() 
+          : new Date(Date.now() + parseInt(keyExpiration) * 86400000).toISOString();
       
-      const formattedKey = `vx_${randomKey}`;
-      setGeneratedKey(formattedKey);
+      const permissions = keyService === "all" 
+        ? ["memory:read", "memory:write", "memory:delete", "search", "analytics"] 
+        : [`${keyService}:read`, `${keyService}:write`];
       
-      if (user) {
-        const expirationDate = keyExpiration === "never" 
-          ? null 
-          : keyExpiration === "custom" 
-            ? new Date(customExpiration).toISOString() 
-            : new Date(Date.now() + parseInt(keyExpiration) * 86400000).toISOString();
-        
-        // Save the API key to the database
-        const { error } = await supabase.from("api_keys").insert({
-          name: keyName,
-          key: formattedKey,
-          service: keyService,
-          user_id: user.id,
-          expires_at: expirationDate,
-          rate_limited: rateLimit,
-        });
-        
-        if (error) throw error;
+      const response = await apiClient.createApiKey({
+        name: keyName,
+        permissions,
+        expires_at: expirationDate,
+      });
+      
+      if (response.error) {
+        throw new Error(response.error);
       }
+      
+      setGeneratedKey(response.data?.secret || "");
       
       toast({
         title: "API Key Generated",
@@ -115,7 +106,7 @@ export const ApiKeyManager = () => {
       });
       
       setShowKey(true);
-    } catch (error) {
+    } catch (error: any) {
       toast({
         title: "Error",
         description: error.message || "Failed to generate API key",
@@ -126,17 +117,15 @@ export const ApiKeyManager = () => {
     }
   };
 
-  const revokeApiKey = async (keyId) => {
+  const revokeApiKey = async (keyId: string) => {
     if (!user) return;
     
     try {
-      const { error } = await supabase
-        .from("api_keys")
-        .delete()
-        .eq("id", keyId)
-        .eq("user_id", user.id);
+      const response = await apiClient.deleteApiKey(keyId);
       
-      if (error) throw error;
+      if (response.error) {
+        throw new Error(response.error);
+      }
       
       toast({
         title: "API Key Revoked",
@@ -144,23 +133,23 @@ export const ApiKeyManager = () => {
       });
       
       fetchApiKeys();
-    } catch (error) {
+    } catch (error: any) {
       toast({
         title: "Error",
-        description: "Failed to revoke API key",
+        description: error.message || "Failed to revoke API key",
         variant: "destructive",
       });
     }
   };
 
-  const formatDate = (dateString) => {
+  const formatDate = (dateString: string | null) => {
     if (!dateString) return "Never";
     
     const date = new Date(dateString);
     return date.toLocaleDateString() + " " + date.toLocaleTimeString();
   };
 
-  const isExpired = (expiresAt) => {
+  const isExpired = (expiresAt: string | null) => {
     if (!expiresAt) return false;
     return new Date(expiresAt) < new Date();
   };
@@ -386,7 +375,7 @@ export const ApiKeyManager = () => {
                               )}
                             </h3>
                             <p className="text-xs text-muted-foreground">
-                              Access: {key.service === "all" ? "All Services" : key.service}
+                              Permissions: {key.permissions?.join(', ') || 'All Services'}
                             </p>
                           </div>
                           <Button 
@@ -414,13 +403,13 @@ export const ApiKeyManager = () => {
                           </div>
                           <div className="flex items-center gap-1">
                             <ArrowUpDown className="h-3 w-3" /> 
-                            <span>Rate Limited: {key.rate_limited ? "Yes" : "No"}</span>
+                            <span>Active: {key.is_active ? "Yes" : "No"}</span>
                           </div>
                         </div>
                         
                         <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700 flex justify-between items-center">
                           <div className="text-xs">
-                            Last used: {key.last_used ? formatDate(key.last_used) : "Never"}
+                            Last used: {key.last_used_at ? formatDate(key.last_used_at) : "Never"}
                           </div>
                           <Button variant="outline" size="sm" className="h-7 text-xs">
                             View Activity

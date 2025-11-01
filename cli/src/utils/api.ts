@@ -234,97 +234,134 @@ export class APIClient {
     );
   }
 
-  // Authentication - aligned with Supabase auth
+  // Authentication - aligned with Core Gateway auth
   async login(email: string, password: string): Promise<AuthResponse> {
-    const response = await this.client.post('/api/v1/auth/login', {
+    const response = await this.client.post('/v1/auth/login', {
       email,
-      password
+      password,
+      project_scope: 'maas'
+    }, {
+      headers: {
+        'x-project-scope': 'maas'
+      }
     });
     return response.data;
   }
 
   async register(email: string, password: string, organizationName?: string): Promise<AuthResponse> {
-    const response = await this.client.post('/api/v1/auth/register', {
+    const response = await this.client.post('/v1/auth/register', {
       email,
       password,
-      organization_name: organizationName
+      organization_name: organizationName,
+      project_scope: 'maas'
+    }, {
+      headers: {
+        'x-project-scope': 'maas'
+      }
     });
     return response.data;
   }
 
-  // Memory operations - aligned with existing schema
+  // Memory operations - via Core Gateway
   async createMemory(data: CreateMemoryRequest): Promise<MemoryEntry> {
-    const response = await this.client.post('/api/v1/memory', data);
+    const response = await this.client.post('/api/v1/maas/memory', data, {
+      headers: { 'x-project-scope': 'maas' }
+    });
     return response.data;
   }
 
   async getMemories(params: GetMemoriesParams = {}): Promise<PaginatedResponse<MemoryEntry>> {
-    const response = await this.client.get('/api/v1/memory', { params });
+    const response = await this.client.get('/api/v1/maas/memory', { 
+      params,
+      headers: { 'x-project-scope': 'maas' }
+    });
     return response.data;
   }
 
   async getMemory(id: string): Promise<MemoryEntry> {
-    const response = await this.client.get(`/api/v1/memory/${id}`);
+    const response = await this.client.get(`/api/v1/maas/memory/${id}`, {
+      headers: { 'x-project-scope': 'maas' }
+    });
     return response.data;
   }
 
   async updateMemory(id: string, data: UpdateMemoryRequest): Promise<MemoryEntry> {
-    const response = await this.client.put(`/api/v1/memory/${id}`, data);
+    const response = await this.client.put(`/api/v1/maas/memory/${id}`, data, {
+      headers: { 'x-project-scope': 'maas' }
+    });
     return response.data;
   }
 
   async deleteMemory(id: string): Promise<void> {
-    await this.client.delete(`/api/v1/memory/${id}`);
+    await this.client.delete(`/api/v1/maas/memory/${id}`, {
+      headers: { 'x-project-scope': 'maas' }
+    });
   }
 
   async searchMemories(query: string, options: Omit<SearchMemoryRequest, 'query'> = {}): Promise<PaginatedResponse<MemorySearchResult>> {
-    const response = await this.client.post('/api/v1/memory/search', {
+    const response = await this.client.post('/api/v1/maas/memory/search', {
       query,
       ...options
+    }, {
+      headers: { 'x-project-scope': 'maas' }
     });
     return response.data;
   }
 
   async getMemoryStats(): Promise<MemoryStats> {
-    const response = await this.client.get('/api/v1/memory/stats');
-    return response.data;
-  }
-
-  async bulkDeleteMemories(memoryIds: string[]): Promise<BulkDeleteResponse> {
-    const response = await this.client.post('/api/v1/memory/bulk/delete', {
-      memory_ids: memoryIds
+    const response = await this.client.get('/api/v1/maas/memory/stats', {
+      headers: { 'x-project-scope': 'maas' }
     });
     return response.data;
   }
 
-  // Topic operations - working with existing memory_topics table
+  async bulkDeleteMemories(memoryIds: string[]): Promise<BulkDeleteResponse> {
+    const response = await this.client.post('/api/v1/maas/memory/bulk/delete', {
+      memory_ids: memoryIds
+    }, {
+      headers: { 'x-project-scope': 'maas' }
+    });
+    return response.data;
+  }
+
+  // Topic operations - via Core Gateway
   async createTopic(data: CreateTopicRequest): Promise<MemoryTopic> {
-    const response = await this.client.post('/api/v1/topics', data);
+    const response = await this.client.post('/api/v1/maas/topics', data, {
+      headers: { 'x-project-scope': 'maas' }
+    });
     return response.data;
   }
 
   async getTopics(): Promise<MemoryTopic[]> {
-    const response = await this.client.get('/api/v1/topics');
+    const response = await this.client.get('/api/v1/maas/topics', {
+      headers: { 'x-project-scope': 'maas' }
+    });
     return response.data;
   }
 
   async getTopic(id: string): Promise<MemoryTopic> {
-    const response = await this.client.get(`/api/v1/topics/${id}`);
+    const response = await this.client.get(`/api/v1/maas/topics/${id}`, {
+      headers: { 'x-project-scope': 'maas' }
+    });
     return response.data;
   }
 
   async updateTopic(id: string, data: UpdateTopicRequest): Promise<MemoryTopic> {
-    const response = await this.client.put(`/api/v1/topics/${id}`, data);
+    const response = await this.client.put(`/api/v1/maas/topics/${id}`, data, {
+      headers: { 'x-project-scope': 'maas' }
+    });
     return response.data;
   }
 
   async deleteTopic(id: string): Promise<void> {
-    await this.client.delete(`/api/v1/topics/${id}`);
+    await this.client.delete(`/api/v1/maas/topics/${id}`, {
+      headers: { 'x-project-scope': 'maas' }
+    });
   }
 
   // Health check
   async getHealth(): Promise<HealthStatus> {
-    const response = await this.client.get('/api/v1/health');
+    const response = await this.client.get('/api/v1/maas/health');
     return response.data;
   }
 
