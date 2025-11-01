@@ -252,7 +252,7 @@ export class ExtensionAuthHandler {
    * Uses PKCE (Proof Key for Code Exchange) for enhanced security
    */
   async authenticateOAuth(): Promise<boolean> {
-    return new Promise((resolve, reject) => {
+    return new Promise(async (resolve, reject) => {
       let timeoutId: NodeJS.Timeout | null = null;
       
       const cleanup = (server: http.Server) => {
@@ -282,8 +282,8 @@ export class ExtensionAuthHandler {
         const state = this.generateState();
         
         // Store PKCE data temporarily
-        this.storage.store('oauth_code_verifier', codeVerifier);
-        this.storage.store('oauth_state', state);
+        await this.storage.store('oauth_code_verifier', codeVerifier);
+        await this.storage.store('oauth_state', state);
         
         // Build authorization URL
         const authUrlObj = new URL('/oauth/authorize', authUrl);
