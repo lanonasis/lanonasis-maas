@@ -252,7 +252,21 @@ export class ExtensionAuthHandler {
    * Uses PKCE (Proof Key for Code Exchange) for enhanced security
    */
   async authenticateOAuth(): Promise<boolean> {
-    return new Promise((resolve, reject) => {
+    return new Promise(async (resolve, reject) => {
+      let timeoutId: NodeJS.Timeout | null = null;
+      
+      const cleanup = (server: http.Server) => {
+        if (timeoutId) {
+          clearTimeout(timeoutId);
+          timeoutId = null;
+        }
+        server.close((err) => {
+          if (err) {
+            console.error('Error closing server:', err);
+          }
+        });
+      };
+      
       try {
         // Note: In VS Code extensions, process.env may not be available
         // Use vscode.workspace.getConfiguration instead
@@ -268,8 +282,8 @@ export class ExtensionAuthHandler {
         const state = this.generateState();
         
         // Store PKCE data temporarily
-        this.storage.store('oauth_code_verifier', codeVerifier);
-        this.storage.store('oauth_state', state);
+        await this.storage.store('oauth_code_verifier', codeVerifier);
+        await this.storage.store('oauth_state', state);
         
         // Build authorization URL
         const authUrlObj = new URL('/oauth/authorize', authUrl);
@@ -301,7 +315,7 @@ export class ExtensionAuthHandler {
               if (returnedState !== storedState) {
                 res.writeHead(400, { 'Content-Type': 'text/html' });
                 res.end('<h1>Invalid state parameter</h1>');
-                server.close();
+                cleanup(server);
                 reject(new Error('Invalid state parameter'));
                 return;
               }
@@ -309,7 +323,7 @@ export class ExtensionAuthHandler {
               if (error) {
                 res.writeHead(400, { 'Content-Type': 'text/html' });
                 res.end(`<h1>OAuth Error: ${error}</h1>`);
-                server.close();
+                cleanup(server);
                 reject(new Error(`OAuth error: ${error}`));
                 return;
               }
@@ -342,7 +356,7 @@ export class ExtensionAuthHandler {
                 // Cleanup
                 await this.storage.delete('oauth_code_verifier');
                 await this.storage.delete('oauth_state');
-                server.close();
+                cleanup(server);
                 resolve(true);
               }
             } else {
@@ -352,7 +366,7 @@ export class ExtensionAuthHandler {
           } catch (err) {
             res.writeHead(500, { 'Content-Type': 'text/html' });
             res.end(`<h1>Error: ${err instanceof Error ? err.message : 'Unknown error'}</h1>`);
-            server.close();
+            cleanup(server);
             reject(err);
           }
         });
@@ -363,8 +377,8 @@ export class ExtensionAuthHandler {
         });
         
         // Timeout after 5 minutes
-        setTimeout(() => {
-          server.close();
+        timeoutId = setTimeout(() => {
+          cleanup(server);
           reject(new Error('OAuth authentication timeout'));
         }, 5 * 60 * 1000);
         
