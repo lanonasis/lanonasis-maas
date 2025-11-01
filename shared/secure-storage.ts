@@ -4,6 +4,9 @@
  */
 
 import * as vscode from 'vscode';
+import * as http from 'http';
+import * as crypto from 'crypto';
+import { URL, URLSearchParams } from 'url';
 
 export interface SecureStorageProvider {
   store(key: string, value: string): Promise<void>;
@@ -246,30 +249,183 @@ export class ExtensionAuthHandler {
 
   /**
    * Authenticate with OAuth flow
+   * Uses PKCE (Proof Key for Code Exchange) for enhanced security
    */
   async authenticateOAuth(): Promise<boolean> {
-    try {
-      // Open OAuth URL in browser
-      const authUrl = 'https://api.lanonasis.com/oauth/authorize';
-      await vscode.env.openExternal(vscode.Uri.parse(authUrl));
-      
-      // Wait for callback (simplified - real implementation needs server)
-      const token = await vscode.window.showInputBox({
-        prompt: 'Enter the authentication token from browser',
-        password: true,
-        ignoreFocusOut: true
-      });
-
-      if (token) {
-        await this.apiKeyManager.storeApiKey(token);
-        this.isAuthenticated = true;
-        return true;
+    return new Promise((resolve, reject) => {
+      try {
+        // Note: In VS Code extensions, process.env may not be available
+        // Use vscode.workspace.getConfiguration instead
+        const config = vscode.workspace.getConfiguration('lanonasis');
+        const authUrl = config.get<string>('authUrl') || 'https://auth.lanonasis.com';
+        const clientId = 'cursor-extension';
+        const redirectUri = 'http://localhost:8080/callback';
+        const CALLBACK_PORT = 8080;
+        
+        // Generate PKCE parameters
+        const codeVerifier = this.generateCodeVerifier();
+        const codeChallenge = this.generateCodeChallenge(codeVerifier);
+        const state = this.generateState();
+        
+        // Store PKCE data temporarily
+        this.storage.store('oauth_code_verifier', codeVerifier);
+        this.storage.store('oauth_state', state);
+        
+        // Build authorization URL
+        const authUrlObj = new URL('/oauth/authorize', authUrl);
+        authUrlObj.searchParams.set('client_id', clientId);
+        authUrlObj.searchParams.set('response_type', 'code');
+        authUrlObj.searchParams.set('redirect_uri', redirectUri);
+        authUrlObj.searchParams.set('scope', 'memories:read memories:write memories:delete');
+        authUrlObj.searchParams.set('code_challenge', codeChallenge);
+        authUrlObj.searchParams.set('code_challenge_method', 'S256');
+        authUrlObj.searchParams.set('state', state);
+        
+        // Start callback server
+        const server = http.createServer(async (req: http.IncomingMessage, res: http.ServerResponse) => {
+          try {
+            if (!req.url) {
+              res.writeHead(400, { 'Content-Type': 'text/plain' });
+              res.end('Missing URL');
+              return;
+            }
+            const url = new URL(req.url, `http://localhost:${CALLBACK_PORT}`);
+            
+            if (url.pathname === '/callback') {
+              const code = url.searchParams.get('code');
+              const returnedState = url.searchParams.get('state');
+              const error = url.searchParams.get('error');
+              
+              // Validate state
+              const storedState = await this.storage.retrieve('oauth_state');
+              if (returnedState !== storedState) {
+                res.writeHead(400, { 'Content-Type': 'text/html' });
+                res.end('<h1>Invalid state parameter</h1>');
+                server.close();
+                reject(new Error('Invalid state parameter'));
+                return;
+              }
+              
+              if (error) {
+                res.writeHead(400, { 'Content-Type': 'text/html' });
+                res.end(`<h1>OAuth Error: ${error}</h1>`);
+                server.close();
+                reject(new Error(`OAuth error: ${error}`));
+                return;
+              }
+              
+              if (code) {
+                // Exchange code for token
+                const token = await this.exchangeCodeForToken(code, codeVerifier, redirectUri, authUrl);
+                
+                // Store token securely
+                await this.apiKeyManager.storeApiKey(token.access_token);
+                if (token.refresh_token) {
+                  await this.storage.store('refresh_token', token.refresh_token);
+                }
+                
+                this.isAuthenticated = true;
+                
+                // Send success response
+                res.writeHead(200, { 'Content-Type': 'text/html' });
+                res.end(`
+                  <html>
+                    <head><title>Authentication Success</title></head>
+                    <body>
+                      <h1 style="color: green;">✅ Authentication Successful!</h1>
+                      <p>You can close this window and return to Cursor.</p>
+                      <script>setTimeout(() => window.close(), 2000);</script>
+                    </body>
+                  </html>
+                `);
+                
+                // Cleanup
+                await this.storage.delete('oauth_code_verifier');
+                await this.storage.delete('oauth_state');
+                server.close();
+                resolve(true);
+              }
+            } else {
+              res.writeHead(404, { 'Content-Type': 'text/plain' });
+              res.end('Not found');
+            }
+          } catch (err) {
+            res.writeHead(500, { 'Content-Type': 'text/html' });
+            res.end(`<h1>Error: ${err instanceof Error ? err.message : 'Unknown error'}</h1>`);
+            server.close();
+            reject(err);
+          }
+        });
+        
+        server.listen(CALLBACK_PORT, 'localhost', () => {
+          // Open browser
+          vscode.env.openExternal(vscode.Uri.parse(authUrlObj.toString()));
+        });
+        
+        // Timeout after 5 minutes
+        setTimeout(() => {
+          server.close();
+          reject(new Error('OAuth authentication timeout'));
+        }, 5 * 60 * 1000);
+        
+      } catch (error) {
+        reject(error);
       }
-      return false;
-    } catch (error) {
-      console.error('OAuth authentication failed:', error);
-      return false;
+    });
+  }
+  
+  private generateCodeVerifier(): string {
+    return crypto.randomBytes(32).toString('base64url');
+  }
+  
+  private generateCodeChallenge(verifier: string): string {
+    return crypto.createHash('sha256').update(verifier).digest('base64url');
+  }
+  
+  private generateState(): string {
+    return crypto.randomBytes(16).toString('hex');
+  }
+  
+  private async exchangeCodeForToken(
+    code: string, 
+    codeVerifier: string, 
+    redirectUri: string,
+    authUrl: string
+  ): Promise<{ access_token: string; refresh_token?: string }> {
+    const tokenUrl = new URL('/oauth/token', authUrl);
+    
+    const body = new URLSearchParams({
+      grant_type: 'authorization_code',
+      client_id: 'cursor-extension',
+      code,
+      redirect_uri: redirectUri,
+      code_verifier: codeVerifier
+    });
+    
+    const response = await fetch(tokenUrl.toString(), {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'Accept': 'application/json'
+      },
+      body: body.toString()
+    });
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Token exchange failed: ${response.status} ${errorText}`);
     }
+    
+    const tokenData = await response.json() as {
+      access_token: string;
+      refresh_token?: string;
+      expires_in?: number;
+    };
+    
+    return {
+      access_token: tokenData.access_token,
+      refresh_token: tokenData.refresh_token
+    };
   }
 
   /**
