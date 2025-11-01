@@ -6,6 +6,7 @@
 import * as vscode from 'vscode';
 import * as http from 'http';
 import * as crypto from 'crypto';
+import { URL, URLSearchParams } from 'url';
 
 export interface SecureStorageProvider {
   store(key: string, value: string): Promise<void>;
@@ -283,7 +284,12 @@ export class ExtensionAuthHandler {
         // Start callback server
         const server = http.createServer(async (req: http.IncomingMessage, res: http.ServerResponse) => {
           try {
-            const url = new URL(req.url!, `http://localhost:${CALLBACK_PORT}`);
+            if (!req.url) {
+              res.writeHead(400, { 'Content-Type': 'text/plain' });
+              res.end('Missing URL');
+              return;
+            }
+            const url = new URL(req.url, `http://localhost:${CALLBACK_PORT}`);
             
             if (url.pathname === '/callback') {
               const code = url.searchParams.get('code');
