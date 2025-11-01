@@ -704,7 +704,19 @@ export class CLIConfig {
       return false;
     }
 
-    // Verify with server (security check)
+    // Token is locally valid - check if we need server validation
+    // Skip server validation if we have a recent lastValidated timestamp (within 24 hours)
+    const lastValidated = this.config.lastValidated;
+    const skipServerValidation = lastValidated &&
+      (Date.now() - new Date(lastValidated).getTime()) < (24 * 60 * 60 * 1000); // 24 hours
+
+    if (skipServerValidation) {
+      // Trust the local validation if it was recently validated
+      this.authCheckCache = { isValid: locallyValid, timestamp: Date.now() };
+      return locallyValid;
+    }
+
+    // Verify with server (security check) for tokens that haven't been validated recently
     try {
       const axios = (await import('axios')).default;
 
@@ -729,16 +741,30 @@ export class CLIConfig {
       }
 
       if (!response || response.data.valid !== true) {
+        // Server says invalid - but if locally valid and recent, trust local
+        if (locallyValid) {
+          if (process.env.CLI_VERBOSE === 'true') {
+            console.warn('⚠️  Server validation failed, but token is locally valid - using local validation');
+          }
+          this.authCheckCache = { isValid: locallyValid, timestamp: Date.now() };
+          return locallyValid;
+        }
         this.authCheckCache = { isValid: false, timestamp: Date.now() };
         return false;
       }
+
+      // Update lastValidated on successful server validation
+      this.config.lastValidated = new Date().toISOString();
+      await this.save().catch(() => { }); // Don't fail auth check if save fails
 
       this.authCheckCache = { isValid: true, timestamp: Date.now() };
       return true;
     } catch {
       // If all server checks fail, fall back to local validation
       // This allows offline usage but is less secure
-      console.warn('⚠️  Unable to verify token with server, using local validation');
+      if (process.env.CLI_VERBOSE === 'true') {
+        console.warn('⚠️  Unable to verify token with server, using local validation');
+      }
       this.authCheckCache = { isValid: locallyValid, timestamp: Date.now() };
       return locallyValid;
     }
