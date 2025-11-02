@@ -2,7 +2,6 @@ import * as vscode from 'vscode';
 import * as crypto from 'crypto';
 import * as http from 'http';
 import { URL } from 'url';
-import { setTimeout } from 'timers';
 
 export interface AuthToken {
     access_token: string;
@@ -59,6 +58,9 @@ export class AuthenticationService {
 
     async authenticateWithBrowser(cancellationToken?: vscode.CancellationToken): Promise<boolean> {
         return new Promise((resolve, reject) => {
+            // Track timeout to prevent race conditions (#43)
+            let timeoutId: NodeJS.Timeout | undefined;
+
             const config = vscode.workspace.getConfiguration('lanonasis');
             const authUrl = config.get<string>('authUrl', 'https://auth.lanonasis.com');
             
@@ -69,7 +71,7 @@ export class AuthenticationService {
             
             // Start local callback server
             this.server = http.createServer((req, res) => {
-                this.handleCallback(req, res, codeVerifier, state, resolve, reject);
+                this.handleCallback(req, res, codeVerifier, state, resolve, reject, timeoutId);
             });
 
             this.server.listen(AuthenticationService.CALLBACK_PORT, 'localhost', () => {
@@ -98,7 +100,7 @@ export class AuthenticationService {
             }
 
             // Timeout after 5 minutes
-            setTimeout(() => {
+            timeoutId = setTimeout(() => {
                 this.cleanup();
                 reject(new Error('Authentication timeout'));
             }, 5 * 60 * 1000);
@@ -166,7 +168,8 @@ export class AuthenticationService {
         codeVerifier: string,
         expectedState: string,
         resolve: (value: boolean) => void,
-        reject: (reason: any) => void
+        reject: (reason: any) => void,
+        timeoutId?: NodeJS.Timeout
     ): Promise<void> {
         try {
             const url = new URL(req.url!, `http://localhost:${AuthenticationService.CALLBACK_PORT}`);
@@ -220,9 +223,11 @@ export class AuthenticationService {
                 </html>
             `);
 
+            if (timeoutId) clearTimeout(timeoutId);
             this.cleanup();
             resolve(true);
         } catch (error) {
+            if (timeoutId) clearTimeout(timeoutId);
             // Send error response
             res.writeHead(400, { 'Content-Type': 'text/html' });
             res.end(`
@@ -243,6 +248,7 @@ export class AuthenticationService {
                 </html>
             `);
 
+            if (timeoutId) clearTimeout(timeoutId);
             this.cleanup();
             reject(error);
         }

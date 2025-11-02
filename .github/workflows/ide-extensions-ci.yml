@@ -28,15 +28,11 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
-
-      - name: Ensure lockfile
-        run: |
-          if [ ! -f package-lock.json ]; then
-            npm install --package-lock-only --ignore-scripts --no-audit --no-fund
-          fi
+          cache: 'npm'
+          cache-dependency-path: IDE-EXTENSIONS/${{ matrix.extension }}/package-lock.json
 
       - name: Install deps
-        run: npm install --ignore-scripts --no-audit --no-fund
+        run: npm ci --ignore-scripts
 
       - name: Lint
         run: npm run lint --if-present
