@@ -39,10 +39,11 @@ const vscode = __importStar(require("vscode"));
 const MemoryTreeProvider_1 = require("./providers/MemoryTreeProvider");
 const MemoryCompletionProvider_1 = require("./providers/MemoryCompletionProvider");
 const ApiKeyTreeProvider_1 = require("./providers/ApiKeyTreeProvider");
+const MemorySidebarProvider_1 = require("./panels/MemorySidebarProvider");
 const MemoryService_1 = require("./services/MemoryService");
 const ApiKeyService_1 = require("./services/ApiKeyService");
-const AuthenticationService_1 = require("./auth/AuthenticationService");
 const WindsurfAiAssistant_1 = require("./utils/WindsurfAiAssistant");
+const AuthenticationService_1 = require("./auth/AuthenticationService");
 function activate(context) {
     console.log('Lanonasis Memory Extension for Windsurf is now active');
     // Initialize authentication service with Windsurf-optimized settings
@@ -52,7 +53,10 @@ function activate(context) {
     const apiKeyService = new ApiKeyService_1.ApiKeyService();
     // Initialize Windsurf AI Assistant
     const aiAssistant = new WindsurfAiAssistant_1.WindsurfAiAssistant(memoryService);
-    // Initialize tree providers
+    // Initialize sidebar provider (modern UI)
+    const sidebarProvider = new MemorySidebarProvider_1.MemorySidebarProvider(context.extensionUri, memoryService);
+    context.subscriptions.push(vscode.window.registerWebviewViewProvider(MemorySidebarProvider_1.MemorySidebarProvider.viewType, sidebarProvider));
+    // Initialize tree providers (optional legacy view)
     const memoryTreeProvider = new MemoryTreeProvider_1.MemoryTreeProvider(memoryService, authService);
     const apiKeyTreeProvider = new ApiKeyTreeProvider_1.ApiKeyTreeProvider(apiKeyService);
     vscode.window.registerTreeDataProvider('lanonasisMemories', memoryTreeProvider);

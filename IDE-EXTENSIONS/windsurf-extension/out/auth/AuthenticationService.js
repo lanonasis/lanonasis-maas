@@ -75,6 +75,8 @@ class AuthenticationService {
     }
     async authenticateWithBrowser(cancellationToken) {
         return new Promise((resolve, reject) => {
+            // Track timeout to prevent race conditions (#43)
+            let timeoutId;
             const config = vscode.workspace.getConfiguration('lanonasis');
             const authUrl = config.get('authUrl', 'https://auth.lanonasis.com');
             // Generate PKCE challenge
@@ -83,13 +85,13 @@ class AuthenticationService {
             const state = crypto.randomBytes(32).toString('hex');
             // Start local callback server
             this.server = http.createServer((req, res) => {
-                this.handleCallback(req, res, codeVerifier, state, resolve, reject);
+                this.handleCallback(req, res, codeVerifier, state, resolve, reject, timeoutId);
             });
             this.server.listen(AuthenticationService.CALLBACK_PORT, 'localhost', () => {
                 console.log(`Callback server listening on port ${AuthenticationService.CALLBACK_PORT}`);
                 // Build OAuth2 authorization URL
                 const authUrlObj = new url_1.URL('/oauth/authorize', authUrl);
-                authUrlObj.searchParams.set('client_id', 'cursor-extension');
+                authUrlObj.searchParams.set('client_id', 'windsurf-extension');
                 authUrlObj.searchParams.set('response_type', 'code');
                 authUrlObj.searchParams.set('scope', 'memories:read memories:write memories:delete');
                 authUrlObj.searchParams.set('redirect_uri', `http://localhost:${AuthenticationService.CALLBACK_PORT}${AuthenticationService.CALLBACK_PATH}`);
@@ -107,7 +109,7 @@ class AuthenticationService {
                 });
             }
             // Timeout after 5 minutes
-            setTimeout(() => {
+            timeoutId = setTimeout(() => {
                 this.cleanup();
                 reject(new Error('Authentication timeout'));
             }, 5 * 60 * 1000);
@@ -160,7 +162,7 @@ class AuthenticationService {
         return (this.authToken && this.isTokenValid(this.authToken)) ||
             (this.getStoredApiKey() !== null);
     }
-    async handleCallback(req, res, codeVerifier, expectedState, resolve, reject) {
+    async handleCallback(req, res, codeVerifier, expectedState, resolve, reject, timeoutId) {
         try {
             const url = new url_1.URL(req.url, `http://localhost:${AuthenticationService.CALLBACK_PORT}`);
             if (url.pathname !== AuthenticationService.CALLBACK_PATH) {
@@ -204,10 +206,14 @@ class AuthenticationService {
                     </body>
                 </html>
             `);
+            if (timeoutId)
+                clearTimeout(timeoutId);
             this.cleanup();
             resolve(true);
         }
         catch (error) {
+            if (timeoutId)
+                clearTimeout(timeoutId);
             // Send error response
             res.writeHead(400, { 'Content-Type': 'text/html' });
             res.end(`
@@ -227,6 +233,8 @@ class AuthenticationService {
                     </body>
                 </html>
             `);
+            if (timeoutId)
+                clearTimeout(timeoutId);
             this.cleanup();
             reject(error);
         }
@@ -237,7 +245,7 @@ class AuthenticationService {
         const tokenUrl = new url_1.URL('/oauth/token', authUrl);
         const body = new URLSearchParams({
             grant_type: 'authorization_code',
-            client_id: 'cursor-extension',
+            client_id: 'windsurf-extension',
             code,
             redirect_uri: `http://localhost:${AuthenticationService.CALLBACK_PORT}${AuthenticationService.CALLBACK_PATH}`,
             code_verifier: codeVerifier
@@ -272,7 +280,7 @@ class AuthenticationService {
         const tokenUrl = new url_1.URL('/oauth/token', authUrl);
         const body = new URLSearchParams({
             grant_type: 'refresh_token',
-            client_id: 'cursor-extension',
+            client_id: 'windsurf-extension',
             refresh_token: this.authToken.refresh_token
         });
         const response = await fetch(tokenUrl.toString(), {

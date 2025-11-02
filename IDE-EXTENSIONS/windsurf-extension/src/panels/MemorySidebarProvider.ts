@@ -1,6 +1,5 @@
 import * as vscode from 'vscode';
 import { MemoryService } from '../services/MemoryService';
-import { EnhancedMemoryService } from '../services/EnhancedMemoryService';
 import type { IMemoryService } from '../services/IMemoryService';
 import { MemoryEntry, MemoryType } from '../types/memory-aligned';
 
@@ -81,8 +80,9 @@ export class MemorySidebarProvider implements vscode.WebviewViewProvider {
                 });
 
                 const memories = await this.memoryService.listMemories(50);
-                const enhancedInfo = this.memoryService instanceof EnhancedMemoryService 
-                    ? this.memoryService.getCapabilities()
+                // Enhanced service capabilities (if available)
+                const enhancedInfo = (this.memoryService as any).getCapabilities 
+                    ? (this.memoryService as any).getCapabilities()
                     : null;
 
                 this._view.webview.postMessage({

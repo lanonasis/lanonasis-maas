@@ -1,5 +1,18 @@
 # Change Log
 
+## [1.4.0] - 2025-11-02
+
+### Security
+- 🔐 Applied OAuth timeout race condition fixes (Issues #43, #44, #45)
+- 🔐 Implemented proper timeout tracking to prevent double-rejection
+- 🔐 Added clearTimeout on all authentication exit paths
+- 🔐 Maintained backward-compatible legacy API key fallback
+
+### Technical
+- ♻️ Standardized authentication patterns across VSCode, Cursor, and Windsurf extensions
+- 📝 Updated type definitions for consistent interface usage
+- ⚡ Improved error handling in OAuth flows
+
 ## [1.3.2] - 2025-10-18
 
 ### Added
