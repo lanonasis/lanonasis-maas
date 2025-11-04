@@ -1,0 +1,31 @@
+<svg width="256" height="256" viewBox="0 0 256 256" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background Circle -->
+  <circle cx="128" cy="128" r="120" fill="#1B365D"/>
+  
+  <!-- Outer Ring (Memory) -->
+  <circle cx="128" cy="128" r="90" stroke="#34E8BB" stroke-width="8" fill="none" opacity="0.8"/>
+  
+  <!-- Middle Ring (AI Processing) -->
+  <circle cx="128" cy="128" r="65" stroke="#34E8BB" stroke-width="6" fill="none" opacity="0.6"/>
+  
+  <!-- Inner Core -->
+  <circle cx="128" cy="128" r="40" fill="#34E8BB"/>
+  
+  <!-- Center Icon (Brain/Memory Symbol) -->
+  <path d="M128 98C115.85 98 106 107.85 106 120C106 124.5 107.5 128.6 110 131.8C110 131.8 111 133 111 135C111 138 113 140 116 140H140C143 140 145 138 145 135C145 133 146 131.8 146 131.8C148.5 128.6 150 124.5 150 120C150 107.85 140.15 98 128 98Z" fill="#1B365D"/>
+  
+  <!-- Memory Nodes -->
+  <circle cx="128" cy="108" r="4" fill="#FFFFFF"/>
+  <circle cx="118" cy="118" r="4" fill="#FFFFFF"/>
+  <circle cx="138" cy="118" r="4" fill="#FFFFFF"/>
+  <circle cx="128" cy="128" r="6" fill="#FFFFFF"/>
+  
+  <!-- Connection Lines -->
+  <line x1="128" y1="108" x2="118" y2="118" stroke="#FFFFFF" stroke-width="2" opacity="0.6"/>
+  <line x1="128" y1="108" x2="138" y2="118" stroke="#FFFFFF" stroke-width="2" opacity="0.6"/>
+  <line x1="118" y1="118" x2="128" y2="128" stroke="#FFFFFF" stroke-width="2" opacity="0.6"/>
+  <line x1="138" y1="118" x2="128" y2="128" stroke="#FFFFFF" stroke-width="2" opacity="0.6"/>
+  
+  <!-- Brand Mark "L" -->
+  <text x="128" y="180" font-family="Arial, sans-serif" font-size="48" font-weight="bold" fill="#34E8BB" text-anchor="middle">L</text>
+</svg>
