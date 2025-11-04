@@ -1,24 +1,50 @@
 #!/bin/bash
 
 # Publish VS Code Extension to Marketplace
-# Version 1.3.2 - Web Compatibility & CLI v3.0.6 Integration
+# Version 1.4.0 - OAuth2 + Secure API Key Management
 
 echo "🚀 Publishing LanOnasis Memory Extension to VS Code Marketplace"
 echo "=========================================================="
 
-cd vscode-extension || exit 1
+# Ensure we're in the IDE-EXTENSIONS directory
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+cd "$SCRIPT_DIR/vscode-extension" || exit 1
 
 # Check current version
 CURRENT_VERSION=$(node -p "require('./package.json').version")
 echo "📦 Current version: $CURRENT_VERSION"
 
+# Pre-publish checks
+echo ""
+echo "🔍 Running pre-publish checks..."
+if [ ! -f "images/icon.png" ]; then
+    echo "❌ Error: Icon file missing (images/icon.png)"
+    exit 1
+fi
+if [ ! -f "README.md" ]; then
+    echo "❌ Error: README.md missing"
+    exit 1
+fi
+if [ ! -f "CHANGELOG.md" ]; then
+    echo "⚠️  Warning: CHANGELOG.md missing (recommended)"
+fi
+
+# Install dependencies
+echo "📥 Installing dependencies..."
+npm install
+
 # Build extension
 echo "🔨 Building extension..."
 npm run compile
 
+if [ $? -ne 0 ]; then
+    echo "❌ Compilation failed!"
+    exit 1
+fi
+
 # Package extension
 echo "📦 Packaging extension..."
-vsce package --no-yarn
+vsce package --no-dependencies
 
 if [ -f "lanonasis-memory-${CURRENT_VERSION}.vsix" ]; then
     echo "✅ Package created: lanonasis-memory-${CURRENT_VERSION}.vsix"
