@@ -1,4 +1,4 @@
-import { MemoryEntry, MemorySearchResult, CreateMemoryRequest, UpdateMemoryRequest, MemoryStats, MemoryType } from '@/types/memory';
+import { MemoryEntry, MemorySearchResult, CreateMemoryRequest, UpdateMemoryRequest, MemoryStats, MemoryType } from '../types/memory';
 interface SearchFilters {
     memory_types?: MemoryType[];
     tags?: string[];
