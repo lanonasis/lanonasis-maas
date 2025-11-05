@@ -1,8 +1,8 @@
 {
   "name": "lanonasis-memory-windsurf",
   "displayName": "LanOnasis Memory Assistant for Windsurf",
-  "description": "Memory as a Service integration for Windsurf - AI-powered memory management with 17 enterprise tools",
-  "version": "1.4.0",
+  "description": "Memory as a Service integration optimized for Windsurf IDE - AI-powered memory management with semantic search and enhanced CLI/MCP features",
+  "version": "1.4.4",
   "publisher": "LanOnasis",
   "icon": "images/icon.png",
   "repository": {
