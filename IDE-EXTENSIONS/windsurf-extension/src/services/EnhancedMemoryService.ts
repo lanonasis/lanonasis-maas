@@ -155,6 +155,10 @@ export class EnhancedMemoryService {
     this.statusBarItem.show();
   }
 
+  public isAuthenticated(): boolean {
+    return this.client !== null;
+  }
+
   public getCapabilities(): CLICapabilities | null {
     return this.cliCapabilities;
   }
