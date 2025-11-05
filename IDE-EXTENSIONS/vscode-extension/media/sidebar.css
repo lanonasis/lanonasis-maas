@@ -318,6 +318,49 @@ body {
     opacity: 0.9;
 }
 
+.onboarding-card {
+    display: flex;
+    gap: 12px;
+    padding: 16px;
+    border-radius: var(--border-radius);
+    border: 1px solid rgba(99, 102, 241, 0.25);
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.08), rgba(129, 140, 248, 0.05));
+    margin-bottom: 16px;
+    align-items: center;
+}
+
+.onboarding-icon {
+    font-size: 28px;
+}
+
+.onboarding-content h3 {
+    margin: 0;
+    font-size: 16px;
+    color: var(--vscode-foreground);
+}
+
+.onboarding-content p {
+    margin: 6px 0 12px 0;
+    color: var(--vscode-descriptionForeground);
+    font-size: 13px;
+    line-height: 1.4;
+}
+
+.onboarding-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.btn-tertiary {
+    background: rgba(99, 102, 241, 0.08);
+    color: var(--vscode-textLink-foreground);
+}
+
+.btn-tertiary:hover {
+    background: rgba(99, 102, 241, 0.15);
+}
+
 /* Error State */
 .error-state {
     padding: 32px 16px;

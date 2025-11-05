@@ -1,5 +1,22 @@
 # Change Log
 
+## [1.4.6] - 2025-11-06
+
+### Fixed
+- ✅ Ensure the API Keys tree view registers correctly by activating on demand and honoring the `lanonasis.enableApiKeyManagement` setting.
+- 🛠️ Updated activation events so sidebar, memories, and API key commands load the extension reliably after VS Code restarts.
+
+### Maintenance
+- 📦 Bumped marketplace version to 1.4.6 ahead of the next VSIX publish.
+
+## [1.4.5] - 2025-11-05
+
+### Added
+- 🔑 Introduced explicit authentication and logout commands to align with the shared OAuth + API key workflow.
+
+### Fixed
+- 🧭 Refreshed sidebar and services when credentials change so command palette flows stay in sync.
+
 ## [1.4.4] - 2025-11-05
 
 ### Maintenance
@@ -69,3 +86,4 @@
 - Memory as a Service (MaaS) SDK integration
 - Secure API key storage in VSCode settings
 - Multi-tenant authentication support
+
