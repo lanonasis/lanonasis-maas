@@ -24,7 +24,7 @@ const envSchema = z.object({
     MCP_MAX_TOOLS_PER_KEY: z.string().transform(Number).default('10'),
     // OpenAI
     OPENAI_API_KEY=REDACTED_OPENAI_API_KEY
-    // Redis (OPTIONAL for API key caching - will use in-memory for dev)
+    // Redis (development can fall back to in-memory; production requires a Redis instance)
     REDIS_URL: z.string().url().optional(),
     REDIS_PASSWORD: z.string().optional(),
     REDIS_KEY_PREFIX: z.string().default('maas:'),
@@ -130,6 +130,28 @@ const validateConditionalRequirements = (config) => {
     // API key prefix validation for production
     if (config.NODE_ENV === 'production' && config.API_KEY_PREFIX_PRODUCTION.includes('test')) {
         throw new Error('Production API key prefix should not contain "test"');
+    }
+    if (!config.REDIS_URL) {
+        if (config.NODE_ENV !== 'development') {
+            throw new Error('Redis configuration required: set REDIS_URL when running outside development to enable shared caching and rate limiting');
+        }
+        const explicitlyConfiguredDistributedFeatures = [];
+        if (typeof process.env.PROXY_TOKEN_ENABLED === 'string') {
+            const normalized = process.env.PROXY_TOKEN_ENABLED.trim().toLowerCase();
+            const truthyValues = new Set(['true', '1', 'yes', 'on']);
+            if (truthyValues.has(normalized)) {
+                explicitlyConfiguredDistributedFeatures.push('proxy token authentication (PROXY_TOKEN_ENABLED)');
+            }
+        }
+        if (typeof process.env.REDIS_SESSION_TTL === 'string' && process.env.REDIS_SESSION_TTL.trim() !== '') {
+            explicitlyConfiguredDistributedFeatures.push('session TTL management (REDIS_SESSION_TTL)');
+        }
+        if (typeof process.env.RATE_LIMIT_MAX_REQUESTS === 'string' && process.env.RATE_LIMIT_MAX_REQUESTS.trim() !== '') {
+            explicitlyConfiguredDistributedFeatures.push('API rate limiting (RATE_LIMIT_MAX_REQUESTS)');
+        }
+        if (explicitlyConfiguredDistributedFeatures.length > 0) {
+            throw new Error(`Redis configuration required: REDIS_URL must be set when ${explicitlyConfiguredDistributedFeatures.join(', ')} is configured for distributed coordination`);
+        }
     }
     return config;
 };
