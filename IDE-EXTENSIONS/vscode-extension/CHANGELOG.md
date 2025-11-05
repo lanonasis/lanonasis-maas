@@ -1,5 +1,18 @@
 # Change Log
 
+## [1.4.4] - 2025-11-05
+
+### Maintenance
+- 🔄 Version alignment across all IDE extensions (VSCode, Cursor, Windsurf)
+- 📦 Package manager standardization fixes
+- 🐛 Consistency improvements for marketplace releases
+
+## [1.4.2] - 2025-11-04
+
+### Fixed
+- 🐛 Extension activation events for sidebar and tree views
+- 🎨 Activity bar icon visibility improvements
+
 ## [1.4.0] - 2025-11-02
 
 ### Security
