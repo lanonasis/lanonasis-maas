@@ -51,12 +51,6 @@ export class MemorySidebarProvider implements vscode.WebviewViewProvider {
                 case 'getApiKey':
                     await vscode.env.openExternal(vscode.Uri.parse('https://api.lanonasis.com'));
                     break;
-                case 'installCli':
-                    await vscode.env.openExternal(vscode.Uri.parse('https://www.npmjs.com/package/@lanonasis/cli'));
-                    break;
-                case 'openDocs':
-                    await vscode.env.openExternal(vscode.Uri.parse('https://docs.lanonasis.com/ide/vscode'));
-                    break;
             }
         });
 
