@@ -6,7 +6,7 @@ export class MemoryCompletionProvider implements vscode.CompletionItemProvider {
     private cache: Map<string, { results: MemorySearchResult[]; timestamp: number }> = new Map();
     private readonly cacheTimeout = 5 * 60 * 1000; // 5 minutes
 
-    constructor(private memoryService: IMemoryService) {}
+    constructor(private memoryService: IMemoryService) { }
 
     async provideCompletionItems(
         document: vscode.TextDocument,
@@ -21,7 +21,7 @@ export class MemoryCompletionProvider implements vscode.CompletionItemProvider {
         // Get the current line and extract context
         const line = document.lineAt(position);
         const lineText = line.text.substring(0, position.character);
-        
+
         // Look for trigger characters and extract query
         const query = this.extractQuery(lineText, context.triggerCharacter);
         if (!query || query.length < 2) {
@@ -53,7 +53,7 @@ export class MemoryCompletionProvider implements vscode.CompletionItemProvider {
     private async searchWithCache(query: string): Promise<MemorySearchResult[]> {
         const cacheKey = query.toLowerCase();
         const cached = this.cache.get(cacheKey);
-        
+
         if (cached && Date.now() - cached.timestamp < this.cacheTimeout) {
             return cached.results;
         }
@@ -126,10 +126,10 @@ export class MemoryCompletionProvider implements vscode.CompletionItemProvider {
             item.insertText = insertText;
             item.documentation = new vscode.MarkdownString(documentation);
             item.detail = `${memory.memory_type} • ${new Date(memory.created_at).toLocaleDateString()} • Score: ${Math.round(memory.similarity_score * 100)}%`;
-            
+
             // Add tags to filter text for better search
             item.filterText = `${memory.title} ${memory.tags?.join(' ')} ${memory.memory_type}`;
-            
+
             // Sort by relevance score
             item.sortText = String(1 - memory.similarity_score).padStart(5, '0') + String(index).padStart(3, '0');
 
@@ -147,7 +147,7 @@ export class MemoryCompletionProvider implements vscode.CompletionItemProvider {
     private formatAsComment(memory: MemorySearchResult, languageId: string): string {
         const commentPrefix = this.getCommentPrefix(languageId);
         const lines = memory.content.split('\n');
-        
+
         return lines.map(line => `${commentPrefix} ${line}`).join('\n');
     }
 
@@ -155,7 +155,7 @@ export class MemoryCompletionProvider implements vscode.CompletionItemProvider {
         // Try to extract code blocks from memory content
         const codeBlockRegex = /```[\s\S]*?```/g;
         const codeBlocks = memory.content.match(codeBlockRegex);
-        
+
         if (codeBlocks && codeBlocks.length > 0) {
             // Return the first code block without markdown formatting
             return codeBlocks[0].replace(/```\w*\n?/g, '').replace(/```$/g, '');
