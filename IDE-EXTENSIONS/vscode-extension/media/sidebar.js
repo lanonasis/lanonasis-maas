@@ -114,17 +114,17 @@
                     </span>
                 </div>
                 ${state.enhancedMode ? getEnhancedBannerHTML() : ''}
-
+                
                 <div class="search-container">
                     <span class="search-icon">🔍</span>
-                    <input
+                    <input 
                         type="text" 
                         class="search-box" 
                         id="search-input"
                         placeholder="Search memories..." 
                     />
                 </div>
-
+                
                 <div class="action-buttons">
                     <button class="btn" id="create-memory-btn">
                         <span class="btn-icon">➕ Create</span>
@@ -135,32 +135,7 @@
                 </div>
             </div>
 
-            ${getOnboardingHTML()}
-
             ${hasMemories ? getMemoriesHTML() : getEmptyStateHTML()}
-        `;
-    }
-
-    function getOnboardingHTML() {
-        return `
-            <div class="onboarding-card">
-                <div class="onboarding-icon">✨</div>
-                <div class="onboarding-content">
-                    <h3>Getting Started</h3>
-                    <p>Authenticate, sync the CLI, and explore the memory assistant workflow.</p>
-                    <div class="onboarding-actions">
-                        <button class="btn" id="quick-auth-btn">
-                            <span class="btn-icon">🔑 Authenticate</span>
-                        </button>
-                        <button class="btn btn-secondary" id="install-cli-btn">
-                            <span class="btn-icon">📦 Install CLI</span>
-                        </button>
-                        <button class="btn btn-tertiary" id="open-docs-btn">
-                            <span class="btn-icon">📘 Docs</span>
-                        </button>
-                    </div>
-                </div>
-            </div>
         `;
     }
 
@@ -270,9 +245,6 @@
         const createBtn = document.getElementById('create-memory-btn');
         const createFirstBtn = document.getElementById('create-first-memory-btn');
         const refreshBtn = document.getElementById('refresh-btn');
-        const authCta = document.getElementById('quick-auth-btn');
-        const installCliBtn = document.getElementById('install-cli-btn');
-        const openDocsBtn = document.getElementById('open-docs-btn');
 
         createBtn?.addEventListener('click', () => {
             vscode.postMessage({ type: 'createMemory' });
@@ -284,18 +256,6 @@
 
         refreshBtn?.addEventListener('click', () => {
             vscode.postMessage({ type: 'refresh' });
-        });
-
-        authCta?.addEventListener('click', () => {
-            vscode.postMessage({ type: 'authenticate' });
-        });
-
-        installCliBtn?.addEventListener('click', () => {
-            vscode.postMessage({ type: 'installCli' });
-        });
-
-        openDocsBtn?.addEventListener('click', () => {
-            vscode.postMessage({ type: 'openDocs' });
         });
 
         // Memory type headers (toggle expand/collapse)
