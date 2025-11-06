@@ -5,10 +5,11 @@ import { ApiKeyTreeProvider } from './providers/ApiKeyTreeProvider';
 import { MemorySidebarProvider } from './panels/MemorySidebarProvider';
 import { MemoryService } from './services/MemoryService';
 import { EnhancedMemoryService } from './services/EnhancedMemoryService';
-import type { IMemoryService, IEnhancedMemoryService } from './services/IMemoryService';
+import type { IMemoryService } from './services/IMemoryService';
 import { ApiKeyService } from './services/ApiKeyService';
+import type { ApiKey, Project, CreateApiKeyRequest } from './services/ApiKeyService';
 import { SecureApiKeyService } from './services/SecureApiKeyService';
-import { MemoryType } from './types/memory-aligned';
+import { MemoryType, MemoryEntry, MemorySearchResult } from './types/memory-aligned';
 
 export async function activate(context: vscode.ExtensionContext) {
     console.log('Lanonasis Memory Extension is now active');
@@ -44,14 +45,14 @@ export async function activate(context: vscode.ExtensionContext) {
     );
 
     // Initialize tree providers (optional legacy view)
-    const memoryTreeProvider = new MemoryTreeProvider(memoryService as any);
+    const memoryTreeProvider = new MemoryTreeProvider(memoryService);
     const apiKeyTreeProvider = new ApiKeyTreeProvider(apiKeyService);
 
     vscode.window.registerTreeDataProvider('lanonasisMemories', memoryTreeProvider);
     vscode.window.registerTreeDataProvider('lanonasisApiKeys', apiKeyTreeProvider);
 
     // Initialize completion provider
-    const completionProvider = new MemoryCompletionProvider(memoryService as any);
+    const completionProvider = new MemoryCompletionProvider(memoryService);
     context.subscriptions.push(
         vscode.languages.registerCompletionItemProvider(
             { scheme: 'file' },
@@ -73,15 +74,15 @@ export async function activate(context: vscode.ExtensionContext) {
     // Register commands
     const commands = [
         vscode.commands.registerCommand('lanonasis.searchMemory', async () => {
-            await searchMemories(memoryService as any);
+            await searchMemories(memoryService);
         }),
 
         vscode.commands.registerCommand('lanonasis.createMemory', async () => {
-            await createMemoryFromSelection(memoryService as any);
+            await createMemoryFromSelection(memoryService);
         }),
 
         vscode.commands.registerCommand('lanonasis.createMemoryFromFile', async () => {
-            await createMemoryFromFile(memoryService as any);
+            await createMemoryFromFile(memoryService);
         }),
 
         vscode.commands.registerCommand('lanonasis.authenticate', async () => {
@@ -94,12 +95,12 @@ export async function activate(context: vscode.ExtensionContext) {
             await sidebarProvider.refresh();
         }),
 
-        vscode.commands.registerCommand('lanonasis.openMemory', (memory: any) => {
+        vscode.commands.registerCommand('lanonasis.openMemory', (memory: MemoryEntry) => {
             openMemoryInEditor(memory);
         }),
 
         vscode.commands.registerCommand('lanonasis.switchMode', async () => {
-            await switchConnectionMode(memoryService as any);
+            await switchConnectionMode(memoryService);
         }),
 
         // API Key Management Commands
@@ -258,7 +259,7 @@ async function checkAuthenticationStatus() {
     }
 }
 
-async function searchMemories(memoryService: MemoryService) {
+async function searchMemories(memoryService: IMemoryService) {
     const query = await vscode.window.showInputBox({
         prompt: 'Search memories',
         placeHolder: 'Enter search query...'
@@ -280,7 +281,7 @@ async function searchMemories(memoryService: MemoryService) {
     }
 }
 
-async function showSearchResults(results: any[], query: string) {
+async function showSearchResults(results: MemorySearchResult[], query: string) {
     if (results.length === 0) {
         vscode.window.showInformationMessage(`No memories found for "${query}"`);
         return;
@@ -288,8 +289,8 @@ async function showSearchResults(results: any[], query: string) {
 
     const items = results.map(memory => ({
         label: memory.title,
-        description: memory.type,
-        detail: memory.content.substring(0, 100) + (memory.content.length > 100 ? '...' : ''),
+        description: memory.memory_type,
+        detail: `${memory.content.substring(0, 100)}${memory.content.length > 100 ? '...' : ''}`,
         memory
     }));
 

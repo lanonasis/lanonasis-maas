@@ -1,26 +1,58 @@
 import * as vscode from 'vscode';
-import {
-  EnhancedMemoryClient,
-  createEnhancedMemoryClient,
-  ConfigPresets,
-  Environment,
-  type EnhancedMemoryClientConfig,
-  type OperationResult,
-  type CLICapabilities
+import type {
+  EnhancedMemoryClient as EnhancedMemoryClientType,
+  EnhancedMemoryClientConfig,
+  OperationResult,
+  CLICapabilities,
+  PaginatedResponse,
+  CreateMemoryRequest as SDKCreateMemoryRequest,
+  SearchMemoryRequest as SDKSearchMemoryRequest,
+  MemoryEntry as SDKMemoryEntry,
+  MemorySearchResult as SDKMemorySearchResult,
+  UserMemoryStats as SDKUserMemoryStats
 } from '@lanonasis/memory-client';
 import { SecureApiKeyService } from './SecureApiKeyService';
-import { CreateMemoryRequest, SearchMemoryRequest, MemoryEntry, MemorySearchResult, MemoryType } from '../types/memory-aligned';
-import { IEnhancedMemoryService } from './IMemoryService';
+import { CreateMemoryRequest, SearchMemoryRequest, MemoryEntry, MemorySearchResult, MemoryType, UserMemoryStats } from '../types/memory-aligned';
+import { IEnhancedMemoryService, MemoryServiceCapabilities } from './IMemoryService';
+
+type MemoryClientModule = typeof import('@lanonasis/memory-client');
+type SDKMemoryType = SDKCreateMemoryRequest['memory_type'];
+
+let cachedMemoryClientModule: MemoryClientModule | undefined;
+let attemptedMemoryClientLoad = false;
+
+function getMemoryClientModule(): MemoryClientModule | undefined {
+  if (!attemptedMemoryClientLoad) {
+    attemptedMemoryClientLoad = true;
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      cachedMemoryClientModule = require('@lanonasis/memory-client') as MemoryClientModule;
+    } catch (error) {
+      console.warn('[EnhancedMemoryService] @lanonasis/memory-client not available. Falling back to basic service.', error);
+      cachedMemoryClientModule = undefined;
+    }
+  }
+
+  return cachedMemoryClientModule;
+}
 
 export class EnhancedMemoryService implements IEnhancedMemoryService {
-  private client: EnhancedMemoryClient | null = null;
+  private client: EnhancedMemoryClientType | null = null;
   private config: vscode.WorkspaceConfiguration;
   private statusBarItem: vscode.StatusBarItem;
   private cliCapabilities: CLICapabilities | null = null;
   private showPerformanceFeedback: boolean;
   private secureApiKeyService: SecureApiKeyService;
+  private readonly sdk: MemoryClientModule;
 
   constructor(secureApiKeyService: SecureApiKeyService) {
+    const sdkModule = getMemoryClientModule();
+
+    if (!sdkModule) {
+      throw new Error('@lanonasis/memory-client module not available');
+    }
+
+    this.sdk = sdkModule;
     this.secureApiKeyService = secureApiKeyService;
     this.config = vscode.workspace.getConfiguration('lanonasis');
     this.showPerformanceFeedback = this.config.get<boolean>('showPerformanceFeedback', false);
@@ -36,6 +68,7 @@ export class EnhancedMemoryService implements IEnhancedMemoryService {
   }
 
   private async initializeClient(): Promise<void> {
+    const { ConfigPresets, Environment, EnhancedMemoryClient } = this.sdk;
     const apiKey = await this.secureApiKeyService.getApiKey();
 
     if (!apiKey || apiKey.trim().length === 0) {
@@ -99,12 +132,14 @@ export class EnhancedMemoryService implements IEnhancedMemoryService {
 
     try {
       // Test if CLI integration is working
-      const testResult = await this.client.searchMemories({
+      const testRequest = this.toSDKSearchRequest({
         query: 'test connection',
         limit: 1,
         status: 'active',
         threshold: 0.1
-      } as any);
+      } satisfies SearchMemoryRequest);
+
+      const testResult = await this.client.searchMemories(testRequest);
 
       return {
         cliAvailable: testResult.source === 'cli',
@@ -112,7 +147,7 @@ export class EnhancedMemoryService implements IEnhancedMemoryService {
         authenticated: testResult.error === undefined,
         goldenContract: testResult.source === 'cli' // CLI available implies Golden Contract v1.5.2+
       };
-    } catch (error) {
+    } catch {
       return {
         cliAvailable: false,
         mcpSupport: false,
@@ -161,11 +196,12 @@ export class EnhancedMemoryService implements IEnhancedMemoryService {
     return this.client !== null;
   }
 
-  public getCapabilities(): CLICapabilities | null {
+  public getCapabilities(): MemoryServiceCapabilities | null {
     return this.cliCapabilities;
   }
 
   public async testConnection(apiKey?: string): Promise<void> {
+    const { ConfigPresets, EnhancedMemoryClient } = this.sdk;
     let testClient = this.client;
 
     if (apiKey) {
@@ -187,12 +223,14 @@ export class EnhancedMemoryService implements IEnhancedMemoryService {
     }
 
     // Test with enhanced client - this will try CLI first, then fallback to API
-    const result = await testClient.searchMemories({
+    const testRequest = this.toSDKSearchRequest({
       query: 'connection test',
       limit: 1,
       status: 'active',
       threshold: 0.1
-    } as any);
+    } satisfies SearchMemoryRequest);
+
+    const result = await testClient.searchMemories(testRequest);
 
     if (result.error) {
       throw new Error(result.error);
@@ -210,21 +248,14 @@ export class EnhancedMemoryService implements IEnhancedMemoryService {
       throw new Error('Not authenticated. Please configure your API key.');
     }
 
-    // Map VSCode memory types to SDK memory types
-    const mappedMemory = {
-      ...memory,
-      memory_type: this.mapMemoryType(memory.memory_type)
-    };
-
-    const result = await this.client.createMemory(mappedMemory as any);
+    const sdkMemory = this.toSDKCreateRequest(memory);
+    const result = await this.client.createMemory(sdkMemory);
 
     if (result.error || !result.data) {
       throw new Error(result.error || 'Failed to create memory');
     }
 
-    // Show information about which method was used
     this.showOperationFeedback('create', result);
-
     return this.convertSDKMemoryEntry(result.data);
   }
 
@@ -244,13 +275,9 @@ export class EnhancedMemoryService implements IEnhancedMemoryService {
       ...options
     };
 
-    // Convert VSCode memory types to SDK types for the search
-    const sdkSearchRequest = {
-      ...searchRequest,
-      memory_types: searchRequest.memory_types?.map(type => this.mapMemoryType(type))
-    };
+    const sdkSearchRequest = this.toSDKSearchRequest(searchRequest);
 
-    const result = await this.client.searchMemories(sdkSearchRequest as any);
+    const result = await this.client.searchMemories(sdkSearchRequest);
 
     if (result.error || !result.data) {
       throw new Error(result.error || 'Search failed');
@@ -291,7 +318,7 @@ export class EnhancedMemoryService implements IEnhancedMemoryService {
     // Ensure limit is within reasonable bounds
     const validatedLimit = Math.min(Math.max(1, Math.floor(limit)), 1000);
 
-    const result = await this.client.listMemories({
+    const result: OperationResult<PaginatedResponse<SDKMemoryEntry>> = await this.client.listMemories({
       limit: validatedLimit,
       sort: 'updated_at',
       order: 'desc'
@@ -301,7 +328,7 @@ export class EnhancedMemoryService implements IEnhancedMemoryService {
       throw new Error(result.error || 'Failed to fetch memories');
     }
 
-    return result.data.data.map((entry: any) => this.convertSDKMemoryEntry(entry));
+    return result.data.data.map(entry => this.convertSDKMemoryEntry(entry));
   }
 
   public async deleteMemory(id: string): Promise<void> {
@@ -318,7 +345,7 @@ export class EnhancedMemoryService implements IEnhancedMemoryService {
     this.showOperationFeedback('delete', result);
   }
 
-  public async getMemoryStats(): Promise<any> {
+  public async getMemoryStats(): Promise<UserMemoryStats> {
     if (!this.client) {
       throw new Error('Not authenticated. Please configure your API key.');
     }
@@ -329,10 +356,10 @@ export class EnhancedMemoryService implements IEnhancedMemoryService {
       throw new Error(result.error || 'Failed to fetch stats');
     }
 
-    return result.data;
+    return this.convertSDKUserMemoryStats(result.data);
   }
 
-  private showOperationFeedback(operation: string, result: OperationResult<any>): void {
+  private showOperationFeedback(operation: string, result: OperationResult<unknown>): void {
     if (!this.showPerformanceFeedback) return;
 
     const source = result.source === 'cli' ?
@@ -377,47 +404,87 @@ export class EnhancedMemoryService implements IEnhancedMemoryService {
     }
   }
 
-  private mapMemoryType(vscodeType: MemoryType): string {
-    // Map VSCode extension memory types to SDK memory types
-    const typeMap: Record<MemoryType, string> = {
-      'context': 'context',
-      'project': 'project',
-      'knowledge': 'knowledge',
-      'reference': 'reference',
-      'conversation': 'context', // Map conversation to context
-      'personal': 'personal',
-      'workflow': 'workflow'
-    } as any;
+  private toSDKCreateRequest(memory: CreateMemoryRequest): SDKCreateMemoryRequest {
+    const { memory_type, ...rest } = memory;
+    return {
+      ...rest,
+      memory_type: this.mapMemoryType(memory_type)
+    };
+  }
 
-    return typeMap[vscodeType] || 'context';
+  private toSDKSearchRequest(request: SearchMemoryRequest): SDKSearchMemoryRequest {
+    const { memory_types, ...rest } = request;
+    const sdkTypes = memory_types?.map(type => this.mapMemoryType(type));
+    const sdkRequest: SDKSearchMemoryRequest = {
+      ...rest,
+      ...(sdkTypes ? { memory_types: sdkTypes } : {})
+    };
+    return sdkRequest;
+  }
+
+  private mapMemoryType(vscodeType: MemoryType): SDKMemoryType {
+    const typeMap: Record<MemoryType, SDKMemoryType> = {
+      conversation: 'context',
+      knowledge: 'knowledge',
+      project: 'project',
+      context: 'context',
+      reference: 'reference',
+      personal: 'personal',
+      workflow: 'workflow'
+    };
+
+    return typeMap[vscodeType] ?? 'context';
   }
 
   private mapMemoryTypeFromSDK(sdkType: string): MemoryType {
-    // Map SDK memory types back to VSCode extension types
     const typeMap: Record<string, MemoryType> = {
-      'context': 'context',
-      'project': 'project',
-      'knowledge': 'knowledge',
-      'reference': 'reference',
-      'personal': 'context', // Map personal back to context for compatibility
-      'workflow': 'context'  // Map workflow back to context for compatibility
+      context: 'context',
+      project: 'project',
+      knowledge: 'knowledge',
+      reference: 'reference',
+      personal: 'personal',
+      workflow: 'workflow',
+      conversation: 'conversation'
     };
 
-    return typeMap[sdkType] || 'context';
+    return typeMap[sdkType] ?? 'context';
   }
 
-  private convertSDKMemoryEntry(sdkEntry: any): MemoryEntry {
+  private convertSDKMemoryEntry(sdkEntry: SDKMemoryEntry): MemoryEntry {
     return {
       ...sdkEntry,
       memory_type: this.mapMemoryTypeFromSDK(sdkEntry.memory_type)
     };
   }
 
-  private convertSDKSearchResults(sdkResults: any[]): MemorySearchResult[] {
+  private convertSDKSearchResults(sdkResults: SDKMemorySearchResult[]): MemorySearchResult[] {
     return sdkResults.map(result => ({
       ...result,
       memory_type: this.mapMemoryTypeFromSDK(result.memory_type)
     }));
+  }
+
+  private convertSDKUserMemoryStats(stats: SDKUserMemoryStats): UserMemoryStats {
+    const initial: Record<MemoryType, number> = {
+      conversation: 0,
+      knowledge: 0,
+      project: 0,
+      context: 0,
+      reference: 0,
+      personal: 0,
+      workflow: 0
+    };
+
+    const memoriesByType = { ...initial };
+    for (const [key, value] of Object.entries(stats.memories_by_type)) {
+      const mappedKey = this.mapMemoryTypeFromSDK(key);
+      memoriesByType[mappedKey] = value;
+    }
+
+    return {
+      ...stats,
+      memories_by_type: memoriesByType
+    };
   }
 
   public dispose(): void {
