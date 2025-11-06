@@ -5,15 +5,6 @@ All notable changes to the Lanonasis Memory Assistant for Windsurf extension wil
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.4.5] - 2025-11-05
-
-### Fixed
-- 🧭 Restored the API Key tree view contribution so Windsurf stops showing `No view is registered with id: lanonasisApiKeys` during activation.
-
-### Added
-- 🗂️ Exposed API key management commands (Manage/View/Refresh) in the command palette for parity with the VS Code extension.
-- 🔐 Added configuration toggles for legacy tree views and API key management features to match the cross-IDE settings schema.
-
 ## [1.4.4] - 2025-11-05
 
 ### Fixed

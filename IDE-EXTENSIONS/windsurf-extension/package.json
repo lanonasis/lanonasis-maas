@@ -2,7 +2,7 @@
   "name": "lanonasis-memory-windsurf",
   "displayName": "LanOnasis Memory Assistant for Windsurf",
   "description": "Memory as a Service integration optimized for Windsurf IDE - AI-powered memory management with semantic search and enhanced CLI/MCP features",
-  "version": "1.4.5",
+  "version": "1.4.4",
   "publisher": "LanOnasis",
   "icon": "images/icon.png",
   "repository": {
@@ -37,12 +37,7 @@
     "onCommand:lanonasis.searchMemory",
     "onCommand:lanonasis.createMemory",
     "onCommand:lanonasis.authenticate",
-    "onCommand:lanonasis.manageApiKeys",
-    "onCommand:lanonasis.createProject",
-    "onCommand:lanonasis.viewProjects",
-    "onCommand:lanonasis.refreshApiKeys",
-    "onView:lanonasisMemories",
-    "onView:lanonasisApiKeys"
+    "onView:lanonasisMemories"
   ],
   "main": "./out/extension.js",
   "contributes": {
@@ -105,30 +100,6 @@
         "title": "AI Memory Assistant",
         "category": "LanOnasis",
         "icon": "$(sparkle)"
-      },
-      {
-        "command": "lanonasis.manageApiKeys",
-        "title": "Manage API Keys",
-        "category": "LanOnasis",
-        "icon": "$(key)"
-      },
-      {
-        "command": "lanonasis.createProject",
-        "title": "Create API Key Project",
-        "category": "LanOnasis",
-        "icon": "$(folder-library)"
-      },
-      {
-        "command": "lanonasis.viewProjects",
-        "title": "View API Key Projects",
-        "category": "LanOnasis",
-        "icon": "$(folder-opened)"
-      },
-      {
-        "command": "lanonasis.refreshApiKeys",
-        "title": "Refresh API Keys",
-        "category": "LanOnasis",
-        "icon": "$(refresh)"
       }
     ],
     "keybindings": [
@@ -210,13 +181,6 @@
           "id": "lanonasisMemories",
           "name": "Tree View",
           "when": "lanonasis.enabled && config.lanonasis.showTreeView"
-        },
-        {
-          "type": "tree",
-          "id": "lanonasisApiKeys",
-          "name": "API Keys",
-          "icon": "$(key)",
-          "when": "lanonasis.enabled && config.lanonasis.enableApiKeyManagement"
         }
       ]
     },
@@ -272,16 +236,6 @@
           "type": "boolean",
           "default": true,
           "description": "Enable memory-based code completion suggestions"
-        },
-        "lanonasis.showTreeView": {
-          "type": "boolean",
-          "default": false,
-          "description": "Show legacy tree views in the sidebar alongside the modern Memory Assistant"
-        },
-        "lanonasis.enableApiKeyManagement": {
-          "type": "boolean",
-          "default": true,
-          "description": "Enable API key management features and views"
         },
         "lanonasis.autoRefreshInterval": {
           "type": "number",
