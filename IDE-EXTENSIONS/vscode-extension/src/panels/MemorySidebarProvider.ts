@@ -13,7 +13,7 @@ export class MemorySidebarProvider implements vscode.WebviewViewProvider {
 
     public resolveWebviewView(
         webviewView: vscode.WebviewView,
-    _context: vscode.WebviewViewResolveContext,
+        _context: vscode.WebviewViewResolveContext,
         _token: vscode.CancellationToken,
     ) {
         console.log('[Lanonasis] MemorySidebarProvider.resolveWebviewView called');
