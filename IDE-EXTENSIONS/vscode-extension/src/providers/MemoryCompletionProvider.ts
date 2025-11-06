@@ -1,12 +1,12 @@
 import * as vscode from 'vscode';
-import { MemoryService } from '../services/MemoryService';
+import type { IMemoryService } from '../services/IMemoryService';
 import { MemorySearchResult } from '../types/memory-aligned';
 
 export class MemoryCompletionProvider implements vscode.CompletionItemProvider {
     private cache: Map<string, { results: MemorySearchResult[]; timestamp: number }> = new Map();
     private readonly cacheTimeout = 5 * 60 * 1000; // 5 minutes
 
-    constructor(private memoryService: MemoryService) {}
+    constructor(private memoryService: IMemoryService) {}
 
     async provideCompletionItems(
         document: vscode.TextDocument,

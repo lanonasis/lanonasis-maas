@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { MemoryService } from '../services/MemoryService';
+import type { IMemoryService } from '../services/IMemoryService';
 import { MemoryEntry, MemoryType } from '../types/memory-aligned';
 
 export class MemoryTreeItem extends vscode.TreeItem {
@@ -64,7 +64,7 @@ export class MemoryTreeProvider implements vscode.TreeDataProvider<MemoryTreeIte
     private memories: MemoryEntry[] = [];
     private loading: boolean = false;
 
-    constructor(private memoryService: MemoryService) {
+    constructor(private memoryService: IMemoryService) {
         this.loadMemories();
     }
 
