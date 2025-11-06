@@ -8,14 +8,14 @@ export class MemoryTreeItem extends vscode.TreeItem {
         collapsibleState: vscode.TreeItemCollapsibleState
     ) {
         super(memory.title, collapsibleState);
-        
+
         this.tooltip = `${memory.title}\n\nType: ${memory.memory_type}\nCreated: ${new Date(memory.created_at).toLocaleDateString()}\n\n${memory.content.substring(0, 200)}${memory.content.length > 200 ? '...' : ''}`;
         this.description = memory.memory_type;
         this.contextValue = 'memory';
-        
+
         // Set icon based on memory type
         this.iconPath = this.getIconForMemoryType(memory.memory_type);
-        
+
         // Add command to open memory when clicked
         this.command = {
             command: 'lanonasis.openMemory',
@@ -49,7 +49,7 @@ export class MemoryTypeTreeItem extends vscode.TreeItem {
         collapsibleState: vscode.TreeItemCollapsibleState
     ) {
         super(memoryType, collapsibleState);
-        
+
         this.tooltip = `${memoryType} (${memories.length} memories)`;
         this.description = `${memories.length} memories`;
         this.contextValue = 'memoryType';
@@ -112,7 +112,7 @@ export class MemoryTreeProvider implements vscode.TreeDataProvider<MemoryTreeIte
         if (element instanceof MemoryTypeTreeItem) {
             // Return memories for this type
             return Promise.resolve(
-                element.memories.map(memory => 
+                element.memories.map(memory =>
                     new MemoryTreeItem(memory, vscode.TreeItemCollapsibleState.None)
                 )
             );
