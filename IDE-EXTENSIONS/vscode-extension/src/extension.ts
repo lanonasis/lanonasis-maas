@@ -30,7 +30,7 @@ export async function activate(context: vscode.ExtensionContext) {
     } catch (error) {
         // Fallback to basic service
         console.warn('Enhanced Memory Service not available, using basic service:', error);
-        memoryService = new MemoryService(secureApiKeyService);
+        memoryService = new MemoryService();
     }
     const apiKeyService = new ApiKeyService(secureApiKeyService);
 
@@ -65,9 +65,9 @@ export async function activate(context: vscode.ExtensionContext) {
 
     // Check authentication status
     if (memoryService instanceof EnhancedMemoryService) {
-        await checkEnhancedAuthenticationStatus(memoryService, secureApiKeyService);
+        await checkEnhancedAuthenticationStatus(memoryService);
     } else {
-        await checkAuthenticationStatus(secureApiKeyService);
+        checkAuthenticationStatus();
     }
 
     // Register commands
@@ -85,23 +85,8 @@ export async function activate(context: vscode.ExtensionContext) {
         }),
 
         vscode.commands.registerCommand('lanonasis.authenticate', async () => {
-            await vscode.commands.executeCommand('lanonasis.configureApiKey');
-        }),
-
-        vscode.commands.registerCommand('lanonasis.logout', async () => {
-            try {
-                await secureApiKeyService.logout();
-                await memoryService.refreshClient();
-                vscode.window.showInformationMessage('You have been signed out of Lanonasis.');
-                if (memoryService instanceof EnhancedMemoryService) {
-                    await memoryService.refreshConfig();
-                }
-                await sidebarProvider.refresh();
-                vscode.commands.executeCommand('setContext', 'lanonasis.authenticated', false);
-            } catch (error) {
-                vscode.window.showErrorMessage(`Logout failed: ${error}`);
-                outputChannel.appendLine(`[Logout] Error: ${error}`);
-            }
+            // Use the new secure API key management
+            vscode.commands.executeCommand('lanonasis.configureApiKey');
         }),
 
         vscode.commands.registerCommand('lanonasis.refreshMemories', async () => {
@@ -146,15 +131,13 @@ export async function activate(context: vscode.ExtensionContext) {
         // Secure API Key Management Commands
         vscode.commands.registerCommand('lanonasis.configureApiKey', async () => {
             try {
-                await secureApiKeyService.promptForAuthentication();
-                if (await secureApiKeyService.hasApiKey()) {
+                const apiKey = await secureApiKeyService.promptForAuthentication();
+                if (apiKey) {
                     vscode.window.showInformationMessage('Authentication configured successfully and stored securely.');
                     // Refresh services that depend on API key
                     if (memoryService instanceof EnhancedMemoryService) {
                         await memoryService.refreshConfig();
                     }
-                    await memoryService.refreshClient();
-                    await sidebarProvider.refresh();
                 }
             } catch (error) {
                 vscode.window.showErrorMessage(`Failed to configure authentication: ${error}`);
@@ -180,8 +163,6 @@ export async function activate(context: vscode.ExtensionContext) {
                     await secureApiKeyService.deleteApiKey();
                     vscode.window.showInformationMessage('API key cleared successfully.');
                     outputChannel.appendLine('[ClearApiKey] API key removed from secure storage');
-                    await memoryService.refreshClient();
-                    await sidebarProvider.refresh();
                 }
             } catch (error) {
                 vscode.window.showErrorMessage(`Failed to clear API key: ${error}`);
@@ -228,8 +209,13 @@ export async function activate(context: vscode.ExtensionContext) {
                     await memoryService.testConnection();
                     vscode.window.showInformationMessage('✅ Connection test successful!');
                 } else {
-                    await memoryService.testConnection();
-                    vscode.window.showInformationMessage('✅ API connection successful.');
+                    // Basic connection test for regular memory service
+                    const hasApiKey = await secureApiKeyService.hasApiKey();
+                    if (hasApiKey) {
+                        vscode.window.showInformationMessage('✅ API key is configured. Connection test requires Enhanced Memory Service.');
+                    } else {
+                        vscode.window.showWarningMessage('❌ No API key configured.');
+                    }
                 }
             } catch (error) {
                 vscode.window.showErrorMessage(`Connection test failed: ${error}`);
@@ -253,19 +239,21 @@ export async function activate(context: vscode.ExtensionContext) {
     }
 }
 
-async function checkAuthenticationStatus(secureApiKeyService: SecureApiKeyService) {
-    const authenticated = await secureApiKeyService.hasApiKey();
+async function checkAuthenticationStatus() {
+    const config = vscode.workspace.getConfiguration('lanonasis');
+    const apiKey = config.get<string>('apiKey');
+    const authenticated = !!apiKey && apiKey.trim().length > 0;
 
     vscode.commands.executeCommand('setContext', 'lanonasis.authenticated', authenticated);
 
     if (!authenticated) {
         const result = await vscode.window.showInformationMessage(
-            'Lanonasis Memory: No credentials configured. Would you like to authenticate now?',
-            'Authenticate', 'Later'
+            'Lanonasis Memory: No API key configured. Would you like to set it up now?',
+            'Configure', 'Later'
         );
 
-        if (result === 'Authenticate') {
-            await vscode.commands.executeCommand('lanonasis.authenticate');
+        if (result === 'Configure') {
+            vscode.commands.executeCommand('lanonasis.authenticate');
         }
     }
 }
@@ -444,22 +432,21 @@ function openMemoryInEditor(memory: any) {
     });
 }
 
-async function checkEnhancedAuthenticationStatus(
-    enhancedService: EnhancedMemoryService,
-    secureApiKeyService: SecureApiKeyService
-) {
-    const authenticated = await secureApiKeyService.hasApiKey();
+async function checkEnhancedAuthenticationStatus(enhancedService: EnhancedMemoryService) {
+    const config = vscode.workspace.getConfiguration('lanonasis');
+    const apiKey = config.get<string>('apiKey');
+    const authenticated = !!apiKey && apiKey.trim().length > 0;
 
     vscode.commands.executeCommand('setContext', 'lanonasis.authenticated', authenticated);
 
     if (!authenticated) {
         const result = await vscode.window.showInformationMessage(
-            'Lanonasis Memory: No credentials configured. Would you like to authenticate now?',
-            'Authenticate', 'Later'
+            'Lanonasis Memory: No API key configured. Would you like to set it up now?',
+            'Configure', 'Later'
         );
 
-        if (result === 'Authenticate') {
-            await vscode.commands.executeCommand('lanonasis.authenticate');
+        if (result === 'Configure') {
+            vscode.commands.executeCommand('lanonasis.authenticate');
         }
         return;
     }
@@ -526,7 +513,7 @@ async function switchConnectionMode(memoryService: MemoryService) {
 
     try {
         await config.update('useGateway', selected.value, vscode.ConfigurationTarget.Global);
-        await memoryService.refreshClient();
+        memoryService.refreshClient();
 
         const modeName = selected.value ? 'Gateway' : 'Direct API';
         vscode.window.showInformationMessage(`Switched to ${modeName} mode. Testing connection...`);

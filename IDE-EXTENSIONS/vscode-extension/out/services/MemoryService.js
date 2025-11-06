@@ -37,17 +37,17 @@ exports.MemoryService = void 0;
 const vscode = __importStar(require("vscode"));
 const memory_client_sdk_1 = require("./memory-client-sdk");
 class MemoryService {
-    constructor(secureApiKeyService) {
+    constructor() {
         this.client = null;
-        this.secureApiKeyService = secureApiKeyService;
         this.config = vscode.workspace.getConfiguration('lanonasis');
-        void this.initializeClient();
+        this.initializeClient();
     }
-    async initializeClient() {
-        const apiKey = await this.secureApiKeyService.getApiKey();
+    initializeClient() {
+        const apiKey = this.config.get('apiKey');
         const apiUrl = this.config.get('apiUrl', 'https://api.lanonasis.com');
         const gatewayUrl = this.config.get('gatewayUrl', 'https://api.lanonasis.com');
         const useGateway = this.config.get('useGateway', true);
+        // Use gateway URL if enabled, otherwise use direct API URL
         const effectiveUrl = useGateway ? gatewayUrl : apiUrl;
         if (apiKey && apiKey.trim().length > 0) {
             this.client = (0, memory_client_sdk_1.createMaaSClient)({
@@ -56,13 +56,10 @@ class MemoryService {
                 timeout: 30000
             });
         }
-        else {
-            this.client = null;
-        }
     }
-    async refreshClient() {
+    refreshClient() {
         this.config = vscode.workspace.getConfiguration('lanonasis');
-        await this.initializeClient();
+        this.initializeClient();
     }
     isAuthenticated() {
         return this.client !== null;
@@ -72,15 +69,14 @@ class MemoryService {
         const gatewayUrl = this.config.get('gatewayUrl', 'https://api.lanonasis.com');
         const useGateway = this.config.get('useGateway', true);
         const effectiveUrl = useGateway ? gatewayUrl : apiUrl;
-        const resolvedKey = apiKey ?? await this.secureApiKeyService.getApiKey();
-        if (!resolvedKey) {
+        const testClient = apiKey ? (0, memory_client_sdk_1.createMaaSClient)({
+            apiUrl: effectiveUrl,
+            apiKey,
+            timeout: 10000
+        }) : this.client;
+        if (!testClient) {
             throw new Error('No API key configured');
         }
-        const testClient = (0, memory_client_sdk_1.createMaaSClient)({
-            apiUrl: effectiveUrl,
-            apiKey: resolvedKey,
-            timeout: 10000
-        });
         const response = await testClient.getHealth();
         if (response.error) {
             throw new Error(response.error);
