@@ -2,25 +2,23 @@ import * as vscode from 'vscode';
 import { MaaSClient, createMaaSClient } from './memory-client-sdk';
 import { CreateMemoryRequest, SearchMemoryRequest, MemoryEntry, MemorySearchResult } from '../types/memory-aligned';
 import type { IMemoryService } from './IMemoryService';
-import { SecureApiKeyService } from './SecureApiKeyService';
 
 export class MemoryService implements IMemoryService {
     private client: MaaSClient | null = null;
     private config: vscode.WorkspaceConfiguration;
-    private secureApiKeyService: SecureApiKeyService;
 
-    constructor(secureApiKeyService: SecureApiKeyService) {
-        this.secureApiKeyService = secureApiKeyService;
+    constructor() {
         this.config = vscode.workspace.getConfiguration('lanonasis');
-        void this.initializeClient();
+        this.initializeClient();
     }
 
-    private async initializeClient(): Promise<void> {
-        const apiKey = await this.secureApiKeyService.getApiKey();
+    private initializeClient(): void {
+        const apiKey = this.config.get<string>('apiKey');
         const apiUrl = this.config.get<string>('apiUrl', 'https://api.lanonasis.com');
         const gatewayUrl = this.config.get<string>('gatewayUrl', 'https://api.lanonasis.com');
         const useGateway = this.config.get<boolean>('useGateway', true);
 
+        // Use gateway URL if enabled, otherwise use direct API URL
         const effectiveUrl = useGateway ? gatewayUrl : apiUrl;
 
         if (apiKey && apiKey.trim().length > 0) {
@@ -29,14 +27,12 @@ export class MemoryService implements IMemoryService {
                 apiKey,
                 timeout: 30000
             });
-        } else {
-            this.client = null;
         }
     }
 
-    public async refreshClient(): Promise<void> {
+    public refreshClient(): void {
         this.config = vscode.workspace.getConfiguration('lanonasis');
-        await this.initializeClient();
+        this.initializeClient();
     }
 
     public isAuthenticated(): boolean {
@@ -49,16 +45,15 @@ export class MemoryService implements IMemoryService {
         const useGateway = this.config.get<boolean>('useGateway', true);
         const effectiveUrl = useGateway ? gatewayUrl : apiUrl;
 
-        const resolvedKey = apiKey ?? await this.secureApiKeyService.getApiKey();
-        if (!resolvedKey) {
+        const testClient = apiKey ? createMaaSClient({
+            apiUrl: effectiveUrl,
+            apiKey,
+            timeout: 10000
+        }) : this.client;
+
+        if (!testClient) {
             throw new Error('No API key configured');
         }
-
-        const testClient = createMaaSClient({
-            apiUrl: effectiveUrl,
-            apiKey: resolvedKey,
-            timeout: 10000
-        });
 
         const response = await testClient.getHealth();
         if (response.error) {
