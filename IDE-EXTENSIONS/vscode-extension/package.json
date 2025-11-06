@@ -2,7 +2,7 @@
   "name": "lanonasis-memory",
   "displayName": "LanOnasis Memory Assistant",
   "description": "Memory as a Service integration - AI-powered memory management with semantic search (Compatible with CLI v3.0.6+)",
-  "version": "1.4.4",
+  "version": "1.4.6",
   "publisher": "LanOnasis",
   "icon": "images/icon.png",
   "repository": {
@@ -29,7 +29,11 @@
   "activationEvents": [
     "onStartupFinished",
     "onView:lanonasis.sidebar",
-    "onView:lanonasisMemories"
+    "onView:lanonasisMemories",
+    "onCommand:lanonasis.authenticate",
+    "onCommand:lanonasis.configureApiKey",
+    "onCommand:lanonasis.logout",
+    "onView:lanonasisApiKeys"
   ],
   "main": "./out/extension.js",
   "browser": "./out/extension.js",
@@ -68,6 +72,12 @@
         "title": "Authenticate",
         "category": "Lanonasis",
         "icon": "$(key)"
+      },
+      {
+        "command": "lanonasis.logout",
+        "title": "Sign Out",
+        "category": "Lanonasis",
+        "icon": "$(sign-out)"
       },
       {
         "command": "lanonasis.refreshMemories",
@@ -173,6 +183,11 @@
           "command": "lanonasis.authenticate",
           "when": "view == lanonasisMemories && !lanonasis.authenticated",
           "group": "navigation"
+        },
+        {
+          "command": "lanonasis.logout",
+          "when": "view == lanonasisMemories && lanonasis.authenticated",
+          "group": "navigation"
         }
       ]
     },
@@ -206,7 +221,7 @@
           "id": "lanonasisApiKeys",
           "name": "API Keys",
           "icon": "$(key)",
-          "when": "lanonasis.enableApiKeyManagement"
+          "when": "config.lanonasis.enableApiKeyManagement"
         }
       ]
     },
