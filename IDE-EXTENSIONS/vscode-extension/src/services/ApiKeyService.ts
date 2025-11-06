@@ -70,15 +70,15 @@ export class ApiKeyService {
     }
 
     private async makeRequest<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-        const apiKey = await this.secureApiKeyService.getApiKeyOrPrompt();
-        if (!apiKey) {
-            throw new Error('API key not configured. Please configure your API key to use Lanonasis services.');
+        const authHeader = await this.secureApiKeyService.getAuthenticationHeader();
+        if (!authHeader) {
+            throw new Error('Authentication not configured. Please sign in to use Lanonasis services.');
         }
 
         const url = `${this.baseUrl}${endpoint}`;
         const headers = {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${apiKey}`,
+            'Authorization': authHeader,
             ...options.headers
         };
 

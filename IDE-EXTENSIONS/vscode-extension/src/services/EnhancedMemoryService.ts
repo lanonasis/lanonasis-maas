@@ -36,17 +36,19 @@ export class EnhancedMemoryService implements IEnhancedMemoryService {
   }
 
   private async initializeClient(): Promise<void> {
-    const apiKey = await this.secureApiKeyService.getApiKey();
+    const authHeader = await this.secureApiKeyService.getAuthenticationHeader();
 
-    if (!apiKey || apiKey.trim().length === 0) {
+    if (!authHeader) {
       this.client = null;
       this.updateStatusBar(false, 'No API Key');
       return;
     }
 
     try {
+      const token = authHeader.replace(/^Bearer\s+/i, '');
+
       // Use IDE extension preset for optimized configuration
-      const clientConfig: EnhancedMemoryClientConfig = ConfigPresets.ideExtension(apiKey);
+      const clientConfig: EnhancedMemoryClientConfig = ConfigPresets.ideExtension(token);
 
       // Override with VSCode-specific settings
       const apiUrl = this.config.get<string>('apiUrl', 'https://api.lanonasis.com');
@@ -168,22 +170,25 @@ export class EnhancedMemoryService implements IEnhancedMemoryService {
   public async testConnection(apiKey?: string): Promise<void> {
     let testClient = this.client;
 
-    if (apiKey) {
-      const config = ConfigPresets.ideExtension(apiKey);
+    const resolveToken = async (): Promise<string> => {
+      if (apiKey) {
+        return apiKey;
+      }
+
+      const authHeader = await this.secureApiKeyService.getAuthenticationHeader();
+      if (!authHeader) {
+        throw new Error('No authentication configured');
+      }
+
+      return authHeader.replace(/^Bearer\s+/i, '');
+    };
+
+    const token = await resolveToken();
+
+    if (!testClient || apiKey) {
+      const config = ConfigPresets.ideExtension(token);
       testClient = new EnhancedMemoryClient(config);
       await testClient.initialize();
-    }
-
-    if (!testClient) {
-      // Try to get API key from secure storage
-      const secureApiKey = await this.secureApiKeyService.getApiKey();
-      if (secureApiKey) {
-        const config = ConfigPresets.ideExtension(secureApiKey);
-        testClient = new EnhancedMemoryClient(config);
-        await testClient.initialize();
-      } else {
-        throw new Error('No API key configured');
-      }
     }
 
     // Test with enhanced client - this will try CLI first, then fallback to API
