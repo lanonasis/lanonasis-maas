@@ -49,7 +49,7 @@ export class SystemCommands {
     console.log('  exit                    - Exit REPL');
   }
   
-  async clear() {
+  async clear(): Promise<void> {
     console.clear();
   }
 }
