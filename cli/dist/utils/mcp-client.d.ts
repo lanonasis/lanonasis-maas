@@ -111,10 +111,6 @@ export declare class MCPClient {
      */
     private validateAuthBeforeConnect;
     /**
-     * Validate vendor key format
-     */
-    private validateVendorKeyFormat;
-    /**
      * Validate and refresh token if needed
      */
     private validateAndRefreshToken;

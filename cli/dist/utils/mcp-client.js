@@ -245,11 +245,10 @@ export class MCPClient {
         const msg = error?.message ?? '';
         if (msg.includes('AUTHENTICATION_REQUIRED')) {
             console.log(chalk.cyan('• No credentials found. Run: lanonasis auth login'));
-            console.log(chalk.cyan('• Or set vendor key: lanonasis auth login --vendor-key pk_xxx.sk_xxx'));
+            console.log(chalk.cyan('• Or set a vendor key: lanonasis auth login --vendor-key <your-key>'));
         }
         else if (msg.includes('AUTHENTICATION_INVALID')) {
-            console.log(chalk.cyan('• Invalid credentials. Check your vendor key format'));
-            console.log(chalk.cyan('• Expected format: pk_xxx.sk_xxx'));
+            console.log(chalk.cyan('• Invalid credentials. Confirm the vendor key matches your dashboard value'));
             console.log(chalk.cyan('• Try: lanonasis auth logout && lanonasis auth login'));
         }
         else if (msg.includes('expired')) {
@@ -259,7 +258,7 @@ export class MCPClient {
         else {
             console.log(chalk.cyan('• Check authentication status: lanonasis auth status'));
             console.log(chalk.cyan('• Re-authenticate: lanonasis auth login'));
-            console.log(chalk.cyan('• Verify vendor key: lanonasis auth login --vendor-key pk_xxx.sk_xxx'));
+            console.log(chalk.cyan('• Verify vendor key: lanonasis auth login --vendor-key <your-key>'));
         }
     }
     /**
@@ -331,20 +330,13 @@ export class MCPClient {
                 throw new Error(`AUTHENTICATION_INVALID: ${error instanceof Error ? error.message : 'Token validation failed'}`);
             }
         }
-        // If we have a vendor key, validate its format
+        // If we have a vendor key, ensure it is valid (non-empty)
         if (vendorKey && !token) {
-            if (!this.validateVendorKeyFormat(vendorKey)) {
-                throw new Error('AUTHENTICATION_INVALID: Invalid vendor key format. Expected format: pk_xxx.sk_xxx');
+            const validationResult = this.config.validateVendorKeyFormat(vendorKey);
+            if (validationResult !== true) {
+                throw new Error(`AUTHENTICATION_INVALID: ${typeof validationResult === 'string' ? validationResult : 'Vendor key is invalid'}`);
             }
         }
-    }
-    /**
-     * Validate vendor key format
-     */
-    validateVendorKeyFormat(vendorKey) {
-        // Vendor key should be in format: pk_xxx.sk_xxx
-        const vendorKeyPattern = /^pk_[a-zA-Z0-9]+\.sk_[a-zA-Z0-9]+$/;
-        return vendorKeyPattern.test(vendorKey);
     }
     /**
      * Validate and refresh token if needed
