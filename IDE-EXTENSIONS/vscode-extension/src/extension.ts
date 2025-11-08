@@ -85,8 +85,22 @@ export async function activate(context: vscode.ExtensionContext) {
         }),
 
         vscode.commands.registerCommand('lanonasis.authenticate', async () => {
-            // Use the new secure API key management
-            vscode.commands.executeCommand('lanonasis.configureApiKey');
+            // Direct authentication - don't redirect to avoid timing issues
+            try {
+                const apiKey = await secureApiKeyService.promptForAuthentication();
+                if (apiKey) {
+                    vscode.window.showInformationMessage('Authentication configured successfully and stored securely.');
+                    // Refresh services that depend on API key
+                    if (memoryService instanceof EnhancedMemoryService) {
+                        await memoryService.refreshConfig();
+                    }
+                    // Refresh sidebar
+                    await sidebarProvider.refresh();
+                }
+            } catch (error) {
+                vscode.window.showErrorMessage(`Failed to configure authentication: ${error}`);
+                outputChannel.appendLine(`[Authenticate] Error: ${error}`);
+            }
         }),
 
         vscode.commands.registerCommand('lanonasis.refreshMemories', async () => {
