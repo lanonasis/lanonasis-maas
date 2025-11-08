@@ -169,7 +169,11 @@ export const alignedAuthMiddleware = async (
           ));
           return;
         }
-        req.user = { ...user, auth_type: 'api_key' };
+        req.user = { 
+          ...user, 
+          id: user.id || user.userId || '',
+          auth_type: 'api_key' 
+        };
         logger.info(`[${req.id}] API key authentication successful for user ${user.id}`);
       } else {
         // Handle JWT token authentication with Supabase
@@ -204,7 +208,11 @@ export const alignedAuthMiddleware = async (
           app_metadata: user.app_metadata || {}
         };
 
-        req.user = { ...alignedUser, auth_type: 'jwt' };
+        req.user = { 
+          ...alignedUser, 
+          id: alignedUser.id || alignedUser.userId || '',
+          auth_type: 'jwt' 
+        };
         logger.info(`[${req.id}] JWT authentication successful for user ${alignedUser.id}`);
       }
 
