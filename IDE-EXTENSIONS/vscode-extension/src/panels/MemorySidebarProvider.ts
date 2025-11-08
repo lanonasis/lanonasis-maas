@@ -65,20 +65,6 @@ export class MemorySidebarProvider implements vscode.WebviewViewProvider {
 
     public async refresh() {
         if (this._view) {
-            const authenticated = await this.isAuthenticated();
-
-            if (!authenticated) {
-                this._view.webview.postMessage({
-                    type: 'updateState',
-                    state: {
-                        authenticated: false,
-                        memories: [],
-                        loading: false
-                    }
-                });
-                return;
-            }
-
             try {
                 this._view.webview.postMessage({
                     type: 'updateState',
@@ -101,9 +87,25 @@ export class MemorySidebarProvider implements vscode.WebviewViewProvider {
                     }
                 });
             } catch (error) {
+                if (error instanceof Error && error.message.includes('Not authenticated')) {
+                    this._view.webview.postMessage({
+                        type: 'updateState',
+                        state: {
+                            authenticated: false,
+                            memories: [],
+                            loading: false
+                        }
+                    });
+                    return;
+                }
+
                 this._view.webview.postMessage({
                     type: 'error',
                     message: error instanceof Error ? error.message : 'Failed to load memories'
+                });
+                this._view.webview.postMessage({
+                    type: 'updateState',
+                    state: { loading: false }
                 });
             }
         }
@@ -136,10 +138,6 @@ export class MemorySidebarProvider implements vscode.WebviewViewProvider {
                 state: { loading: false }
             });
         }
-    }
-
-    private async isAuthenticated(): Promise<boolean> {
-        return this.memoryService.isAuthenticated();
     }
 
     private _getHtmlForWebview(webview: vscode.Webview) {

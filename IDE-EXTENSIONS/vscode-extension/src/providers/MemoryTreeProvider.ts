@@ -69,18 +69,14 @@ export class MemoryTreeProvider implements vscode.TreeDataProvider<MemoryTreeIte
     }
 
     private async loadMemories(): Promise<void> {
-        if (!this.memoryService.isAuthenticated()) {
-            this.memories = [];
-            this._onDidChangeTreeData.fire();
-            return;
-        }
-
         try {
             this.loading = true;
             this.memories = await this.memoryService.listMemories(100);
         } catch (error) {
             this.memories = [];
-            vscode.window.showErrorMessage(`Failed to load memories: ${error instanceof Error ? error.message : 'Unknown error'}`);
+            if (!(error instanceof Error && error.message.includes('Not authenticated'))) {
+                vscode.window.showErrorMessage(`Failed to load memories: ${error instanceof Error ? error.message : 'Unknown error'}`);
+            }
         } finally {
             this.loading = false;
             this._onDidChangeTreeData.fire();
