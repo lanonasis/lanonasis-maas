@@ -148,11 +148,13 @@ export class MCPClient {
       // 3) configured preference
       // 4) default to 'websocket' (production-ready pm2 mcp-core)
       const configuredMode = this.config.get<string>('mcpConnectionMode');
+      const mcpPreference = this.config.get<string>('mcpPreference');
       const preferRemote = this.config.get<boolean>('mcpUseRemote');
       const connectionMode = options.connectionMode
         ?? (options.useWebSocket ? 'websocket' : undefined)
         ?? (options.useRemote ? 'remote' : undefined)
         ?? configuredMode
+        ?? mcpPreference
         ?? (preferRemote ? 'remote' : 'websocket');
 
       let wsUrl: string;
