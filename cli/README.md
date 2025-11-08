@@ -452,3 +452,71 @@ MIT License - see [LICENSE](../LICENSE) for details.
 ---
 
 _Professional CLI for Enterprise Memory as a Service - Golden Contract Compliant_
+
+## OAuth2 Authentication (v3.5.0+)
+
+### Browser Login with OAuth2 PKCE
+
+The CLI now supports secure OAuth2 authentication with PKCE (Proof Key for Code Exchange) for browser-based login:
+
+```bash
+onasis auth login
+# Choose: 🌐 Browser Login (Get token from web page)
+```
+
+**How it works:**
+1. CLI starts a local callback server on port 8888
+2. Opens your browser to the OAuth2 authorization page
+3. You authenticate in the browser
+4. Authorization code is sent back to the CLI
+5. CLI exchanges code for access and refresh tokens
+6. Tokens are securely stored locally
+
+**Benefits:**
+- ✅ More secure (PKCE prevents code interception)
+- ✅ Automatic token refresh
+- ✅ Revocable access
+- ✅ Industry-standard OAuth2 flow
+
+### Authentication Methods
+
+The CLI supports three authentication methods:
+
+1. **🔑 Vendor Key** (Recommended for API access)
+   - Long-lived API key from dashboard
+   - Best for automation and CI/CD
+
+2. **🌐 Browser Login** (OAuth2 PKCE)
+   - Secure browser-based authentication
+   - Automatic token refresh
+   - Best for interactive use
+
+3. **⚙️ Username/Password** (Direct credentials)
+   - Traditional email/password login
+   - Returns JWT token
+   - Legacy method
+
+### Token Management
+
+OAuth2 tokens are automatically refreshed when expired:
+
+```bash
+# Check authentication status
+onasis auth status
+
+# Force re-authentication
+onasis auth logout
+onasis auth login
+```
+
+### Troubleshooting
+
+**Port 8888 already in use:**
+The CLI needs port 8888 for the OAuth callback. If it's in use, close the application using it or use the Vendor Key method instead.
+
+**Browser doesn't open:**
+The CLI will show the authorization URL - copy and paste it into your browser manually.
+
+**Token refresh failed:**
+Run `onasis auth login` to re-authenticate.
+
