@@ -120,16 +120,16 @@ export declare const createMemorySchema: z.ZodObject<{
 }, "strip", z.ZodTypeAny, {
     title: string;
     content: string;
-    memory_type: "context" | "project" | "knowledge" | "reference" | "personal" | "workflow";
+    memory_type: "knowledge" | "project" | "context" | "reference" | "personal" | "workflow";
     tags: string[];
     topic_id?: string | undefined;
     metadata?: Record<string, unknown> | undefined;
 }, {
     title: string;
     content: string;
-    memory_type?: "context" | "project" | "knowledge" | "reference" | "personal" | "workflow" | undefined;
-    tags?: string[] | undefined;
+    memory_type?: "knowledge" | "project" | "context" | "reference" | "personal" | "workflow" | undefined;
     topic_id?: string | undefined;
+    tags?: string[] | undefined;
     metadata?: Record<string, unknown> | undefined;
 }>;
 /**
@@ -174,16 +174,16 @@ export declare const updateMemorySchema: z.ZodObject<{
 }, "strip", z.ZodTypeAny, {
     title?: string | undefined;
     content?: string | undefined;
-    memory_type?: "context" | "project" | "knowledge" | "reference" | "personal" | "workflow" | undefined;
-    tags?: string[] | undefined;
+    memory_type?: "knowledge" | "project" | "context" | "reference" | "personal" | "workflow" | undefined;
     topic_id?: string | null | undefined;
+    tags?: string[] | undefined;
     metadata?: Record<string, unknown> | undefined;
 }, {
     title?: string | undefined;
     content?: string | undefined;
-    memory_type?: "context" | "project" | "knowledge" | "reference" | "personal" | "workflow" | undefined;
-    tags?: string[] | undefined;
+    memory_type?: "knowledge" | "project" | "context" | "reference" | "personal" | "workflow" | undefined;
     topic_id?: string | null | undefined;
+    tags?: string[] | undefined;
     metadata?: Record<string, unknown> | undefined;
 }>;
 /**
@@ -233,16 +233,16 @@ export declare const searchMemorySchema: z.ZodObject<{
     query: string;
     limit: number;
     threshold: number;
-    tags?: string[] | undefined;
     topic_id?: string | undefined;
-    memory_types?: ("context" | "project" | "knowledge" | "reference" | "personal" | "workflow")[] | undefined;
+    tags?: string[] | undefined;
+    memory_types?: ("knowledge" | "project" | "context" | "reference" | "personal" | "workflow")[] | undefined;
 }, {
     query: string;
-    tags?: string[] | undefined;
     topic_id?: string | undefined;
-    memory_types?: ("context" | "project" | "knowledge" | "reference" | "personal" | "workflow")[] | undefined;
+    tags?: string[] | undefined;
     limit?: number | undefined;
     threshold?: number | undefined;
+    memory_types?: ("knowledge" | "project" | "context" | "reference" | "personal" | "workflow")[] | undefined;
 }>;
 /**
  * @swagger

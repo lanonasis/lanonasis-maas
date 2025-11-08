@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { MaaSClient, createMaaSClient } from './memory-client-sdk';
-import { CreateMemoryRequest, SearchMemoryRequest, MemoryEntry, MemorySearchResult } from '../types/memory-aligned';
+import { CreateMemoryRequest, SearchMemoryRequest, MemoryEntry, MemorySearchResult, UserMemoryStats } from '../types/memory-aligned';
 import type { IMemoryService } from './IMemoryService';
 
 export class MemoryService implements IMemoryService {
@@ -145,7 +145,7 @@ export class MemoryService implements IMemoryService {
         }
     }
 
-    public async getMemoryStats() {
+    public async getMemoryStats(): Promise<UserMemoryStats> {
         if (!this.client) {
             throw new Error('Not authenticated. Please configure your API key.');
         }

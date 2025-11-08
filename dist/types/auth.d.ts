@@ -148,10 +148,14 @@ export interface AuthResponse {
     expires_at: string;
 }
 export interface JWTPayload {
-    userId: string;
-    organizationId: string;
-    role: string;
-    plan: string;
+    sub?: string;
+    userId?: string;
+    email?: string;
+    role?: string;
+    organizationId?: string;
+    project_scope?: string;
+    platform?: 'mcp' | 'cli' | 'web' | 'api';
+    plan?: string;
     iat?: number;
     exp?: number;
 }
