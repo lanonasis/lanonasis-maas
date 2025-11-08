@@ -31,7 +31,7 @@ export async function activate(context: vscode.ExtensionContext) {
     } catch (error) {
         // Fallback to basic service
         console.warn('Enhanced Memory Service not available, using basic service:', error);
-        memoryService = new MemoryService();
+        memoryService = new MemoryService(secureApiKeyService);
     }
     const apiKeyService = new ApiKeyService(secureApiKeyService);
 
@@ -152,6 +152,8 @@ export async function activate(context: vscode.ExtensionContext) {
                     // Refresh services that depend on API key
                     if (memoryService instanceof EnhancedMemoryService) {
                         await memoryService.refreshConfig();
+                    } else {
+                        await memoryService.refreshClient();
                     }
                 }
             } catch (error) {
@@ -317,7 +319,7 @@ async function showSearchResults(results: MemorySearchResult[], query: string) {
     }
 }
 
-async function createMemoryFromSelection(memoryService: MemoryService) {
+async function createMemoryFromSelection(memoryService: IMemoryService) {
     const editor = vscode.window.activeTextEditor;
     if (!editor || editor.selection.isEmpty) {
         vscode.window.showWarningMessage('Please select some text to create a memory');
@@ -364,7 +366,7 @@ async function createMemoryFromSelection(memoryService: MemoryService) {
     }
 }
 
-async function createMemoryFromFile(memoryService: MemoryService) {
+async function createMemoryFromFile(memoryService: IMemoryService) {
     const editor = vscode.window.activeTextEditor;
     if (!editor) {
         vscode.window.showWarningMessage('No active editor');
@@ -410,34 +412,8 @@ async function createMemoryFromFile(memoryService: MemoryService) {
     }
 }
 
-async function authenticate(memoryService: MemoryService) {
-    const apiKey = await vscode.window.showInputBox({
-        prompt: 'Enter your Lanonasis API Key',
-        placeHolder: 'Get your API key from api.lanonasis.com',
-        password: true,
-        ignoreFocusOut: true
-    });
-
-    if (!apiKey) return;
-
-    try {
-        // Test the API key
-        await memoryService.testConnection(apiKey);
-
-        // Save to configuration
-        const config = vscode.workspace.getConfiguration('lanonasis');
-        await config.update('apiKey', apiKey, vscode.ConfigurationTarget.Global);
-
-        vscode.commands.executeCommand('setContext', 'lanonasis.authenticated', true);
-        vscode.window.showInformationMessage('Successfully authenticated with Lanonasis Memory Service');
-        vscode.commands.executeCommand('lanonasis.refreshMemories');
-    } catch (error) {
-        vscode.window.showErrorMessage(`Authentication failed: ${error instanceof Error ? error.message : 'Invalid API key'}`);
-    }
-}
-
-function openMemoryInEditor(memory: any) {
-    const content = `# ${memory.title}\n\n**Type:** ${memory.type}\n**Created:** ${new Date(memory.created_at).toLocaleString()}\n\n---\n\n${memory.content}`;
+function openMemoryInEditor(memory: MemoryEntry | MemorySearchResult) {
+    const content = `# ${memory.title}\n\n**Type:** ${memory.memory_type}\n**Created:** ${new Date(memory.created_at).toLocaleString()}\n\n---\n\n${memory.content}`;
 
     vscode.workspace.openTextDocument({
         content,
@@ -500,7 +476,7 @@ Get your API key from api.lanonasis.com to get started.`;
         });
 }
 
-async function switchConnectionMode(memoryService: MemoryService) {
+async function switchConnectionMode(memoryService: IMemoryService) {
     const config = vscode.workspace.getConfiguration('lanonasis');
     const currentUseGateway = config.get<boolean>('useGateway', true);
 
@@ -528,7 +504,7 @@ async function switchConnectionMode(memoryService: MemoryService) {
 
     try {
         await config.update('useGateway', selected.value, vscode.ConfigurationTarget.Global);
-        memoryService.refreshClient();
+        await memoryService.refreshClient();
 
         const modeName = selected.value ? 'Gateway' : 'Direct API';
         vscode.window.showInformationMessage(`Switched to ${modeName} mode. Testing connection...`);
@@ -542,7 +518,7 @@ async function switchConnectionMode(memoryService: MemoryService) {
         vscode.window.showErrorMessage(`Failed to switch mode: ${error instanceof Error ? error.message : 'Unknown error'}`);
         // Revert the setting
         await config.update('useGateway', currentUseGateway, vscode.ConfigurationTarget.Global);
-        memoryService.refreshClient();
+        await memoryService.refreshClient();
     }
 }
 
@@ -677,7 +653,8 @@ async function createApiKey(apiKeyService: ApiKeyService) {
         if (!value) return;
 
         // Key type selection
-        const keyTypes = [
+        type KeyTypeOption = vscode.QuickPickItem & { value: CreateApiKeyRequest['keyType'] };
+        const keyTypes: KeyTypeOption[] = [
             { label: 'API Key', value: 'api_key' },
             { label: 'Database URL', value: 'database_url' },
             { label: 'OAuth Token', value: 'oauth_token' },
@@ -697,7 +674,8 @@ async function createApiKey(apiKeyService: ApiKeyService) {
         const config = vscode.workspace.getConfiguration('lanonasis');
         const defaultEnv = config.get<string>('defaultEnvironment', 'development');
 
-        const environments = [
+        type EnvironmentOption = vscode.QuickPickItem & { value: CreateApiKeyRequest['environment'] };
+        const environments: EnvironmentOption[] = [
             { label: 'Development', value: 'development', picked: defaultEnv === 'development' },
             { label: 'Staging', value: 'staging', picked: defaultEnv === 'staging' },
             { label: 'Production', value: 'production', picked: defaultEnv === 'production' }
@@ -718,8 +696,8 @@ async function createApiKey(apiKeyService: ApiKeyService) {
             await apiKeyService.createApiKey({
                 name,
                 value,
-                keyType: selectedKeyType.value as any,
-                environment: selectedEnvironment.value as any,
+                keyType: selectedKeyType.value,
+                environment: selectedEnvironment.value,
                 accessLevel: 'team',
                 projectId: selectedProject.project.id
             });
@@ -748,7 +726,7 @@ async function createProject(apiKeyService: ApiKeyService, apiKeyTreeProvider: A
         });
 
         const config = vscode.workspace.getConfiguration('lanonasis');
-        const organizationId = config.get<string>('organizationId');
+        let organizationId = config.get<string>('organizationId');
 
         if (!organizationId) {
             const orgId = await vscode.window.showInputBox({
@@ -759,6 +737,7 @@ async function createProject(apiKeyService: ApiKeyService, apiKeyTreeProvider: A
             if (!orgId) return;
 
             await config.update('organizationId', orgId, vscode.ConfigurationTarget.Global);
+            organizationId = orgId;
         }
 
         await vscode.window.withProgress({
@@ -769,7 +748,7 @@ async function createProject(apiKeyService: ApiKeyService, apiKeyTreeProvider: A
             const project = await apiKeyService.createProject({
                 name,
                 description,
-                organizationId: organizationId || await config.get<string>('organizationId')!
+                organizationId: organizationId
             });
 
             if (apiKeyTreeProvider) {
@@ -826,7 +805,7 @@ async function viewProjects(apiKeyService: ApiKeyService) {
     }
 }
 
-async function showApiKeyDetails(apiKey: any) {
+async function showApiKeyDetails(apiKey: ApiKey) {
     const content = `# API Key: ${apiKey.name}
 
 **Type:** ${apiKey.keyType}
@@ -847,12 +826,12 @@ ${JSON.stringify(apiKey.metadata, null, 2)}
     vscode.workspace.openTextDocument({
         content,
         language: 'markdown'
-    }).then((doc: any) => {
+    }).then((doc: vscode.TextDocument) => {
         vscode.window.showTextDocument(doc);
     });
 }
 
-async function showProjectDetails(project: any, apiKeyService: ApiKeyService) {
+async function showProjectDetails(project: Project, apiKeyService: ApiKeyService) {
     try {
         const apiKeys = await apiKeyService.getApiKeys(project.id);
 
@@ -865,7 +844,7 @@ async function showProjectDetails(project: any, apiKeyService: ApiKeyService) {
 
 ## API Keys (${apiKeys.length})
 ${apiKeys.length > 0 ?
-                apiKeys.map((key: any) => `- **${key.name}** (${key.keyType}, ${key.environment})`).join('\n') :
+                apiKeys.map((key: ApiKey) => `- **${key.name}** (${key.keyType}, ${key.environment})`).join('\n') :
                 'No API keys found in this project'
             }
 
@@ -877,7 +856,7 @@ ${JSON.stringify(project.settings, null, 2)}
         vscode.workspace.openTextDocument({
             content,
             language: 'markdown'
-        }).then((doc: any) => {
+        }).then((doc: vscode.TextDocument) => {
             vscode.window.showTextDocument(doc);
         });
     } catch (error) {

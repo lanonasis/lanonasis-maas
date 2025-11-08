@@ -20,7 +20,7 @@ export interface IMemoryService {
   listMemories(limit?: number): Promise<MemoryEntry[]>;
   deleteMemory(id: string): Promise<void>;
   getMemoryStats(): Promise<UserMemoryStats>;
-  refreshClient(): void | Promise<void>;
+  refreshClient(): Promise<void>;
 }
 
 /**
