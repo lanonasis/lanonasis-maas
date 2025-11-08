@@ -216,14 +216,14 @@
           "id": "lanonasisMemories",
           "name": "Memories",
           "icon": "$(list-tree)",
-          "when": "config.lanonasis.showTreeView"
+          "when": "config.lanonasis.showTreeView && lanonasis.authenticated"
         },
         {
           "type": "tree",
           "id": "lanonasisApiKeys",
           "name": "API Keys",
           "icon": "$(key)",
-          "when": "lanonasis.enableApiKeyManagement"
+          "when": "lanonasis.enableApiKeyManagement && lanonasis.authenticated"
         }
       ]
     },

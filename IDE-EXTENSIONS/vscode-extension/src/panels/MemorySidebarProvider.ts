@@ -36,7 +36,7 @@ export class MemorySidebarProvider implements vscode.WebviewViewProvider {
         webviewView.webview.onDidReceiveMessage(async (data) => {
             switch (data.type) {
                 case 'authenticate':
-                    await vscode.commands.executeCommand('lanonasis.authenticate');
+                    await vscode.commands.executeCommand('lanonasis.authenticate', data.mode);
                     break;
                 case 'searchMemories':
                     await this.handleSearch(data.query);
@@ -56,6 +56,9 @@ export class MemorySidebarProvider implements vscode.WebviewViewProvider {
                 case 'getApiKey':
                     await vscode.env.openExternal(vscode.Uri.parse('https://api.lanonasis.com'));
                     break;
+                case 'openCommandPalette':
+                    await vscode.commands.executeCommand('workbench.action.quickOpen', '>Lanonasis: Authenticate');
+                    break;
             }
         });
 
@@ -66,10 +69,26 @@ export class MemorySidebarProvider implements vscode.WebviewViewProvider {
     public async refresh() {
         if (this._view) {
             try {
+                const authenticated = this.memoryService.isAuthenticated();
+
                 this._view.webview.postMessage({
                     type: 'updateState',
                     state: { loading: true }
                 });
+
+                if (!authenticated) {
+                    this._view.webview.postMessage({
+                        type: 'updateState',
+                        state: {
+                            authenticated: false,
+                            memories: [],
+                            loading: false,
+                            enhancedMode: false,
+                            cliVersion: null
+                        }
+                    });
+                    return;
+                }
 
                 const memories = await this.memoryService.listMemories(50);
                 const enhancedInfo = this.memoryService instanceof EnhancedMemoryService
@@ -79,7 +98,7 @@ export class MemorySidebarProvider implements vscode.WebviewViewProvider {
                 this._view.webview.postMessage({
                     type: 'updateState',
                     state: {
-                        authenticated: true,
+                        authenticated: authenticated,
                         memories,
                         loading: false,
                         enhancedMode: enhancedInfo?.cliAvailable || false,
@@ -113,6 +132,18 @@ export class MemorySidebarProvider implements vscode.WebviewViewProvider {
 
     private async handleSearch(query: string) {
         if (!this._view) return;
+
+        if (!this.memoryService.isAuthenticated()) {
+            this._view.webview.postMessage({
+                type: 'updateState',
+                state: {
+                    authenticated: false,
+                    memories: [],
+                    loading: false
+                }
+            });
+            return;
+        }
 
         try {
             this._view.webview.postMessage({
