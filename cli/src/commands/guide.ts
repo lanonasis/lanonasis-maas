@@ -271,7 +271,7 @@ export class UserGuidanceSystem {
     switch (authMethod) {
       case 'vendor_key':
         console.log(chalk.yellow('📝 Vendor keys provide secure, programmatic access'));
-        console.log(chalk.gray('Format: pk_xxxxx.sk_xxxxx'));
+        console.log(chalk.gray('Find it in your dashboard under API Keys.'));
         console.log();
         break;
       case 'oauth':
@@ -470,7 +470,7 @@ export async function quickStartCommand(): Promise<void> {
       category: 'Setup',
       commands: [
         { cmd: 'lanonasis init', desc: 'Initialize configuration' },
-        { cmd: 'lanonasis login --vendor-key pk_xxx.sk_xxx', desc: 'Authenticate with vendor key' },
+        { cmd: 'lanonasis login --vendor-key <your-key>', desc: 'Authenticate with vendor key' },
         { cmd: 'lanonasis health', desc: 'Verify system health' }
       ]
     },

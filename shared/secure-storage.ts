@@ -56,9 +56,9 @@ export class SecureApiKeyManager {
    * Store API key securely
    */
   async storeApiKey(key: string): Promise<void> {
-    // Validate key format
+    // Require a non-empty key; rely on server-side validation for correctness
     if (!this.isValidApiKey(key)) {
-      throw new Error('Invalid API key format');
+      throw new Error('API key is required');
     }
 
     // Never log the actual key
@@ -122,14 +122,7 @@ export class SecureApiKeyManager {
    * Validate API key format
    */
   private isValidApiKey(key: string): boolean {
-    // Check for common patterns: pk_xxx, sk_xxx, or JWT format
-    const patterns = [
-      /^pk_[a-zA-Z0-9]{20,}$/,
-      /^sk_[a-zA-Z0-9]{20,}$/,
-      /^eyJ[a-zA-Z0-9_-]+\.[a-zA-Z0-9_-]+\.[a-zA-Z0-9_-]+$/ // JWT
-    ];
-    
-    return patterns.some(pattern => pattern.test(key));
+    return typeof key === 'string' && key.trim().length > 0;
   }
 
   /**

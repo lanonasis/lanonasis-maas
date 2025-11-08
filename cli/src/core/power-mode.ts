@@ -344,7 +344,7 @@ export class PowerUserMode {
 
     switch (subCommand) {
       case 'keys':
-        console.log('API Keys: pk_xxx...xxx (active), pk_yyy...yyy (revoked)');
+        console.log('API Keys: vendor-key-1... (active), vendor-key-2... (revoked)');
         break;
       case 'limits':
         console.log('Rate Limits: 1000/hour (432 used)');
