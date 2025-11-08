@@ -45,14 +45,17 @@ export function mcpCommands(program) {
             const connected = await client.connect({ useRemote: isAuthenticated });
             if (connected) {
                 spinner.succeed(chalk.green(`Connected to ${isAuthenticated ? 'remote' : 'local'} MCP server`));
+                process.exit(0);
             }
             else {
                 spinner.fail('Failed to auto-connect to MCP');
+                process.exit(1);
             }
         }
         catch {
             spinner.fail('MCP auto-connect failed');
         }
+        process.exit(1);
     });
     // Connect command
     mcp.command('connect')
@@ -109,6 +112,7 @@ export function mcpCommands(program) {
                 connected = await enhancedClient.connectSingle(serverConfig);
                 if (connected) {
                     spinner.succeed(chalk.green(`Connected to MCP server at ${options.url}`));
+                    process.exit(0);
                     return;
                 }
             }
@@ -127,6 +131,7 @@ export function mcpCommands(program) {
             }
             if (connected) {
                 spinner.succeed(chalk.green(`Connected to MCP server in ${connectionMode} mode`));
+                process.exit(0);
                 if (connectionMode === 'remote') {
                     console.log(chalk.cyan('ℹ️  Using remote MCP via mcp.lanonasis.com'));
                     console.log(chalk.cyan('📡 SSE endpoint active for real-time updates'));
@@ -141,6 +146,7 @@ export function mcpCommands(program) {
             }
         }
         catch (error) {
+            process.exit(1);
             spinner.fail(`Connection failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
             process.exit(1);
         }
@@ -341,15 +347,15 @@ export function mcpCommands(program) {
         .action(async (options) => {
         const config = new CLIConfig();
         if (options.preferRemote) {
-            config.set('mcpPreference', 'remote');
+            await config.setAndSave('mcpPreference', 'remote');
             console.log(chalk.green('✓ Set MCP preference to remote'));
         }
         else if (options.preferLocal) {
-            config.set('mcpPreference', 'local');
+            await config.setAndSave('mcpPreference', 'local');
             console.log(chalk.green('✓ Set MCP preference to local'));
         }
         else if (options.auto) {
-            config.set('mcpPreference', 'auto');
+            await config.setAndSave('mcpPreference', 'auto');
             console.log(chalk.green('✓ Set MCP preference to auto-detect'));
         }
         else {

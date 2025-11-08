@@ -225,6 +225,7 @@ authCmd
   .action(async () => {
     await cliConfig.logout();
     console.log(chalk.green('✓ Logged out successfully'));
+    process.exit(0);
   });
 
 authCmd
