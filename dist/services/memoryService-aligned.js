@@ -1,8 +1,8 @@
 import { createClient } from '@supabase/supabase-js';
 import OpenAI from 'openai';
-import { config } from '@/config/environment';
-import { logger, logPerformance } from '@/utils/logger';
-import { InternalServerError } from '@/middleware/errorHandler';
+import { config } from '../config/environment';
+import { logger, logPerformance } from '../utils/logger';
+import { InternalServerError } from '../middleware/errorHandler';
 export class AlignedMemoryService {
     supabase;
     openai;

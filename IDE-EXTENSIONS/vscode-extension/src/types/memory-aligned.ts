@@ -5,7 +5,7 @@ import { z } from 'zod';
  */
 
 // Memory types from existing schema
-export type MemoryType = 'conversation' | 'knowledge' | 'project' | 'context' | 'reference';
+export type MemoryType = 'conversation' | 'knowledge' | 'project' | 'context' | 'reference' | 'personal' | 'workflow';
 export type MemoryStatus = 'active' | 'archived' | 'draft' | 'deleted';
 
 /**
@@ -179,7 +179,7 @@ export const createMemorySchema = z.object({
   title: z.string().min(1).max(500),
   content: z.string().min(1).max(50000),
   summary: z.string().max(1000).optional(),
-  memory_type: z.enum(['conversation', 'knowledge', 'project', 'context', 'reference']).default('context'),
+  memory_type: z.enum(['conversation', 'knowledge', 'project', 'context', 'reference', 'personal', 'workflow']).default('context'),
   topic_id: z.string().uuid().optional(),
   project_ref: z.string().max(100).optional(),
   tags: z.array(z.string().min(1).max(50)).max(20).default([]),
@@ -232,7 +232,7 @@ export const updateMemorySchema = z.object({
   title: z.string().min(1).max(500).optional(),
   content: z.string().min(1).max(50000).optional(),
   summary: z.string().max(1000).optional(),
-  memory_type: z.enum(['conversation', 'knowledge', 'project', 'context', 'reference']).optional(),
+  memory_type: z.enum(['conversation', 'knowledge', 'project', 'context', 'reference', 'personal', 'workflow']).optional(),
   status: z.enum(['active', 'archived', 'draft', 'deleted']).optional(),
   topic_id: z.string().uuid().nullable().optional(),
   project_ref: z.string().max(100).nullable().optional(),
@@ -284,7 +284,7 @@ export const updateMemorySchema = z.object({
  */
 export const searchMemorySchema = z.object({
   query: z.string().min(1).max(1000),
-  memory_types: z.array(z.enum(['conversation', 'knowledge', 'project', 'context', 'reference'])).optional(),
+  memory_types: z.array(z.enum(['conversation', 'knowledge', 'project', 'context', 'reference', 'personal', 'workflow'])).optional(),
   tags: z.array(z.string()).optional(),
   topic_id: z.string().uuid().optional(),
   project_ref: z.string().optional(),

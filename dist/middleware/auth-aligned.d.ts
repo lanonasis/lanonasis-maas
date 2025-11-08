@@ -1,26 +1,16 @@
 import { Request, Response, NextFunction } from 'express';
-import { JWTPayload } from '@/types/auth';
+import { UnifiedUser, AuthenticatedUser } from '@/types/express-auth';
 declare global {
     namespace Express {
         interface Request {
-            id?: string;
-            user?: UnifiedUser;
+            requestId?: string;
         }
     }
 }
-export interface UnifiedUser extends JWTPayload {
-    id?: string;
-    email?: string;
-    user_metadata?: Record<string, unknown>;
-    app_metadata?: Record<string, unknown>;
-    auth_type?: 'jwt' | 'api_key';
-    api_key_id?: string;
-    last_used?: string;
-    rate_limit_remaining?: number;
-}
+export { UnifiedUser, AuthenticatedUser };
 export type AlignedUser = UnifiedUser;
 export declare const attachRequestId: (req: Request, res: Response, next: NextFunction) => void;
-export declare const corsGuard: (req: Request, res: Response, next: NextFunction) => Response<any, Record<string, any>> | undefined;
+export declare const corsGuard: (req: Request, res: Response, next: NextFunction) => void;
 export declare const createErrorEnvelope: (req: Request, message: string, type?: string, code?: string) => {
     error: {
         message: string;
@@ -61,8 +51,13 @@ export declare const planBasedRateLimit: () => (req: Request, res: Response, nex
  * Initialize user service configuration if it doesn't exist
  */
 export declare function ensureUserServiceConfig(userId: string): Promise<void>;
-export declare const globalErrorHandler: (error: any, req: Request, res: Response, next: NextFunction) => void;
+export declare const globalErrorHandler: (error: unknown, req: Request, res: Response, next: NextFunction) => void;
 export declare const notFoundHandler: (req: Request, res: Response) => void;
-export declare const createSuccessEnvelope: (data: any, req: Request, meta?: any) => any;
-export declare const validateProjectScope: (req: Request, res: Response, next: NextFunction) => Response<any, Record<string, any>> | undefined;
+export declare const createSuccessEnvelope: <TData, TMeta = Record<string, unknown> | undefined>(data: TData, req: Request, meta?: TMeta) => {
+    meta?: NonNullable<TMeta>;
+    data: TData;
+    request_id: string | undefined;
+    timestamp: string;
+};
+export declare const validateProjectScope: (req: Request, res: Response, next: NextFunction) => void;
 //# sourceMappingURL=auth-aligned.d.ts.map
