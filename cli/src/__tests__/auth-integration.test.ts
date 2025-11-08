@@ -144,6 +144,9 @@ describe('Authentication Integration Tests', () => {
 
     describe('Vendor Key Authentication', () => {
         vendorKeyRequiredTest('should validate vendor key against server', async () => {
+            if (!testVendorKey) {
+                throw new Error('Vendor key not configured; this test should have been skipped.');
+            }
             // This will hit the real server
             await config.setVendorKey(testVendorKey);
 
@@ -160,6 +163,9 @@ describe('Authentication Integration Tests', () => {
 
     describe('Token Authentication', () => {
         tokenRequiredTest('should verify JWT token expiration', async () => {
+            if (!testToken) {
+                throw new Error('JWT token not configured; this test should have been skipped.');
+            }
             await config.setToken(testToken);
 
             const isAuthenticated = await config.isAuthenticated();
