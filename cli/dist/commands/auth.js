@@ -65,7 +65,7 @@ async function handleAuthenticationFailure(error, config, authMethod = 'jwt') {
         case 'network_error':
             console.log(chalk.red('Network connection failed'));
             console.log(chalk.gray('• Check your internet connection'));
-            console.log(chalk.gray('• Verify you can access https://api.lanonasis.com'));
+            console.log(chalk.gray('• Verify you can access https://auth.lanonasis.com'));
             console.log(chalk.gray('• Try again in a few moments'));
             if (failureCount >= 2) {
                 console.log(chalk.gray('• Consider using a different network if issues persist'));
@@ -101,7 +101,7 @@ async function handleAuthenticationFailure(error, config, authMethod = 'jwt') {
         if (authMethod === 'vendor_key') {
             console.log(chalk.cyan('• Generate a new vendor key from your dashboard'));
             console.log(chalk.cyan('• Try: lanonasis auth logout && lanonasis auth login'));
-            console.log(chalk.cyan('• Switch to browser login: lanonasis auth login --use-web-auth'));
+            console.log(chalk.cyan('• Switch to browser login: lanonasis auth login (choose Browser Login)'));
         }
         else {
             console.log(chalk.cyan('• Reset your password if you\'re unsure'));
@@ -485,7 +485,7 @@ export async function diagnoseCommand() {
         console.log(chalk.gray('\n🔧 Additional troubleshooting:'));
         console.log(chalk.gray('   • Verify the vendor key matches the value shown in your dashboard'));
         console.log(chalk.gray('   • Check if your key is active in the dashboard'));
-        console.log(chalk.gray('   • Try browser authentication: lanonasis auth login --use-web-auth'));
+        console.log(chalk.gray('   • Try browser authentication: lanonasis auth login (choose Browser Login)'));
         console.log(chalk.gray('   • Contact support if issues persist'));
     }
 }
@@ -574,7 +574,7 @@ async function handleVendorKeyFlow(config) {
     console.log();
     // Enhanced guidance for obtaining vendor keys
     console.log(chalk.cyan('📋 How to get your vendor key:'));
-    console.log(chalk.gray('1. Visit your Lanonasis dashboard at https://app.lanonasis.com'));
+    console.log(chalk.gray('1. Visit your Lanonasis dashboard at https://dashboard.lanonasis.com'));
     console.log(chalk.gray('2. Navigate to Settings → API Keys'));
     console.log(chalk.gray('3. Click "Generate New Key" and copy the full key value'));
     console.log();
@@ -649,6 +649,7 @@ async function handleOAuthFlow(config) {
         console.log();
         console.log(chalk.green('✓ OAuth2 authentication successful'));
         console.log(colors.info('You can now use Lanonasis services'));
+        process.exit(0);
     }
     catch (error) {
         console.error(chalk.red('✖ OAuth2 authentication failed'));
