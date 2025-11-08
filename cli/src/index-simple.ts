@@ -141,7 +141,7 @@ const showWelcome = () => {
   
   if (isOnasisInvocation) {
     console.log(colors.info('🔑 Golden Contract Authentication:'));
-    console.log(`  ${colors.success(`${cmdName} login --vendor-key pk_xxx.sk_xxx`)}  ${colors.muted('# Vendor key auth')}`);
+    console.log(`  ${colors.success(`${cmdName} login --vendor-key <your-key>`)}      ${colors.muted('# Vendor key auth')}`);
     console.log(`  ${colors.success(`${cmdName} login --oauth`)}                    ${colors.muted('# Browser OAuth')}`);
     console.log();
   }
@@ -268,7 +268,7 @@ authCmd
   .description('Login to your MaaS account')
   .option('-e, --email <email>', 'email address')
   .option('-p, --password <password>', 'password')
-  .option('--vendor-key <key>', 'vendor key (pk_xxx.sk_xxx format)')
+  .option('--vendor-key <key>', 'vendor key (as provided in your dashboard)')
   .option('--oauth', 'use OAuth browser flow')
   .action(async (options) => {
     // Handle oauth flag
