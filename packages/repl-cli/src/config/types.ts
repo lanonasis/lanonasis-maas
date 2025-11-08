@@ -10,7 +10,7 @@ export interface ReplConfig {
 
 export interface CommandContext {
   mode: 'remote' | 'local';
-  lastResult?: any;
+  lastResult?: unknown;
   aliases: Map<string, string>;
   config: ReplConfig;
 }

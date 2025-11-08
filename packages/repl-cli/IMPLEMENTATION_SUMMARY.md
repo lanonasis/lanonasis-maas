@@ -6,7 +6,7 @@ All phases from the runbook have been successfully implemented.
 
 ## 📦 Package Structure
 
-```
+```text
 packages/repl-cli/
 ├── src/
 │   ├── commands/

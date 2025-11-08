@@ -27,7 +27,7 @@ export class SystemCommands {
     console.log(`MCP: ${context.config.useMCP ? chalk.green('Enabled') : chalk.red('Disabled')}`);
     console.log(`Auth: ${context.config.authToken ? chalk.green('Configured') : chalk.yellow('Not configured')}`);
     if (context.lastResult) {
-      console.log(chalk.gray(`Last result: ${typeof context.lastResult === 'object' ? 'Available' : context.lastResult}`));
+      console.log(chalk.gray(`Last result: ${typeof context.lastResult === 'object' && context.lastResult !== null ? 'Available' : context.lastResult}`));
     }
   }
   
