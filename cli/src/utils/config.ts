@@ -505,8 +505,8 @@ export class CLIConfig {
 
       const authBase = this.config.discoveredServices?.auth_base || 'https://api.lanonasis.com';
 
-      // Test vendor key with health endpoint
-      await axios.get(`${authBase}/api/v1/health`, {
+      // Verify vendor key with dedicated endpoint
+      await axios.post(`${authBase}/v1/auth/verify-api-key`, {}, {
         headers: {
           'X-API-Key': vendorKey,
           'X-Auth-Method': 'vendor_key',
@@ -782,7 +782,7 @@ export class CLIConfig {
       }
 
       // Validate against server with health endpoint
-      await axios.get(`${authBase}/api/v1/health`, {
+      await axios.post(`${authBase}/v1/auth/verify-api-key`, {}, {
         headers,
         timeout: 10000
       });
