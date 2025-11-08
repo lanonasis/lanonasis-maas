@@ -411,15 +411,15 @@ export function configCommands(program) {
                     console.log(chalk.cyan('   → Repaired: Set auth method to jwt'));
                 }
             }
-            // Validate vendor key format if present
+            // Validate vendor key presence if present
             if (vendorKey) {
                 const formatValidation = config.validateVendorKeyFormat(vendorKey);
                 if (formatValidation === true) {
-                    console.log(chalk.green('   ✓ Vendor key format is valid'));
+                    console.log(chalk.green('   ✓ Vendor key is set'));
                 }
                 else {
-                    console.log(chalk.red('   ✖ Vendor key format is invalid'));
-                    validation.issues.push('Invalid vendor key format');
+                    console.log(chalk.red(`   ✖ Vendor key issue: ${formatValidation}`));
+                    validation.issues.push('Vendor key missing or invalid');
                 }
             }
             // Test authentication validity

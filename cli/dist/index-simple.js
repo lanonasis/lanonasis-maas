@@ -123,7 +123,7 @@ const showWelcome = () => {
     console.log();
     if (isOnasisInvocation) {
         console.log(colors.info('🔑 Golden Contract Authentication:'));
-        console.log(`  ${colors.success(`${cmdName} login --vendor-key pk_xxx.sk_xxx`)}  ${colors.muted('# Vendor key auth')}`);
+        console.log(`  ${colors.success(`${cmdName} login --vendor-key <your-key>`)}      ${colors.muted('# Vendor key auth')}`);
         console.log(`  ${colors.success(`${cmdName} login --oauth`)}                    ${colors.muted('# Browser OAuth')}`);
         console.log();
     }
@@ -175,11 +175,24 @@ const healthCheck = async () => {
     process.stdout.write('MCP Server status: ');
     try {
         const client = getMCPClient();
+        const status = client.getConnectionStatus();
+        const mcpPreference = await cliConfig.get('mcpPreference') || 'auto';
         if (client.isConnectedToServer()) {
             console.log(colors.success('✅ Connected'));
+            console.log(`  Mode: ${colors.highlight(status.mode)}`);
+            console.log(`  Server: ${colors.highlight(status.server || 'N/A')}`);
         }
         else {
             console.log(colors.warning('⚠️  Disconnected'));
+            console.log(`  Configured preference: ${colors.highlight(mcpPreference)}`);
+            if (mcpPreference === 'remote') {
+                const mcpUrl = cliConfig.getMCPServerUrl();
+                console.log(`  Remote server: ${colors.highlight(mcpUrl)}`);
+            }
+            else if (mcpPreference === 'local') {
+                const mcpPath = cliConfig.getMCPServerPath();
+                console.log(`  Local server: ${colors.highlight(mcpPath || 'Not configured')}`);
+            }
         }
     }
     catch (error) {
@@ -229,7 +242,7 @@ authCmd
     .description('Login to your MaaS account')
     .option('-e, --email <email>', 'email address')
     .option('-p, --password <password>', 'password')
-    .option('--vendor-key <key>', 'vendor key (pk_xxx.sk_xxx format)')
+    .option('--vendor-key <key>', 'vendor key (as provided in your dashboard)')
     .option('--oauth', 'use OAuth browser flow')
     .action(async (options) => {
     // Handle oauth flag
@@ -249,6 +262,8 @@ authCmd
     .command('status')
     .description('Show authentication status')
     .action(async () => {
+    // Initialize config first
+    await cliConfig.init();
     const isAuth = await cliConfig.isAuthenticated();
     const user = await cliConfig.getCurrentUser();
     const failureCount = cliConfig.getFailureCount();
@@ -523,6 +538,8 @@ program
     .command('status')
     .description('Show overall system status')
     .action(async () => {
+    // Initialize config first
+    await cliConfig.init();
     const isAuth = await cliConfig.isAuthenticated();
     const apiUrl = cliConfig.getApiUrl();
     console.log(chalk.blue.bold('MaaS CLI Status'));
