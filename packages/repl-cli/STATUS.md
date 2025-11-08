@@ -53,7 +53,7 @@
 
 ## 📁 File Structure
 
-```
+```text
 packages/repl-cli/
 ├── src/
 │   ├── commands/

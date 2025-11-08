@@ -19,11 +19,32 @@ export class MemoryCommands {
   
   async create(args: string[], context: CommandContext) {
     if (args.length < 2) {
-      console.log(chalk.yellow('Usage: create <title> <content>'));
+      console.log(chalk.yellow('Usage: create <title> <content> [--type=<type>] [--tags=tag1,tag2]'));
       return;
     }
     
-    const [title, ...contentParts] = args;
+    // Parse arguments for type and tags
+    let memory_type = 'context';
+    let tags: string[] = [];
+    const filteredArgs: string[] = [];
+    
+    for (let i = 0; i < args.length; i++) {
+      const arg = args[i];
+      if (arg.startsWith('--type=')) {
+        memory_type = arg.substring(7);
+      } else if (arg.startsWith('--tags=')) {
+        tags = arg.substring(7).split(',').map(t => t.trim()).filter(Boolean);
+      } else {
+        filteredArgs.push(arg);
+      }
+    }
+    
+    if (filteredArgs.length < 2) {
+      console.log(chalk.yellow('Error: Title and content are required'));
+      return;
+    }
+    
+    const [title, ...contentParts] = filteredArgs;
     const content = contentParts.join(' ');
     
     const spinner = ora('Creating memory...').start();
@@ -32,8 +53,8 @@ export class MemoryCommands {
       const result = await client.createMemory({ 
         title, 
         content,
-        memory_type: 'context',
-        tags: []
+        memory_type,
+        tags
       });
       if (result.error) {
         spinner.fail(chalk.red(`Failed: ${result.error}`));
