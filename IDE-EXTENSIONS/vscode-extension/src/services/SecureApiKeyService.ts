@@ -108,34 +108,62 @@ export class SecureApiKeyService {
         }
 
         if (choice.value === 'oauth') {
-            const success = await this.authenticateOAuth();
-            if (success) {
-                const apiKey = await this.getApiKey();
-                return apiKey;
-            }
-            return null;
+            return await this.authenticateWithOAuthFlow();
         } else if (choice.value === 'apikey') {
-            const apiKey = await vscode.window.showInputBox({
-                prompt: 'Enter your Lanonasis API Key',
-                placeHolder: 'Get your API key from api.lanonasis.com',
-                password: true,
-                ignoreFocusOut: true,
-                validateInput: (value) => {
-                    if (!value || value.trim().length === 0) {
-                        return 'API key is required';
-                    }
-                    if (value.length < 20) {
-                        return 'API key seems too short';
-                    }
-                    return null;
-                }
-            });
+            return await this.promptForApiKeyEntry();
+        }
 
-            if (apiKey) {
-                await this.storeApiKey(apiKey);
-                this.log('API key stored securely');
-                return apiKey;
+        return null;
+    }
+
+    /**
+     * Run the OAuth authentication flow and return the stored API key/token
+     */
+    async authenticateWithOAuthFlow(): Promise<string | null> {
+        const success = await this.authenticateOAuth();
+        if (!success) {
+            return null;
+        }
+
+        const apiKey = await this.getApiKey();
+        if (apiKey) {
+            return apiKey;
+        }
+
+        const authHeader = await this.getAuthenticationHeader();
+        if (authHeader?.startsWith('Bearer ')) {
+            return authHeader.replace('Bearer ', '');
+        }
+
+        return null;
+    }
+
+    /**
+     * Prompt for raw API key entry and persist it securely
+     */
+    async promptForApiKeyEntry(): Promise<string | null> {
+        const apiKey = await vscode.window.showInputBox({
+            prompt: 'Enter your Lanonasis API Key',
+            placeHolder: 'Get your API key from api.lanonasis.com',
+            password: true,
+            ignoreFocusOut: true,
+            validateInput: (value) => {
+                if (!value || value.trim().length === 0) {
+                    return 'API key is required';
+                }
+                if (value.length < 20) {
+                    return 'API key seems too short';
+                }
+                return null;
             }
+        });
+
+        if (apiKey) {
+            await this.storeApiKey(apiKey);
+            await this.context.secrets.delete(SecureApiKeyService.AUTH_TOKEN_KEY);
+            await this.context.secrets.delete(SecureApiKeyService.REFRESH_TOKEN_KEY);
+            this.log('API key stored securely');
+            return apiKey;
         }
 
         return null;

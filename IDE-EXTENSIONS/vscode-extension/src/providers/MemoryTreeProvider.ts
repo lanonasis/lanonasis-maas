@@ -63,12 +63,23 @@ export class MemoryTreeProvider implements vscode.TreeDataProvider<MemoryTreeIte
 
     private memories: MemoryEntry[] = [];
     private loading: boolean = false;
+    private authenticated: boolean = false;
 
     constructor(private memoryService: IMemoryService) {
-        this.loadMemories();
+        this.authenticated = this.memoryService.isAuthenticated();
+        if (this.authenticated) {
+            void this.loadMemories();
+        }
     }
 
     private async loadMemories(): Promise<void> {
+        if (!this.authenticated) {
+            this.memories = [];
+            this.loading = false;
+            this._onDidChangeTreeData.fire();
+            return;
+        }
+
         try {
             this.loading = true;
             this.memories = await this.memoryService.listMemories(100);
@@ -84,15 +95,36 @@ export class MemoryTreeProvider implements vscode.TreeDataProvider<MemoryTreeIte
     }
 
     refresh(): void {
-        this.loadMemories();
+        if (!this.authenticated) {
+            this.clear();
+            return;
+        }
+
+        void this.loadMemories();
+    }
+
+    setAuthenticated(authenticated: boolean): void {
+        this.authenticated = authenticated;
+
+        if (authenticated) {
+            void this.loadMemories();
+        } else {
+            this.clear();
+        }
+    }
+
+    clear(): void {
+        this.loading = false;
+        this.memories = [];
+        this._onDidChangeTreeData.fire();
     }
 
     getTreeItem(element: MemoryTreeItem | MemoryTypeTreeItem): vscode.TreeItem {
         return element;
     }
 
-    getChildren(element?: MemoryTreeItem | MemoryTypeTreeItem): Thenable<(MemoryTreeItem | MemoryTypeTreeItem)[]> {
-        if (!this.memoryService.isAuthenticated()) {
+    getChildren(element?: MemoryTreeItem | MemoryTypeTreeItem): Promise<(MemoryTreeItem | MemoryTypeTreeItem)[]> {
+        if (!this.authenticated) {
             return Promise.resolve([]);
         }
 
@@ -136,6 +168,10 @@ export class MemoryTreeProvider implements vscode.TreeDataProvider<MemoryTreeIte
     }
 
     getParent(element: MemoryTreeItem | MemoryTypeTreeItem): vscode.ProviderResult<MemoryTreeItem | MemoryTypeTreeItem> {
+        if (!this.authenticated) {
+            return null;
+        }
+
         if (element instanceof MemoryTreeItem) {
             // Find the parent memory type group
             const memoryType = element.memory.memory_type;
