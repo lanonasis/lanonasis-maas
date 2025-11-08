@@ -158,34 +158,18 @@ describe('Authentication Persistence Tests', () => {
   });
 
   describe('Vendor Key Validation', () => {
-    it('should validate correct vendor key format', () => {
-      const validKey = 'pk_test123456789.sk_test123456789012345';
-      const result = config.validateVendorKeyFormat(validKey);
-      expect(result).toBe(true);
+    it('should require a non-empty vendor key', () => {
+      const result = config.validateVendorKeyFormat('   ');
+      expect(result).toBe('Vendor key is required');
     });
 
-    it('should reject invalid vendor key formats', () => {
-      const invalidKeys = [
-        'invalid-key', // no dot
-        'pk_.sk_test123456789012345', // empty public part
-        'pk_test123456789.sk_', // empty secret part
-        'pk_test.sk_test', // too short
-        'pk_test123456789', // missing secret part
-        'sk_test123456789.pk_test123456789', // wrong order
-        'pk_test@invalid.sk_test123456789012345', // invalid chars
-      ];
-
-      invalidKeys.forEach(key => {
-        const result = config.validateVendorKeyFormat(key);
-        expect(result).not.toBe(true);
-        expect(typeof result).toBe('string'); // Should return error message
-      });
-    });
-
-    it('should accept valid vendor key formats', () => {
+    it('should accept arbitrary non-empty vendor keys', () => {
       const validKeys = [
-        'pk_123456789ABCDEF.sk_1234567890123456789012345',
-        'pk_A0123456789ABC.sk_XYZ123456789012345',
+        'pk_test123456789.sk_test123456789012345',
+        'custom-key-123',
+        'my-company::service-token',
+        'sk-only-test',
+        'TOKEN=abc123'
       ];
 
       validKeys.forEach(key => {

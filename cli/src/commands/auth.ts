@@ -81,9 +81,9 @@ async function handleAuthenticationFailure(error: any, config: CLIConfig, authMe
     case 'invalid_credentials':
       console.log(chalk.red('Invalid credentials provided'));
       if (authMethod === 'vendor_key') {
-        console.log(chalk.gray('• Check your vendor key format: pk_xxx.sk_xxx'));
-        console.log(chalk.gray('• Verify the key is active in your account dashboard'));
-        console.log(chalk.gray('• Ensure you copied the complete key including both parts'));
+        console.log(chalk.gray('• Verify the vendor key matches the value shown in your dashboard'));
+        console.log(chalk.gray('• Confirm the key is active and has not been revoked'));
+        console.log(chalk.gray('• Ensure you copied the entire key without extra spaces'));
       } else {
         console.log(chalk.gray('• Double-check your email and password'));
         console.log(chalk.gray('• Passwords are case-sensitive'));
@@ -254,13 +254,10 @@ export async function diagnoseCommand(): Promise<void> {
     diagnostics.credentialType = 'vendor_key';
     console.log(chalk.green('   ✓ Vendor key found'));
 
-    // Validate vendor key format
+    // Validate vendor key presence
     const formatValidation = config.validateVendorKeyFormat(vendorKey);
-    if (formatValidation === true) {
-      console.log(chalk.green('   ✓ Vendor key format is valid'));
-    } else {
-      console.log(chalk.red('   ✖ Vendor key format is invalid:'));
-      console.log(chalk.gray(`     ${formatValidation}`));
+    if (formatValidation !== true) {
+      console.log(chalk.red(`   ✖ Vendor key issue: ${formatValidation}`));
     }
   } else if (token) {
     diagnostics.hasCredentials = true;
@@ -384,7 +381,7 @@ export async function diagnoseCommand(): Promise<void> {
 
   if (!diagnostics.hasCredentials) {
     issues.push('No authentication credentials stored');
-    recommendations.push('Run: lanonasis auth login --vendor-key pk_xxx.sk_xxx');
+    recommendations.push('Run: lanonasis auth login --vendor-key <your-key>');
   }
 
   if (diagnostics.hasCredentials && !diagnostics.credentialsValid) {
@@ -425,7 +422,7 @@ export async function diagnoseCommand(): Promise<void> {
   // Additional troubleshooting info
   if (diagnostics.authFailures > 0 || !diagnostics.credentialsValid) {
     console.log(chalk.gray('\n🔧 Additional troubleshooting:'));
-    console.log(chalk.gray('   • Verify your vendor key format: pk_xxx.sk_xxx'));
+    console.log(chalk.gray('   • Verify the vendor key matches the value shown in your dashboard'));
     console.log(chalk.gray('   • Check if your key is active in the dashboard'));
     console.log(chalk.gray('   • Try browser authentication: lanonasis auth login --use-web-auth'));
     console.log(chalk.gray('   • Contact support if issues persist'));
@@ -528,90 +525,29 @@ async function handleVendorKeyAuth(vendorKey: string, config: CLIConfig): Promis
 async function handleVendorKeyFlow(config: CLIConfig): Promise<void> {
   console.log();
   console.log(chalk.yellow('🔑 Vendor Key Authentication'));
-  console.log(chalk.gray('Vendor keys provide secure API access with format: pk_xxx.sk_xxx'));
+  console.log(chalk.gray('Vendor keys provide secure API access for automation and integrations.'));
   console.log();
 
   // Enhanced guidance for obtaining vendor keys
   console.log(chalk.cyan('📋 How to get your vendor key:'));
   console.log(chalk.gray('1. Visit your Lanonasis dashboard at https://app.lanonasis.com'));
   console.log(chalk.gray('2. Navigate to Settings → API Keys'));
-  console.log(chalk.gray('3. Click "Generate New Key" and copy the full key'));
-  console.log(chalk.gray('4. The key format should be: pk_[letters/numbers].sk_[letters/numbers]'));
+  console.log(chalk.gray('3. Click "Generate New Key" and copy the full key value'));
   console.log();
 
   const { vendorKey } = await inquirer.prompt<{ vendorKey: string }>([
     {
       type: 'password',
       name: 'vendorKey',
-      message: 'Enter your vendor key (pk_xxx.sk_xxx):',
+      message: 'Enter your vendor key:',
       mask: '*',
       validate: (input: string) => {
-        return validateVendorKeyFormat(input);
+        return config.validateVendorKeyFormat(input);
       }
     }
   ]);
 
   await handleVendorKeyAuth(vendorKey, config);
-}
-
-// Enhanced vendor key format validation with detailed error messages
-function validateVendorKeyFormat(input: string): string | boolean {
-  if (!input || input.trim().length === 0) {
-    return 'Vendor key is required';
-  }
-
-  const trimmed = input.trim();
-
-  // Check basic format
-  if (!trimmed.includes('.')) {
-    return 'Invalid format: Vendor key must contain a dot (.) separator\nExpected format: pk_xxx.sk_xxx';
-  }
-
-  const parts = trimmed.split('.');
-  if (parts.length !== 2) {
-    return 'Invalid format: Vendor key must have exactly two parts separated by a dot\nExpected format: pk_xxx.sk_xxx';
-  }
-
-  const [publicPart, secretPart] = parts;
-
-  // Validate public key part
-  if (!publicPart.startsWith('pk_')) {
-    return 'Invalid format: First part must start with "pk_"\nExpected format: pk_xxx.sk_xxx';
-  }
-
-  if (publicPart.length < 4) {
-    return 'Invalid format: Public key part is too short\nExpected format: pk_xxx.sk_xxx (where xxx is alphanumeric)';
-  }
-
-  const publicKeyContent = publicPart.substring(3); // Remove 'pk_'
-  if (!/^[a-zA-Z0-9]+$/.test(publicKeyContent)) {
-    return 'Invalid format: Public key part contains invalid characters\nOnly letters and numbers are allowed after "pk_"';
-  }
-
-  // Validate secret key part
-  if (!secretPart.startsWith('sk_')) {
-    return 'Invalid format: Second part must start with "sk_"\nExpected format: pk_xxx.sk_xxx';
-  }
-
-  if (secretPart.length < 4) {
-    return 'Invalid format: Secret key part is too short\nExpected format: pk_xxx.sk_xxx (where xxx is alphanumeric)';
-  }
-
-  const secretKeyContent = secretPart.substring(3); // Remove 'sk_'
-  if (!/^[a-zA-Z0-9]+$/.test(secretKeyContent)) {
-    return 'Invalid format: Secret key part contains invalid characters\nOnly letters and numbers are allowed after "sk_"';
-  }
-
-  // Check minimum length requirements
-  if (publicKeyContent.length < 8) {
-    return 'Invalid format: Public key part is too short (minimum 8 characters after "pk_")';
-  }
-
-  if (secretKeyContent.length < 16) {
-    return 'Invalid format: Secret key part is too short (minimum 16 characters after "sk_")';
-  }
-
-  return true;
 }
 
 async function handleOAuthFlow(config: CLIConfig): Promise<void> {
