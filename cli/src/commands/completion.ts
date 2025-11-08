@@ -84,7 +84,7 @@ export async function generateCompletionData(): Promise<CompletionData> {
             options: [
               { name: '--email', description: 'Email address', type: 'string' },
               { name: '--password', description: 'Password', type: 'string' },
-              { name: '--vendor-key', description: 'Vendor key (pk_xxx.sk_xxx)', type: 'string' },
+              { name: '--vendor-key', description: 'Vendor key value', type: 'string' },
               { name: '--oauth', description: 'Use OAuth flow', type: 'boolean' }
             ]
           },

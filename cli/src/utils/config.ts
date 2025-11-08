@@ -467,16 +467,18 @@ export class CLIConfig {
 
   // Enhanced authentication support
   async setVendorKey(vendorKey: string): Promise<void> {
-    // Enhanced format validation with detailed error messages
-    const formatValidation = this.validateVendorKeyFormat(vendorKey);
+    const trimmedKey = typeof vendorKey === 'string' ? vendorKey.trim() : '';
+
+    // Minimal format validation (non-empty); rely on server-side checks for everything else
+    const formatValidation = this.validateVendorKeyFormat(trimmedKey);
     if (formatValidation !== true) {
-      throw new Error(typeof formatValidation === 'string' ? formatValidation : 'Invalid vendor key format');
+      throw new Error(typeof formatValidation === 'string' ? formatValidation : 'Vendor key is invalid');
     }
 
     // Server-side validation
-    await this.validateVendorKeyWithServer(vendorKey);
+    await this.validateVendorKeyWithServer(trimmedKey);
 
-    this.config.vendorKey = vendorKey;
+    this.config.vendorKey = trimmedKey;
     this.config.authMethod = 'vendor_key';
     this.config.lastValidated = new Date().toISOString();
     await this.resetFailureCount(); // Reset failure count on successful auth
@@ -484,50 +486,10 @@ export class CLIConfig {
   }
 
   validateVendorKeyFormat(vendorKey: string): string | boolean {
-    if (!vendorKey || vendorKey.trim().length === 0) {
+    const trimmed = typeof vendorKey === 'string' ? vendorKey.trim() : '';
+
+    if (!trimmed) {
       return 'Vendor key is required';
-    }
-
-    const trimmed = vendorKey.trim();
-
-    // Check basic format
-    if (!trimmed.includes('.')) {
-      return 'Invalid vendor key format: Must contain a dot (.) separator. Expected format: pk_xxx.sk_xxx';
-    }
-
-    const parts = trimmed.split('.');
-    if (parts.length !== 2) {
-      return 'Invalid vendor key format: Must have exactly two parts separated by a dot. Expected format: pk_xxx.sk_xxx';
-    }
-
-    const [publicPart, secretPart] = parts;
-
-    // Validate public key part
-    if (!publicPart.startsWith('pk_')) {
-      return 'Invalid vendor key format: First part must start with "pk_". Expected format: pk_xxx.sk_xxx';
-    }
-
-    if (publicPart.length < 11) { // pk_ + minimum 8 chars
-      return 'Invalid vendor key format: Public key part is too short. Expected format: pk_xxx.sk_xxx (minimum 8 characters after "pk_")';
-    }
-
-    const publicKeyContent = publicPart.substring(3); // Remove 'pk_'
-    if (!/^[a-zA-Z0-9]+$/.test(publicKeyContent)) {
-      return 'Invalid vendor key format: Public key part contains invalid characters. Only letters and numbers are allowed after "pk_"';
-    }
-
-    // Validate secret key part
-    if (!secretPart.startsWith('sk_')) {
-      return 'Invalid vendor key format: Second part must start with "sk_". Expected format: pk_xxx.sk_xxx';
-    }
-
-    if (secretPart.length < 19) { // sk_ + minimum 16 chars
-      return 'Invalid vendor key format: Secret key part is too short. Expected format: pk_xxx.sk_xxx (minimum 16 characters after "sk_")';
-    }
-
-    const secretKeyContent = secretPart.substring(3); // Remove 'sk_'
-    if (!/^[a-zA-Z0-9]+$/.test(secretKeyContent)) {
-      return 'Invalid vendor key format: Secret key part contains invalid characters. Only letters and numbers are allowed after "sk_"';
     }
 
     return true;
