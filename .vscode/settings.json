@@ -27,5 +27,8 @@
         "docker-compose.yml": "docker-compose.*.yml",
         "README.md": "README.*.md,README-*.md,README_*.md"
     },
-    "markdown.validate.enabled": true
+    "markdown.validate.enabled": true,
+    "lanonasis.showPerformanceFeedback": true,
+    "lanonasis.showTreeView": true,
+    "lanonasis.verboseLogging": true
 }
