@@ -29,7 +29,12 @@ export class MemoryCommands {
     const spinner = ora('Creating memory...').start();
     try {
       const client = this.getClient(context);
-      const result = await client.createMemory({ title, content });
+      const result = await client.createMemory({ 
+        title, 
+        content,
+        memory_type: 'context',
+        tags: []
+      });
       if (result.error) {
         spinner.fail(chalk.red(`Failed: ${result.error}`));
         return;
@@ -53,7 +58,12 @@ export class MemoryCommands {
     const spinner = ora('Searching...').start();
     try {
       const client = this.getClient(context);
-      const result = await client.searchMemories({ query });
+      const result = await client.searchMemories({ 
+        query,
+        status: 'active',
+        limit: 20,
+        threshold: 0.7
+      });
       spinner.stop();
       
       if (result.error) {

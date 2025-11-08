@@ -45,8 +45,8 @@ export class ReplEngine {
     this.registry.register('mode', (args, ctx) => this.systemCommands.mode(args, ctx));
     this.registry.register('status', (args, ctx) => this.systemCommands.status(args, ctx));
     this.registry.register('help', () => this.systemCommands.help(), ['?', 'h']);
-    this.registry.register('clear', () => this.systemCommands.clear());
-    this.registry.register('exit', () => this.stop(), ['quit', 'q']);
+    this.registry.register('clear', async () => await this.systemCommands.clear());
+    this.registry.register('exit', async () => { this.stop(); }, ['quit', 'q']);
   }
   
   async start() {
