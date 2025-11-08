@@ -519,13 +519,13 @@ export class CLIConfig {
       if (error.response?.status === 401) {
         const errorData = error.response.data;
         if (errorData?.error?.includes('expired') || errorData?.message?.includes('expired')) {
-          throw new Error('Vendor key has expired. Please generate a new key from your dashboard.');
+          throw new Error('Vendor key validation failed: Key has expired. Please generate a new key from your dashboard.');
         } else if (errorData?.error?.includes('revoked') || errorData?.message?.includes('revoked')) {
-          throw new Error('Vendor key has been revoked. Please generate a new key from your dashboard.');
+          throw new Error('Vendor key validation failed: Key has been revoked. Please generate a new key from your dashboard.');
         } else if (errorData?.error?.includes('invalid') || errorData?.message?.includes('invalid')) {
-          throw new Error('Vendor key is invalid. Please check the key format and ensure it was copied correctly.');
+          throw new Error('Vendor key validation failed: Key is invalid. Please check the key format and ensure it was copied correctly.');
         } else {
-          throw new Error('Vendor key authentication failed. The key may be invalid, expired, or revoked.');
+          throw new Error('Vendor key validation failed: Authentication failed. The key may be invalid, expired, or revoked.');
         }
       } else if (error.response?.status === 403) {
         throw new Error('Vendor key access denied. The key may not have sufficient permissions for this operation.');
