@@ -322,7 +322,7 @@ async function refreshOAuth2Token(config: CLIConfig): Promise<boolean> {
   }
 
   try {
-    const authBase = config.getDiscoveredApiUrl();
+    const authBase = config.get<any>('discoveredServices')?.auth_base || 'https://auth.lanonasis.com';
     const response = await apiClient.post(`${authBase}/oauth/token`, {
       grant_type: 'refresh_token',
       refresh_token: refreshToken,
@@ -718,7 +718,7 @@ async function handleOAuthFlow(config: CLIConfig): Promise<void> {
     console.log(chalk.gray(`   ✓ Started local callback server on port ${callbackPort}`));
 
     // Build OAuth2 authorization URL
-    const authBase = config.getDiscoveredApiUrl();
+    const authBase = config.get<any>("discoveredServices")?.auth_base || "https://auth.lanonasis.com";
     const authUrl = new URL(`${authBase}/oauth/authorize`);
     authUrl.searchParams.set('response_type', 'code');
     authUrl.searchParams.set('client_id', 'lanonasis-cli');
