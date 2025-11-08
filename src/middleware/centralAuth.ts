@@ -127,6 +127,8 @@ export const centralAuth = async (req: Request, res: Response, next: NextFunctio
       console.log(`[${req.id}] Authenticating with API key`);
       const keyData = await validateApiKey(apiKey);
 
+      const organizationId = keyData.organization_id || keyData.user_id;
+
       req.user = {
         id: keyData.user_id,
         userId: keyData.user_id,
@@ -144,8 +146,7 @@ export const centralAuth = async (req: Request, res: Response, next: NextFunctio
         ...(keyData.project_scope ? { project_scope: keyData.project_scope } : {})
       };
 
-      req.user = unifiedUser;
-      console.log(`[${req.id}] API key authentication successful for user ${unifiedUser.id}`);
+      console.log(`[${req.id}] API key authentication successful for user ${req.user.id}`);
       return next();
     }
 
@@ -156,14 +157,14 @@ export const centralAuth = async (req: Request, res: Response, next: NextFunctio
       const decoded = await validateJWT(token);
 
       req.user = {
-        id: decoded.sub || decoded.user_id || decoded.id,
-        email: decoded.email,
-        plan: decoded.plan || 'free',
-        organization_id: decoded.organization_id,
+        id: String(decoded.sub || decoded.user_id || decoded.id || ''),
+        email: decoded.email ? String(decoded.email) : undefined,
+        plan: decoded.plan ? String(decoded.plan) : 'free',
+        organization_id: decoded.organization_id ? String(decoded.organization_id) : undefined,
         auth_type: 'jwt'
       };
 
-      console.log(`[${req.id}] JWT authentication successful for user ${req.user.id}`);
+      console.log(`[${req.id}] JWT authentication successful for user ${req.user?.id || 'unknown'}`);
       return next();
     }
 
@@ -209,7 +210,7 @@ export const planBasedRateLimit = () => {
       return next();
     }
 
-    const userId = req.user.id || req.user.userId || req.user.user_id || req.user.sub;
+    const userId = req.user.id || req.user.userId || req.user.sub;
     if (!userId) {
       console.warn(`[${req.id}] Rate limit skipped: missing user identifier`);
       return next(createAuthError('Authenticated user is missing an identifier', 'USER_ID_MISSING'));

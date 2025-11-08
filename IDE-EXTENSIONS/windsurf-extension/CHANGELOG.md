@@ -5,6 +5,17 @@ All notable changes to the Lanonasis Memory Assistant for Windsurf extension wil
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.4] - 2025-11-05
+
+### Fixed
+- 🐛 Added missing `isAuthenticated()` method to EnhancedMemoryService
+- 🔧 Fixed extension activation errors in Windsurf
+
+### Maintenance
+- 🔄 Version alignment across all IDE extensions (VSCode, Cursor, Windsurf)
+- 📦 Package manager standardization fixes
+- 🐛 Consistency improvements for marketplace releases
+
 ## [1.4.0] - 2025-11-02
 
 ### Security

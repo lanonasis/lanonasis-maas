@@ -1,8 +1,6 @@
 import * as vscode from 'vscode';
-import { MemoryService } from '../services/MemoryService';
 import { EnhancedMemoryService } from '../services/EnhancedMemoryService';
 import type { IMemoryService } from '../services/IMemoryService';
-import { MemoryEntry, MemoryType } from '../types/memory-aligned';
 
 export class MemorySidebarProvider implements vscode.WebviewViewProvider {
     public static readonly viewType = 'lanonasis.sidebar';
@@ -15,9 +13,16 @@ export class MemorySidebarProvider implements vscode.WebviewViewProvider {
 
     public resolveWebviewView(
         webviewView: vscode.WebviewView,
-        context: vscode.WebviewViewResolveContext,
+        _context: vscode.WebviewViewResolveContext,
         _token: vscode.CancellationToken,
     ) {
+        console.log('[Lanonasis] MemorySidebarProvider.resolveWebviewView called');
+        try {
+            const activationChannel = vscode.window.createOutputChannel('Lanonasis Activation');
+            activationChannel.appendLine('[Lanonasis] MemorySidebarProvider.resolveWebviewView called');
+        } catch {
+            // ignore in tests
+        }
         this._view = webviewView;
 
         webviewView.webview.options = {
