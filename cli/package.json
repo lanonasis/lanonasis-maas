@@ -1,6 +1,6 @@
 {
   "name": "@lanonasis/cli",
-  "version": "3.6.2",
+  "version": "3.6.3",
   "description": "LanOnasis Enterprise CLI - Memory as a Service, API Key Management, and Infrastructure Orchestration",
   "main": "dist/index-simple.js",
   "bin": {
@@ -21,9 +21,11 @@
     "build:mcp-client": "tsc src/mcp/client/enhanced-client.ts --outDir dist/mcp/client",
     "start": "node dist/index.js",
     "start:mcp-server": "node dist/mcp/server/lanonasis-server.js",
-    "test": "NODE_OPTIONS=--experimental-vm-modules jest",
+    "test": "NODE_OPTIONS=--experimental-vm-modules jest --testPathIgnorePatterns=\"integration|reliability|persistence\"",
+    "test:all": "NODE_OPTIONS=--experimental-vm-modules jest",
     "test:mcp": "NODE_OPTIONS=--experimental-vm-modules jest --testPathPattern=mcp",
-    "test:integration": "npm run build:mcp && npm run test:mcp",
+    "test:integration": "NODE_OPTIONS=--experimental-vm-modules jest --testPathPattern=\"integration|reliability|persistence\"",
+    "test:coverage": "NODE_OPTIONS=--experimental-vm-modules jest --coverage --testPathIgnorePatterns=\"integration|reliability|persistence\"",
     "lint": "eslint .",
     "type-check": "tsc --noEmit",
     "prepare": "npm run build",
