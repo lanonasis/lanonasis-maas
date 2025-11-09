@@ -2,7 +2,7 @@
   "name": "lanonasis-memory",
   "displayName": "LanOnasis Memory Assistant",
   "description": "Memory as a Service integration - AI-powered memory management with semantic search (Compatible with CLI v3.0.6+)",
-  "version": "1.4.8",
+  "version": "1.4.9",
   "publisher": "LanOnasis",
   "icon": "images/icon.png",
   "repository": {
@@ -29,26 +29,7 @@
   "activationEvents": [
     "onStartupFinished",
     "onView:lanonasis.sidebar",
-    "onView:lanonasisMemories",
-    "onCommand:lanonasis.searchMemory",
-    "onCommand:lanonasis.createMemory",
-    "onCommand:lanonasis.createMemoryFromFile",
-    "onCommand:lanonasis.authenticate",
-    "onCommand:lanonasis.refreshMemories",
-    "onCommand:lanonasis.openMemory",
-    "onCommand:lanonasis.switchMode",
-    "onCommand:lanonasis.manageApiKeys",
-    "onCommand:lanonasis.createProject",
-    "onCommand:lanonasis.viewProjects",
-    "onCommand:lanonasis.showConnectionInfo",
-    "onCommand:lanonasis.configureApiKey",
-    "onCommand:lanonasis.clearApiKey",
-    "onCommand:lanonasis.checkApiKeyStatus",
-    "onCommand:lanonasis.testConnection",
-    "onCommand:lanonasis.refreshApiKeys",
-    "onCommand:lanonasis.searchMemory",
-    "onCommand:lanonasis.runDiagnostics",
-    "onCommand:lanonasis.showLogs"
+    "onView:lanonasisMemories"
   ],
   "main": "./out/extension.js",
   "browser": "./out/extension.js",
@@ -361,13 +342,6 @@
       }
     }
   },
-  "files": [
-    "out/**",
-    "media/**",
-    "images/**",
-    "README.md",
-    "LICENSE"
-  ],
   "extensionKind": [
     "ui"
   ],
@@ -377,12 +351,12 @@
     "pretest": "npm run compile && npm run lint",
     "lint": "eslint src --ext ts",
     "test": "node ./out/test/runTest.js",
-    "package": "vsce package",
+    "package": "npm run compile && vsce package --no-dependencies",
     "publish": "vsce publish",
     "build:package": "npm run compile && vsce package --no-dependencies"
   },
   "dependencies": {
-    "@lanonasis/memory-client": "file:../../packages/memory-client",
+    "@lanonasis/memory-client": "workspace:*",
     "zod": "^3.23.8"
   },
   "devDependencies": {
