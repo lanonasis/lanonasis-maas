@@ -46,7 +46,9 @@
     "onCommand:lanonasis.checkApiKeyStatus",
     "onCommand:lanonasis.testConnection",
     "onCommand:lanonasis.refreshApiKeys",
-    "onCommand:lanonasis.searchMemory"
+    "onCommand:lanonasis.searchMemory",
+    "onCommand:lanonasis.runDiagnostics",
+    "onCommand:lanonasis.showLogs"
   ],
   "main": "./out/extension.js",
   "browser": "./out/extension.js",
@@ -150,6 +152,18 @@
         "title": "Test Connection",
         "category": "Lanonasis",
         "icon": "$(plug)"
+      },
+      {
+        "command": "lanonasis.runDiagnostics",
+        "title": "Run System Diagnostics",
+        "category": "Lanonasis",
+        "icon": "$(checklist)"
+      },
+      {
+        "command": "lanonasis.showLogs",
+        "title": "Show Extension Logs",
+        "category": "Lanonasis",
+        "icon": "$(output)"
       }
     ],
     "keybindings": [
