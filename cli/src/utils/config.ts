@@ -240,6 +240,8 @@ export class CLIConfig {
 
       const response = await axios.get(discoveryUrl, {
         timeout: 10000,
+        maxRedirects: 5,
+        proxy: false, // Bypass proxy to avoid redirect loops
         headers: {
           'User-Agent': 'Lanonasis-CLI/3.0.13'
         }
@@ -247,8 +249,16 @@ export class CLIConfig {
 
       // Map discovery response to our config format
       const discovered = response.data;
+
+      // Extract auth base, but filter out localhost URLs
+      let authBase = discovered.auth?.base || discovered.auth?.login?.replace('/auth/login', '') || '';
+      // Override localhost with production auth endpoint
+      if (authBase.includes('localhost') || authBase.includes('127.0.0.1')) {
+        authBase = 'https://auth.lanonasis.com';
+      }
+
       this.config.discoveredServices = {
-        auth_base: discovered.auth?.login?.replace('/auth/login', '') || 'https://api.lanonasis.com',
+        auth_base: authBase || 'https://auth.lanonasis.com',
         memory_base: 'https://api.lanonasis.com/api/v1',
         mcp_base: discovered.endpoints?.http || 'https://mcp.lanonasis.com/api/v1',
         mcp_ws_base: discovered.endpoints?.websocket || 'wss://mcp.lanonasis.com/ws',
@@ -512,7 +522,8 @@ export class CLIConfig {
           'X-Auth-Method': 'vendor_key',
           'X-Project-Scope': 'lanonasis-maas'
         },
-        timeout: 10000
+        timeout: 10000,
+        proxy: false // Bypass proxy to avoid redirect loops
       });
     } catch (error: any) {
       // Provide specific error messages based on response
