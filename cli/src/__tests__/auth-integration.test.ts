@@ -144,6 +144,9 @@ describe('Authentication Integration Tests', () => {
 
     describe('Vendor Key Authentication', () => {
         vendorKeyRequiredTest('should validate vendor key against server', async () => {
+            if (!testVendorKey) {
+                throw new Error('Vendor key not configured; this test should have been skipped.');
+            }
             // This will hit the real server
             await config.setVendorKey(testVendorKey);
 
@@ -151,15 +154,18 @@ describe('Authentication Integration Tests', () => {
             expect(config.get('authMethod')).toBe('vendor_key');
         });
 
-        it('should reject invalid vendor key format', async () => {
+        it('should reject invalid vendor keys', async () => {
             const invalidKey = 'invalid-key';
 
-            await expect(config.setVendorKey(invalidKey)).rejects.toThrow('Invalid vendor key format');
+            await expect(config.setVendorKey(invalidKey)).rejects.toThrow(/Vendor key validation failed/i);
         });
     });
 
     describe('Token Authentication', () => {
         tokenRequiredTest('should verify JWT token expiration', async () => {
+            if (!testToken) {
+                throw new Error('JWT token not configured; this test should have been skipped.');
+            }
             await config.setToken(testToken);
 
             const isAuthenticated = await config.isAuthenticated();

@@ -1,20 +1,36 @@
 # Lanonasis Memory Assistant for VSCode
 
-**Transform your coding experience with intelligent memory management and API key management directly in VSCode.**
+**Transform your coding experience with intelligent memory management and secure authentication directly in VSCode.**
 
-## 🆕 New in v1.3.2
+## 🆕 New in v1.4.1 - Security & Authentication Enhancements
 
-- **🌐 Web Extension Support** - Now works in VS Code for Web (vscode.dev, github.dev)
-- **🔧 CLI v3.0.6 Integration** - Enhanced integration with @lanonasis/cli v3.0.6+
-- **🔐 Auth Persistence** - Leverages CLI's persistent authentication
-- **📦 Virtual Workspaces** - Full support for virtual and untrusted workspaces
-- **⚡ Improved Compatibility** - Better cross-platform support
+### 🔐 Secure Authentication
+- **OAuth2 with PKCE** - Secure browser-based authentication flow (Recommended)
+- **SecretStorage Integration** - Credentials stored in OS keychain (macOS Keychain, Windows Credential Manager)
+- **Manual API Key Option** - Alternative authentication method for automation/CI
+- **Automatic Token Refresh** - No manual re-authentication needed
+- **Console Redaction** - Prevents credential leaks in logs
 
-## Previous Updates (v1.2.0)
+### 🎯 Authentication Options
+Choose your preferred method when running **"Lanonasis: Authenticate"**:
+1. **OAuth (Browser)** - Opens browser for secure sign-in with automatic token management
+2. **API Key** - Direct API key entry with secure storage
 
-- **🔑 API Key Management** - Create and manage API keys directly from VSCode
+### ⚠️ Breaking Changes
+- **Deprecated**: `lanonasis.apiKey` setting in plaintext is now deprecated
+- **Migration**: Run `Lanonasis: Authenticate` to migrate to secure storage
+- **Note**: Old API keys still work but will show deprecation warning
+
+## Previous Updates
+
+### v1.3.2
+- **🌐 Web Extension Support** - Works in VS Code for Web (vscode.dev, github.dev)
+- **🔧 CLI v3.0.6 Integration** - Enhanced integration with @lanonasis/cli
+- **📦 Virtual Workspaces** - Full support for virtual workspaces
+
+### v1.2.0
+- **🔑 API Key Management** - Create and manage API keys directly
 - **📁 Project Organization** - Organize API keys by projects
-- **🌳 API Key Tree View** - Browse projects and keys in Explorer panel
 - **🔄 Key Rotation** - Rotate API keys for enhanced security
 
 ## 🧠 Features
@@ -37,17 +53,31 @@
 
 ### Prerequisites
 - VS Code 1.99.0 or higher (Desktop or Web)
+- Lanonasis account (sign up at [auth.lanonasis.com](https://auth.lanonasis.com))
 - @lanonasis/cli v3.0.6+ (optional, for enhanced features)
 - Internet connection for API access
 
 ### Quick Start
-1. **Get API Key**: Visit [api.lanonasis.com](https://api.lanonasis.com) to get your free API key
-2. **Configure Extension**: Open VSCode settings and add your API key to `lanonasis.apiKey`
-3. **Optional - Install CLI**: `npm install -g @lanonasis/cli@latest` for enhanced auth
-4. **Start Using**: 
+1. **Install Extension**:
+   - Search "LanOnasis" in VS Code Extensions
+   - Or: `code --install-extension LanOnasis.lanonasis-memory`
+
+2. **Authenticate** (Choose one method):
+   - **Method A - OAuth (Recommended)**:
+     - Press `Cmd+Shift+P` → `Lanonasis: Authenticate`
+     - Select "OAuth (Browser)"
+     - Browser opens → Sign in → Done!
+
+   - **Method B - API Key**:
+     - Press `Cmd+Shift+P` → `Lanonasis: Authenticate`
+     - Select "API Key"
+     - Enter your API key from [api.lanonasis.com](https://api.lanonasis.com)
+
+3. **Start Using**:
    - Press `Ctrl+Shift+M` to search memories
    - Press `Ctrl+Shift+K` to manage API keys
    - Select code and press `Ctrl+Shift+Alt+M` to create memories
+   - Click Lanonasis icon in Activity Bar for sidebar view
 
 ## 🎯 Use Cases
 
@@ -113,28 +143,42 @@
 
 ## 📊 Commands
 
+### Authentication Commands (NEW in v1.4.1!)
+- `Lanonasis: Authenticate` - Configure OAuth or API key authentication
+- `Lanonasis: Configure Authentication` - Set up secure credentials
+- `Lanonasis: Check API Key Status` - Verify authentication status
+- `Lanonasis: Clear API Key` - Remove stored credentials
+- `Lanonasis: Test Connection` - Verify API connectivity
+
 ### Memory Commands
-- `Lanonasis: Search Memory` - Search through all memories
-- `Lanonasis: Create Memory` - Create memory from selection
-- `Lanonasis: List Memories` - View all memories
-- `Lanonasis: Delete Memory` - Remove a memory
-- `Lanonasis: Update Memory` - Edit existing memory
+- `Lanonasis: Search Memory` - Search through all memories (`Ctrl+Shift+M`)
+- `Lanonasis: Create Memory` - Create memory from selection (`Ctrl+Shift+Alt+M`)
+- `Lanonasis: Create Memory from File` - Create memory from entire file
 - `Lanonasis: Refresh Memories` - Sync with server
 - `Lanonasis: Switch Gateway/Direct API Mode` - Toggle connection mode
 
-### API Key Commands (NEW!)
-- `Lanonasis: Manage API Keys` - Open API key management
+### API Key Commands
+- `Lanonasis: Manage API Keys` - Open API key management (`Ctrl+Shift+K`)
 - `Lanonasis: Create API Key Project` - Create new project
 - `Lanonasis: View API Key Projects` - List all projects
-- `Lanonasis: Refresh API Keys` - Update key list
 
 ## 🔐 Security
 
-- All API keys are stored securely in VSCode's secret storage
-- Keys are never logged or exposed in code
+### Credential Storage (v1.4.1+)
+- **SecretStorage API** - Credentials stored in OS-level keychain
+  - macOS: Keychain
+  - Windows: Credential Manager
+  - Linux: Secret Service API
+- **OAuth2 with PKCE** - Industry-standard secure authentication
+- **Automatic Token Refresh** - No credential re-entry needed
+- **Console Redaction** - Credentials never appear in logs
+
+### API Security
+- All API keys encrypted at rest and in transit
 - Support for key rotation and expiration
 - Audit trail for all key operations
-- Encrypted communication with TLS 1.3
+- TLS 1.3 encrypted communication
+- No plaintext storage of credentials
 
 ## 📞 Support
 

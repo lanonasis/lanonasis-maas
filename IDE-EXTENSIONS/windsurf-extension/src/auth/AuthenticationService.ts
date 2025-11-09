@@ -58,6 +58,9 @@ export class AuthenticationService {
 
     async authenticateWithBrowser(cancellationToken?: vscode.CancellationToken): Promise<boolean> {
         return new Promise((resolve, reject) => {
+            // Track timeout to prevent race conditions (#43)
+            let timeoutId: NodeJS.Timeout | undefined;
+
             const config = vscode.workspace.getConfiguration('lanonasis');
             const authUrl = config.get<string>('authUrl', 'https://auth.lanonasis.com');
             
@@ -68,7 +71,7 @@ export class AuthenticationService {
             
             // Start local callback server
             this.server = http.createServer((req, res) => {
-                this.handleCallback(req, res, codeVerifier, state, resolve, reject);
+                this.handleCallback(req, res, codeVerifier, state, resolve, reject, timeoutId);
             });
 
             this.server.listen(AuthenticationService.CALLBACK_PORT, 'localhost', () => {
@@ -76,7 +79,7 @@ export class AuthenticationService {
                 
                 // Build OAuth2 authorization URL
                 const authUrlObj = new URL('/oauth/authorize', authUrl);
-                authUrlObj.searchParams.set('client_id', 'cursor-extension');
+                authUrlObj.searchParams.set('client_id', 'windsurf-extension');
                 authUrlObj.searchParams.set('response_type', 'code');
                 authUrlObj.searchParams.set('scope', 'memories:read memories:write memories:delete');
                 authUrlObj.searchParams.set('redirect_uri', `http://localhost:${AuthenticationService.CALLBACK_PORT}${AuthenticationService.CALLBACK_PATH}`);
@@ -97,7 +100,7 @@ export class AuthenticationService {
             }
 
             // Timeout after 5 minutes
-            setTimeout(() => {
+            timeoutId = setTimeout(() => {
                 this.cleanup();
                 reject(new Error('Authentication timeout'));
             }, 5 * 60 * 1000);
@@ -165,7 +168,8 @@ export class AuthenticationService {
         codeVerifier: string,
         expectedState: string,
         resolve: (value: boolean) => void,
-        reject: (reason: any) => void
+        reject: (reason: any) => void,
+        timeoutId?: NodeJS.Timeout
     ): Promise<void> {
         try {
             const url = new URL(req.url!, `http://localhost:${AuthenticationService.CALLBACK_PORT}`);
@@ -219,9 +223,11 @@ export class AuthenticationService {
                 </html>
             `);
 
+            if (timeoutId) clearTimeout(timeoutId);
             this.cleanup();
             resolve(true);
         } catch (error) {
+            if (timeoutId) clearTimeout(timeoutId);
             // Send error response
             res.writeHead(400, { 'Content-Type': 'text/html' });
             res.end(`
@@ -242,6 +248,7 @@ export class AuthenticationService {
                 </html>
             `);
 
+            if (timeoutId) clearTimeout(timeoutId);
             this.cleanup();
             reject(error);
         }
@@ -255,7 +262,7 @@ export class AuthenticationService {
         
         const body = new URLSearchParams({
             grant_type: 'authorization_code',
-            client_id: 'cursor-extension',
+            client_id: 'windsurf-extension',
             code,
             redirect_uri: `http://localhost:${AuthenticationService.CALLBACK_PORT}${AuthenticationService.CALLBACK_PATH}`,
             code_verifier: codeVerifier
@@ -304,7 +311,7 @@ export class AuthenticationService {
         
         const body = new URLSearchParams({
             grant_type: 'refresh_token',
-            client_id: 'cursor-extension',
+            client_id: 'windsurf-extension',
             refresh_token: this.authToken.refresh_token
         });
 

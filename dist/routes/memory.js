@@ -1,12 +1,18 @@
 import { Router } from 'express';
 import { v4 as uuidv4 } from 'uuid';
-import { asyncHandler } from '@/middleware/errorHandler';
-import { requirePlan, requireRole } from '@/middleware/auth-aligned';
-import { MemoryService } from '@/services/memoryService';
-import { createMemorySchema, updateMemorySchema, searchMemorySchema } from '@/types/memory';
-import { logMemoryOperation } from '@/utils/logger';
+import { asyncHandler } from '../middleware/errorHandler';
+import { requirePlan, requireRole } from '../middleware/auth-aligned';
+import { MemoryService } from '../services/memoryService';
+import { createMemorySchema, updateMemorySchema, searchMemorySchema } from '../types/memory';
+import { logMemoryOperation } from '../utils/logger';
 const router = Router();
 const memoryService = new MemoryService();
+const resolveUserContext = (user) => {
+    const userId = user?.userId ?? user?.sub ?? user?.id ?? user?.user_id;
+    const organizationId = user?.organizationId ?? user?.organization_id ?? userId;
+    const plan = user?.plan ?? 'free';
+    return { userId, organizationId, plan };
+};
 /**
  * @swagger
  * /memory:
@@ -36,15 +42,14 @@ const memoryService = new MemoryService();
  */
 router.post('/', asyncHandler(async (req, res) => {
     const validatedData = createMemorySchema.parse(req.body);
-    const user = req.user;
-    if (!user || !user.userId || !user.organizationId || !user.plan) {
+    const { userId, organizationId, plan } = resolveUserContext(req.user);
+    if (!req.user || !userId || !organizationId) {
         res.status(401).json({
             error: 'Unauthorized',
             message: 'Valid authentication required'
         });
         return;
     }
-    const { userId, organizationId, plan } = user;
     // Check plan limits
     const memoryCount = await memoryService.getMemoryCount(organizationId);
     const planLimits = {
@@ -149,15 +154,15 @@ router.post('/', asyncHandler(async (req, res) => {
  *                       type: integer
  */
 router.get('/', asyncHandler(async (req, res) => {
-    const user = req.user;
-    if (!user || !user.organizationId) {
+    const { userId, organizationId } = resolveUserContext(req.user);
+    const role = req.user?.role ?? 'user';
+    if (!req.user || !organizationId) {
         res.status(401).json({
             error: 'Unauthorized',
             message: 'Valid authentication required'
         });
         return;
     }
-    const { organizationId, role } = user;
     const page = parseInt(req.query.page) || 1;
     const limit = Math.min(parseInt(req.query.limit) || 20, 100);
     const memory_type = req.query.memory_type;
@@ -176,7 +181,14 @@ router.get('/', asyncHandler(async (req, res) => {
         filters.tags = tags;
     // Role-based filtering
     if (role !== 'admin' && user_id) {
-        filters.user_id = user.userId; // Force to own memories
+        if (!userId) {
+            res.status(401).json({
+                error: 'Unauthorized',
+                message: 'Valid authentication required'
+            });
+            return;
+        }
+        filters.user_id = userId; // Force to own memories
     }
     else if (user_id) {
         filters.user_id = user_id;
@@ -225,15 +237,15 @@ router.get('/', asyncHandler(async (req, res) => {
  */
 router.post('/search', asyncHandler(async (req, res) => {
     const validatedData = searchMemorySchema.parse(req.body);
-    const user = req.user;
-    if (!user || !user.userId || !user.organizationId) {
+    const { userId, organizationId } = resolveUserContext(req.user);
+    const role = req.user?.role ?? 'user';
+    if (!req.user || !userId || !organizationId) {
         res.status(401).json({
             error: 'Unauthorized',
             message: 'Valid authentication required'
         });
         return;
     }
-    const { userId, organizationId, role } = user;
     const startTime = Date.now();
     // Build filters object without undefined values
     const filters = {
@@ -301,15 +313,15 @@ router.get('/:id', asyncHandler(async (req, res) => {
         });
         return;
     }
-    const user = req.user;
-    if (!user || !user.userId || !user.organizationId) {
+    const { userId, organizationId } = resolveUserContext(req.user);
+    const role = req.user?.role ?? 'user';
+    if (!req.user || !userId || !organizationId) {
         res.status(401).json({
             error: 'Unauthorized',
             message: 'Valid authentication required'
         });
         return;
     }
-    const { userId, organizationId, role } = user;
     const memory = await memoryService.getMemoryById(id, organizationId);
     if (!memory) {
         res.status(404).json({
@@ -378,15 +390,15 @@ router.put('/:id', asyncHandler(async (req, res) => {
         return;
     }
     const validatedData = updateMemorySchema.parse(req.body);
-    const user = req.user;
-    if (!user || !user.userId || !user.organizationId) {
+    const { userId, organizationId } = resolveUserContext(req.user);
+    const role = req.user?.role ?? 'user';
+    if (!req.user || !userId || !organizationId) {
         res.status(401).json({
             error: 'Unauthorized',
             message: 'Valid authentication required'
         });
         return;
     }
-    const { userId, organizationId, role } = user;
     const existingMemory = await memoryService.getMemoryById(id, organizationId);
     if (!existingMemory) {
         res.status(404).json({
@@ -443,15 +455,15 @@ router.delete('/:id', asyncHandler(async (req, res) => {
         });
         return;
     }
-    const user = req.user;
-    if (!user || !user.userId || !user.organizationId) {
+    const { userId, organizationId } = resolveUserContext(req.user);
+    const role = req.user?.role ?? 'user';
+    if (!req.user || !userId || !organizationId) {
         res.status(401).json({
             error: 'Unauthorized',
             message: 'Valid authentication required'
         });
         return;
     }
-    const { userId, organizationId, role } = user;
     const existingMemory = await memoryService.getMemoryById(id, organizationId);
     if (!existingMemory) {
         res.status(404).json({
@@ -546,15 +558,14 @@ router.get('/admin/stats', requireRole(['admin']), asyncHandler(async (req, res)
  */
 router.post('/bulk/delete', requireRole(['admin']), requirePlan(['pro', 'enterprise']), asyncHandler(async (req, res) => {
     const { memory_ids } = req.body;
-    const user = req.user;
-    if (!user || !user.userId || !user.organizationId) {
+    const { userId, organizationId } = resolveUserContext(req.user);
+    if (!req.user || !userId || !organizationId) {
         res.status(401).json({
             error: 'Unauthorized',
             message: 'Valid authentication required'
         });
         return;
     }
-    const { userId, organizationId } = user;
     if (!Array.isArray(memory_ids) || memory_ids.length === 0) {
         res.status(400).json({
             error: 'Invalid request',

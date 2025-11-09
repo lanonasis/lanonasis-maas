@@ -181,21 +181,21 @@ export declare const createMemorySchema: z.ZodObject<{
 }, "strip", z.ZodTypeAny, {
     title: string;
     content: string;
-    memory_type: "context" | "project" | "knowledge" | "reference" | "conversation";
+    memory_type: "conversation" | "knowledge" | "project" | "context" | "reference";
     tags: string[];
-    topic_id?: string | undefined;
-    metadata?: Record<string, unknown> | undefined;
     summary?: string | undefined;
+    topic_id?: string | undefined;
     project_ref?: string | undefined;
+    metadata?: Record<string, unknown> | undefined;
 }, {
     title: string;
     content: string;
-    memory_type?: "context" | "project" | "knowledge" | "reference" | "conversation" | undefined;
-    tags?: string[] | undefined;
-    topic_id?: string | undefined;
-    metadata?: Record<string, unknown> | undefined;
     summary?: string | undefined;
+    memory_type?: "conversation" | "knowledge" | "project" | "context" | "reference" | undefined;
+    topic_id?: string | undefined;
     project_ref?: string | undefined;
+    tags?: string[] | undefined;
+    metadata?: Record<string, unknown> | undefined;
 }>;
 /**
  * @swagger
@@ -250,25 +250,25 @@ export declare const updateMemorySchema: z.ZodObject<{
     tags: z.ZodOptional<z.ZodArray<z.ZodString, "many">>;
     metadata: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
 }, "strip", z.ZodTypeAny, {
-    status?: "active" | "archived" | "draft" | "deleted" | undefined;
     title?: string | undefined;
     content?: string | undefined;
-    memory_type?: "context" | "project" | "knowledge" | "reference" | "conversation" | undefined;
-    tags?: string[] | undefined;
-    topic_id?: string | null | undefined;
-    metadata?: Record<string, unknown> | undefined;
     summary?: string | undefined;
+    memory_type?: "conversation" | "knowledge" | "project" | "context" | "reference" | undefined;
+    topic_id?: string | null | undefined;
     project_ref?: string | null | undefined;
+    status?: "active" | "archived" | "draft" | "deleted" | undefined;
+    tags?: string[] | undefined;
+    metadata?: Record<string, unknown> | undefined;
 }, {
-    status?: "active" | "archived" | "draft" | "deleted" | undefined;
     title?: string | undefined;
     content?: string | undefined;
-    memory_type?: "context" | "project" | "knowledge" | "reference" | "conversation" | undefined;
-    tags?: string[] | undefined;
-    topic_id?: string | null | undefined;
-    metadata?: Record<string, unknown> | undefined;
     summary?: string | undefined;
+    memory_type?: "conversation" | "knowledge" | "project" | "context" | "reference" | undefined;
+    topic_id?: string | null | undefined;
     project_ref?: string | null | undefined;
+    status?: "active" | "archived" | "draft" | "deleted" | undefined;
+    tags?: string[] | undefined;
+    metadata?: Record<string, unknown> | undefined;
 }>;
 /**
  * @swagger
@@ -326,19 +326,19 @@ export declare const searchMemorySchema: z.ZodObject<{
     query: string;
     limit: number;
     threshold: number;
-    tags?: string[] | undefined;
     topic_id?: string | undefined;
-    memory_types?: ("context" | "project" | "knowledge" | "reference" | "conversation")[] | undefined;
     project_ref?: string | undefined;
+    tags?: string[] | undefined;
+    memory_types?: ("conversation" | "knowledge" | "project" | "context" | "reference")[] | undefined;
 }, {
     query: string;
+    topic_id?: string | undefined;
+    project_ref?: string | undefined;
     status?: "active" | "archived" | "draft" | "deleted" | undefined;
     tags?: string[] | undefined;
-    topic_id?: string | undefined;
-    memory_types?: ("context" | "project" | "knowledge" | "reference" | "conversation")[] | undefined;
     limit?: number | undefined;
     threshold?: number | undefined;
-    project_ref?: string | undefined;
+    memory_types?: ("conversation" | "knowledge" | "project" | "context" | "reference")[] | undefined;
 }>;
 /**
  * @swagger

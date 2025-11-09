@@ -351,7 +351,7 @@ export class InteractiveSetup {
           {
             name: authBox(
               '🔑 Vendor Key',
-              'Secure API access with pk_xxx.sk_xxx format',
+              'Secure API access with long-lived credentials',
               ['No expiration', 'Ideal for CI/CD', 'Full API access']
             ),
             value: 'vendor',
@@ -394,33 +394,22 @@ export class InteractiveSetup {
   }
 
   private async authenticateWithVendorKey(): Promise<void> {
-    const creds = await inquirer.prompt([
-      {
-        type: 'input',
-        name: 'publicKey',
-        message: 'Enter your Public Key (pk_xxx):',
-        validate: (input) => {
-          if (!input.startsWith('pk_')) {
-            return 'Public key must start with pk_';
-          }
-          return true;
-        }
-      },
+    const { vendorKey } = await inquirer.prompt([
       {
         type: 'password',
-        name: 'secretKey',
-        message: 'Enter your Secret Key (sk_xxx):',
+        name: 'vendorKey',
+        message: 'Enter your vendor key:',
         mask: '*',
         validate: (input) => {
-          if (!input.startsWith('sk_')) {
-            return 'Secret key must start with sk_';
+          if (!input || input.trim().length === 0) {
+            return 'Vendor key is required';
           }
           return true;
         }
       }
     ]);
 
-    void creds; // collected for future use when hooking real auth
+    void vendorKey; // collected for future use when hooking real auth
     const spinner = ora('Authenticating...').start();
     await this.simulateDelay(1000);
     spinner.succeed('Authentication successful!');

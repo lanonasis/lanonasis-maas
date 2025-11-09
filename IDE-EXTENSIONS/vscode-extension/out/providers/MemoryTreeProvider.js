@@ -88,11 +88,16 @@ class MemoryTreeProvider {
         this.onDidChangeTreeData = this._onDidChangeTreeData.event;
         this.memories = [];
         this.loading = false;
-        this.loadMemories();
+        this.authenticated = false;
+        this.authenticated = this.memoryService.isAuthenticated();
+        if (this.authenticated) {
+            void this.loadMemories();
+        }
     }
     async loadMemories() {
-        if (!this.memoryService.isAuthenticated()) {
+        if (!this.authenticated) {
             this.memories = [];
+            this.loading = false;
             this._onDidChangeTreeData.fire();
             return;
         }
@@ -102,7 +107,9 @@ class MemoryTreeProvider {
         }
         catch (error) {
             this.memories = [];
-            vscode.window.showErrorMessage(`Failed to load memories: ${error instanceof Error ? error.message : 'Unknown error'}`);
+            if (!(error instanceof Error && error.message.includes('Not authenticated'))) {
+                vscode.window.showErrorMessage(`Failed to load memories: ${error instanceof Error ? error.message : 'Unknown error'}`);
+            }
         }
         finally {
             this.loading = false;
@@ -110,13 +117,31 @@ class MemoryTreeProvider {
         }
     }
     refresh() {
-        this.loadMemories();
+        if (!this.authenticated) {
+            this.clear();
+            return;
+        }
+        void this.loadMemories();
+    }
+    setAuthenticated(authenticated) {
+        this.authenticated = authenticated;
+        if (authenticated) {
+            void this.loadMemories();
+        }
+        else {
+            this.clear();
+        }
+    }
+    clear() {
+        this.loading = false;
+        this.memories = [];
+        this._onDidChangeTreeData.fire();
     }
     getTreeItem(element) {
         return element;
     }
     getChildren(element) {
-        if (!this.memoryService.isAuthenticated()) {
+        if (!this.authenticated) {
             return Promise.resolve([]);
         }
         if (this.loading) {
@@ -144,6 +169,9 @@ class MemoryTreeProvider {
         return groups;
     }
     getParent(element) {
+        if (!this.authenticated) {
+            return null;
+        }
         if (element instanceof MemoryTreeItem) {
             // Find the parent memory type group
             const memoryType = element.memory.memory_type;

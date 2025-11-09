@@ -38,7 +38,6 @@ const vscode = __importStar(require("vscode"));
 const crypto = __importStar(require("crypto"));
 const http = __importStar(require("http"));
 const url_1 = require("url");
-const timers_1 = require("timers");
 class AuthenticationService {
     constructor(context) {
         this.authToken = null;
@@ -76,6 +75,8 @@ class AuthenticationService {
     }
     async authenticateWithBrowser(cancellationToken) {
         return new Promise((resolve, reject) => {
+            // Track timeout to prevent race conditions (#43)
+            let timeoutId;
             const config = vscode.workspace.getConfiguration('lanonasis');
             const authUrl = config.get('authUrl', 'https://auth.lanonasis.com');
             // Generate PKCE challenge
@@ -84,7 +85,7 @@ class AuthenticationService {
             const state = crypto.randomBytes(32).toString('hex');
             // Start local callback server
             this.server = http.createServer((req, res) => {
-                this.handleCallback(req, res, codeVerifier, state, resolve, reject);
+                this.handleCallback(req, res, codeVerifier, state, resolve, reject, timeoutId);
             });
             this.server.listen(AuthenticationService.CALLBACK_PORT, 'localhost', () => {
                 console.log(`Callback server listening on port ${AuthenticationService.CALLBACK_PORT}`);
@@ -108,7 +109,7 @@ class AuthenticationService {
                 });
             }
             // Timeout after 5 minutes
-            (0, timers_1.setTimeout)(() => {
+            timeoutId = setTimeout(() => {
                 this.cleanup();
                 reject(new Error('Authentication timeout'));
             }, 5 * 60 * 1000);
@@ -161,7 +162,7 @@ class AuthenticationService {
         return (this.authToken && this.isTokenValid(this.authToken)) ||
             (this.getStoredApiKey() !== null);
     }
-    async handleCallback(req, res, codeVerifier, expectedState, resolve, reject) {
+    async handleCallback(req, res, codeVerifier, expectedState, resolve, reject, timeoutId) {
         try {
             const url = new url_1.URL(req.url, `http://localhost:${AuthenticationService.CALLBACK_PORT}`);
             if (url.pathname !== AuthenticationService.CALLBACK_PATH) {
@@ -205,10 +206,14 @@ class AuthenticationService {
                     </body>
                 </html>
             `);
+            if (timeoutId)
+                clearTimeout(timeoutId);
             this.cleanup();
             resolve(true);
         }
         catch (error) {
+            if (timeoutId)
+                clearTimeout(timeoutId);
             // Send error response
             res.writeHead(400, { 'Content-Type': 'text/html' });
             res.end(`
@@ -228,6 +233,8 @@ class AuthenticationService {
                     </body>
                 </html>
             `);
+            if (timeoutId)
+                clearTimeout(timeoutId);
             this.cleanup();
             reject(error);
         }
