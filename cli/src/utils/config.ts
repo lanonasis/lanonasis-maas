@@ -503,10 +503,10 @@ export class CLIConfig {
       // Ensure service discovery is done
       await this.discoverServices();
 
-      const authBase = this.config.discoveredServices?.auth_base || 'https://api.lanonasis.com';
+      const authBase = this.config.discoveredServices?.auth_base || 'https://auth.lanonasis.com';
 
       // Test vendor key with health endpoint
-      await axios.get(`${authBase}/api/v1/health`, {
+      await axios.get(`${authBase}/health`, {
         headers: {
           'X-API-Key': vendorKey,
           'X-Auth-Method': 'vendor_key',
