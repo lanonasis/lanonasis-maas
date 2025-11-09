@@ -121,6 +121,30 @@ export async function activate(context: vscode.ExtensionContext) {
         await applyAuthenticationState(false);
     };
 
+    // Register authentication command FIRST before any other code tries to call it
+    const authenticateCommand = vscode.commands.registerCommand('lanonasis.authenticate', async (mode?: 'oauth' | 'apikey') => {
+        try {
+            let apiKey: string | null = null;
+
+            if (mode === 'oauth') {
+                apiKey = await secureApiKeyService.authenticateWithOAuthFlow();
+            } else if (mode === 'apikey') {
+                apiKey = await secureApiKeyService.promptForApiKeyEntry();
+            } else {
+                apiKey = await secureApiKeyService.promptForAuthentication();
+            }
+
+            if (apiKey) {
+                await handleAuthenticationSuccess();
+                vscode.window.showInformationMessage('✅ Successfully authenticated with Lanonasis Memory');
+            }
+        } catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            vscode.window.showErrorMessage(`Authentication failed: ${message}`);
+            outputChannel.appendLine(`[Auth] Error: ${message}`);
+        }
+    });
+
     const promptForAuthenticationIfMissing = async () => {
         const selection = await vscode.window.showInformationMessage(
             'Lanonasis Memory: No authentication configured. Choose how you would like to connect.',
@@ -137,6 +161,7 @@ export async function activate(context: vscode.ExtensionContext) {
     };
 
     const commands = [
+        authenticateCommand,
         vscode.commands.registerCommand('lanonasis.searchMemory', async () => {
             await searchMemories(memoryService);
         }),
@@ -149,28 +174,7 @@ export async function activate(context: vscode.ExtensionContext) {
             await createMemoryFromFile(memoryService);
         }),
 
-        vscode.commands.registerCommand('lanonasis.authenticate', async (mode?: 'oauth' | 'apikey') => {
-            try {
-                let apiKey: string | null = null;
-
-                if (mode === 'oauth') {
-                    apiKey = await secureApiKeyService.authenticateWithOAuthFlow();
-                } else if (mode === 'apikey') {
-                    apiKey = await secureApiKeyService.promptForApiKeyEntry();
-                } else {
-                    apiKey = await secureApiKeyService.promptForAuthentication();
-                }
-
-                if (apiKey) {
-                    vscode.window.showInformationMessage('Authentication configured successfully and stored securely.');
-                    await handleAuthenticationSuccess();
-                }
-            } catch (error) {
-                const message = error instanceof Error ? error.message : String(error);
-                vscode.window.showErrorMessage(`Failed to configure authentication: ${message}`);
-                outputChannel.appendLine(`[Authenticate] Error: ${message}`);
-            }
-        }),
+        // Note: lanonasis.authenticate is registered earlier (line 125) to prevent timing issues
 
         vscode.commands.registerCommand('lanonasis.refreshMemories', async () => {
             memoryTreeProvider.refresh();
