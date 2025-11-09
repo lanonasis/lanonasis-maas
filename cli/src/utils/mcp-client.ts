@@ -984,7 +984,23 @@ export class MCPClient {
     connectionUptime?: number;
     failureCount: number;
   } {
-    const connectionMode = this.activeConnectionMode;
+    // When disconnected, show the configured preference instead of the stale activeConnectionMode
+    let connectionMode = this.activeConnectionMode;
+    if (!this.isConnected) {
+      // Check configured preference
+      const mcpPreference = this.config.get<string>('mcpPreference');
+      const mcpConnectionMode = this.config.get<string>('mcpConnectionMode');
+      const preferRemote = this.config.get<boolean>('mcpUseRemote');
+
+      connectionMode = mcpConnectionMode
+        ?? mcpPreference
+        ?? (preferRemote ? 'remote' : 'websocket');
+
+      // If preference is 'auto', resolve to default (websocket)
+      if (connectionMode === 'auto') {
+        connectionMode = 'websocket';
+      }
+    }
 
     let server: string;
     switch (connectionMode) {
