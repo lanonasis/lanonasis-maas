@@ -10,7 +10,13 @@ vsc-extension-quickstart.md
 **/*.map
 **/*.ts
 node_modules/**
-../packages/**
+../../packages/**
+../../**/node_modules/**
 *.log
 .DS_Store
 .env
+*.vsix
+check-icons.sh
+ICON_UPDATE_README.md
+ICON_STATUS.md
+tsconfig.json.backup
