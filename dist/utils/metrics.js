@@ -1,4 +1,4 @@
-import { logger } from '@/utils/logger';
+import { logger } from '../utils/logger';
 // In-memory metrics storage (in production, use Redis or proper metrics system)
 class MetricsCollector {
     metrics = new Map();

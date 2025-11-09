@@ -83,20 +83,29 @@
     function getAuthHTML() {
         return `
             <div class="auth-state">
-                <div class="auth-icon">🔐</div>
+                <div class="auth-icon">🧭</div>
                 <h3>Welcome to Lanonasis Memory</h3>
-                <p>Connect your Lanonasis account to access your memories, create new ones, and leverage AI-powered semantic search.</p>
+                <p>Choose how you'd like to connect. You can switch between OAuth and API key authentication at any time.</p>
                 <div class="auth-actions">
-                    <button class="btn" id="auth-btn">
-                        <span class="btn-icon">🔑 Authenticate</span>
+                    <button class="btn" id="oauth-btn">
+                        <span class="btn-icon">🌐 Continue in Browser</span>
+                    </button>
+                    <button class="btn" id="api-key-btn">
+                        <span class="btn-icon">🔑 Enter API Key</span>
+                    </button>
+                </div>
+                <div class="auth-actions">
+                    <button class="btn btn-secondary" id="command-palette-btn">
+                        <span class="btn-icon">⌨️ Command Palette</span>
                     </button>
                     <button class="btn btn-secondary" id="get-key-btn">
-                        <span class="btn-icon">🌐 Get API Key</span>
+                        <span class="btn-icon">📬 Get API Key</span>
                     </button>
                     <button class="btn btn-secondary" id="settings-btn">
                         <span class="btn-icon">⚙️ Settings</span>
                     </button>
                 </div>
+                <p class="auth-hint">If the buttons fail, run <code>Lanonasis: Authenticate</code> or <code>Lanonasis: Configure Authentication</code> from the command palette.</p>
             </div>
         `;
     }
@@ -223,12 +232,22 @@
     }
 
     function attachAuthListeners() {
-        const authBtn = document.getElementById('auth-btn');
+        const oauthBtn = document.getElementById('oauth-btn');
+        const apiKeyBtn = document.getElementById('api-key-btn');
+        const commandPaletteBtn = document.getElementById('command-palette-btn');
         const getKeyBtn = document.getElementById('get-key-btn');
         const settingsBtn = document.getElementById('settings-btn');
 
-        authBtn?.addEventListener('click', () => {
-            vscode.postMessage({ type: 'authenticate' });
+        oauthBtn?.addEventListener('click', () => {
+            vscode.postMessage({ type: 'authenticate', mode: 'oauth' });
+        });
+
+        apiKeyBtn?.addEventListener('click', () => {
+            vscode.postMessage({ type: 'authenticate', mode: 'apikey' });
+        });
+
+        commandPaletteBtn?.addEventListener('click', () => {
+            vscode.postMessage({ type: 'openCommandPalette' });
         });
 
         getKeyBtn?.addEventListener('click', () => {

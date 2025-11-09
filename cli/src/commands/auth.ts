@@ -2,6 +2,9 @@ import chalk from 'chalk';
 import inquirer from 'inquirer';
 import ora from 'ora';
 import open from 'open';
+import crypto from 'crypto';
+import http from 'http';
+import url from 'url';
 import { apiClient } from '../utils/api.js';
 import { CLIConfig } from '../utils/config.js';
 
@@ -81,9 +84,9 @@ async function handleAuthenticationFailure(error: any, config: CLIConfig, authMe
     case 'invalid_credentials':
       console.log(chalk.red('Invalid credentials provided'));
       if (authMethod === 'vendor_key') {
-        console.log(chalk.gray('• Check your vendor key format: pk_xxx.sk_xxx'));
-        console.log(chalk.gray('• Verify the key is active in your account dashboard'));
-        console.log(chalk.gray('• Ensure you copied the complete key including both parts'));
+        console.log(chalk.gray('• Verify the vendor key matches the value shown in your dashboard'));
+        console.log(chalk.gray('• Confirm the key is active and has not been revoked'));
+        console.log(chalk.gray('• Ensure you copied the entire key without extra spaces'));
       } else {
         console.log(chalk.gray('• Double-check your email and password'));
         console.log(chalk.gray('• Passwords are case-sensitive'));
@@ -94,7 +97,7 @@ async function handleAuthenticationFailure(error: any, config: CLIConfig, authMe
     case 'network_error':
       console.log(chalk.red('Network connection failed'));
       console.log(chalk.gray('• Check your internet connection'));
-      console.log(chalk.gray('• Verify you can access https://api.lanonasis.com'));
+      console.log(chalk.gray('• Verify you can access https://auth.lanonasis.com'));
       console.log(chalk.gray('• Try again in a few moments'));
       if (failureCount >= 2) {
         console.log(chalk.gray('• Consider using a different network if issues persist'));
@@ -136,7 +139,7 @@ async function handleAuthenticationFailure(error: any, config: CLIConfig, authMe
     if (authMethod === 'vendor_key') {
       console.log(chalk.cyan('• Generate a new vendor key from your dashboard'));
       console.log(chalk.cyan('• Try: lanonasis auth logout && lanonasis auth login'));
-      console.log(chalk.cyan('• Switch to browser login: lanonasis auth login --use-web-auth'));
+      console.log(chalk.cyan('• Switch to browser login: lanonasis auth login (choose Browser Login)'));
     } else {
       console.log(chalk.cyan('• Reset your password if you\'re unsure'));
       console.log(chalk.cyan('• Try vendor key authentication instead'));
@@ -206,6 +209,140 @@ function categorizeAuthError(error: any): 'invalid_credentials' | 'network_error
   return 'unknown';
 }
 
+
+// ============================================
+// OAuth2 PKCE Helper Functions
+// ============================================
+
+/**
+ * Generate PKCE code verifier and challenge for OAuth2
+ */
+function generatePKCE(): { verifier: string; challenge: string } {
+  // Generate random verifier (43-128 chars, base64url)
+  const verifier = crypto.randomBytes(32).toString('base64url');
+  
+  // Generate challenge: base64url(sha256(verifier))
+  const challenge = crypto
+    .createHash('sha256')
+    .update(verifier)
+    .digest('base64url');
+  
+  return { verifier, challenge };
+}
+
+/**
+ * Start local HTTP server to catch OAuth2 callback
+ */
+function createCallbackServer(port: number = 8888): Promise<{ code: string; state?: string }> {
+  return new Promise((resolve, reject) => {
+    const server = http.createServer((req, res) => {
+      const parsedUrl = url.parse(req.url!, true);
+      
+      if (parsedUrl.pathname === '/callback') {
+        const { code, state, error, error_description } = parsedUrl.query;
+        
+        // Send response to browser
+        if (error) {
+          res.writeHead(400, { 'Content-Type': 'text/html' });
+          res.end(`
+            <html>
+              <head><title>Authentication Failed</title></head>
+              <body style="font-family: sans-serif; text-align: center; padding: 50px;">
+                <h1>❌ Authentication Failed</h1>
+                <p>${error_description || error}</p>
+                <p style="color: gray;">You can close this window.</p>
+              </body>
+            </html>
+          `);
+          reject(new Error(`OAuth error: ${error_description || error}`));
+        } else if (code) {
+          res.writeHead(200, { 'Content-Type': 'text/html' });
+          res.end(`
+            <html>
+              <head><title>Authentication Successful</title></head>
+              <body style="font-family: sans-serif; text-align: center; padding: 50px;">
+                <h1>✅ Authentication Successful</h1>
+                <p>You can close this window and return to the CLI.</p>
+                <script>setTimeout(() => window.close(), 2000);</script>
+              </body>
+            </html>
+          `);
+          resolve({ code: code as string, state: state as string });
+        } else {
+          res.writeHead(400, { 'Content-Type': 'text/plain' });
+          res.end('Invalid callback');
+          reject(new Error('No authorization code received'));
+        }
+        
+        // Close server after handling request
+        server.close();
+      }
+    });
+    
+    server.listen(port, () => {
+      console.log(chalk.gray(`   Local callback server listening on port ${port}`));
+    });
+    
+    // Timeout after 5 minutes
+    setTimeout(() => {
+      server.close();
+      reject(new Error('Authentication timeout - please try again'));
+    }, 300000);
+  });
+}
+
+/**
+ * Exchange authorization code for OAuth2 tokens
+ */
+async function exchangeCodeForTokens(
+  code: string,
+  verifier: string,
+  authBase: string
+): Promise<{ access_token: string; refresh_token: string; expires_in: number }> {
+  const tokenEndpoint = `${authBase}/oauth/token`;
+  
+  const response = await apiClient.post(tokenEndpoint, {
+    grant_type: 'authorization_code',
+    code,
+    code_verifier: verifier,
+    client_id: 'lanonasis-cli',
+    redirect_uri: 'http://localhost:8888/callback'
+  });
+  
+  return response;
+}
+
+/**
+ * Refresh OAuth2 access token using refresh token
+ */
+async function refreshOAuth2Token(config: CLIConfig): Promise<boolean> {
+  const refreshToken = config.get<string>('refresh_token');
+  if (!refreshToken) {
+    return false;
+  }
+
+  try {
+    const authBase = config.getDiscoveredApiUrl();
+    const response = await apiClient.post(`${authBase}/oauth/token`, {
+      grant_type: 'refresh_token',
+      refresh_token: refreshToken,
+      client_id: 'lanonasis-cli'
+    });
+
+    await config.setToken(response.access_token);
+    if (response.refresh_token) {
+      await config.set('refresh_token', response.refresh_token);
+    }
+    await config.set('token_expires_at', Date.now() + (response.expires_in * 1000));
+
+    return true;
+  } catch (error) {
+    console.error(chalk.yellow('⚠️  Token refresh failed, please re-authenticate'));
+    return false;
+  }
+}
+
+
 export async function diagnoseCommand(): Promise<void> {
   const config = new CLIConfig();
   await config.init();
@@ -254,13 +391,10 @@ export async function diagnoseCommand(): Promise<void> {
     diagnostics.credentialType = 'vendor_key';
     console.log(chalk.green('   ✓ Vendor key found'));
 
-    // Validate vendor key format
+    // Validate vendor key presence
     const formatValidation = config.validateVendorKeyFormat(vendorKey);
-    if (formatValidation === true) {
-      console.log(chalk.green('   ✓ Vendor key format is valid'));
-    } else {
-      console.log(chalk.red('   ✖ Vendor key format is invalid:'));
-      console.log(chalk.gray(`     ${formatValidation}`));
+    if (formatValidation !== true) {
+      console.log(chalk.red(`   ✖ Vendor key issue: ${formatValidation}`));
     }
   } else if (token) {
     diagnostics.hasCredentials = true;
@@ -384,7 +518,7 @@ export async function diagnoseCommand(): Promise<void> {
 
   if (!diagnostics.hasCredentials) {
     issues.push('No authentication credentials stored');
-    recommendations.push('Run: lanonasis auth login --vendor-key pk_xxx.sk_xxx');
+    recommendations.push('Run: lanonasis auth login --vendor-key <your-key>');
   }
 
   if (diagnostics.hasCredentials && !diagnostics.credentialsValid) {
@@ -425,9 +559,9 @@ export async function diagnoseCommand(): Promise<void> {
   // Additional troubleshooting info
   if (diagnostics.authFailures > 0 || !diagnostics.credentialsValid) {
     console.log(chalk.gray('\n🔧 Additional troubleshooting:'));
-    console.log(chalk.gray('   • Verify your vendor key format: pk_xxx.sk_xxx'));
+    console.log(chalk.gray('   • Verify the vendor key matches the value shown in your dashboard'));
     console.log(chalk.gray('   • Check if your key is active in the dashboard'));
-    console.log(chalk.gray('   • Try browser authentication: lanonasis auth login --use-web-auth'));
+    console.log(chalk.gray('   • Try browser authentication: lanonasis auth login (choose Browser Login)'));
     console.log(chalk.gray('   • Contact support if issues persist'));
   }
 }
@@ -528,25 +662,24 @@ async function handleVendorKeyAuth(vendorKey: string, config: CLIConfig): Promis
 async function handleVendorKeyFlow(config: CLIConfig): Promise<void> {
   console.log();
   console.log(chalk.yellow('🔑 Vendor Key Authentication'));
-  console.log(chalk.gray('Vendor keys provide secure API access with format: pk_xxx.sk_xxx'));
+  console.log(chalk.gray('Vendor keys provide secure API access for automation and integrations.'));
   console.log();
 
   // Enhanced guidance for obtaining vendor keys
   console.log(chalk.cyan('📋 How to get your vendor key:'));
-  console.log(chalk.gray('1. Visit your Lanonasis dashboard at https://app.lanonasis.com'));
+  console.log(chalk.gray('1. Visit your Lanonasis dashboard at https://dashboard.lanonasis.com'));
   console.log(chalk.gray('2. Navigate to Settings → API Keys'));
-  console.log(chalk.gray('3. Click "Generate New Key" and copy the full key'));
-  console.log(chalk.gray('4. The key format should be: pk_[letters/numbers].sk_[letters/numbers]'));
+  console.log(chalk.gray('3. Click "Generate New Key" and copy the full key value'));
   console.log();
 
   const { vendorKey } = await inquirer.prompt<{ vendorKey: string }>([
     {
       type: 'password',
       name: 'vendorKey',
-      message: 'Enter your vendor key (pk_xxx.sk_xxx):',
+      message: 'Enter your vendor key:',
       mask: '*',
       validate: (input: string) => {
-        return validateVendorKeyFormat(input);
+        return config.validateVendorKeyFormat(input);
       }
     }
   ]);
@@ -554,77 +687,17 @@ async function handleVendorKeyFlow(config: CLIConfig): Promise<void> {
   await handleVendorKeyAuth(vendorKey, config);
 }
 
-// Enhanced vendor key format validation with detailed error messages
-function validateVendorKeyFormat(input: string): string | boolean {
-  if (!input || input.trim().length === 0) {
-    return 'Vendor key is required';
-  }
-
-  const trimmed = input.trim();
-
-  // Check basic format
-  if (!trimmed.includes('.')) {
-    return 'Invalid format: Vendor key must contain a dot (.) separator\nExpected format: pk_xxx.sk_xxx';
-  }
-
-  const parts = trimmed.split('.');
-  if (parts.length !== 2) {
-    return 'Invalid format: Vendor key must have exactly two parts separated by a dot\nExpected format: pk_xxx.sk_xxx';
-  }
-
-  const [publicPart, secretPart] = parts;
-
-  // Validate public key part
-  if (!publicPart.startsWith('pk_')) {
-    return 'Invalid format: First part must start with "pk_"\nExpected format: pk_xxx.sk_xxx';
-  }
-
-  if (publicPart.length < 4) {
-    return 'Invalid format: Public key part is too short\nExpected format: pk_xxx.sk_xxx (where xxx is alphanumeric)';
-  }
-
-  const publicKeyContent = publicPart.substring(3); // Remove 'pk_'
-  if (!/^[a-zA-Z0-9]+$/.test(publicKeyContent)) {
-    return 'Invalid format: Public key part contains invalid characters\nOnly letters and numbers are allowed after "pk_"';
-  }
-
-  // Validate secret key part
-  if (!secretPart.startsWith('sk_')) {
-    return 'Invalid format: Second part must start with "sk_"\nExpected format: pk_xxx.sk_xxx';
-  }
-
-  if (secretPart.length < 4) {
-    return 'Invalid format: Secret key part is too short\nExpected format: pk_xxx.sk_xxx (where xxx is alphanumeric)';
-  }
-
-  const secretKeyContent = secretPart.substring(3); // Remove 'sk_'
-  if (!/^[a-zA-Z0-9]+$/.test(secretKeyContent)) {
-    return 'Invalid format: Secret key part contains invalid characters\nOnly letters and numbers are allowed after "sk_"';
-  }
-
-  // Check minimum length requirements
-  if (publicKeyContent.length < 8) {
-    return 'Invalid format: Public key part is too short (minimum 8 characters after "pk_")';
-  }
-
-  if (secretKeyContent.length < 16) {
-    return 'Invalid format: Secret key part is too short (minimum 16 characters after "sk_")';
-  }
-
-  return true;
-}
-
 async function handleOAuthFlow(config: CLIConfig): Promise<void> {
   console.log();
-  console.log(chalk.yellow('🌐 Browser-Based Authentication'));
-  console.log(chalk.gray('This will open your browser for secure authentication'));
+  console.log(chalk.yellow('🌐 Browser-Based OAuth2 Authentication'));
+  console.log(chalk.gray('Secure authentication using OAuth2 with PKCE'));
   console.log();
 
   const { openBrowser } = await inquirer.prompt<{ openBrowser: boolean }>([
     {
       type: 'confirm',
       name: 'openBrowser',
-      message: 'Open browser for authentication?',
+      message: 'Open browser for OAuth2 authentication?',
       default: true
     }
   ]);
@@ -634,72 +707,66 @@ async function handleOAuthFlow(config: CLIConfig): Promise<void> {
     return;
   }
 
-  // Use the browser-based CLI login endpoint discovered from auth_base
-  const authBase = config.getDiscoveredApiUrl();
-  const authUrl = `${authBase.replace(/\/$/, '')}/auth/cli-login`;
-
   try {
-    console.log(colors.info('Opening browser...'));
-    await open(authUrl);
+    // Generate PKCE challenge
+    const pkce = generatePKCE();
+    console.log(chalk.gray('   ✓ Generated PKCE challenge'));
+
+    // Start local callback server
+    const callbackPort = 8888;
+    const callbackPromise = createCallbackServer(callbackPort);
+    console.log(chalk.gray(`   ✓ Started local callback server on port ${callbackPort}`));
+
+    // Build OAuth2 authorization URL
+    const authBase = config.getDiscoveredApiUrl();
+    const authUrl = new URL(`${authBase}/oauth/authorize`);
+    authUrl.searchParams.set('response_type', 'code');
+    authUrl.searchParams.set('client_id', 'lanonasis-cli');
+    authUrl.searchParams.set('redirect_uri', `http://localhost:${callbackPort}/callback`);
+    authUrl.searchParams.set('scope', 'read write offline_access');
+    authUrl.searchParams.set('code_challenge', pkce.challenge);
+    authUrl.searchParams.set('code_challenge_method', 'S256');
+    authUrl.searchParams.set('state', crypto.randomBytes(16).toString('hex'));
 
     console.log();
-    console.log(colors.info('Please complete authentication in your browser'));
-    console.log(colors.info('The page will display your authentication token'));
-    console.log(colors.muted(`If browser doesn't open, visit: ${authUrl}`));
+    console.log(colors.info('Opening browser for authentication...'));
+    await open(authUrl.toString());
+
+    console.log(colors.info('Waiting for authentication in browser...'));
+    console.log(colors.muted(`If browser doesn't open, visit: ${authUrl.toString()}`));
     console.log();
 
-    // Prompt for the token from the browser page
-    const { token } = await inquirer.prompt<{ token: string }>([
-      {
-        type: 'input',
-        name: 'token',
-        message: 'Paste the authentication token from browser:',
-        validate: async (input: string) => {
-          if (!input || input.trim().length === 0) {
-            return 'Token is required';
-          }
+    // Wait for callback
+    const spinner = ora('Waiting for authorization...').start();
+    const { code } = await callbackPromise;
+    spinner.succeed('Authorization code received');
 
-          const trimmed = input.trim();
+    // Exchange code for tokens
+    spinner.text = 'Exchanging code for access tokens...';
+    spinner.start();
+    const tokens = await exchangeCodeForTokens(code, pkce.verifier, authBase);
+    spinner.succeed('Access tokens received');
 
-          // Reject if user pasted a URL instead of token
-          if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
-            return 'Please paste the TOKEN from the page, not the URL';
-          }
+    // Store tokens
+    await config.setToken(tokens.access_token);
+    await config.set('refresh_token', tokens.refresh_token);
+    await config.set('token_expires_at', Date.now() + (tokens.expires_in * 1000));
+    await config.set('authMethod', 'oauth2');
 
-          // Check token format - should start with 'cli_' or be a JWT
-          if (!trimmed.startsWith('cli_') && !trimmed.match(/^[\w-]+\.[\w-]+\.[\w-]+$/)) {
-            return 'Invalid token format. Expected format: cli_xxx or JWT token';
-          }
+    console.log();
+    console.log(chalk.green('✓ OAuth2 authentication successful'));
+    console.log(colors.info('You can now use Lanonasis services'));
+    process.exit(0);
 
-          // Verify token with server
-          try {
-            const response = await apiClient.post('/auth/verify', { token: trimmed });
-            if (!response.valid) {
-              return 'Token verification failed. Please try again.';
-            }
-          } catch (error: unknown) {
-            const errorMessage = error instanceof Error ? error.message : 'Server verification failed';
-            return `Token verification error: ${errorMessage}`;
-          }
-
-          return true;
-        }
-      }
-    ]);
-
-    if (token && token.trim()) {
-      await config.setToken(token.trim());
-      console.log(chalk.green('✓ Browser authentication successful'));
-      console.log(colors.info('You can now use Lanonasis services'));
-    } else {
-      console.log(chalk.yellow('⚠️  No token provided'));
-    }
-
-  } catch {
-    console.error(chalk.red('✖ Failed to open browser'));
-    console.log(colors.muted(`Please visit manually: ${authUrl}`));
+  } catch (error) {
+    console.error(chalk.red('✖ OAuth2 authentication failed'));
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error(chalk.gray(`   ${errorMessage}`));
+    process.exit(1);
   }
 }
+
+
 
 async function handleCredentialsFlow(options: LoginOptions, config: CLIConfig): Promise<void> {
   console.log();

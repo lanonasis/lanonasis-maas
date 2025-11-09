@@ -2,8 +2,9 @@
   "name": "lanonasis-memory-cursor",
   "displayName": "LanOnasis Memory Assistant for Cursor",
   "description": "Memory as a Service integration for Cursor IDE - 17 enterprise tools with secure API management",
-  "version": "1.3.1",
+  "version": "1.4.4",
   "publisher": "LanOnasis",
+  "icon": "images/icon.png",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/lanonasis/lanonasis-maas.git"

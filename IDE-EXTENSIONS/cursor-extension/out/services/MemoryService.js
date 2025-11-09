@@ -49,12 +49,6 @@ class MemoryService {
             config.get('gatewayUrl', apiUrl) :
             apiUrl;
     }
-    refreshClient() {
-        this.updateConfiguration();
-    }
-    isAuthenticated() {
-        return this.authService.isAuthenticated();
-    }
     async createMemory(request) {
         const response = await this.makeAuthenticatedRequest('/api/v1/memory', {
             method: 'POST',
@@ -97,101 +91,32 @@ class MemoryService {
             throw new Error(`Failed to delete memory: ${response.status} ${error}`);
         }
     }
-    async listMemories(limitOrOptions = 50) {
-        let options = {};
-        if (typeof limitOrOptions === 'number') {
-            options.limit = limitOrOptions;
-        }
-        else if (limitOrOptions && typeof limitOrOptions === 'object') {
-            options = Object.assign({}, limitOrOptions);
-        }
-        else if (typeof limitOrOptions !== 'undefined') {
-            throw new Error('listMemories expects a number or an options object');
-        }
-        const limitValue = typeof options.limit === 'number' ? options.limit : 50;
-        if (typeof limitValue !== 'number' || Number.isNaN(limitValue) || limitValue < 0) {
-            throw new Error('limit must be a non-negative number');
-        }
+    async listMemories(options = {}) {
         const params = new URLSearchParams();
-        const normalizedLimit = Math.floor(limitValue);
-        params.set('limit', normalizedLimit.toString());
-        const sortValue = typeof options.sort === 'string' && options.sort.length ? options.sort : 'updated_at';
-        const orderValue = typeof options.order === 'string' && options.order.length ? options.order : 'desc';
-        params.set('sort', sortValue);
-        params.set('order', orderValue);
-        if (typeof options.page === 'number' && options.page >= 0) {
-            params.set('page', Math.floor(options.page).toString());
-        }
-        if (typeof options.memory_type === 'string' && options.memory_type.trim().length) {
+        if (options.page)
+            params.set('page', options.page.toString());
+        if (options.limit)
+            params.set('limit', options.limit.toString());
+        if (options.memory_type)
             params.set('memory_type', options.memory_type);
-        }
-        if (Array.isArray(options.tags) && options.tags.length) {
+        if (options.tags?.length)
             params.set('tags', options.tags.join(','));
-        }
-        const response = await this.makeAuthenticatedRequest(`/api/v1/memory?${params.toString()}`);
+        if (options.sort)
+            params.set('sort', options.sort);
+        if (options.order)
+            params.set('order', options.order);
+        const url = `/api/v1/memory${params.toString() ? '?' + params.toString() : ''}`;
+        const response = await this.makeAuthenticatedRequest(url);
         if (!response.ok) {
             const error = await response.text();
             throw new Error(`Failed to list memories: ${response.status} ${error}`);
         }
-        const data = await response.json();
-        if (Array.isArray(data)) {
-            return data;
-        }
-        if ('memories' in data && Array.isArray(data.memories)) {
-            return data.memories;
-        }
-        if ('data' in data && data.data && Array.isArray(data.data.data)) {
-            return data.data.data;
-        }
-        return [];
+        return await response.json();
     }
-    async searchMemories(queryOrRequest, options = {}) {
-        let request;
-        if (queryOrRequest && typeof queryOrRequest === 'object' && !Array.isArray(queryOrRequest)) {
-            request = Object.assign({}, queryOrRequest);
-        }
-        else {
-            request = {
-                query: queryOrRequest,
-                limit: options.limit ?? 20,
-                threshold: options.threshold ?? 0.7,
-                memory_types: options.memory_types,
-                tags: options.tags,
-                topic_id: options.topic_id
-            };
-        }
-        if (!request || typeof request.query !== 'string' || !request.query.trim().length) {
-            throw new Error('searchMemories requires a non-empty query string');
-        }
-        if (typeof request.limit === 'undefined') {
-            request.limit = 20;
-        }
-        else {
-            const parsedLimit = Number(request.limit);
-            if (Number.isNaN(parsedLimit) || parsedLimit < 0) {
-                throw new Error('searchMemories limit must be a non-negative number when provided');
-            }
-            request.limit = parsedLimit;
-        }
-        if (typeof request.threshold === 'undefined') {
-            request.threshold = 0.7;
-        }
-        else {
-            const parsedThreshold = Number(request.threshold);
-            if (Number.isNaN(parsedThreshold)) {
-                throw new Error('searchMemories threshold must be a valid number when provided');
-            }
-            request.threshold = parsedThreshold;
-        }
-        const sanitizedRequest = {};
-        for (const [key, value] of Object.entries(request)) {
-            if (value !== undefined) {
-                sanitizedRequest[key] = value;
-            }
-        }
+    async searchMemories(request) {
         const response = await this.makeAuthenticatedRequest('/api/v1/memory/search', {
             method: 'POST',
-            body: JSON.stringify(sanitizedRequest)
+            body: JSON.stringify(request)
         });
         if (!response.ok) {
             const error = await response.text();
