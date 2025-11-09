@@ -1,8 +1,15 @@
 import { createClient } from '@supabase/supabase-js';
-import { config } from '../config/environment';
-import { logger } from '../utils/logger';
+import { config } from '@/config/environment';
+import { logger } from '@/utils/logger';
 import crypto from 'crypto';
 const supabase = createClient(config.SUPABASE_URL, config.SUPABASE_SERVICE_KEY);
+// Import the proper types from our centralized type definitions
+import { UnifiedUser, AuthenticatedUser } from '@/types/express-auth';
+// ============================================
+// CORE ALIGNMENT: Enhanced User Types
+// ============================================
+// Re-export for backward compatibility
+export { UnifiedUser, AuthenticatedUser };
 // ============================================
 // CORE ALIGNMENT: Request ID Middleware  
 // ============================================

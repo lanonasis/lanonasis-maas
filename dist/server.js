@@ -4,24 +4,24 @@ import swaggerUi from 'swagger-ui-express';
 import swaggerJsdoc from 'swagger-jsdoc';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { config } from './config/environment';
-import { logger } from './utils/logger';
-import { metricsMiddleware, startMetricsCollection } from './utils/metrics';
+import { config } from '@/config/environment';
+import { logger } from '@/utils/logger';
+import { metricsMiddleware, startMetricsCollection } from '@/utils/metrics';
 // CORE ALIGNMENT: Enhanced middleware imports
-import { attachRequestId, corsGuard, alignedAuthMiddleware, globalErrorHandler, notFoundHandler, createSuccessEnvelope, validateProjectScope, requirePlan, planBasedRateLimit } from './middleware/auth-aligned';
+import { attachRequestId, corsGuard, alignedAuthMiddleware, globalErrorHandler, notFoundHandler, createSuccessEnvelope, validateProjectScope, requirePlan, planBasedRateLimit } from '@/middleware/auth-aligned';
 // Route imports
-import healthRoutes from './routes/health';
-import memoryRoutes from './routes/memory';
-import authRouter from './routes/auth-router';
-import authBasicRoutes from './routes/auth-basic';
-import serviceRegistry from './routes/service-registry';
-import metricsRoutes from './routes/metrics';
-import apiKeyRoutes from './routes/api-keys';
-import mcpApiKeyRoutes from './routes/mcp-api-keys';
-import mcpSseRoutes from './routes/mcp-sse';
-import emergencyRoutes from './routes/emergency-admin';
+import healthRoutes from '@/routes/health';
+import memoryRoutes from '@/routes/memory';
+import authRouter from '@/routes/auth-router';
+import authBasicRoutes from '@/routes/auth-basic';
+import serviceRegistry from '@/routes/service-registry';
+import metricsRoutes from '@/routes/metrics';
+import apiKeyRoutes from '@/routes/api-keys';
+import mcpApiKeyRoutes from '@/routes/mcp-api-keys';
+import mcpSseRoutes from '@/routes/mcp-sse';
+import emergencyRoutes from '@/routes/emergency-admin';
 // AI Client middleware for JSON responses
-import { aiClientMiddleware } from './middleware/ai-client-json';
+import { aiClientMiddleware } from '@/middleware/ai-client-json';
 const app = express();
 // Enhanced Swagger configuration
 const swaggerOptions = {
