@@ -2,7 +2,7 @@
   "name": "lanonasis-memory",
   "displayName": "LanOnasis Memory Assistant",
   "description": "Memory as a Service integration - AI-powered memory management with semantic search (Compatible with CLI v3.0.6+)",
-  "version": "1.4.6",
+  "version": "1.4.8",
   "publisher": "LanOnasis",
   "icon": "images/icon.png",
   "repository": {
@@ -10,7 +10,7 @@
     "url": "https://github.com/lanonasis/lanonasis-maas"
   },
   "engines": {
-    "vscode": ">=1.74.0 <2.0.0"
+    "vscode": "^1.74.0"
   },
   "categories": [
     "Other",
@@ -216,17 +216,29 @@
           "id": "lanonasisMemories",
           "name": "Memories",
           "icon": "$(list-tree)",
-          "when": "config.lanonasis.showTreeView && lanonasis.authenticated"
+          "when": "config.lanonasis.showTreeView"
         },
         {
           "type": "tree",
           "id": "lanonasisApiKeys",
           "name": "API Keys",
           "icon": "$(key)",
-          "when": "lanonasis.enableApiKeyManagement && lanonasis.authenticated"
+          "when": "lanonasis.enableApiKeyManagement"
         }
       ]
     },
+    "viewsWelcome": [
+      {
+        "view": "lanonasisMemories",
+        "contents": "Welcome to Lanonasis Memory! 🧠\n\nTo get started, you need to authenticate with your Lanonasis account.\n\n[Connect in Browser](command:lanonasis.authenticate?%5B%22oauth%22%5D)\n\n[Enter API Key](command:lanonasis.authenticate?%5B%22apikey%22%5D)\n\n[Get API Key](https://api.lanonasis.com)\n\n---\n\n**What is Lanonasis Memory?**\n\nLanonasis Memory is an AI-powered memory management system that helps you:\n\n• Store and organize knowledge with semantic search\n• Create memories from code selections\n• Find relevant information instantly\n• Manage API keys and projects\n\n**Need Help?**\n\n[View Documentation](https://docs.lanonasis.com)\n[Report Issue](https://github.com/lanonasis/lanonasis-maas/issues)",
+        "when": "!lanonasis.authenticated"
+      },
+      {
+        "view": "lanonasisApiKeys",
+        "contents": "Welcome to API Key Management! 🔑\n\nAuthenticate to manage your API keys and projects.\n\n[Connect in Browser](command:lanonasis.authenticate?%5B%22oauth%22%5D)\n\n[Enter API Key](command:lanonasis.authenticate?%5B%22apikey%22%5D)",
+        "when": "!lanonasis.authenticated"
+      }
+    ],
     "configuration": {
       "title": "Lanonasis Memory",
       "properties": {
@@ -365,10 +377,10 @@
     "@typescript-eslint/eslint-plugin": "^8.38.0",
     "@typescript-eslint/parser": "^8.38.0",
     "@vscode/test-electron": "^2.5.2",
+    "@vscode/vsce": "^3.7.0",
     "eslint": "^9.32.0",
     "ts-loader": "^9.5.2",
     "typescript": "^5.8.3",
-    "vsce": "^2.15.0",
     "webpack": "^5.101.0",
     "webpack-cli": "^6.0.1"
   }
