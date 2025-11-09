@@ -172,7 +172,9 @@ export class APIClient {
 
   constructor() {
     this.config = new CLIConfig();
-    this.client = axios.create();
+    this.client = axios.create({
+      proxy: false // Bypass proxy to avoid redirect loops in containerized environments
+    });
     
     // Setup request interceptor to add auth token and headers
     this.client.interceptors.request.use(async (config) => {
