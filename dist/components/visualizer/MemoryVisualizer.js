@@ -4,7 +4,7 @@ import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
  * Interactive visualization for memory exploration and management
  * Aligned with sd-ghost-protocol schema
  */
-import { useState, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 export const MemoryVisualizer = ({ memories, topics, onMemorySelect, onTopicSelect, onSearch, className = '' }) => {
     const [selectedNode, setSelectedNode] = useState(null);
     const [searchQuery, setSearchQuery] = useState('');
