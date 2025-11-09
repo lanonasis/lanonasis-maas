@@ -230,19 +230,19 @@ export declare const searchMemorySchema: z.ZodObject<{
     limit: z.ZodDefault<z.ZodNumber>;
     threshold: z.ZodDefault<z.ZodNumber>;
 }, "strip", z.ZodTypeAny, {
-    query: string;
     limit: number;
+    query: string;
     threshold: number;
     topic_id?: string | undefined;
     tags?: string[] | undefined;
     memory_types?: ("knowledge" | "project" | "context" | "reference" | "personal" | "workflow")[] | undefined;
 }, {
     query: string;
+    limit?: number | undefined;
     topic_id?: string | undefined;
     tags?: string[] | undefined;
-    limit?: number | undefined;
-    threshold?: number | undefined;
     memory_types?: ("knowledge" | "project" | "context" | "reference" | "personal" | "workflow")[] | undefined;
+    threshold?: number | undefined;
 }>;
 /**
  * @swagger

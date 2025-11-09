@@ -3,7 +3,7 @@ import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
  * Orchestrator Interface Component
  * Provides a chat-like interface for natural language command execution
  */
-import { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 // Import orchestrator from local source
 import { orchestrate, parseOnly, ContextualOrchestrator } from '../../orchestrator';
 export const OrchestratorInterface = ({ className = '', onCommandExecuted, onUIAction, placeholder = 'Type a command... (e.g., "search for project notes", "create memory", "open dashboard")', disabled = false }) => {
