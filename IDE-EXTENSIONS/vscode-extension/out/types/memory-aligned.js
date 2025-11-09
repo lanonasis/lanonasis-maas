@@ -47,7 +47,7 @@ exports.createMemorySchema = zod_1.z.object({
     title: zod_1.z.string().min(1).max(500),
     content: zod_1.z.string().min(1).max(50000),
     summary: zod_1.z.string().max(1000).optional(),
-    memory_type: zod_1.z.enum(['conversation', 'knowledge', 'project', 'context', 'reference']).default('context'),
+    memory_type: zod_1.z.enum(['conversation', 'knowledge', 'project', 'context', 'reference', 'personal', 'workflow']).default('context'),
     topic_id: zod_1.z.string().uuid().optional(),
     project_ref: zod_1.z.string().max(100).optional(),
     tags: zod_1.z.array(zod_1.z.string().min(1).max(50)).max(20).default([]),
@@ -99,7 +99,7 @@ exports.updateMemorySchema = zod_1.z.object({
     title: zod_1.z.string().min(1).max(500).optional(),
     content: zod_1.z.string().min(1).max(50000).optional(),
     summary: zod_1.z.string().max(1000).optional(),
-    memory_type: zod_1.z.enum(['conversation', 'knowledge', 'project', 'context', 'reference']).optional(),
+    memory_type: zod_1.z.enum(['conversation', 'knowledge', 'project', 'context', 'reference', 'personal', 'workflow']).optional(),
     status: zod_1.z.enum(['active', 'archived', 'draft', 'deleted']).optional(),
     topic_id: zod_1.z.string().uuid().nullable().optional(),
     project_ref: zod_1.z.string().max(100).nullable().optional(),
@@ -150,7 +150,7 @@ exports.updateMemorySchema = zod_1.z.object({
  */
 exports.searchMemorySchema = zod_1.z.object({
     query: zod_1.z.string().min(1).max(1000),
-    memory_types: zod_1.z.array(zod_1.z.enum(['conversation', 'knowledge', 'project', 'context', 'reference'])).optional(),
+    memory_types: zod_1.z.array(zod_1.z.enum(['conversation', 'knowledge', 'project', 'context', 'reference', 'personal', 'workflow'])).optional(),
     tags: zod_1.z.array(zod_1.z.string()).optional(),
     topic_id: zod_1.z.string().uuid().optional(),
     project_ref: zod_1.z.string().optional(),
