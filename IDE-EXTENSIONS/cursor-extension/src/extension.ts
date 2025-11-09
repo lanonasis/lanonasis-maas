@@ -27,10 +27,12 @@ export async function activate(context: vscode.ExtensionContext) {
         console.warn('Enhanced Memory Service not available, using basic service:', error);
         memoryService = new MemoryService(authService);
     }
-    const apiKeyService = new ApiKeyService();
+    const apiKeyService = new ApiKeyService(context);
+    // Set auth service for secure API key access
+    apiKeyService.setAuthService(authService);
     
     // Initialize sidebar provider (modern UI)
-    const sidebarProvider = new MemorySidebarProvider(context.extensionUri, memoryService);
+    const sidebarProvider = new MemorySidebarProvider(context.extensionUri, memoryService as any);
     context.subscriptions.push(
         vscode.window.registerWebviewViewProvider(
             MemorySidebarProvider.viewType,
@@ -236,7 +238,7 @@ async function checkEnhancedAuthenticationStatus(
     const capabilities = enhancedService.getCapabilities();
     if (capabilities?.cliAvailable && capabilities.goldenContract) {
         vscode.window.showInformationMessage(
-            '🚀 Cursor Memory: CLI v1.5.2+ + OAuth detected! Maximum performance active.',
+            '?? Cursor Memory: CLI v1.5.2+ + OAuth detected! Maximum performance active.',
             'Show Details'
         ).then(selection => {
             if (selection === 'Show Details') {
@@ -245,7 +247,7 @@ async function checkEnhancedAuthenticationStatus(
         });
     } else if (capabilities?.authenticated) {
         const installCLI = await vscode.window.showInformationMessage(
-            '💡 Cursor Memory: Install CLI v1.5.2+ for enhanced performance with OAuth.',
+            '?? Cursor Memory: Install CLI v1.5.2+ for enhanced performance with OAuth.',
             'Install CLI', 'Learn More', 'Later'
         );
         
@@ -522,11 +524,11 @@ function showWelcomeMessage() {
     
     const message = `Welcome to Lanonasis Memory Assistant for Cursor! 
 
-🧠 Search and manage your memories directly in Cursor
-🔍 Press Ctrl+Shift+M to search memories
-📝 Select text and press Ctrl+Shift+Alt+M to create a memory
-🌐 Enhanced with auto-redirect authentication
-🔄 Auto-refresh keeps your memories up to date
+?? Search and manage your memories directly in Cursor
+?? Press Ctrl+Shift+M to search memories
+?? Select text and press Ctrl+Shift+Alt+M to create a memory
+?? Enhanced with auto-redirect authentication
+?? Auto-refresh keeps your memories up to date
 
 Authentication method: ${authMethod}`;
 
@@ -546,13 +548,13 @@ async function switchConnectionMode(memoryService: MemoryService | EnhancedMemor
     
     const options = [
         {
-            label: '🌐 Gateway Mode (Recommended)',
+            label: '?? Gateway Mode (Recommended)',
             description: 'Use Onasis Gateway for optimized routing and caching',
             picked: currentUseGateway,
             value: true
         },
         {
-            label: '🔗 Direct API Mode',
+            label: '?? Direct API Mode',
             description: 'Connect directly to memory service',
             picked: !currentUseGateway,
             value: false
@@ -640,7 +642,7 @@ async function viewApiKeys(apiKeyService: ApiKeyService) {
 
             const items = apiKeys.map(key => ({
                 label: key.name,
-                description: `${key.environment} • ${key.keyType} • ${key.accessLevel}`,
+                description: `${key.environment} ? ${key.keyType} ? ${key.accessLevel}`,
                 detail: `Project: ${key.projectId} | Created: ${new Date(key.createdAt).toLocaleDateString()}`,
                 apiKey: key
             }));

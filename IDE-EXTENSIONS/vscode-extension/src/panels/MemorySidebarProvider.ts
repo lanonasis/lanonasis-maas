@@ -1,8 +1,6 @@
 import * as vscode from 'vscode';
-import { MemoryService } from '../services/MemoryService';
 import { EnhancedMemoryService } from '../services/EnhancedMemoryService';
 import type { IMemoryService } from '../services/IMemoryService';
-import { MemoryEntry, MemoryType } from '../types/memory-aligned';
 
 export class MemorySidebarProvider implements vscode.WebviewViewProvider {
     public static readonly viewType = 'lanonasis.sidebar';
@@ -15,9 +13,16 @@ export class MemorySidebarProvider implements vscode.WebviewViewProvider {
 
     public resolveWebviewView(
         webviewView: vscode.WebviewView,
-        context: vscode.WebviewViewResolveContext,
+        _context: vscode.WebviewViewResolveContext,
         _token: vscode.CancellationToken,
     ) {
+        console.log('[Lanonasis] MemorySidebarProvider.resolveWebviewView called');
+        try {
+            const activationChannel = vscode.window.createOutputChannel('Lanonasis Activation');
+            activationChannel.appendLine('[Lanonasis] MemorySidebarProvider.resolveWebviewView called');
+        } catch {
+            // ignore in tests
+        }
         this._view = webviewView;
 
         webviewView.webview.options = {
@@ -31,7 +36,7 @@ export class MemorySidebarProvider implements vscode.WebviewViewProvider {
         webviewView.webview.onDidReceiveMessage(async (data) => {
             switch (data.type) {
                 case 'authenticate':
-                    await vscode.commands.executeCommand('lanonasis.authenticate');
+                    await vscode.commands.executeCommand('lanonasis.authenticate', data.mode);
                     break;
                 case 'searchMemories':
                     await this.handleSearch(data.query);
@@ -51,6 +56,9 @@ export class MemorySidebarProvider implements vscode.WebviewViewProvider {
                 case 'getApiKey':
                     await vscode.env.openExternal(vscode.Uri.parse('https://api.lanonasis.com'));
                     break;
+                case 'openCommandPalette':
+                    await vscode.commands.executeCommand('workbench.action.quickOpen', '>Lanonasis: Authenticate');
+                    break;
             }
         });
 
@@ -60,25 +68,27 @@ export class MemorySidebarProvider implements vscode.WebviewViewProvider {
 
     public async refresh() {
         if (this._view) {
-            const authenticated = await this.isAuthenticated();
-
-            if (!authenticated) {
-                this._view.webview.postMessage({
-                    type: 'updateState',
-                    state: {
-                        authenticated: false,
-                        memories: [],
-                        loading: false
-                    }
-                });
-                return;
-            }
-
             try {
+                const authenticated = this.memoryService.isAuthenticated();
+
                 this._view.webview.postMessage({
                     type: 'updateState',
                     state: { loading: true }
                 });
+
+                if (!authenticated) {
+                    this._view.webview.postMessage({
+                        type: 'updateState',
+                        state: {
+                            authenticated: false,
+                            memories: [],
+                            loading: false,
+                            enhancedMode: false,
+                            cliVersion: null
+                        }
+                    });
+                    return;
+                }
 
                 const memories = await this.memoryService.listMemories(50);
                 const enhancedInfo = this.memoryService instanceof EnhancedMemoryService
@@ -88,7 +98,7 @@ export class MemorySidebarProvider implements vscode.WebviewViewProvider {
                 this._view.webview.postMessage({
                     type: 'updateState',
                     state: {
-                        authenticated: true,
+                        authenticated: authenticated,
                         memories,
                         loading: false,
                         enhancedMode: enhancedInfo?.cliAvailable || false,
@@ -96,9 +106,25 @@ export class MemorySidebarProvider implements vscode.WebviewViewProvider {
                     }
                 });
             } catch (error) {
+                if (error instanceof Error && error.message.includes('Not authenticated')) {
+                    this._view.webview.postMessage({
+                        type: 'updateState',
+                        state: {
+                            authenticated: false,
+                            memories: [],
+                            loading: false
+                        }
+                    });
+                    return;
+                }
+
                 this._view.webview.postMessage({
                     type: 'error',
                     message: error instanceof Error ? error.message : 'Failed to load memories'
+                });
+                this._view.webview.postMessage({
+                    type: 'updateState',
+                    state: { loading: false }
                 });
             }
         }
@@ -106,6 +132,18 @@ export class MemorySidebarProvider implements vscode.WebviewViewProvider {
 
     private async handleSearch(query: string) {
         if (!this._view) return;
+
+        if (!this.memoryService.isAuthenticated()) {
+            this._view.webview.postMessage({
+                type: 'updateState',
+                state: {
+                    authenticated: false,
+                    memories: [],
+                    loading: false
+                }
+            });
+            return;
+        }
 
         try {
             this._view.webview.postMessage({
@@ -131,10 +169,6 @@ export class MemorySidebarProvider implements vscode.WebviewViewProvider {
                 state: { loading: false }
             });
         }
-    }
-
-    private async isAuthenticated(): Promise<boolean> {
-        return this.memoryService.isAuthenticated();
     }
 
     private _getHtmlForWebview(webview: vscode.Webview) {

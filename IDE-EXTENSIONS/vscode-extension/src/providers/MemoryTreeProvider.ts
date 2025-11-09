@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { MemoryService } from '../services/MemoryService';
+import type { IMemoryService } from '../services/IMemoryService';
 import { MemoryEntry, MemoryType } from '../types/memory-aligned';
 
 export class MemoryTreeItem extends vscode.TreeItem {
@@ -8,14 +8,14 @@ export class MemoryTreeItem extends vscode.TreeItem {
         collapsibleState: vscode.TreeItemCollapsibleState
     ) {
         super(memory.title, collapsibleState);
-        
+
         this.tooltip = `${memory.title}\n\nType: ${memory.memory_type}\nCreated: ${new Date(memory.created_at).toLocaleDateString()}\n\n${memory.content.substring(0, 200)}${memory.content.length > 200 ? '...' : ''}`;
         this.description = memory.memory_type;
         this.contextValue = 'memory';
-        
+
         // Set icon based on memory type
         this.iconPath = this.getIconForMemoryType(memory.memory_type);
-        
+
         // Add command to open memory when clicked
         this.command = {
             command: 'lanonasis.openMemory',
@@ -49,7 +49,7 @@ export class MemoryTypeTreeItem extends vscode.TreeItem {
         collapsibleState: vscode.TreeItemCollapsibleState
     ) {
         super(memoryType, collapsibleState);
-        
+
         this.tooltip = `${memoryType} (${memories.length} memories)`;
         this.description = `${memories.length} memories`;
         this.contextValue = 'memoryType';
@@ -63,14 +63,19 @@ export class MemoryTreeProvider implements vscode.TreeDataProvider<MemoryTreeIte
 
     private memories: MemoryEntry[] = [];
     private loading: boolean = false;
+    private authenticated: boolean = false;
 
-    constructor(private memoryService: MemoryService) {
-        this.loadMemories();
+    constructor(private memoryService: IMemoryService) {
+        this.authenticated = this.memoryService.isAuthenticated();
+        if (this.authenticated) {
+            void this.loadMemories();
+        }
     }
 
     private async loadMemories(): Promise<void> {
-        if (!this.memoryService.isAuthenticated()) {
+        if (!this.authenticated) {
             this.memories = [];
+            this.loading = false;
             this._onDidChangeTreeData.fire();
             return;
         }
@@ -80,7 +85,9 @@ export class MemoryTreeProvider implements vscode.TreeDataProvider<MemoryTreeIte
             this.memories = await this.memoryService.listMemories(100);
         } catch (error) {
             this.memories = [];
-            vscode.window.showErrorMessage(`Failed to load memories: ${error instanceof Error ? error.message : 'Unknown error'}`);
+            if (!(error instanceof Error && error.message.includes('Not authenticated'))) {
+                vscode.window.showErrorMessage(`Failed to load memories: ${error instanceof Error ? error.message : 'Unknown error'}`);
+            }
         } finally {
             this.loading = false;
             this._onDidChangeTreeData.fire();
@@ -88,15 +95,36 @@ export class MemoryTreeProvider implements vscode.TreeDataProvider<MemoryTreeIte
     }
 
     refresh(): void {
-        this.loadMemories();
+        if (!this.authenticated) {
+            this.clear();
+            return;
+        }
+
+        void this.loadMemories();
+    }
+
+    setAuthenticated(authenticated: boolean): void {
+        this.authenticated = authenticated;
+
+        if (authenticated) {
+            void this.loadMemories();
+        } else {
+            this.clear();
+        }
+    }
+
+    clear(): void {
+        this.loading = false;
+        this.memories = [];
+        this._onDidChangeTreeData.fire();
     }
 
     getTreeItem(element: MemoryTreeItem | MemoryTypeTreeItem): vscode.TreeItem {
         return element;
     }
 
-    getChildren(element?: MemoryTreeItem | MemoryTypeTreeItem): Thenable<(MemoryTreeItem | MemoryTypeTreeItem)[]> {
-        if (!this.memoryService.isAuthenticated()) {
+    getChildren(element?: MemoryTreeItem | MemoryTypeTreeItem): Promise<(MemoryTreeItem | MemoryTypeTreeItem)[]> {
+        if (!this.authenticated) {
             return Promise.resolve([]);
         }
 
@@ -112,7 +140,7 @@ export class MemoryTreeProvider implements vscode.TreeDataProvider<MemoryTreeIte
         if (element instanceof MemoryTypeTreeItem) {
             // Return memories for this type
             return Promise.resolve(
-                element.memories.map(memory => 
+                element.memories.map(memory =>
                     new MemoryTreeItem(memory, vscode.TreeItemCollapsibleState.None)
                 )
             );
@@ -140,6 +168,10 @@ export class MemoryTreeProvider implements vscode.TreeDataProvider<MemoryTreeIte
     }
 
     getParent(element: MemoryTreeItem | MemoryTypeTreeItem): vscode.ProviderResult<MemoryTreeItem | MemoryTypeTreeItem> {
+        if (!this.authenticated) {
+            return null;
+        }
+
         if (element instanceof MemoryTreeItem) {
             // Find the parent memory type group
             const memoryType = element.memory.memory_type;

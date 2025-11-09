@@ -225,6 +225,7 @@ authCmd
   .action(async () => {
     await cliConfig.logout();
     console.log(chalk.green('✓ Logged out successfully'));
+    process.exit(0);
   });
 
 authCmd
@@ -300,6 +301,49 @@ requireAuth(memoryCmd);
 memoryCommands(memoryCmd);
 
 // Note: Memory commands are now MCP-powered when available
+
+// REPL command (lightweight REPL for memory operations)
+program
+  .command('repl')
+  .description('Start lightweight REPL session for memory operations')
+  .option('--mcp', 'Use MCP mode')
+  .option('--api <url>', 'Override API URL')
+  .option('--token <token>', 'Authentication token')
+  .action(async (options) => {
+    try {
+      // Try to use the REPL package if available
+      const { spawn } = await import('child_process');
+      const { fileURLToPath } = await import('url');
+      const { dirname, join } = await import('path');
+      
+      // Try to find the REPL package
+      const replPath = join(process.cwd(), 'packages', 'repl-cli', 'dist', 'index.js');
+      const args = ['start'];
+      
+      if (options.mcp) args.push('--mcp');
+      if (options.api) args.push('--api', options.api);
+      if (options.token) args.push('--token', options.token);
+      
+      const repl = spawn('node', [replPath, ...args], {
+        stdio: 'inherit',
+        cwd: process.cwd()
+      });
+      
+      repl.on('error', (err) => {
+        console.error(colors.error('Failed to start REPL:'), err.message);
+        console.log(colors.muted('Make sure the REPL package is built: cd packages/repl-cli && bun run build'));
+        process.exit(1);
+      });
+      
+      repl.on('exit', (code) => {
+        process.exit(code || 0);
+      });
+    } catch (error) {
+      console.error(colors.error('Failed to start REPL:'), error instanceof Error ? error.message : String(error));
+      console.log(colors.muted('Install the REPL package: cd packages/repl-cli && bun install && bun run build'));
+      process.exit(1);
+    }
+  });
 
 // Topic commands (require auth)
 const topicCmd = program

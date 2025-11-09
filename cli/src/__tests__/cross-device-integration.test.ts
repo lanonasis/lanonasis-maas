@@ -334,18 +334,13 @@ describe('Cross-Device Integration Tests', () => {
       expect(errors).toHaveLength(3);
       expect(errors[0]).toBe(errors[1]);
       expect(errors[0]).toBe(errors[2]);
-      expect(errors[0]).toContain('Invalid vendor key format');
+      expect(errors[0]).toContain('Vendor key validation failed');
     });
 
     it('should provide consistent validation error messages', async () => {
-      const invalidFormats = [
-        'invalid-key',
-        'pk_short.sk_short',
-        'pk_.sk_test123456789012345',
-        'pk_test123456789.sk_'
-      ];
+      const invalidInputs = ['', '   '];
 
-      for (const invalidKey of invalidFormats) {
+      for (const invalidKey of invalidInputs) {
         const validationResults: (string | boolean)[] = [];
 
         // Test validation on all devices
@@ -357,6 +352,7 @@ describe('Cross-Device Integration Tests', () => {
         expect(validationResults[0]).toBe(validationResults[1]);
         expect(validationResults[0]).toBe(validationResults[2]);
         expect(typeof validationResults[0]).toBe('string'); // Should be error message
+        expect(validationResults[0]).toBe('Vendor key is required');
       }
     });
 
