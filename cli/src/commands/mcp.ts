@@ -173,19 +173,44 @@ export function mcpCommands(program: Command) {
     .description('Show MCP connection status')
     .action(async () => {
       const client = getMCPClient();
+      // Reload config from disk to get latest preference
+      await client.init();
       const status = client.getConnectionStatus();
 
       console.log(chalk.cyan('\n📊 MCP Connection Status'));
       console.log(chalk.cyan('========================'));
       console.log(`Status: ${status.connected ? chalk.green('Connected') : chalk.red('Disconnected')}`);
-      console.log(`Mode: ${status.mode === 'remote' ? chalk.blue('Remote (API)') : chalk.yellow('Local')}`);
+
+      // Display mode with proper labels
+      let modeDisplay: string;
+      switch (status.mode) {
+        case 'websocket':
+          modeDisplay = chalk.blue('WebSocket');
+          break;
+        case 'remote':
+          modeDisplay = chalk.blue('Remote (HTTP/SSE)');
+          break;
+        case 'local':
+          modeDisplay = chalk.yellow('Local (stdio)');
+          break;
+        default:
+          modeDisplay = chalk.gray(status.mode);
+      }
+      console.log(`Mode: ${modeDisplay}`);
       console.log(`Server: ${status.server}`);
 
-      if (status.connected && status.mode === 'remote') {
-        console.log(`\n${chalk.cyan('Features:')}`);
-        console.log('• Real-time updates via SSE');
-        console.log('• Authenticated API access');
-        console.log('• MCP-compatible tool interface');
+      if (status.connected) {
+        if (status.mode === 'remote') {
+          console.log(`\n${chalk.cyan('Features:')}`);
+          console.log('• Real-time updates via SSE');
+          console.log('• Authenticated API access');
+          console.log('• MCP-compatible tool interface');
+        } else if (status.mode === 'websocket') {
+          console.log(`\n${chalk.cyan('Features:')}`);
+          console.log('• Bi-directional real-time communication');
+          console.log('• Authenticated WebSocket connection');
+          console.log('• Production-ready MCP server');
+        }
       }
     });
 
