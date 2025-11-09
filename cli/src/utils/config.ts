@@ -382,7 +382,7 @@ export class CLIConfig {
     const nodeEnv = (process.env.NODE_ENV ?? '').toLowerCase();
     const isDevEnvironment = nodeEnv === 'development' || nodeEnv === 'test';
 
-    const defaultAuthBase = isDevEnvironment ? 'http://localhost:4000' : 'https://api.lanonasis.com';
+    const defaultAuthBase = isDevEnvironment ? 'http://localhost:4000' : 'https://auth.lanonasis.com';
     const defaultMemoryBase = isDevEnvironment ? 'http://localhost:4000/api/v1' : 'https://api.lanonasis.com/api/v1';
     const defaultMcpBase = isDevEnvironment ? 'http://localhost:4100/api/v1' : 'https://mcp.lanonasis.com/api/v1';
     const defaultMcpWsBase = isDevEnvironment ? 'ws://localhost:4100/ws' : 'wss://mcp.lanonasis.com/ws';
