@@ -44,6 +44,7 @@ const MemoryService_1 = require("./services/MemoryService");
 const EnhancedMemoryService_1 = require("./services/EnhancedMemoryService");
 const ApiKeyService_1 = require("./services/ApiKeyService");
 const SecureApiKeyService_1 = require("./services/SecureApiKeyService");
+const diagnostics_1 = require("./utils/diagnostics");
 async function activate(context) {
     console.log('Lanonasis Memory Extension is now active');
     const outputChannel = vscode.window.createOutputChannel('Lanonasis');
@@ -267,6 +268,59 @@ async function activate(context) {
                 vscode.window.showErrorMessage(`Connection test failed: ${message}`);
                 outputChannel.appendLine(`[TestConnection] Error: ${message}`);
             }
+        }),
+        vscode.commands.registerCommand('lanonasis.runDiagnostics', async () => {
+            try {
+                outputChannel.show();
+                outputChannel.appendLine('Running comprehensive diagnostics...\n');
+                const health = await (0, diagnostics_1.runDiagnostics)(context, secureApiKeyService, memoryService, outputChannel);
+                const report = (0, diagnostics_1.formatDiagnosticResults)(health);
+                // Show report in a new document
+                const doc = await vscode.workspace.openTextDocument({
+                    content: report,
+                    language: 'markdown'
+                });
+                await vscode.window.showTextDocument(doc);
+                // Show summary notification
+                const statusEmoji = {
+                    healthy: '✅',
+                    degraded: '⚠️',
+                    critical: '❌'
+                };
+                const message = `${statusEmoji[health.overall]} System Health: ${health.overall.toUpperCase()}`;
+                if (health.overall === 'healthy') {
+                    vscode.window.showInformationMessage(message, 'View Report').then(action => {
+                        if (action === 'View Report') {
+                            outputChannel.show();
+                        }
+                    });
+                }
+                else if (health.overall === 'degraded') {
+                    vscode.window.showWarningMessage(message, 'View Report', 'Fix Issues').then(action => {
+                        if (action === 'View Report') {
+                            outputChannel.show();
+                        }
+                    });
+                }
+                else {
+                    vscode.window.showErrorMessage(message, 'View Report', 'Get Help').then(action => {
+                        if (action === 'View Report') {
+                            outputChannel.show();
+                        }
+                        else if (action === 'Get Help') {
+                            vscode.env.openExternal(vscode.Uri.parse('https://docs.lanonasis.com/troubleshooting'));
+                        }
+                    });
+                }
+            }
+            catch (error) {
+                const message = error instanceof Error ? error.message : String(error);
+                vscode.window.showErrorMessage(`Diagnostics failed: ${message}`);
+                outputChannel.appendLine(`[Diagnostics] Fatal error: ${message}`);
+            }
+        }),
+        vscode.commands.registerCommand('lanonasis.showLogs', () => {
+            outputChannel.show();
         })
     ];
     context.subscriptions.push(...commands);
@@ -443,14 +497,10 @@ async function checkEnhancedAuthenticationStatus(enhancedService) {
     }
 }
 function showWelcomeMessage() {
-    const message = `Welcome to Lanonasis Memory Assistant!
+    const message = `🎉 Welcome to Lanonasis Memory Assistant!
 
-🧠 Search and manage your memories directly in VS Code
-🔐 Use the Memory sidebar to authenticate via OAuth or API key
-🔍 Press Ctrl+Shift+M (Cmd+Shift+M on macOS) to search memories
-📝 Select text and press Ctrl+Shift+Alt+M to capture it`;
-    vscode.window.showInformationMessage(message, 'Connect in Browser', 'Enter API Key', 'Get API Key')
-        .then(selection => {
+Your AI-powered memory management system is ready. Let's get you started!`;
+    vscode.window.showInformationMessage(message, 'Connect in Browser', 'Enter API Key', 'Get API Key', 'Learn More').then(selection => {
         if (selection === 'Connect in Browser') {
             vscode.commands.executeCommand('lanonasis.authenticate', 'oauth');
         }
@@ -460,6 +510,158 @@ function showWelcomeMessage() {
         else if (selection === 'Get API Key') {
             vscode.env.openExternal(vscode.Uri.parse('https://api.lanonasis.com'));
         }
+        else if (selection === 'Learn More') {
+            showOnboardingGuide();
+        }
+    });
+}
+function showOnboardingGuide() {
+    const guide = `# 🧠 Lanonasis Memory Assistant - Quick Start Guide
+
+Welcome to your AI-powered memory management system! This guide will help you get started in just a few minutes.
+
+## 🚀 Getting Started
+
+### Step 1: Authenticate
+Choose one of two authentication methods:
+
+**Option A: Browser Authentication (Recommended)**
+1. Click the Lanonasis icon in the sidebar
+2. Click "Continue in Browser"
+3. Sign in with your Lanonasis account
+4. Authorize the extension
+
+**Option B: API Key Authentication**
+1. Visit https://api.lanonasis.com to get your API key
+2. Click the Lanonasis icon in the sidebar
+3. Click "Enter API Key"
+4. Paste your API key when prompted
+
+### Step 2: Create Your First Memory
+There are multiple ways to create memories:
+
+**From Selected Text:**
+1. Select any text in your editor
+2. Press \`Ctrl+Shift+Alt+M\` (or \`Cmd+Shift+Alt+M\` on Mac)
+3. Give your memory a title
+4. Done! Your memory is saved
+
+**From Current File:**
+1. Open any file
+2. Run command: \`Lanonasis: Create Memory from Current File\`
+3. Give your memory a title
+4. The entire file content is saved as a memory
+
+**From Sidebar:**
+1. Click the Lanonasis icon in the sidebar
+2. Click the "Create" button
+3. Select text first, then click to save
+
+### Step 3: Search Your Memories
+**Quick Search:**
+- Press \`Ctrl+Shift+M\` (or \`Cmd+Shift+M\` on Mac)
+- Type your search query
+- Select a memory to open it
+
+**Sidebar Search:**
+- Open the Lanonasis sidebar
+- Use the search box at the top
+- Results appear instantly
+
+## 🎯 Key Features
+
+### Memory Types
+Memories are automatically organized by type:
+- **Context**: Code snippets and contextual information
+- **Project**: Project-specific notes and documentation
+- **Knowledge**: General knowledge and learnings
+- **Reference**: Reference materials and guides
+- **Conversation**: Discussion notes and meeting summaries
+
+### CLI Integration
+If you have \`@lanonasis/cli\` v3.0.6+ installed, you'll get:
+- ⚡ Faster performance
+- 🔄 Enhanced caching
+- 🚀 Advanced features
+
+Install with: \`npm install -g @lanonasis/cli\`
+
+### API Key Management
+Manage multiple API keys for different projects:
+- Press \`Ctrl+Shift+K\` (or \`Cmd+Shift+K\` on Mac)
+- Create, view, and organize API keys
+- Support for different environments (dev, staging, prod)
+
+## 🛠️ Useful Commands
+
+Open the Command Palette (\`Ctrl+Shift+P\` or \`Cmd+Shift+P\`) and try:
+
+- \`Lanonasis: Search Memories\` - Search your memories
+- \`Lanonasis: Create Memory from Selection\` - Save selected text
+- \`Lanonasis: Manage API Keys\` - Manage your API keys
+- \`Lanonasis: Run System Diagnostics\` - Check system health
+- \`Lanonasis: Show Extension Logs\` - View detailed logs
+- \`Lanonasis: Test Connection\` - Test your connection
+- \`Lanonasis: Switch Gateway/Direct API Mode\` - Change connection mode
+
+## 🔧 Troubleshooting
+
+### Connection Issues?
+1. Run: \`Lanonasis: Run System Diagnostics\`
+2. Check the diagnostics report for issues
+3. Follow recommended actions
+
+### Authentication Problems?
+1. Run: \`Lanonasis: Check API Key Status\`
+2. Clear and re-enter your API key if needed
+3. Try OAuth authentication as an alternative
+
+### Need Help?
+- 📚 Documentation: https://docs.lanonasis.com
+- 🐛 Report Issues: https://github.com/lanonasis/lanonasis-maas/issues
+- 💬 Community: https://discord.gg/lanonasis
+
+## ⚙️ Settings
+
+Configure the extension to your liking:
+1. Go to: \`File > Preferences > Settings\`
+2. Search for: \`Lanonasis\`
+3. Customize:
+   - API URLs
+   - Default memory types
+   - Search limits
+   - Performance options
+   - And more!
+
+## 🎓 Tips & Tricks
+
+1. **Use Keyboard Shortcuts**: Master the shortcuts for faster workflow
+2. **Tag Your Memories**: Add tags during creation for better organization
+3. **Regular Backups**: Export important memories regularly
+4. **CLI Integration**: Install the CLI for best performance
+5. **Organize by Project**: Use project-specific memories for better context
+
+## 🎉 You're All Set!
+
+You're now ready to use Lanonasis Memory Assistant. Start by:
+1. Authenticating (if you haven't already)
+2. Creating your first memory
+3. Searching and exploring
+
+Happy memory management! 🧠✨
+
+---
+
+**Quick Reference:**
+- Search: \`Ctrl+Shift+M\` / \`Cmd+Shift+M\`
+- Create from Selection: \`Ctrl+Shift+Alt+M\` / \`Cmd+Shift+Alt+M\`
+- Manage API Keys: \`Ctrl+Shift+K\` / \`Cmd+Shift+K\`
+`;
+    vscode.workspace.openTextDocument({
+        content: guide,
+        language: 'markdown'
+    }).then(doc => {
+        vscode.window.showTextDocument(doc);
     });
 }
 async function switchConnectionMode(memoryService, apiKeyService) {
