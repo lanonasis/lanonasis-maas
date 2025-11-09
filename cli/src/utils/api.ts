@@ -198,7 +198,7 @@ export class APIClient {
       const vendorKey = this.config.getVendorKey();
       
       if (vendorKey) {
-        // Vendor key authentication (pk_*.sk_* format)
+        // Vendor key authentication (validated server-side)
         config.headers['X-API-Key'] = vendorKey;
         config.headers['X-Auth-Method'] = 'vendor_key';
       } else if (token) {

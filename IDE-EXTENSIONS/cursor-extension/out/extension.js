@@ -60,7 +60,9 @@ async function activate(context) {
         console.warn('Enhanced Memory Service not available, using basic service:', error);
         memoryService = new MemoryService_1.MemoryService(authService);
     }
-    const apiKeyService = new ApiKeyService_1.ApiKeyService();
+    const apiKeyService = new ApiKeyService_1.ApiKeyService(context);
+    // Set auth service for secure API key access
+    apiKeyService.setAuthService(authService);
     // Initialize sidebar provider (modern UI)
     const sidebarProvider = new MemorySidebarProvider_1.MemorySidebarProvider(context.extensionUri, memoryService);
     context.subscriptions.push(vscode.window.registerWebviewViewProvider(MemorySidebarProvider_1.MemorySidebarProvider.viewType, sidebarProvider));
@@ -209,14 +211,14 @@ async function checkEnhancedAuthenticationStatus(authService, memoryTreeProvider
     // Check CLI capabilities for enhanced features
     const capabilities = enhancedService.getCapabilities();
     if (capabilities?.cliAvailable && capabilities.goldenContract) {
-        vscode.window.showInformationMessage('🚀 Cursor Memory: CLI v1.5.2+ + OAuth detected! Maximum performance active.', 'Show Details').then(selection => {
+        vscode.window.showInformationMessage('?? Cursor Memory: CLI v1.5.2+ + OAuth detected! Maximum performance active.', 'Show Details').then(selection => {
             if (selection === 'Show Details') {
                 vscode.commands.executeCommand('lanonasis.showConnectionInfo');
             }
         });
     }
     else if (capabilities?.authenticated) {
-        const installCLI = await vscode.window.showInformationMessage('💡 Cursor Memory: Install CLI v1.5.2+ for enhanced performance with OAuth.', 'Install CLI', 'Learn More', 'Later');
+        const installCLI = await vscode.window.showInformationMessage('?? Cursor Memory: Install CLI v1.5.2+ for enhanced performance with OAuth.', 'Install CLI', 'Learn More', 'Later');
         if (installCLI === 'Install CLI') {
             vscode.env.openExternal(vscode.Uri.parse('https://www.npmjs.com/package/@lanonasis/cli'));
         }
@@ -459,11 +461,11 @@ function showWelcomeMessage() {
     const authMethod = useAutoAuth ? 'auto-login with browser' : 'manual API key';
     const message = `Welcome to Lanonasis Memory Assistant for Cursor! 
 
-🧠 Search and manage your memories directly in Cursor
-🔍 Press Ctrl+Shift+M to search memories
-📝 Select text and press Ctrl+Shift+Alt+M to create a memory
-🌐 Enhanced with auto-redirect authentication
-🔄 Auto-refresh keeps your memories up to date
+?? Search and manage your memories directly in Cursor
+?? Press Ctrl+Shift+M to search memories
+?? Select text and press Ctrl+Shift+Alt+M to create a memory
+?? Enhanced with auto-redirect authentication
+?? Auto-refresh keeps your memories up to date
 
 Authentication method: ${authMethod}`;
     vscode.window.showInformationMessage(message, 'Get Started', 'Configure')
@@ -481,13 +483,13 @@ async function switchConnectionMode(memoryService) {
     const currentUseGateway = config.get('useGateway', true);
     const options = [
         {
-            label: '🌐 Gateway Mode (Recommended)',
+            label: '?? Gateway Mode (Recommended)',
             description: 'Use Onasis Gateway for optimized routing and caching',
             picked: currentUseGateway,
             value: true
         },
         {
-            label: '🔗 Direct API Mode',
+            label: '?? Direct API Mode',
             description: 'Connect directly to memory service',
             picked: !currentUseGateway,
             value: false
@@ -566,7 +568,7 @@ async function viewApiKeys(apiKeyService) {
             }
             const items = apiKeys.map(key => ({
                 label: key.name,
-                description: `${key.environment} • ${key.keyType} • ${key.accessLevel}`,
+                description: `${key.environment} ? ${key.keyType} ? ${key.accessLevel}`,
                 detail: `Project: ${key.projectId} | Created: ${new Date(key.createdAt).toLocaleDateString()}`,
                 apiKey: key
             }));

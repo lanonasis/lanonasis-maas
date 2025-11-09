@@ -1,9 +1,9 @@
 #!/bin/bash
 
 # Build and Package All IDE Extensions
-# Version 1.3.0 - With 17 Enterprise Tools
+# Version 1.4.0 - Phase 2 Security Fixes + OAuth Race Condition Fixes
 
-echo "🚀 Building LanOnasis-MAAS Extensions v1.3.0"
+echo "🚀 Building LanOnasis-MAAS Extensions v1.4.0"
 echo "==========================================="
 
 # Colors for output
@@ -69,9 +69,9 @@ echo -e "\n${GREEN}===========================================
 ===========================================
 
 📦 Extension packages created in dist/extensions/:
-  - lanonasis-memory-1.3.0.vsix (VS Code)
-  - lanonasis-memory-cursor-1.3.0.vsix (Cursor)
-  - lanonasis-memory-windsurf-1.3.0.vsix (Windsurf)
+  - lanonasis-memory-1.4.0.vsix (VS Code)
+  - lanonasis-memory-cursor-1.4.0.vsix (Cursor)
+  - lanonasis-memory-windsurf-1.4.0.vsix (Windsurf)
 
 🎯 All 17 tools included:
   Memory: 6 tools

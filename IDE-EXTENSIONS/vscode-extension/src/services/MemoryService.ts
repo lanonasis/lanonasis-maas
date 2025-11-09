@@ -1,42 +1,84 @@
 import * as vscode from 'vscode';
 import { MaaSClient, createMaaSClient } from './memory-client-sdk';
-import { CreateMemoryRequest, SearchMemoryRequest, MemoryEntry, MemorySearchResult } from '../types/memory-aligned';
+import { CreateMemoryRequest, SearchMemoryRequest, MemoryEntry, MemorySearchResult, UserMemoryStats } from '../types/memory-aligned';
 import type { IMemoryService } from './IMemoryService';
+import { SecureApiKeyService } from './SecureApiKeyService';
 
 export class MemoryService implements IMemoryService {
     private client: MaaSClient | null = null;
     private config: vscode.WorkspaceConfiguration;
+    private readonly secureApiKeyService?: SecureApiKeyService;
+    private initializePromise: Promise<void> | null = null;
+    private authenticated = false;
 
-    constructor() {
+    constructor(secureApiKeyService?: SecureApiKeyService) {
+        this.secureApiKeyService = secureApiKeyService;
         this.config = vscode.workspace.getConfiguration('lanonasis');
-        this.initializeClient();
+        void this.ensureClient();
     }
 
-    private initializeClient(): void {
-        const apiKey = this.config.get<string>('apiKey');
+    private async resolveApiKey(): Promise<string | null> {
+        if (this.secureApiKeyService) {
+            try {
+                const secureKey = await this.secureApiKeyService.getApiKey();
+                if (secureKey && secureKey.trim().length > 0) {
+                    return secureKey;
+                }
+            } catch (error) {
+                console.warn('[MemoryService] Failed to read secure API key', error);
+            }
+        }
+
+        const legacyKey = this.config.get<string>('apiKey');
+        if (legacyKey && legacyKey.trim().length > 0) {
+            return legacyKey;
+        }
+
+        return null;
+    }
+
+    private async loadClient(): Promise<void> {
+        const apiKey = await this.resolveApiKey();
         const apiUrl = this.config.get<string>('apiUrl', 'https://api.lanonasis.com');
         const gatewayUrl = this.config.get<string>('gatewayUrl', 'https://api.lanonasis.com');
         const useGateway = this.config.get<boolean>('useGateway', true);
-
-        // Use gateway URL if enabled, otherwise use direct API URL
         const effectiveUrl = useGateway ? gatewayUrl : apiUrl;
 
-        if (apiKey && apiKey.trim().length > 0) {
+        if (apiKey) {
             this.client = createMaaSClient({
                 apiUrl: effectiveUrl,
                 apiKey,
                 timeout: 30000
             });
+            this.authenticated = true;
+        } else {
+            this.client = null;
+            this.authenticated = false;
         }
     }
 
-    public refreshClient(): void {
-        this.config = vscode.workspace.getConfiguration('lanonasis');
-        this.initializeClient();
+    private async ensureClient(): Promise<void> {
+        if (this.client) {
+            return;
+        }
+
+        if (!this.initializePromise) {
+            this.initializePromise = this.loadClient();
+        }
+
+        try {
+            await this.initializePromise;
+        } finally {
+            this.initializePromise = null;
+        }
     }
 
     public isAuthenticated(): boolean {
-        return this.client !== null;
+        if (!this.client && !this.initializePromise) {
+            void this.ensureClient();
+        }
+
+        return this.authenticated;
     }
 
     public async testConnection(apiKey?: string): Promise<void> {
@@ -45,11 +87,18 @@ export class MemoryService implements IMemoryService {
         const useGateway = this.config.get<boolean>('useGateway', true);
         const effectiveUrl = useGateway ? gatewayUrl : apiUrl;
 
-        const testClient = apiKey ? createMaaSClient({
-            apiUrl: effectiveUrl,
-            apiKey,
-            timeout: 10000
-        }) : this.client;
+        let testClient: MaaSClient | null = null;
+
+        if (apiKey && apiKey.trim().length > 0) {
+            testClient = createMaaSClient({
+                apiUrl: effectiveUrl,
+                apiKey,
+                timeout: 10000
+            });
+        } else {
+            await this.ensureClient();
+            testClient = this.client;
+        }
 
         if (!testClient) {
             throw new Error('No API key configured');
@@ -62,11 +111,13 @@ export class MemoryService implements IMemoryService {
     }
 
     public async createMemory(memory: CreateMemoryRequest): Promise<MemoryEntry> {
-        if (!this.client) {
+        await this.ensureClient();
+        const client = this.client;
+        if (!client) {
             throw new Error('Not authenticated. Please configure your API key.');
         }
 
-        const response = await this.client.createMemory(memory);
+        const response = await client.createMemory(memory);
         if (response.error || !response.data) {
             throw new Error(response.error || 'Failed to create memory');
         }
@@ -75,7 +126,9 @@ export class MemoryService implements IMemoryService {
     }
 
     public async searchMemories(query: string, options: Partial<SearchMemoryRequest> = {}): Promise<MemorySearchResult[]> {
-        if (!this.client) {
+        await this.ensureClient();
+        const client = this.client;
+        if (!client) {
             throw new Error('Not authenticated. Please configure your API key.');
         }
 
@@ -87,7 +140,7 @@ export class MemoryService implements IMemoryService {
             ...options
         };
 
-        const response = await this.client.searchMemories(searchRequest);
+        const response = await client.searchMemories(searchRequest);
         if (response.error || !response.data) {
             throw new Error(response.error || 'Search failed');
         }
@@ -96,11 +149,13 @@ export class MemoryService implements IMemoryService {
     }
 
     public async getMemory(id: string): Promise<MemoryEntry> {
-        if (!this.client) {
+        await this.ensureClient();
+        const client = this.client;
+        if (!client) {
             throw new Error('Not authenticated. Please configure your API key.');
         }
 
-        const response = await this.client.getMemory(id);
+        const response = await client.getMemory(id);
         if (response.error || !response.data) {
             throw new Error(response.error || 'Memory not found');
         }
@@ -109,7 +164,9 @@ export class MemoryService implements IMemoryService {
     }
 
     public async listMemories(limit: number = 50): Promise<MemoryEntry[]> {
-        if (!this.client) {
+        await this.ensureClient();
+        const client = this.client;
+        if (!client) {
             throw new Error('Not authenticated. Please configure your API key.');
         }
 
@@ -121,7 +178,7 @@ export class MemoryService implements IMemoryService {
         // Ensure limit is within reasonable bounds
         const validatedLimit = Math.min(Math.max(1, Math.floor(limit)), 1000);
 
-        const response = await this.client.listMemories({
+        const response = await client.listMemories({
             limit: validatedLimit,
             sort: 'updated_at',
             order: 'desc'
@@ -135,26 +192,37 @@ export class MemoryService implements IMemoryService {
     }
 
     public async deleteMemory(id: string): Promise<void> {
-        if (!this.client) {
+        await this.ensureClient();
+        const client = this.client;
+        if (!client) {
             throw new Error('Not authenticated. Please configure your API key.');
         }
 
-        const response = await this.client.deleteMemory(id);
+        const response = await client.deleteMemory(id);
         if (response.error) {
             throw new Error(response.error);
         }
     }
 
-    public async getMemoryStats() {
-        if (!this.client) {
+    public async getMemoryStats(): Promise<UserMemoryStats> {
+        await this.ensureClient();
+        const client = this.client;
+        if (!client) {
             throw new Error('Not authenticated. Please configure your API key.');
         }
 
-        const response = await this.client.getMemoryStats();
+        const response = await client.getMemoryStats();
         if (response.error || !response.data) {
             throw new Error(response.error || 'Failed to fetch stats');
         }
 
         return response.data;
+    }
+
+    public async refreshClient(): Promise<void> {
+        this.config = vscode.workspace.getConfiguration('lanonasis');
+        this.client = null;
+        this.authenticated = false;
+        await this.ensureClient();
     }
 }

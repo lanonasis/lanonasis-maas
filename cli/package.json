@@ -1,6 +1,6 @@
 {
   "name": "@lanonasis/cli",
-  "version": "3.4.15",
+  "version": "3.6.3",
   "description": "LanOnasis Enterprise CLI - Memory as a Service, API Key Management, and Infrastructure Orchestration",
   "main": "dist/index-simple.js",
   "bin": {
@@ -22,8 +22,10 @@
     "start": "node dist/index.js",
     "start:mcp-server": "node dist/mcp/server/lanonasis-server.js",
     "test": "NODE_OPTIONS=--experimental-vm-modules jest",
+    "test:unit": "NODE_OPTIONS=--experimental-vm-modules jest --testPathIgnorePatterns=\"integration|reliability|persistence\"",
     "test:mcp": "NODE_OPTIONS=--experimental-vm-modules jest --testPathPattern=mcp",
-    "test:integration": "npm run build:mcp && npm run test:mcp",
+    "test:integration": "NODE_OPTIONS=--experimental-vm-modules jest --testPathPattern=\"integration|reliability|persistence\"",
+    "test:coverage": "NODE_OPTIONS=--experimental-vm-modules jest --coverage",
     "lint": "eslint .",
     "type-check": "tsc --noEmit",
     "prepare": "npm run build",
@@ -63,6 +65,7 @@
   },
   "homepage": "https://github.com/lanonasis/lanonasis-maas#readme",
   "dependencies": {
+    "@lanonasis/cli": "^3.6.3",
     "@modelcontextprotocol/sdk": "^1.17.4",
     "@types/eventsource": "^1.1.15",
     "@types/ws": "^8.18.1",

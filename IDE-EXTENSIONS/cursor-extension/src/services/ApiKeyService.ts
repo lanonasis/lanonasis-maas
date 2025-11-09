@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { AuthenticationService } from '../auth/AuthenticationService';
 
 export interface ApiKey {
     id: string;
@@ -47,11 +48,17 @@ export interface CreateProjectRequest {
 export class ApiKeyService {
     private config: vscode.WorkspaceConfiguration;
     private baseUrl: string;
+    private authService: AuthenticationService | null = null;
 
-    constructor() {
+    constructor(context?: vscode.ExtensionContext) {
         this.config = vscode.workspace.getConfiguration('lanonasis');
         this.baseUrl = '';
         this.updateConfig();
+        
+        // Initialize auth service if context provided (for secure storage access)
+        if (context) {
+            this.authService = new AuthenticationService(context);
+        }
     }
 
     private updateConfig(): void {
@@ -67,16 +74,43 @@ export class ApiKeyService {
         this.updateConfig();
     }
 
+    /**
+     * Set authentication service for secure API key access
+     */
+    setAuthService(authService: AuthenticationService): void {
+        this.authService = authService;
+    }
+
     private async makeRequest<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-        const apiKey = this.config.get<string>('apiKey');
-        if (!apiKey) {
-            throw new Error('API key not configured. Please set your API key in settings.');
+        // Try to get auth header from secure storage first
+        let authHeader: string | null = null;
+        
+        if (this.authService) {
+            try {
+                authHeader = await this.authService.getAuthenticationHeader();
+            } catch (error) {
+                // Fall through to legacy config check
+            }
+        }
+
+        // Fallback to legacy configuration (for migration period)
+        if (!authHeader) {
+            const apiKey = this.config.get<string>('apiKey');
+            if (apiKey) {
+                authHeader = `Bearer ${apiKey}`;
+                // Warn user about using insecure storage
+                console.warn('[ApiKeyService] Using API key from configuration. Please migrate to secure storage.');
+            }
+        }
+
+        if (!authHeader) {
+            throw new Error('API key not configured. Please authenticate using the "Lanonasis: Authenticate" command.');
         }
 
         const url = `${this.baseUrl}${endpoint}`;
         const headers = {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${apiKey}`,
+            'Authorization': authHeader,
             ...options.headers
         };
 

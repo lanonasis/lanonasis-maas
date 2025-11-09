@@ -1,6 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
-import { config } from '@/config/environment';
-import { logger } from '@/utils/logger';
+import { config } from '../config/environment';
+import { logger } from '../utils/logger';
 import crypto from 'crypto';
 const supabase = createClient(config.SUPABASE_URL, config.SUPABASE_SERVICE_KEY);
 // ============================================
@@ -37,10 +37,12 @@ export const corsGuard = (req, res, next) => {
             res.header('Access-Control-Allow-Headers', 'Origin, Content-Type, Accept, Authorization, X-API-Key, X-Project-Scope, X-Request-ID');
             res.header('Access-Control-Allow-Credentials', 'true');
             res.header('Access-Control-Max-Age', '86400');
-            return res.status(204).send();
+            res.status(204).send();
+            return;
         }
         else {
-            return res.status(403).json(createErrorEnvelope(req, 'CORS policy violation', 'CORSError', 'ORIGIN_NOT_ALLOWED'));
+            res.status(403).json(createErrorEnvelope(req, 'CORS policy violation', 'CORSError', 'ORIGIN_NOT_ALLOWED'));
+            return;
         }
     }
     // Handle actual requests
@@ -49,7 +51,8 @@ export const corsGuard = (req, res, next) => {
         res.header('Access-Control-Allow-Credentials', 'true');
     }
     else if (origin) {
-        return res.status(403).json(createErrorEnvelope(req, 'CORS policy violation', 'CORSError', 'ORIGIN_NOT_ALLOWED'));
+        res.status(403).json(createErrorEnvelope(req, 'CORS policy violation', 'CORSError', 'ORIGIN_NOT_ALLOWED'));
+        return;
     }
     // Add security headers to all responses
     res.header('X-Content-Type-Options', 'nosniff');
@@ -110,7 +113,11 @@ export const alignedAuthMiddleware = async (req, res, next) => {
                     res.status(401).json(createErrorEnvelope(req, 'The provided API key is invalid or inactive', 'AuthError', 'INVALID_API_KEY'));
                     return;
                 }
-                req.user = { ...user, auth_type: 'api_key' };
+                req.user = {
+                    ...user,
+                    id: user.id || user.userId || '',
+                    auth_type: 'api_key'
+                };
                 logger.info(`[${req.id}] API key authentication successful for user ${user.id}`);
             }
             else {
@@ -143,7 +150,11 @@ export const alignedAuthMiddleware = async (req, res, next) => {
                     user_metadata: user.user_metadata || {},
                     app_metadata: user.app_metadata || {}
                 };
-                req.user = { ...alignedUser, auth_type: 'jwt' };
+                req.user = {
+                    ...alignedUser,
+                    id: alignedUser.id || alignedUser.userId || '',
+                    auth_type: 'jwt'
+                };
                 logger.info(`[${req.id}] JWT authentication successful for user ${alignedUser.id}`);
             }
             logger.debug('User authenticated', {
@@ -357,12 +368,13 @@ export const globalErrorHandler = (error, req, res, next) => {
     if (res.headersSent) {
         return next(error);
     }
-    const status = error.status || error.statusCode || 500;
-    const message = error.message || 'Internal Server Error';
-    const type = error.constructor.name || 'Error';
-    const code = error.code || 'INTERNAL_ERROR';
+    const normalizedError = error;
+    const status = normalizedError.status || normalizedError.statusCode || 500;
+    const message = normalizedError.message || 'Internal Server Error';
+    const type = normalizedError.constructor?.name || 'Error';
+    const code = normalizedError.code || 'INTERNAL_ERROR';
     logger.error(`[${req.id}] Global error handler`, {
-        error: error.stack,
+        error: normalizedError.stack,
         url: req.url,
         method: req.method,
         ip: req.ip,
@@ -403,7 +415,8 @@ export const validateProjectScope = (req, res, next) => {
     const projectScope = req.headers['x-project-scope'];
     if (projectScope !== 'lanonasis-maas') {
         logger.warn(`[${req.id}] Invalid project scope: ${projectScope}`);
-        return res.status(403).json(createErrorEnvelope(req, 'Invalid project scope', 'AuthError', 'INVALID_PROJECT_SCOPE'));
+        res.status(403).json(createErrorEnvelope(req, 'Invalid project scope', 'AuthError', 'INVALID_PROJECT_SCOPE'));
+        return;
     }
     next();
 };

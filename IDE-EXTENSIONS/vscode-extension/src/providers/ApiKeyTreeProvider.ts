@@ -68,10 +68,30 @@ export class ApiKeyTreeProvider implements vscode.TreeDataProvider<vscode.TreeIt
 
     private projects: Project[] = [];
     private apiKeys: Record<string, ApiKey[]> = {};
+    private authenticated: boolean = false;
 
     constructor(private apiKeyService: ApiKeyService) {}
 
-    refresh(): void {
+    refresh(resetCache: boolean = false): void {
+        if (resetCache) {
+            this.clearCache();
+        }
+        this._onDidChangeTreeData.fire();
+    }
+
+    setAuthenticated(authenticated: boolean): void {
+        this.authenticated = authenticated;
+
+        if (!authenticated) {
+            this.clear();
+        } else {
+            this.clear();
+            this.refresh();
+        }
+    }
+
+    clear(): void {
+        this.clearCache();
         this._onDidChangeTreeData.fire();
     }
 
@@ -80,6 +100,10 @@ export class ApiKeyTreeProvider implements vscode.TreeDataProvider<vscode.TreeIt
     }
 
     async getChildren(element?: vscode.TreeItem): Promise<vscode.TreeItem[]> {
+        if (!this.authenticated) {
+            return [];
+        }
+
         try {
             if (!element) {
                 // Root level - show projects
@@ -152,7 +176,7 @@ export class ApiKeyTreeProvider implements vscode.TreeDataProvider<vscode.TreeIt
     }
 
     // Clear cache when refreshing
-    clearCache(): void {
+    private clearCache(): void {
         this.projects = [];
         this.apiKeys = {};
     }

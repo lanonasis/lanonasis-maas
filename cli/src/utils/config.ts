@@ -382,7 +382,7 @@ export class CLIConfig {
     const nodeEnv = (process.env.NODE_ENV ?? '').toLowerCase();
     const isDevEnvironment = nodeEnv === 'development' || nodeEnv === 'test';
 
-    const defaultAuthBase = isDevEnvironment ? 'http://localhost:4000' : 'https://api.lanonasis.com';
+    const defaultAuthBase = isDevEnvironment ? 'http://localhost:4000' : 'https://auth.lanonasis.com';
     const defaultMemoryBase = isDevEnvironment ? 'http://localhost:4000/api/v1' : 'https://api.lanonasis.com/api/v1';
     const defaultMcpBase = isDevEnvironment ? 'http://localhost:4100/api/v1' : 'https://mcp.lanonasis.com/api/v1';
     const defaultMcpWsBase = isDevEnvironment ? 'ws://localhost:4100/ws' : 'wss://mcp.lanonasis.com/ws';
@@ -467,16 +467,18 @@ export class CLIConfig {
 
   // Enhanced authentication support
   async setVendorKey(vendorKey: string): Promise<void> {
-    // Enhanced format validation with detailed error messages
-    const formatValidation = this.validateVendorKeyFormat(vendorKey);
+    const trimmedKey = typeof vendorKey === 'string' ? vendorKey.trim() : '';
+
+    // Minimal format validation (non-empty); rely on server-side checks for everything else
+    const formatValidation = this.validateVendorKeyFormat(trimmedKey);
     if (formatValidation !== true) {
-      throw new Error(typeof formatValidation === 'string' ? formatValidation : 'Invalid vendor key format');
+      throw new Error(typeof formatValidation === 'string' ? formatValidation : 'Vendor key is invalid');
     }
 
     // Server-side validation
-    await this.validateVendorKeyWithServer(vendorKey);
+    await this.validateVendorKeyWithServer(trimmedKey);
 
-    this.config.vendorKey = vendorKey;
+    this.config.vendorKey = trimmedKey;
     this.config.authMethod = 'vendor_key';
     this.config.lastValidated = new Date().toISOString();
     await this.resetFailureCount(); // Reset failure count on successful auth
@@ -484,50 +486,10 @@ export class CLIConfig {
   }
 
   validateVendorKeyFormat(vendorKey: string): string | boolean {
-    if (!vendorKey || vendorKey.trim().length === 0) {
+    const trimmed = typeof vendorKey === 'string' ? vendorKey.trim() : '';
+
+    if (!trimmed) {
       return 'Vendor key is required';
-    }
-
-    const trimmed = vendorKey.trim();
-
-    // Check basic format
-    if (!trimmed.includes('.')) {
-      return 'Invalid vendor key format: Must contain a dot (.) separator. Expected format: pk_xxx.sk_xxx';
-    }
-
-    const parts = trimmed.split('.');
-    if (parts.length !== 2) {
-      return 'Invalid vendor key format: Must have exactly two parts separated by a dot. Expected format: pk_xxx.sk_xxx';
-    }
-
-    const [publicPart, secretPart] = parts;
-
-    // Validate public key part
-    if (!publicPart.startsWith('pk_')) {
-      return 'Invalid vendor key format: First part must start with "pk_". Expected format: pk_xxx.sk_xxx';
-    }
-
-    if (publicPart.length < 11) { // pk_ + minimum 8 chars
-      return 'Invalid vendor key format: Public key part is too short. Expected format: pk_xxx.sk_xxx (minimum 8 characters after "pk_")';
-    }
-
-    const publicKeyContent = publicPart.substring(3); // Remove 'pk_'
-    if (!/^[a-zA-Z0-9]+$/.test(publicKeyContent)) {
-      return 'Invalid vendor key format: Public key part contains invalid characters. Only letters and numbers are allowed after "pk_"';
-    }
-
-    // Validate secret key part
-    if (!secretPart.startsWith('sk_')) {
-      return 'Invalid vendor key format: Second part must start with "sk_". Expected format: pk_xxx.sk_xxx';
-    }
-
-    if (secretPart.length < 19) { // sk_ + minimum 16 chars
-      return 'Invalid vendor key format: Secret key part is too short. Expected format: pk_xxx.sk_xxx (minimum 16 characters after "sk_")';
-    }
-
-    const secretKeyContent = secretPart.substring(3); // Remove 'sk_'
-    if (!/^[a-zA-Z0-9]+$/.test(secretKeyContent)) {
-      return 'Invalid vendor key format: Secret key part contains invalid characters. Only letters and numbers are allowed after "sk_"';
     }
 
     return true;
@@ -541,10 +503,10 @@ export class CLIConfig {
       // Ensure service discovery is done
       await this.discoverServices();
 
-      const authBase = this.config.discoveredServices?.auth_base || 'https://api.lanonasis.com';
+      const authBase = this.config.discoveredServices?.auth_base || 'https://auth.lanonasis.com';
 
       // Test vendor key with health endpoint
-      await axios.get(`${authBase}/api/v1/health`, {
+      await axios.get(`${authBase}/health`, {
         headers: {
           'X-API-Key': vendorKey,
           'X-Auth-Method': 'vendor_key',
@@ -557,13 +519,13 @@ export class CLIConfig {
       if (error.response?.status === 401) {
         const errorData = error.response.data;
         if (errorData?.error?.includes('expired') || errorData?.message?.includes('expired')) {
-          throw new Error('Vendor key has expired. Please generate a new key from your dashboard.');
+          throw new Error('Vendor key validation failed: Key has expired. Please generate a new key from your dashboard.');
         } else if (errorData?.error?.includes('revoked') || errorData?.message?.includes('revoked')) {
-          throw new Error('Vendor key has been revoked. Please generate a new key from your dashboard.');
+          throw new Error('Vendor key validation failed: Key has been revoked. Please generate a new key from your dashboard.');
         } else if (errorData?.error?.includes('invalid') || errorData?.message?.includes('invalid')) {
-          throw new Error('Vendor key is invalid. Please check the key format and ensure it was copied correctly.');
+          throw new Error('Vendor key validation failed: Key is invalid. Please check the key format and ensure it was copied correctly.');
         } else {
-          throw new Error('Vendor key authentication failed. The key may be invalid, expired, or revoked.');
+          throw new Error('Vendor key validation failed: Authentication failed. The key may be invalid, expired, or revoked.');
         }
       } else if (error.response?.status === 403) {
         throw new Error('Vendor key access denied. The key may not have sufficient permissions for this operation.');
