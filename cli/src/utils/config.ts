@@ -248,7 +248,7 @@ export class CLIConfig {
       // Map discovery response to our config format
       const discovered = response.data;
       this.config.discoveredServices = {
-        auth_base: discovered.auth?.login?.replace('/auth/login', '') || 'https://api.lanonasis.com',
+        auth_base: discovered.auth?.login?.replace('/auth/login', '') || 'https://auth.lanonasis.com',
         memory_base: 'https://api.lanonasis.com/api/v1',
         mcp_base: discovered.endpoints?.http || 'https://mcp.lanonasis.com/api/v1',
         mcp_ws_base: discovered.endpoints?.websocket || 'wss://mcp.lanonasis.com/ws',
@@ -503,17 +503,26 @@ export class CLIConfig {
       // Ensure service discovery is done
       await this.discoverServices();
 
-      const authBase = this.config.discoveredServices?.auth_base || 'https://api.lanonasis.com';
-
-      // Verify vendor key with dedicated endpoint
-      await axios.post(`${authBase}/v1/auth/verify-api-key`, {}, {
-        headers: {
-          'X-API-Key': vendorKey,
-          'X-Auth-Method': 'vendor_key',
-          'X-Project-Scope': 'lanonasis-maas'
-        },
-        timeout: 10000
-      });
+      // Try MCP-Core first (Supabase DB with vendor keys)
+      const mcpBase = 'http://localhost:3001';
+      try {
+        await axios.get(`${mcpBase}/api/v1/health`, {
+          headers: {
+            'X-API-Key': vendorKey,
+          },
+          timeout: 5000
+        });
+        return; // Success!
+      } catch (mcpError) {
+        // If MCP-Core fails, try auth-gateway
+        const authBase = this.config.discoveredServices?.auth_base || 'https://auth.lanonasis.com';
+        await axios.post(`${authBase}/v1/auth/verify-api-key`, {}, {
+          headers: {
+            'X-API-Key': vendorKey,
+          },
+          timeout: 10000
+        });
+      }
     } catch (error: any) {
       // Provide specific error messages based on response
       if (error.response?.status === 401) {
@@ -768,7 +777,7 @@ export class CLIConfig {
       // Ensure service discovery is done
       await this.discoverServices();
 
-      const authBase = this.config.discoveredServices?.auth_base || 'https://api.lanonasis.com';
+      const authBase = this.config.discoveredServices?.auth_base || 'https://auth.lanonasis.com';
       const headers: Record<string, string> = {
         'X-Project-Scope': 'lanonasis-maas'
       };
@@ -824,7 +833,7 @@ export class CLIConfig {
         const axios = (await import('axios')).default;
 
         await this.discoverServices();
-        const authBase = this.config.discoveredServices?.auth_base || 'https://api.lanonasis.com';
+        const authBase = this.config.discoveredServices?.auth_base || 'https://auth.lanonasis.com';
 
         // Attempt token refresh
         const response = await axios.post(`${authBase}/v1/auth/refresh`, {}, {
