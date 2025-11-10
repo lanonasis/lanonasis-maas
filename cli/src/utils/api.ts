@@ -184,10 +184,10 @@ export class APIClient {
       await this.config.discoverServices();
       
       // Use appropriate base URL based on endpoint
-      const isAuthEndpoint = config.url?.includes('/auth/') || config.url?.includes('/login') || config.url?.includes('/register');
+      const isAuthEndpoint = config.url?.includes('/auth/') || config.url?.includes('/login') || config.url?.includes('/register') || config.url?.includes('/oauth/');
       const discoveredServices = this.config.get<any>('discoveredServices');
       config.baseURL = isAuthEndpoint ?
-        (discoveredServices?.auth_base || 'https://api.lanonasis.com') :
+        (discoveredServices?.auth_base || 'https://auth.lanonasis.com') :
         this.config.getApiUrl();
       
       // Add project scope header for auth endpoints
