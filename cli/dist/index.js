@@ -1,36 +1,41 @@
 #!/usr/bin/env node
-import { Command } from 'commander';
-import chalk from 'chalk';
-import { config } from 'dotenv';
-import { initCommand } from './commands/init.js';
-import { loginCommand, diagnoseCommand } from './commands/auth.js';
-import { memoryCommands } from './commands/memory.js';
-import { topicCommands } from './commands/topics.js';
-import { configCommands } from './commands/config.js';
-import { orgCommands } from './commands/organization.js';
-import { mcpCommands } from './commands/mcp.js';
-import apiKeysCommand from './commands/api-keys.js';
-import { CLIConfig } from './utils/config.js';
-import { getMCPClient } from './utils/mcp-client.js';
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+const commander_1 = require("commander");
+const chalk_1 = __importDefault(require("chalk"));
+const dotenv_1 = require("dotenv");
+const init_js_1 = require("./commands/init.js");
+const auth_js_1 = require("./commands/auth.js");
+const memory_js_1 = require("./commands/memory.js");
+const topics_js_1 = require("./commands/topics.js");
+const config_js_1 = require("./commands/config.js");
+const organization_js_1 = require("./commands/organization.js");
+const mcp_js_1 = require("./commands/mcp.js");
+const api_keys_js_1 = __importDefault(require("./commands/api-keys.js"));
+const config_js_2 = require("./utils/config.js");
+const mcp_client_js_1 = require("./utils/mcp-client.js");
 // Load environment variables
-config();
-import { createRequire } from 'module';
-const require = createRequire(import.meta.url);
+(0, dotenv_1.config)();
+const module_1 = require("module");
+const require = (0, module_1.createRequire)(import.meta.url);
 const packageJson = require('../package.json');
 // Enhanced color scheme (VPS-style)
 const colors = {
-    primary: chalk.blue.bold,
-    success: chalk.green,
-    warning: chalk.yellow,
-    error: chalk.red,
-    info: chalk.cyan,
-    accent: chalk.magenta,
-    muted: chalk.gray,
-    highlight: chalk.white.bold
+    primary: chalk_1.default.blue.bold,
+    success: chalk_1.default.green,
+    warning: chalk_1.default.yellow,
+    error: chalk_1.default.red,
+    info: chalk_1.default.cyan,
+    accent: chalk_1.default.magenta,
+    muted: chalk_1.default.gray,
+    highlight: chalk_1.default.white.bold
 };
-const program = new Command();
+const program = new commander_1.Command();
 // CLI Configuration
-const cliConfig = new CLIConfig();
+const cliConfig = new config_js_2.CLIConfig();
 program
     .name('lanonasis')
     .alias('memory')
@@ -58,7 +63,7 @@ program
         actionCommand.parent?.name?.() === 'mcp-server';
     if (opts.mcp !== false && !isMcpFlow && !['init', 'auth', 'login', 'health', 'status'].includes(actionCommand.name())) {
         try {
-            const client = getMCPClient();
+            const client = (0, mcp_client_js_1.getMCPClient)();
             if (!client.isConnectedToServer()) {
                 const useRemote = await cliConfig.isAuthenticated();
                 await client.connect({ useRemote });
@@ -146,7 +151,7 @@ const healthCheck = async () => {
     console.log();
     process.stdout.write('MCP Server status: ');
     try {
-        const client = getMCPClient();
+        const client = (0, mcp_client_js_1.getMCPClient)();
         if (client.isConnectedToServer()) {
             console.log(colors.success('✅ Connected'));
         }
@@ -179,8 +184,8 @@ const requireAuth = (command) => {
         await cliConfig.init();
         const isAuthenticated = await cliConfig.isAuthenticated();
         if (!isAuthenticated) {
-            console.error(chalk.red('✖ Authentication required'));
-            console.log(chalk.yellow('Please run:'), chalk.white('lanonasis auth login'));
+            console.error(chalk_1.default.red('✖ Authentication required'));
+            console.log(chalk_1.default.yellow('Please run:'), chalk_1.default.white('lanonasis auth login'));
             process.exit(1);
         }
     });
@@ -190,7 +195,7 @@ program
     .command('init')
     .description('Initialize CLI configuration')
     .option('-f, --force', 'overwrite existing configuration')
-    .action(initCommand);
+    .action(init_js_1.initCommand);
 // Authentication commands (no auth required)
 const authCmd = program
     .command('auth')
@@ -201,13 +206,13 @@ authCmd
     .description('Login to your MaaS account')
     .option('-e, --email <email>', 'email address')
     .option('-p, --password <password>', 'password')
-    .action(loginCommand);
+    .action(auth_js_1.loginCommand);
 authCmd
     .command('logout')
     .description('Logout from your account')
     .action(async () => {
     await cliConfig.logout();
-    console.log(chalk.green('✓ Logged out successfully'));
+    console.log(chalk_1.default.green('✓ Logged out successfully'));
     process.exit(0);
 });
 authCmd
@@ -220,10 +225,10 @@ authCmd
     const lastFailure = cliConfig.getLastAuthFailure();
     const authMethod = cliConfig.get('authMethod');
     const lastValidated = cliConfig.get('lastValidated');
-    console.log(chalk.blue.bold('🔐 Authentication Status'));
+    console.log(chalk_1.default.blue.bold('🔐 Authentication Status'));
     console.log('━'.repeat(40));
     if (isAuth && user) {
-        console.log(chalk.green('✓ Authenticated'));
+        console.log(chalk_1.default.green('✓ Authenticated'));
         console.log(`Email: ${user.email}`);
         console.log(`Organization: ${user.organization_id}`);
         console.log(`Plan: ${user.plan}`);
@@ -236,13 +241,13 @@ authCmd
         }
     }
     else {
-        console.log(chalk.red('✖ Not authenticated'));
-        console.log(chalk.yellow('Run:'), chalk.white('memory login'));
+        console.log(chalk_1.default.red('✖ Not authenticated'));
+        console.log(chalk_1.default.yellow('Run:'), chalk_1.default.white('memory login'));
     }
     // Show failure tracking information
     if (failureCount > 0) {
         console.log();
-        console.log(chalk.yellow('⚠️  Authentication Issues:'));
+        console.log(chalk_1.default.yellow('⚠️  Authentication Issues:'));
         console.log(`Failed attempts: ${failureCount}`);
         if (lastFailure) {
             const failureDate = new Date(lastFailure);
@@ -250,26 +255,26 @@ authCmd
         }
         if (cliConfig.shouldDelayAuth()) {
             const delayMs = cliConfig.getAuthDelayMs();
-            console.log(chalk.yellow(`Next retry delay: ${Math.round(delayMs / 1000)} seconds`));
+            console.log(chalk_1.default.yellow(`Next retry delay: ${Math.round(delayMs / 1000)} seconds`));
         }
         console.log();
-        console.log(chalk.cyan('💡 To reset failure count:'));
-        console.log(chalk.white('  lanonasis auth logout && lanonasis auth login'));
+        console.log(chalk_1.default.cyan('💡 To reset failure count:'));
+        console.log(chalk_1.default.white('  lanonasis auth logout && lanonasis auth login'));
     }
 });
 authCmd
     .command('diagnose')
     .description('Diagnose authentication issues')
-    .action(diagnoseCommand);
+    .action(auth_js_1.diagnoseCommand);
 // MCP Commands (primary interface)
-mcpCommands(program);
+(0, mcp_js_1.mcpCommands)(program);
 // Memory commands (require auth) - now MCP-powered by default
 const memoryCmd = program
     .command('memory')
     .alias('mem')
     .description('Memory management commands');
 requireAuth(memoryCmd);
-memoryCommands(memoryCmd);
+(0, memory_js_1.memoryCommands)(memoryCmd);
 // Note: Memory commands are now MCP-powered when available
 // REPL command (lightweight REPL for memory operations)
 program
@@ -318,23 +323,23 @@ const topicCmd = program
     .alias('topics')
     .description('Topic management commands');
 requireAuth(topicCmd);
-topicCommands(topicCmd);
+(0, topics_js_1.topicCommands)(topicCmd);
 // Configuration commands (require auth)
 const configCmd = program
     .command('config')
     .description('Configuration management');
 requireAuth(configCmd);
-configCommands(configCmd);
+(0, config_js_1.configCommands)(configCmd);
 // Organization commands (require auth)
 const orgCmd = program
     .command('org')
     .alias('organization')
     .description('Organization management');
 requireAuth(orgCmd);
-orgCommands(orgCmd);
+(0, organization_js_1.orgCommands)(orgCmd);
 // API Key management commands (require auth)
-requireAuth(apiKeysCommand);
-program.addCommand(apiKeysCommand);
+requireAuth(api_keys_js_1.default);
+program.addCommand(api_keys_js_1.default);
 // Dashboard management commands (require auth)
 const dashboardCmd = program
     .command('dashboard')
@@ -536,9 +541,9 @@ program
     await cliConfig.init();
     const isAuth = await cliConfig.isAuthenticated();
     const apiUrl = cliConfig.getApiUrl();
-    console.log(chalk.blue.bold('MaaS CLI Status'));
+    console.log(chalk_1.default.blue.bold('MaaS CLI Status'));
     console.log(`API URL: ${apiUrl}`);
-    console.log(`Authenticated: ${isAuth ? chalk.green('Yes') : chalk.red('No')}`);
+    console.log(`Authenticated: ${isAuth ? chalk_1.default.green('Yes') : chalk_1.default.red('No')}`);
     if (isAuth) {
         const user = await cliConfig.getCurrentUser();
         if (user) {
@@ -570,46 +575,46 @@ program
     .description('Open documentation in browser')
     .action(() => {
     const url = 'https://api.lanonasis.com/docs';
-    console.log(chalk.blue(`Opening documentation: ${url}`));
+    console.log(chalk_1.default.blue(`Opening documentation: ${url}`));
     // Try to open in browser
     import('open').then(open => {
         open.default(url).catch(() => {
-            console.log(chalk.yellow('Could not open browser automatically.'));
-            console.log(chalk.white(`Please visit: ${url}`));
+            console.log(chalk_1.default.yellow('Could not open browser automatically.'));
+            console.log(chalk_1.default.white(`Please visit: ${url}`));
         });
     }).catch(() => {
-        console.log(chalk.white(`Please visit: ${url}`));
+        console.log(chalk_1.default.white(`Please visit: ${url}`));
     });
 });
 // Help customization
 program.configureHelp({
     formatHelp: (cmd, helper) => {
-        let help = chalk.blue.bold('🧠 Memory as a Service CLI\n\n');
+        let help = chalk_1.default.blue.bold('🧠 Memory as a Service CLI\n\n');
         help += helper.commandUsage(cmd) + '\n\n';
         if (cmd.description()) {
-            help += chalk.yellow('Description:\n');
+            help += chalk_1.default.yellow('Description:\n');
             help += `  ${cmd.description()}\n\n`;
         }
         const commands = helper.visibleCommands(cmd);
         if (commands.length > 0) {
-            help += chalk.yellow('Commands:\n');
+            help += chalk_1.default.yellow('Commands:\n');
             const maxNameLength = Math.max(...commands.map(c => c.name().length));
             commands.forEach(c => {
                 const name = c.name().padEnd(maxNameLength);
-                help += `  ${chalk.white(name)}  ${c.description()}\n`;
+                help += `  ${chalk_1.default.white(name)}  ${c.description()}\n`;
             });
             help += '\n';
         }
         const options = helper.visibleOptions(cmd);
         if (options.length > 0) {
-            help += chalk.yellow('Options:\n');
+            help += chalk_1.default.yellow('Options:\n');
             options.forEach(option => {
                 help += `  ${option.flags.padEnd(20)}  ${option.description}\n`;
             });
             help += '\n';
         }
-        help += chalk.gray('For more help on a specific command, run: memory <command> --help\n');
-        help += chalk.gray('Documentation: https://api.lanonasis.com/docs\n');
+        help += chalk_1.default.gray('For more help on a specific command, run: memory <command> --help\n');
+        help += chalk_1.default.gray('Documentation: https://api.lanonasis.com/docs\n');
         return help;
     }
 });
@@ -625,7 +630,7 @@ async function main() {
     }
     catch (error) {
         if (error instanceof Error) {
-            console.error(chalk.red('✖ Error:'), error.message);
+            console.error(chalk_1.default.red('✖ Error:'), error.message);
             if (process.env.CLI_VERBOSE === 'true') {
                 console.error(error.stack);
             }

@@ -1,11 +1,51 @@
-import { Client } from '@modelcontextprotocol/sdk/client/index.js';
-import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
-import chalk from 'chalk';
-import { CLIConfig } from './config.js';
-import * as fs from 'fs';
-import { EventSource } from 'eventsource';
-import WebSocket from 'ws';
-export class MCPClient {
+"use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.MCPClient = void 0;
+exports.getMCPClient = getMCPClient;
+const index_js_1 = require("@modelcontextprotocol/sdk/client/index.js");
+const stdio_js_1 = require("@modelcontextprotocol/sdk/client/stdio.js");
+const chalk_1 = __importDefault(require("chalk"));
+const config_js_1 = require("./config.js");
+const fs = __importStar(require("fs"));
+const eventsource_1 = require("eventsource");
+const ws_1 = __importDefault(require("ws"));
+class MCPClient {
     client = null;
     config;
     isConnected = false;
@@ -18,7 +58,7 @@ export class MCPClient {
     lastHealthCheck = null;
     activeConnectionMode = 'local'; // Track actual connection mode
     constructor() {
-        this.config = new CLIConfig();
+        this.config = new config_js_1.CLIConfig();
     }
     /**
      * Overrides the configuration directory used by the underlying CLI config.
@@ -94,10 +134,10 @@ export class MCPClient {
                         'wss://mcp.lanonasis.com/ws';
                     wsUrl = wsUrlValue;
                     if (this.retryAttempts === 0) {
-                        console.log(chalk.cyan(`Connecting to WebSocket MCP server at ${wsUrl}...`));
+                        console.log(chalk_1.default.cyan(`Connecting to WebSocket MCP server at ${wsUrl}...`));
                     }
                     else {
-                        console.log(chalk.yellow(`Retry ${this.retryAttempts}/${this.maxRetries}: Connecting to WebSocket MCP server...`));
+                        console.log(chalk_1.default.yellow(`Retry ${this.retryAttempts}/${this.maxRetries}: Connecting to WebSocket MCP server...`));
                     }
                     // Initialize WebSocket connection
                     await this.initializeWebSocket(wsUrl);
@@ -115,10 +155,10 @@ export class MCPClient {
                         'https://mcp.lanonasis.com/api/v1';
                     serverUrl = serverUrlValue;
                     if (this.retryAttempts === 0) {
-                        console.log(chalk.cyan(`Connecting to remote MCP server at ${serverUrl}...`));
+                        console.log(chalk_1.default.cyan(`Connecting to remote MCP server at ${serverUrl}...`));
                     }
                     else {
-                        console.log(chalk.yellow(`Retry ${this.retryAttempts}/${this.maxRetries}: Connecting to remote MCP server...`));
+                        console.log(chalk_1.default.yellow(`Retry ${this.retryAttempts}/${this.maxRetries}: Connecting to remote MCP server...`));
                     }
                     // Initialize SSE connection for real-time updates
                     await this.initializeSSE(serverUrl);
@@ -132,22 +172,22 @@ export class MCPClient {
                     // Local MCP server connection requires explicit path via option or config
                     serverPath = options.serverPath ?? this.config.get('mcpServerPath');
                     if (!serverPath) {
-                        console.log(chalk.yellow('⚠️  No local MCP server path configured.'));
-                        console.log(chalk.cyan('💡 Prefer using WebSocket mode (default). Or configure a local path via:'));
-                        console.log(chalk.cyan('   lanonasis config set mcpServerPath /absolute/path/to/server.js'));
+                        console.log(chalk_1.default.yellow('⚠️  No local MCP server path configured.'));
+                        console.log(chalk_1.default.cyan('💡 Prefer using WebSocket mode (default). Or configure a local path via:'));
+                        console.log(chalk_1.default.cyan('   lanonasis config set mcpServerPath /absolute/path/to/server.js'));
                         throw new Error('Local MCP server path not provided');
                     }
                     // Check if the server file exists
                     if (!fs.existsSync(serverPath)) {
-                        console.log(chalk.yellow(`⚠️  Local MCP server not found at ${serverPath}`));
-                        console.log(chalk.cyan('💡 For remote use WebSocket: lanonasis mcp connect --mode websocket --url wss://mcp.lanonasis.com/ws'));
+                        console.log(chalk_1.default.yellow(`⚠️  Local MCP server not found at ${serverPath}`));
+                        console.log(chalk_1.default.cyan('💡 For remote use WebSocket: lanonasis mcp connect --mode websocket --url wss://mcp.lanonasis.com/ws'));
                         throw new Error(`MCP server not found at ${serverPath}`);
                     }
                     if (this.retryAttempts === 0) {
-                        console.log(chalk.cyan(`Connecting to local MCP server at ${serverPath}...`));
+                        console.log(chalk_1.default.cyan(`Connecting to local MCP server at ${serverPath}...`));
                     }
                     else {
-                        console.log(chalk.yellow(`Retry ${this.retryAttempts}/${this.maxRetries}: Connecting to local MCP server...`));
+                        console.log(chalk_1.default.yellow(`Retry ${this.retryAttempts}/${this.maxRetries}: Connecting to local MCP server...`));
                     }
                     // Allow passing extra args to local server (e.g., --stdio) via options or env/config
                     // Precedence: options.localArgs -> env.MCP_LOCAL_SERVER_ARGS -> config.mcpLocalArgs -> none
@@ -160,11 +200,11 @@ export class MCPClient {
                         ? options.localArgs
                         : (envArgs.length > 0 ? envArgs : configArgs);
                     const args = [serverPath, ...extraArgs];
-                    const localTransport = new StdioClientTransport({
+                    const localTransport = new stdio_js_1.StdioClientTransport({
                         command: 'node',
                         args
                     });
-                    this.client = new Client({
+                    this.client = new index_js_1.Client({
                         name: '@lanonasis/cli',
                         version: '3.0.1'
                     });
@@ -172,7 +212,7 @@ export class MCPClient {
                     this.isConnected = true;
                     this.activeConnectionMode = 'local';
                     this.retryAttempts = 0;
-                    console.log(chalk.green('✓ Connected to MCP server'));
+                    console.log(chalk_1.default.green('✓ Connected to MCP server'));
                     this.startHealthMonitoring();
                     return true;
                 }
@@ -183,7 +223,7 @@ export class MCPClient {
                         ?? this.config.getMCPRestUrl()
                         ?? 'https://mcp.lanonasis.com/api/v1';
                     serverUrl = serverUrlValue;
-                    console.log(chalk.yellow(`Unknown connection mode '${String(connectionMode)}', falling back to remote at ${serverUrl}`));
+                    console.log(chalk_1.default.yellow(`Unknown connection mode '${String(connectionMode)}', falling back to remote at ${serverUrl}`));
                     await this.initializeSSE(serverUrl);
                     this.isConnected = true;
                     this.activeConnectionMode = 'remote';
@@ -204,23 +244,23 @@ export class MCPClient {
         // Check if this is an authentication error (don't retry these)
         if (this.isAuthenticationError(error)) {
             const authMsg = error?.message ?? '';
-            console.error(chalk.red('Authentication failed:'), authMsg);
+            console.error(chalk_1.default.red('Authentication failed:'), authMsg);
             this.provideAuthenticationGuidance(error);
             this.isConnected = false;
             return false;
         }
         this.retryAttempts++;
         if (this.retryAttempts >= this.maxRetries) {
-            console.error(chalk.red(`Failed to connect after ${this.maxRetries} attempts`));
+            console.error(chalk_1.default.red(`Failed to connect after ${this.maxRetries} attempts`));
             this.provideNetworkTroubleshootingGuidance(error);
             this.isConnected = false;
             return false;
         }
         // For network errors, retry with exponential backoff
         const delay = await this.exponentialBackoff(this.retryAttempts);
-        console.log(chalk.yellow(`Network error, retrying in ${delay}ms... (${this.retryAttempts}/${this.maxRetries})`));
+        console.log(chalk_1.default.yellow(`Network error, retrying in ${delay}ms... (${this.retryAttempts}/${this.maxRetries})`));
         const message = error?.message ?? String(error);
-        console.log(chalk.gray(`Error: ${message}`));
+        console.log(chalk_1.default.gray(`Error: ${message}`));
         await new Promise(resolve => setTimeout(resolve, delay));
         return this.connectWithRetry(options);
     }
@@ -243,61 +283,61 @@ export class MCPClient {
      * Provide authentication-specific guidance
      */
     provideAuthenticationGuidance(error) {
-        console.log(chalk.yellow('\n🔐 Authentication Issue Detected:'));
+        console.log(chalk_1.default.yellow('\n🔐 Authentication Issue Detected:'));
         const msg = error?.message ?? '';
         if (msg.includes('AUTHENTICATION_REQUIRED')) {
-            console.log(chalk.cyan('• No credentials found. Run: lanonasis auth login'));
-            console.log(chalk.cyan('• Or set a vendor key: lanonasis auth login --vendor-key <your-key>'));
+            console.log(chalk_1.default.cyan('• No credentials found. Run: lanonasis auth login'));
+            console.log(chalk_1.default.cyan('• Or set a vendor key: lanonasis auth login --vendor-key <your-key>'));
         }
         else if (msg.includes('AUTHENTICATION_INVALID')) {
-            console.log(chalk.cyan('• Invalid credentials. Confirm the vendor key matches your dashboard value'));
-            console.log(chalk.cyan('• Try: lanonasis auth logout && lanonasis auth login'));
+            console.log(chalk_1.default.cyan('• Invalid credentials. Confirm the vendor key matches your dashboard value'));
+            console.log(chalk_1.default.cyan('• Try: lanonasis auth logout && lanonasis auth login'));
         }
         else if (msg.includes('expired')) {
-            console.log(chalk.cyan('• Token expired. Re-authenticate: lanonasis auth login'));
-            console.log(chalk.cyan('• Or refresh: lanonasis auth refresh (if available)'));
+            console.log(chalk_1.default.cyan('• Token expired. Re-authenticate: lanonasis auth login'));
+            console.log(chalk_1.default.cyan('• Or refresh: lanonasis auth refresh (if available)'));
         }
         else {
-            console.log(chalk.cyan('• Check authentication status: lanonasis auth status'));
-            console.log(chalk.cyan('• Re-authenticate: lanonasis auth login'));
-            console.log(chalk.cyan('• Verify vendor key: lanonasis auth login --vendor-key <your-key>'));
+            console.log(chalk_1.default.cyan('• Check authentication status: lanonasis auth status'));
+            console.log(chalk_1.default.cyan('• Re-authenticate: lanonasis auth login'));
+            console.log(chalk_1.default.cyan('• Verify vendor key: lanonasis auth login --vendor-key <your-key>'));
         }
     }
     /**
      * Provide network troubleshooting guidance
      */
     provideNetworkTroubleshootingGuidance(_error) {
-        console.log(chalk.yellow('\n🌐 Network Issue Detected:'));
+        console.log(chalk_1.default.yellow('\n🌐 Network Issue Detected:'));
         const msg = _error?.message ?? '';
         if (msg.includes('ECONNREFUSED') || msg.includes('connect ECONNREFUSED')) {
-            console.log(chalk.cyan('• Connection refused. Service may be down:'));
-            console.log(chalk.cyan('  - For remote: Check https://mcp.lanonasis.com/health'));
-            console.log(chalk.cyan('  - For WebSocket: Check wss://mcp.lanonasis.com/ws'));
-            console.log(chalk.cyan('  - For local: Install local MCP server'));
+            console.log(chalk_1.default.cyan('• Connection refused. Service may be down:'));
+            console.log(chalk_1.default.cyan('  - For remote: Check https://mcp.lanonasis.com/health'));
+            console.log(chalk_1.default.cyan('  - For WebSocket: Check wss://mcp.lanonasis.com/ws'));
+            console.log(chalk_1.default.cyan('  - For local: Install local MCP server'));
         }
         else if (msg.includes('timeout') || msg.includes('ETIMEDOUT')) {
-            console.log(chalk.cyan('• Connection timeout. Check network:'));
-            console.log(chalk.cyan('  - Verify internet connectivity'));
-            console.log(chalk.cyan('  - Check firewall settings'));
-            console.log(chalk.cyan('  - Try different connection mode: --mode remote'));
+            console.log(chalk_1.default.cyan('• Connection timeout. Check network:'));
+            console.log(chalk_1.default.cyan('  - Verify internet connectivity'));
+            console.log(chalk_1.default.cyan('  - Check firewall settings'));
+            console.log(chalk_1.default.cyan('  - Try different connection mode: --mode remote'));
         }
         else if (msg.includes('ENOTFOUND') || msg.includes('getaddrinfo')) {
-            console.log(chalk.cyan('• DNS resolution failed:'));
-            console.log(chalk.cyan('  - Check DNS settings'));
-            console.log(chalk.cyan('  - Verify server URL is correct'));
-            console.log(chalk.cyan('  - Try using IP address instead of hostname'));
+            console.log(chalk_1.default.cyan('• DNS resolution failed:'));
+            console.log(chalk_1.default.cyan('  - Check DNS settings'));
+            console.log(chalk_1.default.cyan('  - Verify server URL is correct'));
+            console.log(chalk_1.default.cyan('  - Try using IP address instead of hostname'));
         }
         else if (msg.includes('certificate') || msg.includes('SSL') || msg.includes('TLS')) {
-            console.log(chalk.cyan('• SSL/TLS certificate issue:'));
-            console.log(chalk.cyan('  - Check system time and date'));
-            console.log(chalk.cyan('  - Update CA certificates'));
-            console.log(chalk.cyan('  - Try different connection mode'));
+            console.log(chalk_1.default.cyan('• SSL/TLS certificate issue:'));
+            console.log(chalk_1.default.cyan('  - Check system time and date'));
+            console.log(chalk_1.default.cyan('  - Update CA certificates'));
+            console.log(chalk_1.default.cyan('  - Try different connection mode'));
         }
         else {
-            console.log(chalk.cyan('• General network error:'));
-            console.log(chalk.cyan('  - Check server status'));
-            console.log(chalk.cyan('  - Verify network connectivity'));
-            console.log(chalk.cyan('  - Try: lanonasis mcp diagnose (when available)'));
+            console.log(chalk_1.default.cyan('• General network error:'));
+            console.log(chalk_1.default.cyan('  - Check server status'));
+            console.log(chalk_1.default.cyan('  - Verify network connectivity'));
+            console.log(chalk_1.default.cyan('  - Try: lanonasis mcp diagnose (when available)'));
         }
     }
     /**
@@ -352,7 +392,7 @@ export class MCPClient {
                 const currentTime = Math.floor(Date.now() / 1000);
                 // Check if token is expired or expires within 5 minutes
                 if (payload.exp && payload.exp < currentTime + 300) {
-                    console.log(chalk.yellow('Token is expired or expiring soon, attempting refresh...'));
+                    console.log(chalk_1.default.yellow('Token is expired or expiring soon, attempting refresh...'));
                     await this.refreshTokenIfNeeded();
                 }
             }
@@ -380,7 +420,7 @@ export class MCPClient {
             });
             if (response.data.access_token) {
                 await this.config.setAndSave('token', response.data.access_token);
-                console.log(chalk.green('✓ Token refreshed successfully'));
+                console.log(chalk_1.default.green('✓ Token refreshed successfully'));
             }
         }
         catch {
@@ -420,18 +460,18 @@ export class MCPClient {
         const token = this.config.get('token');
         if (token) {
             // EventSource doesn't support headers directly, append token to URL
-            this.sseConnection = new EventSource(`${sseUrl}?token=${encodeURIComponent(token)}`);
+            this.sseConnection = new eventsource_1.EventSource(`${sseUrl}?token=${encodeURIComponent(token)}`);
             this.sseConnection.onmessage = (event) => {
                 try {
                     const data = JSON.parse(event.data);
-                    console.log(chalk.blue('📡 Real-time update:'), data.type);
+                    console.log(chalk_1.default.blue('📡 Real-time update:'), data.type);
                 }
                 catch {
                     // Ignore parse errors
                 }
             };
             this.sseConnection.onerror = () => {
-                console.error(chalk.yellow('⚠️  SSE connection error (will retry)'));
+                console.error(chalk_1.default.yellow('⚠️  SSE connection error (will retry)'));
             };
         }
     }
@@ -451,14 +491,14 @@ export class MCPClient {
                     this.wsConnection = null;
                 }
                 // Create new WebSocket connection with authentication
-                this.wsConnection = new WebSocket(wsUrl, [], {
+                this.wsConnection = new ws_1.default(wsUrl, [], {
                     headers: {
                         'Authorization': `Bearer ${token}`,
                         'X-API-Key': token
                     }
                 });
                 this.wsConnection.on('open', () => {
-                    console.log(chalk.green('✅ Connected to MCP WebSocket server'));
+                    console.log(chalk_1.default.green('✅ Connected to MCP WebSocket server'));
                     // Send initialization message
                     this.sendWebSocketMessage({
                         id: 1,
@@ -479,22 +519,22 @@ export class MCPClient {
                 this.wsConnection.on('message', (data) => {
                     try {
                         const message = JSON.parse(data.toString());
-                        console.log(chalk.blue('📡 MCP message:'), message.id, message.method || 'response');
+                        console.log(chalk_1.default.blue('📡 MCP message:'), message.id, message.method || 'response');
                     }
                     catch (error) {
                         console.error('Failed to parse WebSocket message:', error);
                     }
                 });
                 this.wsConnection.on('error', (error) => {
-                    console.error(chalk.red('WebSocket error:'), error);
+                    console.error(chalk_1.default.red('WebSocket error:'), error);
                     reject(error);
                 });
                 this.wsConnection.on('close', (code, reason) => {
-                    console.log(chalk.yellow(`WebSocket connection closed (${code}): ${reason}`));
+                    console.log(chalk_1.default.yellow(`WebSocket connection closed (${code}): ${reason}`));
                     // Auto-reconnect after delay
                     setTimeout(() => {
                         if (this.isConnected) {
-                            console.log(chalk.blue('🔄 Attempting to reconnect to WebSocket...'));
+                            console.log(chalk_1.default.blue('🔄 Attempting to reconnect to WebSocket...'));
                             this.initializeWebSocket(wsUrl).catch(err => {
                                 console.error('Failed to reconnect:', err);
                             });
@@ -562,7 +602,7 @@ export class MCPClient {
         }
         catch {
             const connectionMode = this.activeConnectionMode || 'remote';
-            console.log(chalk.yellow(`⚠️  ${connectionMode} connection health check failed, attempting reconnection...`));
+            console.log(chalk_1.default.yellow(`⚠️  ${connectionMode} connection health check failed, attempting reconnection...`));
             await this.handleHealthCheckFailure();
         }
     }
@@ -570,7 +610,7 @@ export class MCPClient {
      * Check WebSocket connection health
      */
     async checkWebSocketHealth() {
-        if (!this.wsConnection || this.wsConnection.readyState !== WebSocket.OPEN) {
+        if (!this.wsConnection || this.wsConnection.readyState !== ws_1.default.OPEN) {
             throw new Error('WebSocket connection not open');
         }
         // Send a ping message to check connectivity
@@ -631,7 +671,7 @@ export class MCPClient {
         const options = {
             connectionMode
         };
-        console.log(chalk.yellow(`↻ Attempting reconnection using ${connectionMode} mode...`));
+        console.log(chalk_1.default.yellow(`↻ Attempting reconnection using ${connectionMode} mode...`));
         // Add specific URLs if available
         if (connectionMode === 'websocket') {
             options.serverUrl = this.config.get('mcpWebSocketUrl');
@@ -645,10 +685,10 @@ export class MCPClient {
         // Attempt reconnection
         const reconnected = await this.connect(options);
         if (reconnected) {
-            console.log(chalk.green('✓ Reconnected to MCP server'));
+            console.log(chalk_1.default.green('✓ Reconnected to MCP server'));
         }
         else {
-            console.log(chalk.red('✗ Failed to reconnect to MCP server'));
+            console.log(chalk_1.default.red('✗ Failed to reconnect to MCP server'));
         }
     }
     /**
@@ -823,7 +863,21 @@ export class MCPClient {
      * Get connection status details with health information
      */
     getConnectionStatus() {
-        const connectionMode = this.activeConnectionMode;
+        // When disconnected, show the configured preference instead of the stale activeConnectionMode
+        let connectionMode = this.activeConnectionMode;
+        if (!this.isConnected) {
+            // Check configured preference
+            const mcpPreference = this.config.get('mcpPreference');
+            const mcpConnectionMode = this.config.get('mcpConnectionMode');
+            const preferRemote = this.config.get('mcpUseRemote');
+            connectionMode = mcpConnectionMode
+                ?? mcpPreference
+                ?? (preferRemote ? 'remote' : 'websocket');
+            // If preference is 'auto', resolve to default (websocket)
+            if (connectionMode === 'auto') {
+                connectionMode = 'websocket';
+            }
+        }
         let server;
         switch (connectionMode) {
             case 'websocket':
@@ -849,9 +903,10 @@ export class MCPClient {
         };
     }
 }
+exports.MCPClient = MCPClient;
 // Singleton instance
 let mcpClientInstance = null;
-export function getMCPClient() {
+function getMCPClient() {
     if (!mcpClientInstance) {
         mcpClientInstance = new MCPClient();
     }

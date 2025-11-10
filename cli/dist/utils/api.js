@@ -1,23 +1,31 @@
-import axios from 'axios';
-import chalk from 'chalk';
-import { randomUUID } from 'crypto';
-import { CLIConfig } from './config.js';
-export class APIClient {
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.apiClient = exports.APIClient = void 0;
+const axios_1 = __importDefault(require("axios"));
+const chalk_1 = __importDefault(require("chalk"));
+const crypto_1 = require("crypto");
+const config_js_1 = require("./config.js");
+class APIClient {
     client;
     config;
     constructor() {
-        this.config = new CLIConfig();
-        this.client = axios.create();
+        this.config = new config_js_1.CLIConfig();
+        this.client = axios_1.default.create({
+            proxy: false // Bypass proxy to avoid redirect loops in containerized environments
+        });
         // Setup request interceptor to add auth token and headers
         this.client.interceptors.request.use(async (config) => {
             await this.config.init();
             // Service Discovery
             await this.config.discoverServices();
             // Use appropriate base URL based on endpoint
-            const isAuthEndpoint = config.url?.includes('/auth/') || config.url?.includes('/login') || config.url?.includes('/register');
+            const isAuthEndpoint = config.url?.includes('/auth/') || config.url?.includes('/login') || config.url?.includes('/register') || config.url?.includes('/oauth/');
             const discoveredServices = this.config.get('discoveredServices');
             config.baseURL = isAuthEndpoint ?
-                (discoveredServices?.auth_base || 'https://api.lanonasis.com') :
+                (discoveredServices?.auth_base || 'https://auth.lanonasis.com') :
                 this.config.getApiUrl();
             // Add project scope header for auth endpoints
             if (isAuthEndpoint) {
@@ -37,44 +45,44 @@ export class APIClient {
                 config.headers['X-Auth-Method'] = 'jwt';
             }
             // Add request ID for correlation
-            const requestId = randomUUID();
+            const requestId = (0, crypto_1.randomUUID)();
             config.headers['X-Request-ID'] = requestId;
             // Add project scope for Golden Contract compliance
             config.headers['X-Project-Scope'] = 'lanonasis-maas';
             if (process.env.CLI_VERBOSE === 'true') {
-                console.log(chalk.dim(`→ ${config.method?.toUpperCase()} ${config.url} [${requestId}]`));
+                console.log(chalk_1.default.dim(`→ ${config.method?.toUpperCase()} ${config.url} [${requestId}]`));
             }
             return config;
         });
         // Setup response interceptor for error handling
         this.client.interceptors.response.use((response) => {
             if (process.env.CLI_VERBOSE === 'true') {
-                console.log(chalk.dim(`← ${response.status} ${response.statusText}`));
+                console.log(chalk_1.default.dim(`← ${response.status} ${response.statusText}`));
             }
             return response;
         }, (error) => {
             if (error.response) {
                 const { status, data } = error.response;
                 if (status === 401) {
-                    console.error(chalk.red('✖ Authentication failed'));
-                    console.log(chalk.yellow('Please run:'), chalk.white('memory login'));
+                    console.error(chalk_1.default.red('✖ Authentication failed'));
+                    console.log(chalk_1.default.yellow('Please run:'), chalk_1.default.white('memory login'));
                     process.exit(1);
                 }
                 if (status === 403) {
-                    console.error(chalk.red('✖ Permission denied'));
+                    console.error(chalk_1.default.red('✖ Permission denied'));
                     if (data.message) {
-                        console.error(chalk.gray(data.message));
+                        console.error(chalk_1.default.gray(data.message));
                     }
                     process.exit(1);
                 }
                 if (status === 429) {
-                    console.error(chalk.red('✖ Rate limit exceeded'));
-                    console.error(chalk.gray('Please wait a moment before trying again'));
+                    console.error(chalk_1.default.red('✖ Rate limit exceeded'));
+                    console.error(chalk_1.default.gray('Please wait a moment before trying again'));
                     process.exit(1);
                 }
                 if (process.env.CLI_VERBOSE === 'true') {
-                    console.error(chalk.dim(`← ${status} ${error.response.statusText}`));
-                    console.error(chalk.dim(JSON.stringify(data, null, 2)));
+                    console.error(chalk_1.default.dim(`← ${status} ${error.response.statusText}`));
+                    console.error(chalk_1.default.dim(JSON.stringify(data, null, 2)));
                 }
             }
             return Promise.reject(error);
@@ -181,4 +189,5 @@ export class APIClient {
         return response.data;
     }
 }
-export const apiClient = new APIClient();
+exports.APIClient = APIClient;
+exports.apiClient = new APIClient();

@@ -1,14 +1,20 @@
-import chalk from 'chalk';
-import inquirer from 'inquirer';
-import { CLIConfig } from '../utils/config.js';
-export async function initCommand(options) {
-    const config = new CLIConfig();
-    console.log(chalk.blue.bold('🚀 Initializing MaaS CLI'));
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.initCommand = initCommand;
+const chalk_1 = __importDefault(require("chalk"));
+const inquirer_1 = __importDefault(require("inquirer"));
+const config_js_1 = require("../utils/config.js");
+async function initCommand(options) {
+    const config = new config_js_1.CLIConfig();
+    console.log(chalk_1.default.blue.bold('🚀 Initializing MaaS CLI'));
     console.log();
     // Check if config already exists
     const configExists = await config.exists();
     if (configExists && !options.force) {
-        const answer = await inquirer.prompt([
+        const answer = await inquirer_1.default.prompt([
             {
                 type: 'confirm',
                 name: 'overwrite',
@@ -17,12 +23,12 @@ export async function initCommand(options) {
             }
         ]);
         if (!answer.overwrite) {
-            console.log(chalk.yellow('Initialization cancelled'));
+            console.log(chalk_1.default.yellow('Initialization cancelled'));
             return;
         }
     }
     // Get configuration
-    const answers = await inquirer.prompt([
+    const answers = await inquirer_1.default.prompt([
         {
             type: 'input',
             name: 'apiUrl',
@@ -43,10 +49,10 @@ export async function initCommand(options) {
     await config.init();
     await config.setApiUrl(answers.apiUrl);
     console.log();
-    console.log(chalk.green('✓ CLI initialized successfully'));
-    console.log(chalk.gray(`Configuration saved to: ${config.getConfigPath()}`));
+    console.log(chalk_1.default.green('✓ CLI initialized successfully'));
+    console.log(chalk_1.default.gray(`Configuration saved to: ${config.getConfigPath()}`));
     console.log();
-    console.log(chalk.yellow('Next steps:'));
-    console.log(chalk.white('  memory login    # Authenticate with your account'));
-    console.log(chalk.white('  memory --help   # Show available commands'));
+    console.log(chalk_1.default.yellow('Next steps:'));
+    console.log(chalk_1.default.white('  memory login    # Authenticate with your account'));
+    console.log(chalk_1.default.white('  memory --help   # Show available commands'));
 }

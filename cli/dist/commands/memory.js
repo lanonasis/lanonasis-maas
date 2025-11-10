@@ -1,12 +1,18 @@
-import chalk from 'chalk';
-import inquirer from 'inquirer';
-import ora from 'ora';
-import { table } from 'table';
-import wrap from 'word-wrap';
-import { format } from 'date-fns';
-import { apiClient } from '../utils/api.js';
-import { formatBytes, truncateText } from '../utils/formatting.js';
-export function memoryCommands(program) {
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.memoryCommands = memoryCommands;
+const chalk_1 = __importDefault(require("chalk"));
+const inquirer_1 = __importDefault(require("inquirer"));
+const ora_1 = __importDefault(require("ora"));
+const table_1 = require("table");
+const word_wrap_1 = __importDefault(require("word-wrap"));
+const date_fns_1 = require("date-fns");
+const api_js_1 = require("../utils/api.js");
+const formatting_js_1 = require("../utils/formatting.js");
+function memoryCommands(program) {
     // Create memory
     program
         .command('create')
@@ -22,7 +28,7 @@ export function memoryCommands(program) {
         try {
             let { title, content, type, tags, topicId, interactive } = options;
             if (interactive || (!title || !content)) {
-                const answers = await inquirer.prompt([
+                const answers = await inquirer_1.default.prompt([
                     {
                         type: 'input',
                         name: 'title',
@@ -56,7 +62,7 @@ export function memoryCommands(program) {
                 type = answers.type;
                 tags = answers.tags;
             }
-            const spinner = ora('Creating memory...').start();
+            const spinner = (0, ora_1.default)('Creating memory...').start();
             const memoryData = {
                 title,
                 content,
@@ -68,11 +74,11 @@ export function memoryCommands(program) {
             if (topicId) {
                 memoryData.topic_id = topicId;
             }
-            const memory = await apiClient.createMemory(memoryData);
+            const memory = await api_js_1.apiClient.createMemory(memoryData);
             spinner.succeed('Memory created successfully');
             console.log();
-            console.log(chalk.green('✓ Memory created:'));
-            console.log(`  ID: ${chalk.cyan(memory.id)}`);
+            console.log(chalk_1.default.green('✓ Memory created:'));
+            console.log(`  ID: ${chalk_1.default.cyan(memory.id)}`);
             console.log(`  Title: ${memory.title}`);
             console.log(`  Type: ${memory.memory_type}`);
             if (memory.tags && memory.tags.length > 0) {
@@ -81,7 +87,7 @@ export function memoryCommands(program) {
         }
         catch (error) {
             const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-            console.error(chalk.red('✖ Failed to create memory:'), errorMessage);
+            console.error(chalk_1.default.red('✖ Failed to create memory:'), errorMessage);
             process.exit(1);
         }
     });
@@ -99,7 +105,7 @@ export function memoryCommands(program) {
         .option('--order <order>', 'sort order (asc, desc)', 'desc')
         .action(async (options) => {
         try {
-            const spinner = ora('Fetching memories...').start();
+            const spinner = (0, ora_1.default)('Fetching memories...').start();
             const params = {
                 page: parseInt(options.page || '1'),
                 limit: parseInt(options.limit || '20'),
@@ -112,15 +118,15 @@ export function memoryCommands(program) {
                 params.tags = options.tags;
             if (options.userId)
                 params.user_id = options.userId;
-            const result = await apiClient.getMemories(params);
+            const result = await api_js_1.apiClient.getMemories(params);
             spinner.stop();
             const memories = result.memories || result.data || [];
             if (memories.length === 0) {
-                console.log(chalk.yellow('No memories found'));
+                console.log(chalk_1.default.yellow('No memories found'));
                 return;
             }
-            console.log(chalk.blue.bold(`\n📚 Memories (${result.pagination.total} total)`));
-            console.log(chalk.gray(`Page ${result.pagination.page || 1} of ${result.pagination.pages || Math.ceil(result.pagination.total / result.pagination.limit)}`));
+            console.log(chalk_1.default.blue.bold(`\n📚 Memories (${result.pagination.total} total)`));
+            console.log(chalk_1.default.gray(`Page ${result.pagination.page || 1} of ${result.pagination.pages || Math.ceil(result.pagination.total / result.pagination.limit)}`));
             console.log();
             const outputFormat = process.env.CLI_OUTPUT_FORMAT || 'table';
             if (outputFormat === 'json') {
@@ -129,10 +135,10 @@ export function memoryCommands(program) {
             else {
                 // Table format
                 const tableData = memories.map((memory) => [
-                    truncateText(memory.title, 30),
+                    (0, formatting_js_1.truncateText)(memory.title, 30),
                     memory.memory_type,
                     memory.tags.slice(0, 3).join(', '),
-                    format(new Date(memory.created_at), 'MMM dd, yyyy'),
+                    (0, date_fns_1.format)(new Date(memory.created_at), 'MMM dd, yyyy'),
                     memory.access_count
                 ]);
                 const tableConfig = {
@@ -149,19 +155,19 @@ export function memoryCommands(program) {
                         { width: 8 }
                     ]
                 };
-                console.log(table([tableConfig.header, ...tableData], {
+                console.log((0, table_1.table)([tableConfig.header, ...tableData], {
                     columnDefault: tableConfig.columnDefault,
                     columns: tableConfig.columns
                 }));
                 // Pagination info
                 if (result.pagination.pages > 1) {
-                    console.log(chalk.gray(`\nUse --page ${result.pagination.page + 1} for next page`));
+                    console.log(chalk_1.default.gray(`\nUse --page ${result.pagination.page + 1} for next page`));
                 }
             }
         }
         catch (error) {
             const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-            console.error(chalk.red('✖ Failed to list memories:'), errorMessage);
+            console.error(chalk_1.default.red('✖ Failed to list memories:'), errorMessage);
             process.exit(1);
         }
     });
@@ -176,7 +182,7 @@ export function memoryCommands(program) {
         .option('--tags <tags>', 'filter by tags (comma-separated)')
         .action(async (query, options) => {
         try {
-            const spinner = ora(`Searching for "${query}"...`).start();
+            const spinner = (0, ora_1.default)(`Searching for "${query}"...`).start();
             const searchOptions = {
                 limit: parseInt(options.limit || '20'),
                 threshold: parseFloat(options.threshold || '0.7')
@@ -187,30 +193,30 @@ export function memoryCommands(program) {
             if (options.tags) {
                 searchOptions.tags = options.tags.split(',').map((t) => t.trim());
             }
-            const result = await apiClient.searchMemories(query, searchOptions);
+            const result = await api_js_1.apiClient.searchMemories(query, searchOptions);
             spinner.stop();
             const results = result.results || result.data || [];
             if (results.length === 0) {
-                console.log(chalk.yellow('No memories found matching your search'));
+                console.log(chalk_1.default.yellow('No memories found matching your search'));
                 return;
             }
-            console.log(chalk.blue.bold(`\n🔍 Search Results (${result.total_results || results.length} found)`));
-            console.log(chalk.gray(`Query: "${query}" | Search time: ${result.search_time_ms || 0}ms`));
+            console.log(chalk_1.default.blue.bold(`\n🔍 Search Results (${result.total_results || results.length} found)`));
+            console.log(chalk_1.default.gray(`Query: "${query}" | Search time: ${result.search_time_ms || 0}ms`));
             console.log();
             results.forEach((memory, index) => {
                 const score = (memory.relevance_score * 100).toFixed(1);
-                console.log(chalk.green(`${index + 1}. ${memory.title}`) + chalk.gray(` (${score}% match)`));
-                console.log(chalk.white(`   ${truncateText(memory.content, 100)}`));
-                console.log(chalk.cyan(`   ID: ${memory.id}`) + chalk.gray(` | Type: ${memory.memory_type}`));
+                console.log(chalk_1.default.green(`${index + 1}. ${memory.title}`) + chalk_1.default.gray(` (${score}% match)`));
+                console.log(chalk_1.default.white(`   ${(0, formatting_js_1.truncateText)(memory.content, 100)}`));
+                console.log(chalk_1.default.cyan(`   ID: ${memory.id}`) + chalk_1.default.gray(` | Type: ${memory.memory_type}`));
                 if (memory.tags.length > 0) {
-                    console.log(chalk.yellow(`   Tags: ${memory.tags.join(', ')}`));
+                    console.log(chalk_1.default.yellow(`   Tags: ${memory.tags.join(', ')}`));
                 }
                 console.log();
             });
         }
         catch (error) {
             const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-            console.error(chalk.red('✖ Search failed:'), errorMessage);
+            console.error(chalk_1.default.red('✖ Search failed:'), errorMessage);
             process.exit(1);
         }
     });
@@ -222,38 +228,38 @@ export function memoryCommands(program) {
         .argument('<id>', 'memory ID')
         .action(async (id) => {
         try {
-            const spinner = ora('Fetching memory...').start();
-            const memory = await apiClient.getMemory(id);
+            const spinner = (0, ora_1.default)('Fetching memory...').start();
+            const memory = await api_js_1.apiClient.getMemory(id);
             spinner.stop();
-            console.log(chalk.blue.bold('\n📄 Memory Details'));
+            console.log(chalk_1.default.blue.bold('\n📄 Memory Details'));
             console.log();
-            console.log(chalk.green('Title:'), memory.title);
-            console.log(chalk.green('ID:'), chalk.cyan(memory.id));
-            console.log(chalk.green('Type:'), memory.memory_type);
-            console.log(chalk.green('Created:'), format(new Date(memory.created_at), 'PPpp'));
-            console.log(chalk.green('Updated:'), format(new Date(memory.updated_at), 'PPpp'));
+            console.log(chalk_1.default.green('Title:'), memory.title);
+            console.log(chalk_1.default.green('ID:'), chalk_1.default.cyan(memory.id));
+            console.log(chalk_1.default.green('Type:'), memory.memory_type);
+            console.log(chalk_1.default.green('Created:'), (0, date_fns_1.format)(new Date(memory.created_at), 'PPpp'));
+            console.log(chalk_1.default.green('Updated:'), (0, date_fns_1.format)(new Date(memory.updated_at), 'PPpp'));
             if (memory.last_accessed) {
-                console.log(chalk.green('Last Accessed:'), format(new Date(memory.last_accessed), 'PPpp'));
+                console.log(chalk_1.default.green('Last Accessed:'), (0, date_fns_1.format)(new Date(memory.last_accessed), 'PPpp'));
             }
-            console.log(chalk.green('Access Count:'), memory.access_count);
+            console.log(chalk_1.default.green('Access Count:'), memory.access_count);
             if (memory.tags && memory.tags.length > 0) {
-                console.log(chalk.green('Tags:'), memory.tags.join(', '));
+                console.log(chalk_1.default.green('Tags:'), memory.tags.join(', '));
             }
             if (memory.topic_id) {
-                console.log(chalk.green('Topic ID:'), memory.topic_id);
+                console.log(chalk_1.default.green('Topic ID:'), memory.topic_id);
             }
             console.log();
-            console.log(chalk.green('Content:'));
-            console.log(wrap(memory.content, { width: 80, indent: '  ' }));
+            console.log(chalk_1.default.green('Content:'));
+            console.log((0, word_wrap_1.default)(memory.content, { width: 80, indent: '  ' }));
             if (memory.metadata && Object.keys(memory.metadata).length > 0) {
                 console.log();
-                console.log(chalk.green('Metadata:'));
+                console.log(chalk_1.default.green('Metadata:'));
                 console.log(JSON.stringify(memory.metadata, null, 2));
             }
         }
         catch (error) {
             const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-            console.error(chalk.red('✖ Failed to get memory:'), errorMessage);
+            console.error(chalk_1.default.red('✖ Failed to get memory:'), errorMessage);
             process.exit(1);
         }
     });
@@ -272,10 +278,10 @@ export function memoryCommands(program) {
             let updateData = {};
             if (options.interactive) {
                 // First, get current memory data
-                const spinner = ora('Fetching current memory...').start();
-                const currentMemory = await apiClient.getMemory(id);
+                const spinner = (0, ora_1.default)('Fetching current memory...').start();
+                const currentMemory = await api_js_1.apiClient.getMemory(id);
                 spinner.stop();
-                const answers = await inquirer.prompt([
+                const answers = await inquirer_1.default.prompt([
                     {
                         type: 'input',
                         name: 'title',
@@ -321,20 +327,20 @@ export function memoryCommands(program) {
                 }
             }
             if (Object.keys(updateData).length === 0) {
-                console.log(chalk.yellow('No updates specified'));
+                console.log(chalk_1.default.yellow('No updates specified'));
                 return;
             }
-            const spinner = ora('Updating memory...').start();
-            const memory = await apiClient.updateMemory(id, updateData);
+            const spinner = (0, ora_1.default)('Updating memory...').start();
+            const memory = await api_js_1.apiClient.updateMemory(id, updateData);
             spinner.succeed('Memory updated successfully');
             console.log();
-            console.log(chalk.green('✓ Memory updated:'));
-            console.log(`  ID: ${chalk.cyan(memory.id)}`);
+            console.log(chalk_1.default.green('✓ Memory updated:'));
+            console.log(`  ID: ${chalk_1.default.cyan(memory.id)}`);
             console.log(`  Title: ${memory.title}`);
         }
         catch (error) {
             const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-            console.error(chalk.red('✖ Failed to update memory:'), errorMessage);
+            console.error(chalk_1.default.red('✖ Failed to update memory:'), errorMessage);
             process.exit(1);
         }
     });
@@ -348,8 +354,8 @@ export function memoryCommands(program) {
         .action(async (id, options) => {
         try {
             if (!options.force) {
-                const memory = await apiClient.getMemory(id);
-                const answer = await inquirer.prompt([
+                const memory = await api_js_1.apiClient.getMemory(id);
+                const answer = await inquirer_1.default.prompt([
                     {
                         type: 'confirm',
                         name: 'confirm',
@@ -358,17 +364,17 @@ export function memoryCommands(program) {
                     }
                 ]);
                 if (!answer.confirm) {
-                    console.log(chalk.yellow('Deletion cancelled'));
+                    console.log(chalk_1.default.yellow('Deletion cancelled'));
                     return;
                 }
             }
-            const spinner = ora('Deleting memory...').start();
-            await apiClient.deleteMemory(id);
+            const spinner = (0, ora_1.default)('Deleting memory...').start();
+            await api_js_1.apiClient.deleteMemory(id);
             spinner.succeed('Memory deleted successfully');
         }
         catch (error) {
             const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-            console.error(chalk.red('✖ Failed to delete memory:'), errorMessage);
+            console.error(chalk_1.default.red('✖ Failed to delete memory:'), errorMessage);
             process.exit(1);
         }
     });
@@ -378,35 +384,35 @@ export function memoryCommands(program) {
         .description('Show memory statistics (admin only)')
         .action(async () => {
         try {
-            const spinner = ora('Fetching statistics...').start();
-            const stats = await apiClient.getMemoryStats();
+            const spinner = (0, ora_1.default)('Fetching statistics...').start();
+            const stats = await api_js_1.apiClient.getMemoryStats();
             spinner.stop();
-            console.log(chalk.blue.bold('\n📊 Memory Statistics'));
+            console.log(chalk_1.default.blue.bold('\n📊 Memory Statistics'));
             console.log();
-            console.log(chalk.green('Total Memories:'), stats.total_memories.toLocaleString());
-            console.log(chalk.green('Total Size:'), formatBytes(stats.total_size_bytes));
-            console.log(chalk.green('Average Access Count:'), stats.avg_access_count);
+            console.log(chalk_1.default.green('Total Memories:'), stats.total_memories.toLocaleString());
+            console.log(chalk_1.default.green('Total Size:'), (0, formatting_js_1.formatBytes)(stats.total_size_bytes));
+            console.log(chalk_1.default.green('Average Access Count:'), stats.avg_access_count);
             console.log();
-            console.log(chalk.yellow('Memories by Type:'));
+            console.log(chalk_1.default.yellow('Memories by Type:'));
             Object.entries(stats.memories_by_type).forEach(([type, count]) => {
                 console.log(`  ${type}: ${count}`);
             });
             if (stats.most_accessed_memory) {
                 console.log();
-                console.log(chalk.yellow('Most Accessed Memory:'));
+                console.log(chalk_1.default.yellow('Most Accessed Memory:'));
                 console.log(`  ${stats.most_accessed_memory.title} (${stats.most_accessed_memory.access_count} times)`);
             }
             if (stats.recent_memories.length > 0) {
                 console.log();
-                console.log(chalk.yellow('Recent Memories:'));
+                console.log(chalk_1.default.yellow('Recent Memories:'));
                 stats.recent_memories.forEach((memory, index) => {
-                    console.log(`  ${index + 1}. ${truncateText(memory.title, 50)}`);
+                    console.log(`  ${index + 1}. ${(0, formatting_js_1.truncateText)(memory.title, 50)}`);
                 });
             }
         }
         catch (error) {
             const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-            console.error(chalk.red('✖ Failed to get statistics:'), errorMessage);
+            console.error(chalk_1.default.red('✖ Failed to get statistics:'), errorMessage);
             process.exit(1);
         }
     });

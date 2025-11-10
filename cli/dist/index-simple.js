@@ -1,45 +1,83 @@
 #!/usr/bin/env node
-import { Command } from 'commander';
-import chalk from 'chalk';
-import { config } from 'dotenv';
+"use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+const commander_1 = require("commander");
+const chalk_1 = __importDefault(require("chalk"));
+const dotenv_1 = require("dotenv");
 // Load environment variables silently
-config({ quiet: true });
-import { initCommand } from './commands/init.js';
-import { loginCommand } from './commands/auth.js';
-import { memoryCommands } from './commands/memory.js';
-import { topicCommands } from './commands/topics.js';
-import { configCommands } from './commands/config.js';
-import { orgCommands } from './commands/organization.js';
-import { mcpCommands } from './commands/mcp.js';
-import apiKeysCommand from './commands/api-keys.js';
-import { completionCommand, installCompletionsCommand } from './commands/completion.js';
-import { guideCommand, quickStartCommand } from './commands/guide.js';
-import { CLIConfig } from './utils/config.js';
-import { getMCPClient } from './utils/mcp-client.js';
-import * as fs from 'fs';
-import * as path from 'path';
-import { fileURLToPath } from 'url';
-const __filename = fileURLToPath(import.meta.url);
+(0, dotenv_1.config)({ quiet: true });
+const init_js_1 = require("./commands/init.js");
+const auth_js_1 = require("./commands/auth.js");
+const memory_js_1 = require("./commands/memory.js");
+const topics_js_1 = require("./commands/topics.js");
+const config_js_1 = require("./commands/config.js");
+const organization_js_1 = require("./commands/organization.js");
+const mcp_js_1 = require("./commands/mcp.js");
+const api_keys_js_1 = __importDefault(require("./commands/api-keys.js"));
+const completion_js_1 = require("./commands/completion.js");
+const guide_js_1 = require("./commands/guide.js");
+const config_js_2 = require("./utils/config.js");
+const mcp_client_js_1 = require("./utils/mcp-client.js");
+const fs = __importStar(require("fs"));
+const path = __importStar(require("path"));
+const url_1 = require("url");
+const __filename = (0, url_1.fileURLToPath)(import.meta.url);
 const __dirname = path.dirname(__filename);
 // Load environment variables
-config();
-import { createRequire } from 'module';
-const require = createRequire(import.meta.url);
+(0, dotenv_1.config)();
+const module_1 = require("module");
+const require = (0, module_1.createRequire)(import.meta.url);
 const packageJson = require('../package.json');
 // Enhanced color scheme (VPS-style)
 const colors = {
-    primary: chalk.blue.bold,
-    success: chalk.green,
-    warning: chalk.yellow,
-    error: chalk.red,
-    info: chalk.cyan,
-    accent: chalk.magenta,
-    muted: chalk.gray,
-    highlight: chalk.white.bold
+    primary: chalk_1.default.blue.bold,
+    success: chalk_1.default.green,
+    warning: chalk_1.default.yellow,
+    error: chalk_1.default.red,
+    info: chalk_1.default.cyan,
+    accent: chalk_1.default.magenta,
+    muted: chalk_1.default.gray,
+    highlight: chalk_1.default.white.bold
 };
-const program = new Command();
+const program = new commander_1.Command();
 // CLI Configuration
-const cliConfig = new CLIConfig();
+const cliConfig = new config_js_2.CLIConfig();
 // Detect which command was used to invoke the CLI
 const invocationName = process.argv[1] ? path.basename(process.argv[1]) : 'lanonasis';
 const isOnasisInvocation = invocationName === 'onasis';
@@ -71,7 +109,7 @@ program
         actionCommand.parent?.name?.() === 'mcp-server';
     if (opts.mcp !== false && !isMcpFlow && !['init', 'auth', 'login', 'health', 'status'].includes(actionCommand.name())) {
         try {
-            const client = getMCPClient();
+            const client = (0, mcp_client_js_1.getMCPClient)();
             if (!client.isConnectedToServer()) {
                 const useRemote = await cliConfig.isAuthenticated();
                 await client.connect({ useRemote });
@@ -174,7 +212,7 @@ const healthCheck = async () => {
     console.log();
     process.stdout.write('MCP Server status: ');
     try {
-        const client = getMCPClient();
+        const client = (0, mcp_client_js_1.getMCPClient)();
         const status = client.getConnectionStatus();
         const mcpPreference = await cliConfig.get('mcpPreference') || 'auto';
         if (client.isConnectedToServer()) {
@@ -220,8 +258,8 @@ const requireAuth = (command) => {
         await cliConfig.init();
         const isAuthenticated = await cliConfig.isAuthenticated();
         if (!isAuthenticated) {
-            console.error(chalk.red('✖ Authentication required'));
-            console.log(chalk.yellow('Please run:'), chalk.white('lanonasis auth login'));
+            console.error(chalk_1.default.red('✖ Authentication required'));
+            console.log(chalk_1.default.yellow('Please run:'), chalk_1.default.white('lanonasis auth login'));
             process.exit(1);
         }
     });
@@ -231,7 +269,7 @@ program
     .command('init')
     .description('Initialize CLI configuration')
     .option('-f, --force', 'overwrite existing configuration')
-    .action(initCommand);
+    .action(init_js_1.initCommand);
 // Authentication commands (no auth required)
 const authCmd = program
     .command('auth')
@@ -249,14 +287,14 @@ authCmd
     if (options.oauth) {
         options.useWebAuth = true;
     }
-    await loginCommand(options);
+    await (0, auth_js_1.loginCommand)(options);
 });
 authCmd
     .command('logout')
     .description('Logout from your account')
     .action(async () => {
     await cliConfig.logout();
-    console.log(chalk.green('✓ Logged out successfully'));
+    console.log(chalk_1.default.green('✓ Logged out successfully'));
 });
 authCmd
     .command('status')
@@ -270,10 +308,10 @@ authCmd
     const lastFailure = cliConfig.getLastAuthFailure();
     const authMethod = cliConfig.get('authMethod');
     const lastValidated = cliConfig.get('lastValidated');
-    console.log(chalk.blue.bold('🔐 Authentication Status'));
+    console.log(chalk_1.default.blue.bold('🔐 Authentication Status'));
     console.log('━'.repeat(40));
     if (isAuth && user) {
-        console.log(chalk.green('✓ Authenticated'));
+        console.log(chalk_1.default.green('✓ Authenticated'));
         console.log(`Email: ${user.email}`);
         console.log(`Organization: ${user.organization_id}`);
         console.log(`Plan: ${user.plan}`);
@@ -286,13 +324,13 @@ authCmd
         }
     }
     else {
-        console.log(chalk.red('✖ Not authenticated'));
-        console.log(chalk.yellow('Run:'), chalk.white('memory login'));
+        console.log(chalk_1.default.red('✖ Not authenticated'));
+        console.log(chalk_1.default.yellow('Run:'), chalk_1.default.white('memory login'));
     }
     // Show failure tracking information
     if (failureCount > 0) {
         console.log();
-        console.log(chalk.yellow('⚠️  Authentication Issues:'));
+        console.log(chalk_1.default.yellow('⚠️  Authentication Issues:'));
         console.log(`Failed attempts: ${failureCount}`);
         if (lastFailure) {
             const failureDate = new Date(lastFailure);
@@ -300,22 +338,22 @@ authCmd
         }
         if (cliConfig.shouldDelayAuth()) {
             const delayMs = cliConfig.getAuthDelayMs();
-            console.log(chalk.yellow(`Next retry delay: ${Math.round(delayMs / 1000)} seconds`));
+            console.log(chalk_1.default.yellow(`Next retry delay: ${Math.round(delayMs / 1000)} seconds`));
         }
         console.log();
-        console.log(chalk.cyan('💡 To reset failure count:'));
-        console.log(chalk.white('  lanonasis auth logout && lanonasis auth login'));
+        console.log(chalk_1.default.cyan('💡 To reset failure count:'));
+        console.log(chalk_1.default.white('  lanonasis auth logout && lanonasis auth login'));
     }
 });
 // MCP Commands (primary interface)
-mcpCommands(program);
+(0, mcp_js_1.mcpCommands)(program);
 // Memory commands (require auth) - now MCP-powered by default
 const memoryCmd = program
     .command('memory')
     .alias('mem')
     .description('Memory management commands');
 requireAuth(memoryCmd);
-memoryCommands(memoryCmd);
+(0, memory_js_1.memoryCommands)(memoryCmd);
 // Note: Memory commands are now MCP-powered when available
 // Topic commands (require auth)
 const topicCmd = program
@@ -323,23 +361,23 @@ const topicCmd = program
     .alias('topics')
     .description('Topic management commands');
 requireAuth(topicCmd);
-topicCommands(topicCmd);
+(0, topics_js_1.topicCommands)(topicCmd);
 // Configuration commands (require auth)
 const configCmd = program
     .command('config')
     .description('Configuration management');
 requireAuth(configCmd);
-configCommands(configCmd);
+(0, config_js_1.configCommands)(configCmd);
 // Organization commands (require auth)
 const orgCmd = program
     .command('org')
     .alias('organization')
     .description('Organization management');
 requireAuth(orgCmd);
-orgCommands(orgCmd);
+(0, organization_js_1.orgCommands)(orgCmd);
 // API Key management commands (require auth)
-requireAuth(apiKeysCommand);
-program.addCommand(apiKeysCommand);
+requireAuth(api_keys_js_1.default);
+program.addCommand(api_keys_js_1.default);
 // Dashboard management commands (require auth)  
 const dashboardCmd = program
     .command('dashboard')
@@ -542,9 +580,9 @@ program
     await cliConfig.init();
     const isAuth = await cliConfig.isAuthenticated();
     const apiUrl = cliConfig.getApiUrl();
-    console.log(chalk.blue.bold('MaaS CLI Status'));
+    console.log(chalk_1.default.blue.bold('MaaS CLI Status'));
     console.log(`API URL: ${apiUrl}`);
-    console.log(`Authenticated: ${isAuth ? chalk.green('Yes') : chalk.red('No')}`);
+    console.log(`Authenticated: ${isAuth ? chalk_1.default.green('Yes') : chalk_1.default.red('No')}`);
     if (isAuth) {
         const user = await cliConfig.getCurrentUser();
         if (user) {
@@ -576,15 +614,15 @@ program
     .description('Open documentation in browser')
     .action(() => {
     const url = 'https://api.lanonasis.com/docs';
-    console.log(chalk.blue(`Opening documentation: ${url}`));
+    console.log(chalk_1.default.blue(`Opening documentation: ${url}`));
     // Try to open in browser
     import('open').then(open => {
         open.default(url).catch(() => {
-            console.log(chalk.yellow('Could not open browser automatically.'));
-            console.log(chalk.white(`Please visit: ${url}`));
+            console.log(chalk_1.default.yellow('Could not open browser automatically.'));
+            console.log(chalk_1.default.white(`Please visit: ${url}`));
         });
     }).catch(() => {
-        console.log(chalk.white(`Please visit: ${url}`));
+        console.log(chalk_1.default.white(`Please visit: ${url}`));
     });
 });
 // Completion commands
@@ -594,7 +632,7 @@ program
     .argument('[shell]', 'shell type (bash, zsh, fish)')
     .action(async (shell) => {
     if (!shell) {
-        await installCompletionsCommand();
+        await (0, completion_js_1.installCompletionsCommand)();
         return;
     }
     const completionsDir = path.join(__dirname, 'completions');
@@ -628,44 +666,44 @@ program
     .command('guide')
     .alias('setup')
     .description('Interactive setup guide for new users')
-    .action(guideCommand);
+    .action(guide_js_1.guideCommand);
 program
     .command('quickstart')
     .alias('quick')
     .description('Show essential commands for quick start')
-    .action(quickStartCommand);
+    .action(guide_js_1.quickStartCommand);
 // Help customization
 program.configureHelp({
     formatHelp: (cmd, helper) => {
-        let help = chalk.blue.bold('🧠 Memory as a Service CLI\n\n');
+        let help = chalk_1.default.blue.bold('🧠 Memory as a Service CLI\n\n');
         help += helper.commandUsage(cmd) + '\n\n';
         if (cmd.description()) {
-            help += chalk.yellow('Description:\n');
+            help += chalk_1.default.yellow('Description:\n');
             help += `  ${cmd.description()}\n\n`;
         }
         const commands = helper.visibleCommands(cmd);
         if (commands.length > 0) {
-            help += chalk.yellow('Commands:\n');
+            help += chalk_1.default.yellow('Commands:\n');
             const maxNameLength = Math.max(...commands.map(c => c.name().length));
             commands.forEach(c => {
                 const name = c.name().padEnd(maxNameLength);
-                help += `  ${chalk.white(name)}  ${c.description()}\n`;
+                help += `  ${chalk_1.default.white(name)}  ${c.description()}\n`;
             });
             help += '\n';
         }
         const options = helper.visibleOptions(cmd);
         if (options.length > 0) {
-            help += chalk.yellow('Options:\n');
+            help += chalk_1.default.yellow('Options:\n');
             options.forEach(option => {
                 help += `  ${option.flags.padEnd(20)}  ${option.description}\n`;
             });
             help += '\n';
         }
         const cmdName = isOnasisInvocation ? 'onasis' : program.name();
-        help += chalk.gray(`For more help on a specific command, run: ${cmdName} <command> --help\n`);
-        help += chalk.gray('Documentation: https://api.lanonasis.com/docs\n');
+        help += chalk_1.default.gray(`For more help on a specific command, run: ${cmdName} <command> --help\n`);
+        help += chalk_1.default.gray('Documentation: https://api.lanonasis.com/docs\n');
         if (isOnasisInvocation) {
-            help += chalk.gray('Golden Contract: Onasis-Core v0.1 Compliant\n');
+            help += chalk_1.default.gray('Golden Contract: Onasis-Core v0.1 Compliant\n');
         }
         return help;
     }
@@ -674,7 +712,7 @@ program.configureHelp({
 async function main() {
     // Check for special flags first
     if (process.argv.includes('--completion-data')) {
-        await completionCommand();
+        await (0, completion_js_1.completionCommand)();
         return;
     }
     if (process.argv.includes('--completion')) {
@@ -719,7 +757,7 @@ async function main() {
     }
     catch (error) {
         if (error instanceof Error) {
-            console.error(chalk.red('✖ Error:'), error.message);
+            console.error(chalk_1.default.red('✖ Error:'), error.message);
             if (process.env.CLI_VERBOSE === 'true') {
                 console.error(error.stack);
             }

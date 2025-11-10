@@ -1,11 +1,17 @@
-import chalk from 'chalk';
-import inquirer from 'inquirer';
-import ora from 'ora';
-import { table } from 'table';
-import { format } from 'date-fns';
-import { apiClient } from '../utils/api.js';
-import { truncateText } from '../utils/formatting.js';
-export function topicCommands(program) {
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.topicCommands = topicCommands;
+const chalk_1 = __importDefault(require("chalk"));
+const inquirer_1 = __importDefault(require("inquirer"));
+const ora_1 = __importDefault(require("ora"));
+const table_1 = require("table");
+const date_fns_1 = require("date-fns");
+const api_js_1 = require("../utils/api.js");
+const formatting_js_1 = require("../utils/formatting.js");
+function topicCommands(program) {
     // Create topic
     program
         .command('create')
@@ -21,7 +27,7 @@ export function topicCommands(program) {
         try {
             let { name, description, color, icon, parent, interactive } = options;
             if (interactive || !name) {
-                const answers = await inquirer.prompt([
+                const answers = await inquirer_1.default.prompt([
                     {
                         type: 'input',
                         name: 'name',
@@ -58,7 +64,7 @@ export function topicCommands(program) {
                 color = answers.color;
                 icon = answers.icon;
             }
-            const spinner = ora('Creating topic...').start();
+            const spinner = (0, ora_1.default)('Creating topic...').start();
             const topicData = { name };
             if (description)
                 topicData.description = description;
@@ -68,11 +74,11 @@ export function topicCommands(program) {
                 topicData.icon = icon;
             if (parent)
                 topicData.parent_topic_id = parent;
-            const topic = await apiClient.createTopic(topicData);
+            const topic = await api_js_1.apiClient.createTopic(topicData);
             spinner.succeed('Topic created successfully');
             console.log();
-            console.log(chalk.green('✓ Topic created:'));
-            console.log(`  ID: ${chalk.cyan(topic.id)}`);
+            console.log(chalk_1.default.green('✓ Topic created:'));
+            console.log(`  ID: ${chalk_1.default.cyan(topic.id)}`);
             console.log(`  Name: ${topic.name}`);
             if (topic.description) {
                 console.log(`  Description: ${topic.description}`);
@@ -83,7 +89,7 @@ export function topicCommands(program) {
         }
         catch (error) {
             const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-            console.error(chalk.red('✖ Failed to create topic:'), errorMessage);
+            console.error(chalk_1.default.red('✖ Failed to create topic:'), errorMessage);
             process.exit(1);
         }
     });
@@ -94,14 +100,14 @@ export function topicCommands(program) {
         .description('List topics')
         .action(async () => {
         try {
-            const spinner = ora('Fetching topics...').start();
-            const topics = await apiClient.getTopics();
+            const spinner = (0, ora_1.default)('Fetching topics...').start();
+            const topics = await api_js_1.apiClient.getTopics();
             spinner.stop();
             if (topics.length === 0) {
-                console.log(chalk.yellow('No topics found'));
+                console.log(chalk_1.default.yellow('No topics found'));
                 return;
             }
-            console.log(chalk.blue.bold(`\n📁 Topics (${topics.length} total)`));
+            console.log(chalk_1.default.blue.bold(`\n📁 Topics (${topics.length} total)`));
             console.log();
             const outputFormat = process.env.CLI_OUTPUT_FORMAT || 'table';
             if (outputFormat === 'json') {
@@ -110,10 +116,10 @@ export function topicCommands(program) {
             else {
                 // Table format
                 const tableData = topics.map((topic) => [
-                    truncateText(topic.name, 25),
-                    truncateText(topic.description || '', 40),
+                    (0, formatting_js_1.truncateText)(topic.name, 25),
+                    (0, formatting_js_1.truncateText)(topic.description || '', 40),
                     topic.color || '',
-                    format(new Date(topic.created_at), 'MMM dd, yyyy'),
+                    (0, date_fns_1.format)(new Date(topic.created_at), 'MMM dd, yyyy'),
                     topic.parent_topic_id ? '✓' : ''
                 ]);
                 const tableConfig = {
@@ -130,12 +136,12 @@ export function topicCommands(program) {
                     ]
                 };
                 const tableHeaders = ['Name', 'Description', 'System', 'Created'];
-                console.log(table([tableHeaders, ...tableData], tableConfig));
+                console.log((0, table_1.table)([tableHeaders, ...tableData], tableConfig));
             }
         }
         catch (error) {
             const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-            console.error(chalk.red('✖ Failed to list topics:'), errorMessage);
+            console.error(chalk_1.default.red('✖ Failed to list topics:'), errorMessage);
             process.exit(1);
         }
     });
@@ -147,37 +153,37 @@ export function topicCommands(program) {
         .argument('<id>', 'topic ID')
         .action(async (id) => {
         try {
-            const spinner = ora('Fetching topic...').start();
-            const topic = await apiClient.getTopic(id);
+            const spinner = (0, ora_1.default)('Fetching topic...').start();
+            const topic = await api_js_1.apiClient.getTopic(id);
             spinner.stop();
-            console.log(chalk.blue.bold('\n📁 Topic Details'));
+            console.log(chalk_1.default.blue.bold('\n📁 Topic Details'));
             console.log();
-            console.log(chalk.green('Name:'), topic.name);
-            console.log(chalk.green('ID:'), chalk.cyan(topic.id));
+            console.log(chalk_1.default.green('Name:'), topic.name);
+            console.log(chalk_1.default.green('ID:'), chalk_1.default.cyan(topic.id));
             if (topic.description) {
-                console.log(chalk.green('Description:'), topic.description);
+                console.log(chalk_1.default.green('Description:'), topic.description);
             }
             if (topic.color) {
-                console.log(chalk.green('Color:'), topic.color);
+                console.log(chalk_1.default.green('Color:'), topic.color);
             }
             if (topic.icon) {
-                console.log(chalk.green('Icon:'), topic.icon);
+                console.log(chalk_1.default.green('Icon:'), topic.icon);
             }
             if (topic.parent_topic_id) {
-                console.log(chalk.green('Parent Topic:'), topic.parent_topic_id);
+                console.log(chalk_1.default.green('Parent Topic:'), topic.parent_topic_id);
             }
-            console.log(chalk.green('System Topic:'), topic.is_system ? 'Yes' : 'No');
-            console.log(chalk.green('Created:'), format(new Date(topic.created_at), 'PPpp'));
-            console.log(chalk.green('Updated:'), format(new Date(topic.updated_at), 'PPpp'));
+            console.log(chalk_1.default.green('System Topic:'), topic.is_system ? 'Yes' : 'No');
+            console.log(chalk_1.default.green('Created:'), (0, date_fns_1.format)(new Date(topic.created_at), 'PPpp'));
+            console.log(chalk_1.default.green('Updated:'), (0, date_fns_1.format)(new Date(topic.updated_at), 'PPpp'));
             if (topic.metadata && Object.keys(topic.metadata).length > 0) {
                 console.log();
-                console.log(chalk.green('Metadata:'));
+                console.log(chalk_1.default.green('Metadata:'));
                 console.log(JSON.stringify(topic.metadata, null, 2));
             }
         }
         catch (error) {
             const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-            console.error(chalk.red('✖ Failed to get topic:'), errorMessage);
+            console.error(chalk_1.default.red('✖ Failed to get topic:'), errorMessage);
             process.exit(1);
         }
     });
@@ -196,10 +202,10 @@ export function topicCommands(program) {
             let updateData = {};
             if (options.interactive) {
                 // First, get current topic data
-                const spinner = ora('Fetching current topic...').start();
-                const currentTopic = await apiClient.getTopic(id);
+                const spinner = (0, ora_1.default)('Fetching current topic...').start();
+                const currentTopic = await api_js_1.apiClient.getTopic(id);
                 spinner.stop();
-                const answers = await inquirer.prompt([
+                const answers = await inquirer_1.default.prompt([
                     {
                         type: 'input',
                         name: 'name',
@@ -248,20 +254,20 @@ export function topicCommands(program) {
                     updateData.icon = options.icon;
             }
             if (Object.keys(updateData).length === 0) {
-                console.log(chalk.yellow('No updates specified'));
+                console.log(chalk_1.default.yellow('No updates specified'));
                 return;
             }
-            const spinner = ora('Updating topic...').start();
-            const topic = await apiClient.updateTopic(id, updateData);
+            const spinner = (0, ora_1.default)('Updating topic...').start();
+            const topic = await api_js_1.apiClient.updateTopic(id, updateData);
             spinner.succeed('Topic updated successfully');
             console.log();
-            console.log(chalk.green('✓ Topic updated:'));
-            console.log(`  ID: ${chalk.cyan(topic.id)}`);
+            console.log(chalk_1.default.green('✓ Topic updated:'));
+            console.log(`  ID: ${chalk_1.default.cyan(topic.id)}`);
             console.log(`  Name: ${topic.name}`);
         }
         catch (error) {
             const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-            console.error(chalk.red('✖ Failed to update topic:'), errorMessage);
+            console.error(chalk_1.default.red('✖ Failed to update topic:'), errorMessage);
             process.exit(1);
         }
     });
@@ -275,8 +281,8 @@ export function topicCommands(program) {
         .action(async (id, options) => {
         try {
             if (!options.force) {
-                const topic = await apiClient.getTopic(id);
-                const answer = await inquirer.prompt([
+                const topic = await api_js_1.apiClient.getTopic(id);
+                const answer = await inquirer_1.default.prompt([
                     {
                         type: 'confirm',
                         name: 'confirm',
@@ -285,17 +291,17 @@ export function topicCommands(program) {
                     }
                 ]);
                 if (!answer.confirm) {
-                    console.log(chalk.yellow('Deletion cancelled'));
+                    console.log(chalk_1.default.yellow('Deletion cancelled'));
                     return;
                 }
             }
-            const spinner = ora('Deleting topic...').start();
-            await apiClient.deleteTopic(id);
+            const spinner = (0, ora_1.default)('Deleting topic...').start();
+            await api_js_1.apiClient.deleteTopic(id);
             spinner.succeed('Topic deleted successfully');
         }
         catch (error) {
             const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-            console.error(chalk.red('✖ Failed to delete topic:'), errorMessage);
+            console.error(chalk_1.default.red('✖ Failed to delete topic:'), errorMessage);
             process.exit(1);
         }
     });

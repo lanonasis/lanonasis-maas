@@ -1,4 +1,12 @@
-export function formatOutput(data, format = 'table') {
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.formatOutput = formatOutput;
+exports.formatBytes = formatBytes;
+exports.truncateText = truncateText;
+exports.formatDuration = formatDuration;
+exports.formatDate = formatDate;
+exports.formatTableData = formatTableData;
+function formatOutput(data, format = 'table') {
     switch (format) {
         case 'json':
             console.log(JSON.stringify(data, null, 2));
@@ -12,7 +20,7 @@ export function formatOutput(data, format = 'table') {
             break;
     }
 }
-export function formatBytes(bytes) {
+function formatBytes(bytes) {
     if (bytes === 0)
         return '0 Bytes';
     const k = 1024;
@@ -20,23 +28,23 @@ export function formatBytes(bytes) {
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 }
-export function truncateText(text, maxLength) {
+function truncateText(text, maxLength) {
     if (text.length <= maxLength)
         return text;
     return text.substring(0, maxLength - 3) + '...';
 }
-export function formatDuration(ms) {
+function formatDuration(ms) {
     if (ms < 1000)
         return `${ms}ms`;
     if (ms < 60000)
         return `${(ms / 1000).toFixed(1)}s`;
     return `${(ms / 60000).toFixed(1)}m`;
 }
-export function formatDate(date) {
+function formatDate(date) {
     const d = new Date(date);
     return d.toLocaleString();
 }
-export function formatTableData(data) {
+function formatTableData(data) {
     return data.map(item => {
         if (Array.isArray(item))
             return item.map(String);
