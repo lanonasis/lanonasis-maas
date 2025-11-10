@@ -4,7 +4,7 @@ import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
  * Supports multiple formats and batch uploads for context management
  * Aligned with sd-ghost-protocol schema
  */
-import { useState, useRef } from 'react';
+import React, { useState, useRef } from 'react';
 export const ManualMemoryUploader = ({ onUpload, onMemoryCreate, className = '' }) => {
     const [isUploading, setIsUploading] = useState(false);
     const [uploadProgress, setUploadProgress] = useState(0);

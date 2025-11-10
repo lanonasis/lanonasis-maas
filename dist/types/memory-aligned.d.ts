@@ -322,9 +322,9 @@ export declare const searchMemorySchema: z.ZodObject<{
     limit: z.ZodDefault<z.ZodNumber>;
     threshold: z.ZodDefault<z.ZodNumber>;
 }, "strip", z.ZodTypeAny, {
+    limit: number;
     status: "active" | "archived" | "draft" | "deleted";
     query: string;
-    limit: number;
     threshold: number;
     topic_id?: string | undefined;
     project_ref?: string | undefined;
@@ -332,13 +332,13 @@ export declare const searchMemorySchema: z.ZodObject<{
     memory_types?: ("conversation" | "knowledge" | "project" | "context" | "reference")[] | undefined;
 }, {
     query: string;
+    limit?: number | undefined;
     topic_id?: string | undefined;
     project_ref?: string | undefined;
     status?: "active" | "archived" | "draft" | "deleted" | undefined;
     tags?: string[] | undefined;
-    limit?: number | undefined;
-    threshold?: number | undefined;
     memory_types?: ("conversation" | "knowledge" | "project" | "context" | "reference")[] | undefined;
+    threshold?: number | undefined;
 }>;
 /**
  * @swagger
