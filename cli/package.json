@@ -22,5 +22,9 @@
   "scripts": {
     "build": "rimraf dist && tsc -p tsconfig.json",
     "prepublishOnly": "npm run build"
+  },
+  "devDependencies": {
+    "rimraf": "^5.0.7",
+    "typescript": "^5.7.2"
   }
 }
