@@ -164,7 +164,7 @@ app.get('/api/v1/mcp', (req, res) => {
     server: 'cli-aligned-mcp-server',
     authentication: 'vendor-key-aligned',
     endpoints: {
-      stdio: 'Use lanonasis-mcp-server command',
+      stdio: 'Use mcp-core command',
       http: '/api/v1/mcp/tools',
       websocket: '/mcp/ws',
       sse: '/mcp/sse'
