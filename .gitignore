@@ -104,3 +104,6 @@ mcp-config-fixed.json
 # Package lock files (using bun.lock instead)
 package-lock.json
 **/package-lock.json
+
+# Local MCP server directory
+mcp-server/
