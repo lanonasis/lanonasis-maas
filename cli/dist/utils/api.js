@@ -7,17 +7,19 @@ export class APIClient {
     config;
     constructor() {
         this.config = new CLIConfig();
-        this.client = axios.create();
+        this.client = axios.create({
+            proxy: false // Bypass proxy to avoid redirect loops in containerized environments
+        });
         // Setup request interceptor to add auth token and headers
         this.client.interceptors.request.use(async (config) => {
             await this.config.init();
             // Service Discovery
             await this.config.discoverServices();
             // Use appropriate base URL based on endpoint
-            const isAuthEndpoint = config.url?.includes('/auth/') || config.url?.includes('/login') || config.url?.includes('/register');
+            const isAuthEndpoint = config.url?.includes('/auth/') || config.url?.includes('/login') || config.url?.includes('/register') || config.url?.includes('/oauth/');
             const discoveredServices = this.config.get('discoveredServices');
             config.baseURL = isAuthEndpoint ?
-                (discoveredServices?.auth_base || 'https://api.lanonasis.com') :
+                (discoveredServices?.auth_base || 'https://auth.lanonasis.com') :
                 this.config.getApiUrl();
             // Add project scope header for auth endpoints
             if (isAuthEndpoint) {
