@@ -493,7 +493,7 @@ deployCmd
         { name: 'Documentation', url: 'https://docs.lanonasis.com/memory-services', status: 'healthy' },
         { name: 'Memory API', url: 'https://api.lanonasis.com/memories', status: 'healthy' },
         { name: 'MCP Server', url: 'https://mcp.lanonasis.com/api/v1/events', status: 'healthy' },
-        { name: 'Authentication', url: 'https://api.lanonasis.com/auth', status: 'healthy' }
+        { name: 'Authentication', url: 'https://auth.lanonasis.com', status: 'healthy' }
     ];
     for (const service of services) {
         process.stdout.write(`${service.name.padEnd(20)}: `);
