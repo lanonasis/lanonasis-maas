@@ -22,7 +22,7 @@ interface CLIConfigData {
   mcpServerPath?: string;
   mcpServerUrl?: string;
   mcpUseRemote?: boolean;
-  mcpPreference?: 'local' | 'remote' | 'auto';
+  mcpPreference?: 'local' | 'remote' | 'websocket' | 'auto';
   // Service Discovery
   discoveredServices?: {
     auth_base: string;
@@ -561,14 +561,6 @@ export class CLIConfig {
           'X-Auth-Method': 'vendor_key',
           'X-Project-Scope': 'lanonasis-maas'
         },
-      await this.pingAuthHealth(
-        axios,
-        authBase,
-        {
-          'X-API-Key': vendorKey,
-          'X-Auth-Method': 'vendor_key',
-          'X-Project-Scope': 'lanonasis-maas'
-        },
         { timeout: 10000, proxy: false }
       );
     } catch (error: any) {
@@ -998,14 +990,16 @@ export class CLIConfig {
     const preference = this.config.mcpPreference || 'auto';
 
     switch (preference) {
+      case 'websocket':
       case 'remote':
         return true;
       case 'local':
         return false;
       case 'auto':
       default:
-        // Use remote if authenticated, otherwise local
-        return !!this.config.token;
+        // Default to remote/websocket (production mode)
+        // Local mode should only be used when explicitly configured
+        return true;
     }
   }
 }
