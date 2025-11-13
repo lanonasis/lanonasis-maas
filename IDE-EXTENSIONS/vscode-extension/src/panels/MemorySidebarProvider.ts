@@ -23,47 +23,78 @@ export class MemorySidebarProvider implements vscode.WebviewViewProvider {
         } catch {
             // ignore in tests
         }
-        this._view = webviewView;
 
-        webviewView.webview.options = {
-            enableScripts: true,
-            localResourceRoots: [this._extensionUri]
-        };
+        try {
+            this._view = webviewView;
 
-        webviewView.webview.html = this._getHtmlForWebview(webviewView.webview);
+            // Restrict resource access to only necessary directories
+            webviewView.webview.options = {
+                enableScripts: true,
+                localResourceRoots: [
+                    vscode.Uri.joinPath(this._extensionUri, 'media'),
+                    vscode.Uri.joinPath(this._extensionUri, 'out'),
+                    vscode.Uri.joinPath(this._extensionUri, 'images')
+                ]
+            };
 
-        // Handle messages from the webview
-        webviewView.webview.onDidReceiveMessage(async (data) => {
-            switch (data.type) {
-                case 'authenticate':
-                    await vscode.commands.executeCommand('lanonasis.authenticate', data.mode);
-                    break;
-                case 'searchMemories':
-                    await this.handleSearch(data.query);
-                    break;
-                case 'createMemory':
-                    await vscode.commands.executeCommand('lanonasis.createMemory');
-                    break;
-                case 'openMemory':
-                    await vscode.commands.executeCommand('lanonasis.openMemory', data.memory);
-                    break;
-                case 'refresh':
+            webviewView.webview.html = this._getHtmlForWebview(webviewView.webview);
+
+            // Handle messages from the webview
+            webviewView.webview.onDidReceiveMessage(async (data) => {
+                try {
+                    switch (data.type) {
+                        case 'authenticate':
+                            await vscode.commands.executeCommand('lanonasis.authenticate', data.mode);
+                            break;
+                        case 'searchMemories':
+                            await this.handleSearch(data.query);
+                            break;
+                        case 'createMemory':
+                            await vscode.commands.executeCommand('lanonasis.createMemory');
+                            break;
+                        case 'openMemory':
+                            await vscode.commands.executeCommand('lanonasis.openMemory', data.memory);
+                            break;
+                        case 'refresh':
+                            await this.refresh();
+                            break;
+                        case 'showSettings':
+                            await vscode.commands.executeCommand('workbench.action.openSettings', 'lanonasis');
+                            break;
+                        case 'getApiKey':
+                            await vscode.env.openExternal(vscode.Uri.parse('https://api.lanonasis.com'));
+                            break;
+                        case 'openCommandPalette':
+                            await vscode.commands.executeCommand('workbench.action.quickOpen', '>Lanonasis: Authenticate');
+                            break;
+                    }
+                } catch (error) {
+                    console.error('[Lanonasis] Error handling webview message:', error);
+                    this._view?.webview.postMessage({
+                        type: 'error',
+                        message: `Action failed: ${error instanceof Error ? error.message : String(error)}`
+                    });
+                }
+            });
+
+            // Initial load with error handling and delay for auth settlement
+            setTimeout(async () => {
+                try {
+                    // Give auth time to settle
+                    await new Promise(resolve => setTimeout(resolve, 1000));
                     await this.refresh();
-                    break;
-                case 'showSettings':
-                    await vscode.commands.executeCommand('workbench.action.openSettings', 'lanonasis');
-                    break;
-                case 'getApiKey':
-                    await vscode.env.openExternal(vscode.Uri.parse('https://api.lanonasis.com'));
-                    break;
-                case 'openCommandPalette':
-                    await vscode.commands.executeCommand('workbench.action.quickOpen', '>Lanonasis: Authenticate');
-                    break;
-            }
-        });
-
-        // Initial load
-        this.refresh();
+                } catch (error) {
+                    console.error('[Lanonasis] Failed to load sidebar:', error);
+                    this._view?.webview.postMessage({
+                        type: 'error',
+                        message: 'Failed to load Lanonasis Memory. Please try refreshing or check authentication.'
+                    });
+                }
+            }, 500);
+        } catch (error) {
+            console.error('[Lanonasis] Fatal error in resolveWebviewView:', error);
+            vscode.window.showErrorMessage(`Lanonasis extension failed to load: ${error instanceof Error ? error.message : String(error)}`);
+        }
     }
 
     public async refresh() {
@@ -106,7 +137,10 @@ export class MemorySidebarProvider implements vscode.WebviewViewProvider {
                     }
                 });
             } catch (error) {
-                if (error instanceof Error && error.message.includes('Not authenticated')) {
+                const errorMsg = error instanceof Error ? error.message : String(error);
+                
+                // Check for specific error types
+                if (errorMsg.includes('Not authenticated') || errorMsg.includes('401')) {
                     this._view.webview.postMessage({
                         type: 'updateState',
                         state: {
@@ -118,10 +152,19 @@ export class MemorySidebarProvider implements vscode.WebviewViewProvider {
                     return;
                 }
 
-                this._view.webview.postMessage({
-                    type: 'error',
-                    message: error instanceof Error ? error.message : 'Failed to load memories'
-                });
+                // Network/timeout errors
+                if (errorMsg.includes('fetch') || errorMsg.includes('timeout') || errorMsg.includes('Network')) {
+                    this._view.webview.postMessage({
+                        type: 'error',
+                        message: `Connection failed: ${errorMsg}. Check your network and API endpoint configuration.`
+                    });
+                } else {
+                    this._view.webview.postMessage({
+                        type: 'error',
+                        message: `Failed to load memories: ${errorMsg}`
+                    });
+                }
+                
                 this._view.webview.postMessage({
                     type: 'updateState',
                     state: { loading: false }

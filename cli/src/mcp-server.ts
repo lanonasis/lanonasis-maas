@@ -56,8 +56,8 @@ export class CLIMCPServer {
     }
 
     const packageRequests = [
-      '@lanonasis/mcp-server/dist/cli-aligned-mcp-server.js',
-      'lanonasis-mcp-server/dist/cli-aligned-mcp-server.js'
+      'mcp-core/dist/cli-aligned-mcp-server.js',
+      'mcp-core/dist/cli-aligned-mcp-server.js'
     ];
 
     for (const request of packageRequests) {
@@ -209,7 +209,7 @@ async function main() {
 CLI MCP Server - CLI-aligned Model Context Protocol server
 
 Usage:
-  lanonasis-mcp-server [options]
+  mcp-core [options]
 
 Options:
   --stdio          Use stdio transport (default)
@@ -221,9 +221,9 @@ Options:
   --help           Show this help
 
 Examples:
-  lanonasis-mcp-server                    # Start stdio server
-  lanonasis-mcp-server --http --port=3002 # Start HTTP server
-  lanonasis-mcp-server --status           # Check status
+  mcp-core                    # Start stdio server
+  mcp-core --http --port=3002 # Start HTTP server
+  mcp-core --status           # Check status
 `);
     return;
   }
