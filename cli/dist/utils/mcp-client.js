@@ -823,7 +823,21 @@ export class MCPClient {
      * Get connection status details with health information
      */
     getConnectionStatus() {
-        const connectionMode = this.activeConnectionMode;
+        // When disconnected, show the configured preference instead of the stale activeConnectionMode
+        let connectionMode = this.activeConnectionMode;
+        if (!this.isConnected) {
+            // Check configured preference
+            const mcpPreference = this.config.get('mcpPreference');
+            const mcpConnectionMode = this.config.get('mcpConnectionMode');
+            const preferRemote = this.config.get('mcpUseRemote');
+            connectionMode = mcpConnectionMode
+                ?? mcpPreference
+                ?? (preferRemote ? 'remote' : 'websocket');
+            // If preference is 'auto', resolve to default (websocket)
+            if (connectionMode === 'auto') {
+                connectionMode = 'websocket';
+            }
+        }
         let server;
         switch (connectionMode) {
             case 'websocket':
