@@ -461,7 +461,7 @@ export class CLIConfig {
         await axiosInstance.get(endpoint, {
           headers,
           timeout: options.timeout ?? 10000,
-          proxy: options.proxy
+          proxy: options.proxy === false ? false : undefined
         });
         return;
       } catch (error) {
