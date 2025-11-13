@@ -1245,13 +1245,29 @@ Please choose an option (1-4):`
         headers['X-Auth-Method'] = 'jwt';
       }
 
-      // Validate against server with health endpoint
-      await axios.get(`${authBase}/api/v1/health`, {
-        headers,
-        timeout: 10000
-      });
+      const normalizedBase = authBase.replace(/\/$/, '');
+      const endpoints = [
+        `${normalizedBase}/health`,
+        `${normalizedBase}/api/v1/health`
+      ];
 
-      return true;
+      let lastError: unknown;
+      for (const endpoint of endpoints) {
+        try {
+          await axios.get(endpoint, {
+            headers,
+            timeout: 10000
+          });
+          return true;
+        } catch (error) {
+          lastError = error;
+        }
+      }
+
+      if (lastError instanceof Error) {
+        throw lastError;
+      }
+      throw new Error('Auth health endpoints unreachable');
     } catch (error: any) {
       if (this.options.verbose) {
         console.log(chalk.yellow(`⚠️ Credential validation failed: ${error.response?.status || error.message}`));
