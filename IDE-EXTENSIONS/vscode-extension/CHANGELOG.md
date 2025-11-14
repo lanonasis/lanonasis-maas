@@ -1,5 +1,23 @@
 # Change Log
 
+## [1.5.3] - 2025-11-14
+
+### Fixed
+- 🔐 Enhanced Memory + sidebar flows now detect whether stored credentials are OAuth tokens or API keys and send the correct auth header (Bearer vs `X-API-Key`).
+- 🌐 API key management requests sanitize configured base URLs so `/api/v1` is no longer duplicated when using custom gateways.
+
+### Changed
+- 📦 Bumped extension version to 1.5.3 for marketplace distribution.
+
+## [1.5.2] - 2025-11-14
+
+### Fixed
+- 🔐 API key tree + project operations now send keys via `X-API-Key` instead of `Authorization: Bearer`, resolving `Invalid JWT token` failures when toggling services.
+- 🔁 Memory/API clients now distinguish OAuth tokens from raw API keys so switching between connection modes no longer reuses the wrong auth header.
+
+### Changed
+- 📦 Bumped extension version to 1.5.2 for Marketplace publishing with the credential hotfix.
+
 ## [1.5.0] - 2025-11-12
 
 ### Fixed

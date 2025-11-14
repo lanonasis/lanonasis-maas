@@ -5,6 +5,16 @@ import { getMCPClient } from '../utils/mcp-client.js';
 import { EnhancedMCPClient } from '../mcp/client/enhanced-client.js';
 import { CLIConfig } from '../utils/config.js';
 import WebSocket from 'ws';
+/**
+ * Register MCP-related CLI commands (mcp and mcp-server) on a Commander program.
+ *
+ * Adds commands and subcommands for MCP server initialization, connection management,
+ * status reporting, tool listing and invocation, memory create/search operations,
+ * preference configuration, and diagnostic routines, wiring each command to its
+ * corresponding action handlers.
+ *
+ * @param program - Commander program instance to extend with MCP commands
+ */
 export function mcpCommands(program) {
     const mcp = program
         .command('mcp')
