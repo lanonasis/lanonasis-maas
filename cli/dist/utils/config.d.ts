@@ -13,7 +13,7 @@ interface CLIConfigData {
     mcpServerPath?: string;
     mcpServerUrl?: string;
     mcpUseRemote?: boolean;
-    mcpPreference?: 'local' | 'remote' | 'auto';
+    mcpPreference?: 'local' | 'remote' | 'websocket' | 'auto';
     discoveredServices?: {
         auth_base: string;
         memory_base: string;
@@ -65,6 +65,7 @@ export declare class CLIConfig {
     private categorizeServiceDiscoveryError;
     private resolveFallbackEndpoints;
     private logFallbackUsage;
+    private pingAuthHealth;
     setManualEndpoints(endpoints: Partial<CLIConfigData['discoveredServices']>): Promise<void>;
     hasManualEndpointOverrides(): boolean;
     clearManualEndpointOverrides(): Promise<void>;

@@ -38,16 +38,37 @@ export class MemoryService implements IMemoryService {
     }
 
     private async loadClient(): Promise<void> {
-        const apiKey = await this.resolveApiKey();
         const apiUrl = this.config.get<string>('apiUrl', 'https://api.lanonasis.com');
         const gatewayUrl = this.config.get<string>('gatewayUrl', 'https://api.lanonasis.com');
         const useGateway = this.config.get<boolean>('useGateway', true);
         const effectiveUrl = useGateway ? gatewayUrl : apiUrl;
 
-        if (apiKey) {
+        // Try OAuth token first, then API key
+        let authToken: string | null = null;
+        let apiKey: string | null = null;
+
+        if (this.secureApiKeyService) {
+            try {
+                // Check for OAuth Bearer token first
+                const authHeader = await this.secureApiKeyService.getAuthenticationHeader();
+                if (authHeader) {
+                    authToken = authHeader.replace('Bearer ', '');
+                }
+            } catch (error) {
+                console.warn('[MemoryService] Failed to get OAuth token', error);
+            }
+
+            // Fallback to API key if no OAuth token
+            if (!authToken) {
+                apiKey = await this.resolveApiKey();
+            }
+        }
+
+        if (authToken || apiKey) {
             this.client = createMaaSClient({
                 apiUrl: effectiveUrl,
-                apiKey,
+                authToken: authToken || undefined,
+                apiKey: apiKey || undefined,
                 timeout: 30000
             });
             this.authenticated = true;

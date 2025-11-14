@@ -56,6 +56,6 @@ export class Logger {
 }
 
 export const logger = new Logger({
-  service: 'lanonasis-mcp-server',
+  service: 'mcp-core',
   version: '1.0.0'
 });

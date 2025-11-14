@@ -22,7 +22,7 @@ interface CLIConfigData {
   mcpServerPath?: string;
   mcpServerUrl?: string;
   mcpUseRemote?: boolean;
-  mcpPreference?: 'local' | 'remote' | 'auto';
+  mcpPreference?: 'local' | 'remote' | 'websocket' | 'auto';
   // Service Discovery
   discoveredServices?: {
     auth_base: string;
@@ -223,7 +223,7 @@ export class CLIConfig {
   getApiUrl(): string {
     return process.env.MEMORY_API_URL ||
       this.config.apiUrl ||
-      'https://api.lanonasis.com/api/v1';
+      'https://mcp.lanonasis.com/api/v1';
   }
 
   // Enhanced Service Discovery Integration
@@ -257,14 +257,17 @@ export class CLIConfig {
         authBase = 'https://auth.lanonasis.com';
       }
 
+      const memoryBase = discovered.endpoints?.http || 'https://mcp.lanonasis.com/api/v1';
+
       this.config.discoveredServices = {
         auth_base: authBase || 'https://auth.lanonasis.com',
-        memory_base: 'https://api.lanonasis.com/api/v1',
-        mcp_base: discovered.endpoints?.http || 'https://mcp.lanonasis.com/api/v1',
+        memory_base: memoryBase,
+        mcp_base: memoryBase,
         mcp_ws_base: discovered.endpoints?.websocket || 'wss://mcp.lanonasis.com/ws',
         mcp_sse_base: discovered.endpoints?.sse || 'https://mcp.lanonasis.com/api/v1/events',
         project_scope: 'lanonasis-maas'
       };
+      this.config.apiUrl = memoryBase;
 
       // Mark discovery as successful
       this.config.lastServiceDiscovery = new Date().toISOString();
@@ -329,6 +332,7 @@ export class CLIConfig {
       ...fallback.endpoints,
       project_scope: 'lanonasis-maas'
     };
+    this.config.apiUrl = fallback.endpoints.memory_base;
 
     // Mark as fallback (don't set lastServiceDiscovery)
     await this.save();
@@ -393,7 +397,7 @@ export class CLIConfig {
     const isDevEnvironment = nodeEnv === 'development' || nodeEnv === 'test';
 
     const defaultAuthBase = isDevEnvironment ? 'http://localhost:4000' : 'https://auth.lanonasis.com';
-    const defaultMemoryBase = isDevEnvironment ? 'http://localhost:4000/api/v1' : 'https://api.lanonasis.com/api/v1';
+    const defaultMemoryBase = isDevEnvironment ? 'http://localhost:4000/api/v1' : 'https://mcp.lanonasis.com/api/v1';
     const defaultMcpBase = isDevEnvironment ? 'http://localhost:4100/api/v1' : 'https://mcp.lanonasis.com/api/v1';
     const defaultMcpWsBase = isDevEnvironment ? 'ws://localhost:4100/ws' : 'wss://mcp.lanonasis.com/ws';
     const defaultMcpSseBase = isDevEnvironment ? 'http://localhost:4100/api/v1/events' : 'https://mcp.lanonasis.com/api/v1/events';
@@ -439,6 +443,41 @@ export class CLIConfig {
     }
   }
 
+  private async pingAuthHealth(
+    axiosInstance: typeof import('axios').default,
+    authBase: string,
+    headers: Record<string, string>,
+    options: { timeout?: number; proxy?: boolean } = {}
+  ): Promise<void> {
+    const normalizedBase = authBase.replace(/\/$/, '');
+    const endpoints = [
+      `${normalizedBase}/health`,
+      `${normalizedBase}/api/v1/health`
+    ];
+
+    let lastError: unknown;
+    for (const endpoint of endpoints) {
+      try {
+        const requestConfig: any = {
+          headers,
+          timeout: options.timeout ?? 10000
+        };
+        if (options.proxy === false) {
+          requestConfig.proxy = false;
+        }
+        await axiosInstance.get(endpoint, requestConfig);
+        return;
+      } catch (error) {
+        lastError = error;
+      }
+    }
+
+    if (lastError instanceof Error) {
+      throw lastError;
+    }
+    throw new Error('Auth health endpoints unreachable');
+  }
+
   // Manual endpoint override functionality
   async setManualEndpoints(endpoints: Partial<CLIConfigData['discoveredServices']>): Promise<void> {
     if (!this.config.discoveredServices) {
@@ -464,15 +503,17 @@ export class CLIConfig {
   }
 
   async clearManualEndpointOverrides(): Promise<void> {
-    this.config.manualEndpointOverrides = undefined;
-    this.config.lastManualEndpointUpdate = undefined;
+    delete this.config.manualEndpointOverrides;
+    delete this.config.lastManualEndpointUpdate;
 
     // Rediscover services
     await this.discoverServices();
   }
 
   getDiscoveredApiUrl(): string {
-    return this.config.discoveredServices?.auth_base || this.getApiUrl();
+    return process.env.AUTH_BASE ||
+      this.config.discoveredServices?.auth_base ||
+      'https://auth.lanonasis.com';
   }
 
   // Enhanced authentication support
@@ -515,16 +556,16 @@ export class CLIConfig {
 
       const authBase = this.config.discoveredServices?.auth_base || 'https://auth.lanonasis.com';
 
-      // Test vendor key with health endpoint
-      await axios.get(`${authBase}/health`, {
-        headers: {
+      await this.pingAuthHealth(
+        axios,
+        authBase,
+        {
           'X-API-Key': vendorKey,
           'X-Auth-Method': 'vendor_key',
           'X-Project-Scope': 'lanonasis-maas'
         },
-        timeout: 10000,
-        proxy: false // Bypass proxy to avoid redirect loops
-      });
+        { timeout: 10000, proxy: false }
+      );
     } catch (error: any) {
       // Provide specific error messages based on response
       if (error.response?.status === 401) {
@@ -655,8 +696,7 @@ export class CLIConfig {
         const axios = (await import('axios')).default;
         const endpoints = [
           'http://localhost:4000/v1/auth/verify-token',
-          'https://auth.lanonasis.com/v1/auth/verify-token',
-          'https://api.lanonasis.com/auth/verify'
+          'https://auth.lanonasis.com/v1/auth/verify-token'
         ];
         for (const endpoint of endpoints) {
           try {
@@ -696,8 +736,7 @@ export class CLIConfig {
       // Try auth-gateway first (port 4000), then fall back to Netlify function
       const endpoints = [
         'http://localhost:4000/v1/auth/verify-token',
-        'https://auth.lanonasis.com/v1/auth/verify-token',
-        'https://api.lanonasis.com/auth/verify'
+        'https://auth.lanonasis.com/v1/auth/verify-token'
       ];
 
       let response = null;
@@ -779,7 +818,7 @@ export class CLIConfig {
       // Ensure service discovery is done
       await this.discoverServices();
 
-      const authBase = this.config.discoveredServices?.auth_base || 'https://api.lanonasis.com';
+      const authBase = this.config.discoveredServices?.auth_base || 'https://auth.lanonasis.com';
       const headers: Record<string, string> = {
         'X-Project-Scope': 'lanonasis-maas'
       };
@@ -792,11 +831,7 @@ export class CLIConfig {
         headers['X-Auth-Method'] = 'jwt';
       }
 
-      // Validate against server with health endpoint
-      await axios.get(`${authBase}/api/v1/health`, {
-        headers,
-        timeout: 10000
-      });
+      await this.pingAuthHealth(axios, authBase, headers);
 
       // Update last validated timestamp
       this.config.lastValidated = new Date().toISOString();
@@ -835,7 +870,7 @@ export class CLIConfig {
         const axios = (await import('axios')).default;
 
         await this.discoverServices();
-        const authBase = this.config.discoveredServices?.auth_base || 'https://api.lanonasis.com';
+        const authBase = this.config.discoveredServices?.auth_base || 'https://auth.lanonasis.com';
 
         // Attempt token refresh
         const response = await axios.post(`${authBase}/v1/auth/refresh`, {}, {
@@ -958,14 +993,16 @@ export class CLIConfig {
     const preference = this.config.mcpPreference || 'auto';
 
     switch (preference) {
+      case 'websocket':
       case 'remote':
         return true;
       case 'local':
         return false;
       case 'auto':
       default:
-        // Use remote if authenticated, otherwise local
-        return !!this.config.token;
+        // Default to remote/websocket (production mode)
+        // Local mode should only be used when explicitly configured
+        return true;
     }
   }
 }

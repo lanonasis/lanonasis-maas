@@ -149,7 +149,7 @@ describe('Cross-Device Integration Tests', () => {
     it('should discover same service endpoints from all devices', async () => {
       // Mock service discovery response
       const mockDiscoveryResponse = {
-        auth: { login: 'https://api.lanonasis.com/auth/login' },
+        auth: { login: 'https://auth.lanonasis.com/auth/login' },
         endpoints: {
           http: 'https://mcp.lanonasis.com/api/v1',
           websocket: 'wss://mcp.lanonasis.com/ws',
