@@ -11,7 +11,7 @@ import type {
   MemorySearchResult as SDKMemorySearchResult,
   UserMemoryStats as SDKUserMemoryStats
 } from '@lanonasis/memory-client';
-import { SecureApiKeyService } from './SecureApiKeyService';
+import { SecureApiKeyService, StoredCredential } from './SecureApiKeyService';
 import { CreateMemoryRequest, SearchMemoryRequest, MemoryEntry, MemorySearchResult, MemoryType, UserMemoryStats } from '../types/memory-aligned';
 import { IEnhancedMemoryService, MemoryServiceCapabilities } from './IMemoryService';
 
@@ -68,10 +68,10 @@ export class EnhancedMemoryService implements IEnhancedMemoryService {
   }
 
   private async initializeClient(): Promise<void> {
-    const { ConfigPresets, Environment, EnhancedMemoryClient } = this.sdk;
-    const apiKey = await this.secureApiKeyService.getApiKey();
+    const { Environment, EnhancedMemoryClient } = this.sdk;
+    const credential = await this.secureApiKeyService.getStoredCredentials();
 
-    if (!apiKey || apiKey.trim().length === 0) {
+    if (!credential) {
       this.client = null;
       this.updateStatusBar(false, 'No API Key');
       return;
@@ -79,7 +79,7 @@ export class EnhancedMemoryService implements IEnhancedMemoryService {
 
     try {
       // Use IDE extension preset for optimized configuration
-      const clientConfig: EnhancedMemoryClientConfig = ConfigPresets.ideExtension(apiKey);
+      const clientConfig = this.buildClientConfigFromCredential(credential);
 
       // Override with VSCode-specific settings
       const apiUrl = this.config.get<string>('apiUrl', 'https://api.lanonasis.com');
@@ -201,25 +201,24 @@ export class EnhancedMemoryService implements IEnhancedMemoryService {
   }
 
   public async testConnection(apiKey?: string): Promise<void> {
-    const { ConfigPresets, EnhancedMemoryClient } = this.sdk;
+    const { EnhancedMemoryClient } = this.sdk;
     let testClient = this.client;
 
     if (apiKey) {
-      const config = ConfigPresets.ideExtension(apiKey);
+      const config = this.buildClientConfigFromCredential({ type: 'apiKey', token: apiKey });
       testClient = new EnhancedMemoryClient(config);
       await testClient.initialize();
     }
 
     if (!testClient) {
-      // Try to get API key from secure storage
-      const secureApiKey = await this.secureApiKeyService.getApiKey();
-      if (secureApiKey) {
-        const config = ConfigPresets.ideExtension(secureApiKey);
-        testClient = new EnhancedMemoryClient(config);
-        await testClient.initialize();
-      } else {
+      const credential = await this.secureApiKeyService.getStoredCredentials();
+      if (!credential) {
         throw new Error('No API key configured');
       }
+
+      const config = this.buildClientConfigFromCredential(credential);
+      testClient = new EnhancedMemoryClient(config);
+      await testClient.initialize();
     }
 
     // Test with enhanced client - this will try CLI first, then fallback to API
@@ -455,6 +454,20 @@ export class EnhancedMemoryService implements IEnhancedMemoryService {
       ...sdkEntry,
       memory_type: this.mapMemoryTypeFromSDK(sdkEntry.memory_type)
     };
+  }
+
+  private buildClientConfigFromCredential(credential: StoredCredential): EnhancedMemoryClientConfig {
+    const { ConfigPresets } = this.sdk;
+    const config = ConfigPresets.ideExtension(
+      credential.type === 'apiKey' ? credential.token : undefined
+    );
+
+    if (credential.type === 'oauth') {
+      config.apiKey = undefined;
+      config.authToken = credential.token;
+    }
+
+    return config;
   }
 
   private convertSDKSearchResults(sdkResults: SDKMemorySearchResult[]): MemorySearchResult[] {

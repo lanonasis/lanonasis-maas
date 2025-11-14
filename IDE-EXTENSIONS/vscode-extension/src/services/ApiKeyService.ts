@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { SecureApiKeyService } from './SecureApiKeyService';
+import { SecureApiKeyService, StoredCredential } from './SecureApiKeyService';
 
 export interface ApiKey {
     id: string;
@@ -61,7 +61,7 @@ export class ApiKeyService {
         const apiUrl = this.config.get<string>('apiUrl', 'https://api.lanonasis.com');
         const gatewayUrl = this.config.get<string>('gatewayUrl', 'https://api.lanonasis.com');
 
-        this.baseUrl = useGateway ? gatewayUrl : apiUrl;
+        this.baseUrl = this.sanitizeBaseUrl(useGateway ? gatewayUrl : apiUrl);
     }
 
     refreshConfig(): void {
@@ -70,21 +70,20 @@ export class ApiKeyService {
     }
 
     private async makeRequest<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-        const apiKey = await this.secureApiKeyService.getApiKeyOrPrompt();
-        if (!apiKey) {
-            throw new Error('API key not configured. Please configure your API key to use Lanonasis services.');
-        }
-
-        const url = `${this.baseUrl}${endpoint}`;
-        const headers = {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${apiKey}`,
-            ...options.headers
-        };
+        const credentials = await this.resolveCredentials();
+        const normalizedEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+        const url = `${this.baseUrl}${normalizedEndpoint}`;
+        const authHeaders: Record<string, string> = credentials.type === 'oauth'
+            ? { 'Authorization': `Bearer ${credentials.token}` }
+            : { 'X-API-Key': credentials.token };
 
         const response = await fetch(url, {
             ...options,
-            headers
+            headers: {
+                'Content-Type': 'application/json',
+                ...authHeaders,
+                ...options.headers
+            }
         });
 
         if (!response.ok) {
@@ -93,6 +92,52 @@ export class ApiKeyService {
         }
 
         return response.json();
+    }
+
+    private sanitizeBaseUrl(url: string): string {
+        if (!url) {
+            return 'https://api.lanonasis.com';
+        }
+
+        let clean = url.trim();
+        // remove trailing slashes
+        clean = clean.replace(/\/+$/, '');
+
+        // remove duplicate /api or /api/v1 suffixes
+        clean = clean.replace(/\/api\/v1$/i, '').replace(/\/api$/i, '');
+
+        return clean || 'https://api.lanonasis.com';
+    }
+
+    private async resolveCredentials(): Promise<StoredCredential> {
+        let credentials = await this.secureApiKeyService.getStoredCredentials();
+
+        if (!credentials) {
+            const value = await this.secureApiKeyService.getApiKeyOrPrompt();
+            if (!value) {
+                throw new Error('API key not configured. Please configure your API key to use Lanonasis services.');
+            }
+
+            credentials = await this.secureApiKeyService.getStoredCredentials();
+
+            if (!credentials) {
+                credentials = {
+                    type: this.looksLikeJwt(value) ? 'oauth' : 'apiKey',
+                    token: value
+                };
+            }
+        }
+
+        return credentials;
+    }
+
+    private looksLikeJwt(token: string): boolean {
+        const parts = token.split('.');
+        if (parts.length !== 3) {
+            return false;
+        }
+        const jwtSegment = /^[A-Za-z0-9-_]+$/;
+        return parts.every(segment => jwtSegment.test(segment));
     }
 
     // ============================================================================
