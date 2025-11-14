@@ -62,31 +62,63 @@ export class MaaSClient {
     endpoint: string, 
     options: RequestInit = {}
   ): Promise<ApiResponse<T>> {
-    // Check if we're using the gateway URL (contains '/api' already)
-    const baseUrl = this.config.apiUrl.includes('/api') 
-      ? this.config.apiUrl.replace('/api', '') 
-      : this.config.apiUrl;
+    // Normalize base URL - remove trailing slash and any /api suffix
+    let baseUrl = this.config.apiUrl.trim();
+    if (baseUrl.endsWith('/')) {
+      baseUrl = baseUrl.slice(0, -1);
+    }
+    if (baseUrl.endsWith('/api') || baseUrl.endsWith('/api/v1')) {
+      baseUrl = baseUrl.replace(/\/api(\/v1)?$/, '');
+    }
     
-    const url = `${baseUrl}/api/v1${endpoint}`;
+    // Ensure endpoint starts with /
+    const normalizedEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+    
+    // Build full URL
+    const url = `${baseUrl}/api/v1${normalizedEndpoint}`;
+    
+    console.log('[MaaSClient] Request:', url);
     
     try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), this.config.timeout || 30000);
+      
       const response = await fetch(url, {
         headers: { ...this.baseHeaders, ...options.headers },
         ...options,
-        signal: AbortSignal.timeout(this.config.timeout || 30000)
+        signal: controller.signal
       });
 
-      const data = await response.json() as T;
+      clearTimeout(timeoutId);
+
+      // Handle non-JSON responses
+      const contentType = response.headers.get('content-type');
+      let data: any;
+      
+      if (contentType?.includes('application/json')) {
+        data = await response.json();
+      } else {
+        const text = await response.text();
+        data = { error: `Unexpected response: ${text.substring(0, 100)}` };
+      }
 
       if (!response.ok) {
-        return { error: (data as any).error || `HTTP ${response.status}` };
+        const errorMsg = data?.error || data?.message || `HTTP ${response.status}: ${response.statusText}`;
+        console.error('[MaaSClient] Error:', errorMsg);
+        return { error: errorMsg };
       }
 
       return { data };
     } catch (error) {
-      return { 
-        error: error instanceof Error ? error.message : 'Network error' 
-      };
+      if (error instanceof Error) {
+        if (error.name === 'AbortError') {
+          console.error('[MaaSClient] Request timeout:', url);
+          return { error: 'Request timeout' };
+        }
+        console.error('[MaaSClient] Fetch error:', error.message);
+        return { error: `Network error: ${error.message}` };
+      }
+      return { error: 'Unknown network error' };
     }
   }
 

@@ -1,5 +1,25 @@
 # Change Log
 
+## [1.5.0] - 2025-11-12
+
+### Fixed
+- 🐛 Critical: Fixed missing compiled files preventing extension from loading
+- 🔐 Fixed OAuth token not being passed to API client after authentication
+- 🌐 Fixed URL construction issues causing malformed API endpoints
+- 📡 Added proper network error handling with timeout detection
+- 💬 Improved error messages with specific, actionable feedback
+
+### Added
+- ✅ Build verification script to prevent incomplete builds
+- 📝 Added detailed console logging for debugging API requests
+- ⏱️ Added initialization delay to allow authentication to settle
+- 🔄 Added retry logic for network operations
+
+### Changed
+- 📦 Updated dependency: @lanonasis/memory-client to published npm package
+- 🎯 Enhanced error categorization (auth, network, timeout, other)
+- 🔍 Better content-type validation before parsing responses
+
 ## [1.4.4] - 2025-11-05
 
 ### Maintenance
