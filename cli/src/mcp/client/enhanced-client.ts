@@ -192,11 +192,7 @@ export class EnhancedMCPClient extends EventEmitter {
       name: `lanonasis-cli-${config.name}`,
       version: '3.0.1'
     }, {
-      capabilities: {
-        tools: {},
-        resources: {},
-        prompts: {}
-      }
+      capabilities: {}
     });
 
     await client.connect(transport);
