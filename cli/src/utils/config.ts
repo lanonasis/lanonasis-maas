@@ -22,7 +22,7 @@ interface CLIConfigData {
   mcpServerPath?: string;
   mcpServerUrl?: string;
   mcpUseRemote?: boolean;
-  mcpPreference?: 'local' | 'remote' | 'auto';
+  mcpPreference?: 'local' | 'remote' | 'websocket' | 'auto';
   // Service Discovery
   discoveredServices?: {
     auth_base: string;
@@ -458,11 +458,14 @@ export class CLIConfig {
     let lastError: unknown;
     for (const endpoint of endpoints) {
       try {
-        await axiosInstance.get(endpoint, {
+        const requestConfig: any = {
           headers,
-          timeout: options.timeout ?? 10000,
-          proxy: options.proxy === false ? false : undefined
-        });
+          timeout: options.timeout ?? 10000
+        };
+        if (options.proxy === false) {
+          requestConfig.proxy = false;
+        }
+        await axiosInstance.get(endpoint, requestConfig);
         return;
       } catch (error) {
         lastError = error;
@@ -500,8 +503,8 @@ export class CLIConfig {
   }
 
   async clearManualEndpointOverrides(): Promise<void> {
-    this.config.manualEndpointOverrides = undefined;
-    this.config.lastManualEndpointUpdate = undefined;
+    delete this.config.manualEndpointOverrides;
+    delete this.config.lastManualEndpointUpdate;
 
     // Rediscover services
     await this.discoverServices();
@@ -990,14 +993,16 @@ export class CLIConfig {
     const preference = this.config.mcpPreference || 'auto';
 
     switch (preference) {
+      case 'websocket':
       case 'remote':
         return true;
       case 'local':
         return false;
       case 'auto':
       default:
-        // Use remote if authenticated, otherwise local
-        return !!this.config.token;
+        // Default to remote/websocket (production mode)
+        // Local mode should only be used when explicitly configured
+        return true;
     }
   }
 }
