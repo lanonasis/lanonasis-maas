@@ -13,7 +13,7 @@ interface CLIConfigData {
     mcpServerPath?: string;
     mcpServerUrl?: string;
     mcpUseRemote?: boolean;
-    mcpPreference?: 'local' | 'remote' | 'auto';
+    mcpPreference?: 'local' | 'remote' | 'websocket' | 'auto';
     discoveredServices?: {
         auth_base: string;
         memory_base: string;

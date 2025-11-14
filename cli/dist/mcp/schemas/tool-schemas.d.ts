@@ -111,16 +111,16 @@ export declare const TopicCreateSchema: z.ZodObject<{
     color: z.ZodOptional<z.ZodString>;
     icon: z.ZodOptional<z.ZodString>;
 }, "strip", z.ZodTypeAny, {
-    description?: string;
-    icon?: string;
     name?: string;
     color?: string;
+    description?: string;
+    icon?: string;
     parent_id?: string;
 }, {
-    description?: string;
-    icon?: string;
     name?: string;
     color?: string;
+    description?: string;
+    icon?: string;
     parent_id?: string;
 }>;
 export declare const TopicUpdateSchema: z.ZodObject<{
@@ -131,18 +131,18 @@ export declare const TopicUpdateSchema: z.ZodObject<{
     color: z.ZodOptional<z.ZodString>;
     icon: z.ZodOptional<z.ZodString>;
 }, "strip", z.ZodTypeAny, {
-    description?: string;
-    icon?: string;
     name?: string;
     color?: string;
     topic_id?: string;
+    description?: string;
+    icon?: string;
     parent_id?: string;
 }, {
-    description?: string;
-    icon?: string;
     name?: string;
     color?: string;
     topic_id?: string;
+    description?: string;
+    icon?: string;
     parent_id?: string;
 }>;
 export declare const TopicListSchema: z.ZodObject<{
@@ -485,16 +485,16 @@ export declare const MCPSchemas: {
             color: z.ZodOptional<z.ZodString>;
             icon: z.ZodOptional<z.ZodString>;
         }, "strip", z.ZodTypeAny, {
-            description?: string;
-            icon?: string;
             name?: string;
             color?: string;
+            description?: string;
+            icon?: string;
             parent_id?: string;
         }, {
-            description?: string;
-            icon?: string;
             name?: string;
             color?: string;
+            description?: string;
+            icon?: string;
             parent_id?: string;
         }>;
         update: z.ZodObject<{
@@ -505,18 +505,18 @@ export declare const MCPSchemas: {
             color: z.ZodOptional<z.ZodString>;
             icon: z.ZodOptional<z.ZodString>;
         }, "strip", z.ZodTypeAny, {
-            description?: string;
-            icon?: string;
             name?: string;
             color?: string;
             topic_id?: string;
+            description?: string;
+            icon?: string;
             parent_id?: string;
         }, {
-            description?: string;
-            icon?: string;
             name?: string;
             color?: string;
             topic_id?: string;
+            description?: string;
+            icon?: string;
             parent_id?: string;
         }>;
         list: z.ZodObject<{
