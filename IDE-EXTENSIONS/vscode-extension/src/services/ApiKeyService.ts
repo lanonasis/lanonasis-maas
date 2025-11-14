@@ -47,7 +47,7 @@ export interface CreateProjectRequest {
 
 export class ApiKeyService {
     private config: vscode.WorkspaceConfiguration;
-    private baseUrl: string = 'https://api.lanonasis.com';
+    private baseUrl: string = 'https://mcp.lanonasis.com';
     private secureApiKeyService: SecureApiKeyService;
 
     constructor(secureApiKeyService: SecureApiKeyService) {
@@ -58,8 +58,8 @@ export class ApiKeyService {
 
     private updateConfig(): void {
         const useGateway = this.config.get<boolean>('useGateway', true);
-        const apiUrl = this.config.get<string>('apiUrl', 'https://api.lanonasis.com');
-        const gatewayUrl = this.config.get<string>('gatewayUrl', 'https://api.lanonasis.com');
+        const apiUrl = this.config.get<string>('apiUrl', 'https://mcp.lanonasis.com');
+        const gatewayUrl = this.config.get<string>('gatewayUrl', 'https://mcp.lanonasis.com');
 
         this.baseUrl = this.sanitizeBaseUrl(useGateway ? gatewayUrl : apiUrl);
     }
@@ -96,7 +96,7 @@ export class ApiKeyService {
 
     private sanitizeBaseUrl(url: string): string {
         if (!url) {
-            return 'https://api.lanonasis.com';
+            return 'https://mcp.lanonasis.com';
         }
 
         let clean = url.trim();
@@ -106,7 +106,7 @@ export class ApiKeyService {
         // remove duplicate /api or /api/v1 suffixes
         clean = clean.replace(/\/api\/v1$/i, '').replace(/\/api$/i, '');
 
-        return clean || 'https://api.lanonasis.com';
+        return clean || 'https://mcp.lanonasis.com';
     }
 
     private async resolveCredentials(): Promise<StoredCredential> {
