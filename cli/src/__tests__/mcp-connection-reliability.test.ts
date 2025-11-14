@@ -30,7 +30,6 @@ jest.mock('chalk', () => ({
   }
 }));
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const mockAxios: any = {
   get: jest.fn(),
   post: jest.fn()
@@ -362,7 +361,6 @@ describe('MCP Connection Reliability Tests', () => {
       // Mock successful HTTP connection but SSE failure
       mockAxios.get.mockResolvedValue({ status: 200, data: { status: 'ok' } });
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const mockSSEInstance: any = {
         onmessage: null,
         onerror: null,
@@ -430,7 +428,6 @@ describe('MCP Connection Reliability Tests', () => {
         readyState: WebSocket.OPEN
       };
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       let onCloseCallback: any = null;
 
       mockWSInstance.on.mockImplementation((event, callback) => {
@@ -651,24 +648,28 @@ describe('MCP Connection Reliability Tests', () => {
     });
 
     it('should list available tools correctly', async () => {
-      // Mock successful connection
-      mockAxios.get.mockResolvedValue({ status: 200, data: { status: 'ok' } });
+      const internalClient = mcpClient as any;
+      internalClient.isConnected = true;
 
-      const mockSSEInstance = {
-        onmessage: null,
-        onerror: null,
-        close: jest.fn()
+      const sdkClientMock: any = {
+        listTools: jest.fn().mockImplementation(async () => ({
+          tools: [
+            {
+              name: 'memory_create_memory',
+              description: 'Create a new memory entry'
+            }
+          ]
+        }))
       };
-      mockEventSourceConstructor.mockImplementation(() => mockSSEInstance);
 
-      await mcpClient.connect({ connectionMode: 'remote' });
+      internalClient.client = sdkClientMock;
 
-      // Should return list of available tools
       const tools = await mcpClient.listTools();
 
+      expect(sdkClientMock.listTools).toHaveBeenCalledTimes(1);
       expect(Array.isArray(tools)).toBe(true);
       expect(tools.length).toBeGreaterThan(0);
-      expect(tools[0]).toHaveProperty('name');
+      expect(tools[0]).toHaveProperty('name', 'memory_create_memory');
       expect(tools[0]).toHaveProperty('description');
     });
   });
