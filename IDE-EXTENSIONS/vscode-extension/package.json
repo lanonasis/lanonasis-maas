@@ -2,7 +2,7 @@
   "name": "lanonasis-memory",
   "displayName": "LanOnasis Memory Assistant",
   "description": "Memory as a Service integration - AI-powered memory management with semantic search (Compatible with CLI v3.0.6+)",
-  "version": "1.4.9",
+  "version": "1.5.1",
   "publisher": "LanOnasis",
   "icon": "images/icon.png",
   "repository": {
@@ -356,7 +356,7 @@
     "build:package": "npm run compile && vsce package --no-dependencies"
   },
   "dependencies": {
-    "@lanonasis/memory-client": "workspace:*",
+    "@lanonasis/memory-client": "^1.0.0",
     "zod": "^3.23.8"
   },
   "devDependencies": {

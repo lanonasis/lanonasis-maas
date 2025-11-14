@@ -77,14 +77,20 @@ export class MemorySidebarProvider implements vscode.WebviewViewProvider {
                 }
             });
 
-            // Initial load with error handling
-            this.refresh().catch(error => {
-                console.error('[Lanonasis] Failed to load sidebar:', error);
-                this._view?.webview.postMessage({
-                    type: 'error',
-                    message: 'Failed to load Lanonasis Memory. Please check the logs or reload VSCode.'
-                });
-            });
+            // Initial load with error handling and delay for auth settlement
+            setTimeout(async () => {
+                try {
+                    // Give auth time to settle
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                    await this.refresh();
+                } catch (error) {
+                    console.error('[Lanonasis] Failed to load sidebar:', error);
+                    this._view?.webview.postMessage({
+                        type: 'error',
+                        message: 'Failed to load Lanonasis Memory. Please try refreshing or check authentication.'
+                    });
+                }
+            }, 500);
         } catch (error) {
             console.error('[Lanonasis] Fatal error in resolveWebviewView:', error);
             vscode.window.showErrorMessage(`Lanonasis extension failed to load: ${error instanceof Error ? error.message : String(error)}`);
@@ -131,7 +137,10 @@ export class MemorySidebarProvider implements vscode.WebviewViewProvider {
                     }
                 });
             } catch (error) {
-                if (error instanceof Error && error.message.includes('Not authenticated')) {
+                const errorMsg = error instanceof Error ? error.message : String(error);
+                
+                // Check for specific error types
+                if (errorMsg.includes('Not authenticated') || errorMsg.includes('401')) {
                     this._view.webview.postMessage({
                         type: 'updateState',
                         state: {
@@ -143,10 +152,19 @@ export class MemorySidebarProvider implements vscode.WebviewViewProvider {
                     return;
                 }
 
-                this._view.webview.postMessage({
-                    type: 'error',
-                    message: error instanceof Error ? error.message : 'Failed to load memories'
-                });
+                // Network/timeout errors
+                if (errorMsg.includes('fetch') || errorMsg.includes('timeout') || errorMsg.includes('Network')) {
+                    this._view.webview.postMessage({
+                        type: 'error',
+                        message: `Connection failed: ${errorMsg}. Check your network and API endpoint configuration.`
+                    });
+                } else {
+                    this._view.webview.postMessage({
+                        type: 'error',
+                        message: `Failed to load memories: ${errorMsg}`
+                    });
+                }
+                
                 this._view.webview.postMessage({
                     type: 'updateState',
                     state: { loading: false }
