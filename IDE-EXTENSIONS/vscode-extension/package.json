@@ -183,8 +183,55 @@
         },
         {
           "command": "lanonasis.authenticate",
-          "when": "view == lanonasisMemories && !lanonasis.authenticated",
+          "when": "view == lanonasisMemories && !lanonasis.authenticated",                                                      
           "group": "navigation"
+        },
+        {
+          "command": "lanonasis.refreshApiKeys",
+          "when": "view == lanonasisApiKeys",
+          "group": "navigation"
+        },
+        {
+          "command": "lanonasis.createProject",
+          "when": "view == lanonasisApiKeys && lanonasis.authenticated",
+          "group": "navigation"
+        },
+        {
+          "command": "lanonasis.authenticate",
+          "when": "view == lanonasisApiKeys && !lanonasis.authenticated",                                                      
+          "group": "navigation"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "lanonasis.viewProjectDetails",
+          "when": "view == lanonasisApiKeys && viewItem == project",
+          "group": "inline"
+        },
+        {
+          "command": "lanonasis.createApiKey",
+          "when": "view == lanonasisApiKeys && viewItem == project",
+          "group": "inline"
+        },
+        {
+          "command": "lanonasis.deleteProject",
+          "when": "view == lanonasisApiKeys && viewItem == project",
+          "group": "inline@2"
+        },
+        {
+          "command": "lanonasis.viewApiKeyDetails",
+          "when": "view == lanonasisApiKeys && viewItem == apiKey",
+          "group": "inline"
+        },
+        {
+          "command": "lanonasis.rotateApiKey",
+          "when": "view == lanonasisApiKeys && viewItem == apiKey",
+          "group": "inline@1"
+        },
+        {
+          "command": "lanonasis.deleteApiKey",
+          "when": "view == lanonasisApiKeys && viewItem == apiKey",
+          "group": "inline@2"
         }
       ]
     },
