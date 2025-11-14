@@ -46,7 +46,7 @@ export interface CreateProjectRequest {
 
 export class ApiKeyService {
     private config: vscode.WorkspaceConfiguration;
-    private baseUrl: string = 'https://api.lanonasis.com';
+    private baseUrl: string = 'https://mcp.lanonasis.com';
 
     constructor() {
         this.config = vscode.workspace.getConfiguration('lanonasis');
@@ -55,8 +55,8 @@ export class ApiKeyService {
 
     private updateConfig(): void {
         const useGateway = this.config.get<boolean>('useGateway', true);
-        const apiUrl = this.config.get<string>('apiUrl', 'https://api.lanonasis.com');
-        const gatewayUrl = this.config.get<string>('gatewayUrl', 'https://api.lanonasis.com');
+        const apiUrl = this.config.get<string>('apiUrl', 'https://mcp.lanonasis.com');
+        const gatewayUrl = this.config.get<string>('gatewayUrl', 'https://mcp.lanonasis.com');
         
         this.baseUrl = useGateway ? gatewayUrl : apiUrl;
     }
@@ -129,36 +129,36 @@ export class ApiKeyService {
     // ============================================================================
 
     async getApiKeys(projectId?: string): Promise<ApiKey[]> {
-        const endpoint = projectId ? `/api/v1/projects/${projectId}/api-keys` : '/api/v1/api-keys';
+        const endpoint = projectId ? `/api/v1/projects/${projectId}/api-keys` : '/api/v1/auth/api-keys';
         return this.makeRequest<ApiKey[]>(endpoint);
     }
 
     async getApiKey(keyId: string): Promise<ApiKey> {
-        return this.makeRequest<ApiKey>(`/api/v1/api-keys/${keyId}`);
+        return this.makeRequest<ApiKey>(`/api/v1/auth/api-keys/${keyId}`);
     }
 
     async createApiKey(request: CreateApiKeyRequest): Promise<ApiKey> {
-        return this.makeRequest<ApiKey>('/api/v1/api-keys', {
+        return this.makeRequest<ApiKey>('/api/v1/auth/api-keys', {
             method: 'POST',
             body: JSON.stringify(request)
         });
     }
 
     async updateApiKey(keyId: string, updates: Partial<CreateApiKeyRequest>): Promise<ApiKey> {
-        return this.makeRequest<ApiKey>(`/api/v1/api-keys/${keyId}`, {
+        return this.makeRequest<ApiKey>(`/api/v1/auth/api-keys/${keyId}`, {
             method: 'PUT',
             body: JSON.stringify(updates)
         });
     }
 
     async deleteApiKey(keyId: string): Promise<void> {
-        await this.makeRequest<void>(`/api/v1/api-keys/${keyId}`, {
+        await this.makeRequest<void>(`/api/v1/auth/api-keys/${keyId}`, {
             method: 'DELETE'
         });
     }
 
     async rotateApiKey(keyId: string): Promise<ApiKey> {
-        return this.makeRequest<ApiKey>(`/api/v1/api-keys/${keyId}/rotate`, {
+        return this.makeRequest<ApiKey>(`/api/v1/auth/api-keys/${keyId}/rotate`, {
             method: 'POST'
         });
     }
