@@ -1,6 +1,6 @@
 {
   "name": "@lanonasis/cli",
-  "version": "3.6.6",
+  "version": "3.6.7",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -29,9 +29,12 @@
     "commander": "^12.1.0",
     "date-fns": "^4.1.0",
     "dotenv": "^16.4.5",
+    "eventsource": "^4.0.0",
     "inquirer": "^9.3.6",
     "jwt-decode": "^4.0.0",
+    "open": "^10.2.0",
     "ora": "^8.0.1",
+    "table": "^6.9.0",
     "word-wrap": "^1.2.5",
     "ws": "^8.18.0",
     "zod": "^3.24.4"
@@ -42,13 +45,8 @@
   },
   "devDependencies": {
     "@types/cli-progress": "^3.11.6",
-    "@types/cli-table3": "^0.6.5",
-    "@types/dotenv": "^8.2.0",
     "@types/inquirer": "^9.0.7",
-    "@types/jwt-decode": "^3.1.3",
     "@types/node": "^22.10.2",
-    "@types/ora": "^3.2.1",
-    "@types/word-wrap": "^1.2.5",
     "@types/ws": "^8.5.12",
     "rimraf": "^5.0.7",
     "typescript": "^5.7.2"
