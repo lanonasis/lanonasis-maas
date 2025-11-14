@@ -422,13 +422,13 @@ export function mcpCommands(program: Command) {
         await config.setAndSave('mcpPreference', 'auto');
         console.log(chalk.green('✓ Set MCP preference to auto-detect'));
       } else {
-        const current = config.get('mcpPreference') || 'websocket';
+        const current = config.get('mcpPreference') || 'auto';
         console.log(`Current MCP preference: ${chalk.cyan(current)}`);
         console.log('\nOptions:');
         console.log('  --prefer-websocket : Use WebSocket mode (recommended for production)');
         console.log('  --prefer-remote    : Use remote REST/SSE mode (alternative)');
         console.log('  --prefer-local     : Use local stdio mode (development only)');
-        console.log('  --auto             : Auto-detect based on configuration');
+        console.log('  --auto             : Auto-detect based on configuration (default)');
       }
     });
 
