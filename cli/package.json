@@ -1,6 +1,6 @@
 {
   "name": "@lanonasis/cli",
-  "version": "3.6.6",
+  "version": "3.6.7",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
