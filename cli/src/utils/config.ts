@@ -458,11 +458,14 @@ export class CLIConfig {
     let lastError: unknown;
     for (const endpoint of endpoints) {
       try {
-        await axiosInstance.get(endpoint, {
+        const requestConfig: any = {
           headers,
-          timeout: options.timeout ?? 10000,
-          proxy: options.proxy === false ? false : undefined
-        });
+          timeout: options.timeout ?? 10000
+        };
+        if (options.proxy === false) {
+          requestConfig.proxy = false;
+        }
+        await axiosInstance.get(endpoint, requestConfig);
         return;
       } catch (error) {
         lastError = error;
@@ -500,8 +503,8 @@ export class CLIConfig {
   }
 
   async clearManualEndpointOverrides(): Promise<void> {
-    this.config.manualEndpointOverrides = undefined;
-    this.config.lastManualEndpointUpdate = undefined;
+    delete this.config.manualEndpointOverrides;
+    delete this.config.lastManualEndpointUpdate;
 
     // Rediscover services
     await this.discoverServices();
