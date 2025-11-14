@@ -177,8 +177,22 @@ export class ApiKeyService {
     // ============================================================================
 
     async getApiKeys(projectId?: string): Promise<ApiKey[]> {
-        const endpoint = projectId ? `/api/v1/projects/${projectId}/api-keys` : '/api/v1/auth/api-keys';
-        return this.makeRequest<ApiKey[]>(endpoint);
+        const endpoint = projectId ? `/api/v1/projects/${projectId}/api-keys` : '/api/v1/auth/api-keys';                                                        
+        const response = await this.makeRequest<any>(endpoint);
+        
+        // Handle wrapped response format from /api/v1/auth/api-keys
+        // which returns { success: true, data: [...] }
+        if (response && typeof response === 'object' && 'data' in response && Array.isArray(response.data)) {
+            return response.data;
+        }
+        
+        // Handle direct array response from /api/v1/projects/:projectId/api-keys
+        if (Array.isArray(response)) {
+            return response;
+        }
+        
+        // Fallback: return empty array if response format is unexpected
+        return [];
     }
 
     async getApiKey(keyId: string): Promise<ApiKey> {
