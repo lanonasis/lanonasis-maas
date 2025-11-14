@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { MemoryTreeProvider } from './providers/MemoryTreeProvider';
 import { MemoryCompletionProvider } from './providers/MemoryCompletionProvider';
-import { ApiKeyTreeProvider } from './providers/ApiKeyTreeProvider';
+import { ApiKeyTreeProvider, ApiKeyTreeItem, ProjectTreeItem } from './providers/ApiKeyTreeProvider';
 import { MemorySidebarProvider } from './panels/MemorySidebarProvider';
 import { MemoryService } from './services/MemoryService';
 import { EnhancedMemoryService } from './services/EnhancedMemoryService';
@@ -205,8 +205,47 @@ export async function activate(context: vscode.ExtensionContext) {
             await viewProjects(apiKeyService);
         }),
 
-        vscode.commands.registerCommand('lanonasis.refreshApiKeys', async () => {
+        vscode.commands.registerCommand('lanonasis.refreshApiKeys', async () => {                                               
             apiKeyTreeProvider.refresh(true);
+        }),
+
+        // Context menu commands for API Keys tree
+        vscode.commands.registerCommand('lanonasis.viewProjectDetails', async (item: ProjectTreeItem) => {
+            if (item && item.project) {
+                await showProjectDetails(item.project, apiKeyService);
+            }
+        }),
+
+        vscode.commands.registerCommand('lanonasis.viewApiKeyDetails', async (item: ApiKeyTreeItem) => {
+            if (item && item.apiKey) {
+                await showApiKeyDetails(item.apiKey);
+            }
+        }),
+
+        vscode.commands.registerCommand('lanonasis.createApiKey', async (item: ProjectTreeItem) => {
+            if (item && item.project) {
+                await createApiKeyForProject(item.project, apiKeyService, apiKeyTreeProvider);
+            } else {
+                await createApiKey(apiKeyService, apiKeyTreeProvider);
+            }
+        }),
+
+        vscode.commands.registerCommand('lanonasis.rotateApiKey', async (item: ApiKeyTreeItem) => {
+            if (item && item.apiKey) {
+                await rotateApiKey(item.apiKey, apiKeyService, apiKeyTreeProvider);
+            }
+        }),
+
+        vscode.commands.registerCommand('lanonasis.deleteApiKey', async (item: ApiKeyTreeItem) => {
+            if (item && item.apiKey) {
+                await deleteApiKey(item.apiKey, apiKeyService, apiKeyTreeProvider);
+            }
+        }),
+
+        vscode.commands.registerCommand('lanonasis.deleteProject', async (item: ProjectTreeItem) => {
+            if (item && item.project) {
+                await deleteProject(item.project, apiKeyService, apiKeyTreeProvider);
+            }
         }),
 
         vscode.commands.registerCommand('lanonasis.showConnectionInfo', async () => {
@@ -880,7 +919,7 @@ async function viewApiKeys(apiKeyService: ApiKeyService) {
     }
 }
 
-async function createApiKey(apiKeyService: ApiKeyService) {
+async function createApiKey(apiKeyService: ApiKeyService, apiKeyTreeProvider?: ApiKeyTreeProvider) {
     try {
         // Get projects first
         const projects = await apiKeyService.getProjects();
@@ -1135,6 +1174,173 @@ ${JSON.stringify(project.settings, null, 2)}
         });
     } catch (error) {
         vscode.window.showErrorMessage(`Failed to load project details: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+}
+
+async function createApiKeyForProject(project: Project, apiKeyService: ApiKeyService, apiKeyTreeProvider?: ApiKeyTreeProvider) {
+    try {
+        const name = await vscode.window.showInputBox({
+            prompt: 'API Key Name',
+            placeHolder: 'Enter a name for your API key'
+        });
+
+        if (!name) return;
+
+        const value = await vscode.window.showInputBox({
+            prompt: 'API Key Value',
+            placeHolder: 'Enter the API key value',
+            password: true
+        });
+
+        if (!value) return;
+
+        type KeyTypeOption = vscode.QuickPickItem & { value: CreateApiKeyRequest['keyType'] };
+        const keyTypes: KeyTypeOption[] = [
+            { label: 'API Key', value: 'api_key' },
+            { label: 'Database URL', value: 'database_url' },
+            { label: 'OAuth Token', value: 'oauth_token' },
+            { label: 'Certificate', value: 'certificate' },
+            { label: 'SSH Key', value: 'ssh_key' },
+            { label: 'Webhook Secret', value: 'webhook_secret' },
+            { label: 'Encryption Key', value: 'encryption_key' }
+        ];
+
+        const selectedKeyType = await vscode.window.showQuickPick(keyTypes, {
+            placeHolder: 'Select key type'
+        });
+
+        if (!selectedKeyType) return;
+
+        const environments: vscode.QuickPickItem[] = [
+            { label: 'Development', description: 'For development use' },
+            { label: 'Staging', description: 'For staging/testing' },
+            { label: 'Production', description: 'For production use' }
+        ];
+
+        const selectedEnv = await vscode.window.showQuickPick(environments, {
+            placeHolder: 'Select environment'
+        });
+
+        if (!selectedEnv) return;
+
+        const accessLevels: vscode.QuickPickItem[] = [
+            { label: 'Public', description: 'Publicly accessible' },
+            { label: 'Authenticated', description: 'Requires authentication' },
+            { label: 'Team', description: 'Team members only' },
+            { label: 'Admin', description: 'Administrators only' },
+            { label: 'Enterprise', description: 'Enterprise level access' }
+        ];
+
+        const selectedAccess = await vscode.window.showQuickPick(accessLevels, {
+            placeHolder: 'Select access level'
+        });
+
+        if (!selectedAccess) return;
+
+        const request: CreateApiKeyRequest = {
+            name,
+            value,
+            keyType: selectedKeyType.value,
+            environment: selectedEnv.label.toLowerCase() as 'development' | 'staging' | 'production',
+            accessLevel: selectedAccess.label.toLowerCase() as 'public' | 'authenticated' | 'team' | 'admin' | 'enterprise',
+            projectId: project.id
+        };
+
+        await vscode.window.withProgress({
+            location: vscode.ProgressLocation.Notification,
+            title: 'Creating API key...',
+            cancellable: false
+        }, async () => {
+            const apiKey = await apiKeyService.createApiKey(request);
+            vscode.window.showInformationMessage(`API key "${apiKey.name}" created successfully!`);
+            
+            if (apiKeyTreeProvider) {
+                await apiKeyTreeProvider.addApiKey(project.id, apiKey);
+            }
+        });
+    } catch (error) {
+        vscode.window.showErrorMessage(`Failed to create API key: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+}
+
+async function rotateApiKey(apiKey: ApiKey, apiKeyService: ApiKeyService, apiKeyTreeProvider?: ApiKeyTreeProvider) {
+    try {
+        const confirmed = await vscode.window.showWarningMessage(
+            `Are you sure you want to rotate API key "${apiKey.name}"? The old key will be invalidated.`,
+            { modal: true },
+            'Rotate Key'
+        );
+
+        if (confirmed !== 'Rotate Key') return;
+
+        await vscode.window.withProgress({
+            location: vscode.ProgressLocation.Notification,
+            title: 'Rotating API key...',
+            cancellable: false
+        }, async () => {
+            const rotated = await apiKeyService.rotateApiKey(apiKey.id);
+            vscode.window.showInformationMessage(`API key "${rotated.name}" rotated successfully!`);
+            
+            if (apiKeyTreeProvider) {
+                await apiKeyTreeProvider.updateApiKey(apiKey.projectId, rotated);
+            }
+        });
+    } catch (error) {
+        vscode.window.showErrorMessage(`Failed to rotate API key: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+}
+
+async function deleteApiKey(apiKey: ApiKey, apiKeyService: ApiKeyService, apiKeyTreeProvider?: ApiKeyTreeProvider) {
+    try {
+        const confirmed = await vscode.window.showWarningMessage(
+            `Are you sure you want to delete API key "${apiKey.name}"? This action cannot be undone.`,
+            { modal: true },
+            'Delete'
+        );
+
+        if (confirmed !== 'Delete') return;
+
+        await vscode.window.withProgress({
+            location: vscode.ProgressLocation.Notification,
+            title: 'Deleting API key...',
+            cancellable: false
+        }, async () => {
+            await apiKeyService.deleteApiKey(apiKey.id);
+            vscode.window.showInformationMessage(`API key "${apiKey.name}" deleted successfully.`);
+            
+            if (apiKeyTreeProvider) {
+                await apiKeyTreeProvider.removeApiKey(apiKey.projectId, apiKey.id);
+            }
+        });
+    } catch (error) {
+        vscode.window.showErrorMessage(`Failed to delete API key: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+}
+
+async function deleteProject(project: Project, apiKeyService: ApiKeyService, apiKeyTreeProvider?: ApiKeyTreeProvider) {
+    try {
+        const confirmed = await vscode.window.showWarningMessage(
+            `Are you sure you want to delete project "${project.name}"? All API keys in this project will also be deleted. This action cannot be undone.`,
+            { modal: true },
+            'Delete'
+        );
+
+        if (confirmed !== 'Delete') return;
+
+        await vscode.window.withProgress({
+            location: vscode.ProgressLocation.Notification,
+            title: 'Deleting project...',
+            cancellable: false
+        }, async () => {
+            await apiKeyService.deleteProject(project.id);
+            vscode.window.showInformationMessage(`Project "${project.name}" deleted successfully.`);
+            
+            if (apiKeyTreeProvider) {
+                await apiKeyTreeProvider.removeProject(project.id);
+            }
+        });
+    } catch (error) {
+        vscode.window.showErrorMessage(`Failed to delete project: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
 }
 
