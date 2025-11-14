@@ -64,15 +64,34 @@ class MemoryService {
         return null;
     }
     async loadClient() {
-        const apiKey = await this.resolveApiKey();
         const apiUrl = this.config.get('apiUrl', 'https://api.lanonasis.com');
         const gatewayUrl = this.config.get('gatewayUrl', 'https://api.lanonasis.com');
         const useGateway = this.config.get('useGateway', true);
         const effectiveUrl = useGateway ? gatewayUrl : apiUrl;
-        if (apiKey) {
+        // Try OAuth token first, then API key
+        let authToken = null;
+        let apiKey = null;
+        if (this.secureApiKeyService) {
+            try {
+                // Check for OAuth Bearer token first
+                const authHeader = await this.secureApiKeyService.getAuthenticationHeader();
+                if (authHeader) {
+                    authToken = authHeader.replace('Bearer ', '');
+                }
+            }
+            catch (error) {
+                console.warn('[MemoryService] Failed to get OAuth token', error);
+            }
+            // Fallback to API key if no OAuth token
+            if (!authToken) {
+                apiKey = await this.resolveApiKey();
+            }
+        }
+        if (authToken || apiKey) {
             this.client = (0, memory_client_sdk_1.createMaaSClient)({
                 apiUrl: effectiveUrl,
-                apiKey,
+                authToken: authToken || undefined,
+                apiKey: apiKey || undefined,
                 timeout: 30000
             });
             this.authenticated = true;

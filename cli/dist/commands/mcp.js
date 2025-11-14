@@ -82,8 +82,9 @@ export function mcpCommands(program) {
                 connectionMode = 'local';
             }
             else {
-                // Default to remote if authenticated, otherwise local
-                connectionMode = config.get('token') ? 'remote' : 'local';
+                // Default to websocket (production mode) for all users
+                // Local mode should only be used explicitly for development
+                connectionMode = 'websocket';
             }
             // Save preferences
             config.set('mcpConnectionMode', connectionMode);
@@ -164,17 +165,42 @@ export function mcpCommands(program) {
         .description('Show MCP connection status')
         .action(async () => {
         const client = getMCPClient();
+        // Reload config from disk to get latest preference
+        await client.init();
         const status = client.getConnectionStatus();
         console.log(chalk.cyan('\n📊 MCP Connection Status'));
         console.log(chalk.cyan('========================'));
         console.log(`Status: ${status.connected ? chalk.green('Connected') : chalk.red('Disconnected')}`);
-        console.log(`Mode: ${status.mode === 'remote' ? chalk.blue('Remote (API)') : chalk.yellow('Local')}`);
+        // Display mode with proper labels
+        let modeDisplay;
+        switch (status.mode) {
+            case 'websocket':
+                modeDisplay = chalk.blue('WebSocket');
+                break;
+            case 'remote':
+                modeDisplay = chalk.blue('Remote (HTTP/SSE)');
+                break;
+            case 'local':
+                modeDisplay = chalk.yellow('Local (stdio)');
+                break;
+            default:
+                modeDisplay = chalk.gray(status.mode);
+        }
+        console.log(`Mode: ${modeDisplay}`);
         console.log(`Server: ${status.server}`);
-        if (status.connected && status.mode === 'remote') {
-            console.log(`\n${chalk.cyan('Features:')}`);
-            console.log('• Real-time updates via SSE');
-            console.log('• Authenticated API access');
-            console.log('• MCP-compatible tool interface');
+        if (status.connected) {
+            if (status.mode === 'remote') {
+                console.log(`\n${chalk.cyan('Features:')}`);
+                console.log('• Real-time updates via SSE');
+                console.log('• Authenticated API access');
+                console.log('• MCP-compatible tool interface');
+            }
+            else if (status.mode === 'websocket') {
+                console.log(`\n${chalk.cyan('Features:')}`);
+                console.log('• Bi-directional real-time communication');
+                console.log('• Authenticated WebSocket connection');
+                console.log('• Production-ready MCP server');
+            }
         }
     });
     // List tools command
@@ -341,18 +367,23 @@ export function mcpCommands(program) {
     // Configure MCP preferences
     mcp.command('config')
         .description('Configure MCP preferences')
-        .option('--prefer-remote', 'Prefer remote MCP server when available')
-        .option('--prefer-local', 'Prefer local MCP server')
+        .option('--prefer-websocket', 'Prefer WebSocket MCP connection (recommended for production)')
+        .option('--prefer-remote', 'Prefer remote MCP server (REST/SSE mode)')
+        .option('--prefer-local', 'Prefer local MCP server (development only)')
         .option('--auto', 'Auto-detect best connection mode')
         .action(async (options) => {
         const config = new CLIConfig();
-        if (options.preferRemote) {
+        if (options.preferWebsocket) {
+            await config.setAndSave('mcpPreference', 'websocket');
+            console.log(chalk.green('✓ Set MCP preference to WebSocket (production mode)'));
+        }
+        else if (options.preferRemote) {
             await config.setAndSave('mcpPreference', 'remote');
-            console.log(chalk.green('✓ Set MCP preference to remote'));
+            console.log(chalk.green('✓ Set MCP preference to remote (REST/SSE mode)'));
         }
         else if (options.preferLocal) {
             await config.setAndSave('mcpPreference', 'local');
-            console.log(chalk.green('✓ Set MCP preference to local'));
+            console.log(chalk.green('✓ Set MCP preference to local (development only)'));
         }
         else if (options.auto) {
             await config.setAndSave('mcpPreference', 'auto');
@@ -362,9 +393,10 @@ export function mcpCommands(program) {
             const current = config.get('mcpPreference') || 'auto';
             console.log(`Current MCP preference: ${chalk.cyan(current)}`);
             console.log('\nOptions:');
-            console.log('  --prefer-remote : Use remote MCP server (mcp.lanonasis.com)');
-            console.log('  --prefer-local  : Use local MCP server');
-            console.log('  --auto          : Auto-detect based on authentication');
+            console.log('  --prefer-websocket : Use WebSocket mode (recommended for production)');
+            console.log('  --prefer-remote    : Use remote REST/SSE mode (alternative)');
+            console.log('  --prefer-local     : Use local stdio mode (development only)');
+            console.log('  --auto             : Auto-detect based on configuration (default)');
         }
     });
     // Diagnose MCP connection issues
