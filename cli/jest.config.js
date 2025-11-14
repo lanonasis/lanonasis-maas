@@ -36,11 +36,17 @@ export default {
   transform: {
     '^.+\\.ts$': ['ts-jest', {
       useESM: true,
-      tsconfig: 'tsconfig.json'
+      tsconfig: {
+        target: 'ES2022',
+        module: 'ES2022',
+        moduleResolution: 'node',
+        esModuleInterop: true,
+        allowSyntheticDefaultImports: true
+      }
     }]
   },
   transformIgnorePatterns: [
-    'node_modules/(?!(chalk)/)'
+    'node_modules/(?!(chalk|inquirer|ora|cli-progress|cli-table3)/)'
   ],
   // Mock console methods to reduce noise in tests
   setupFilesAfterEnv: ['<rootDir>/src/__tests__/setup.ts']

@@ -8,10 +8,18 @@ import { URL, URLSearchParams } from 'url';
  * Manages API keys using VS Code SecretStorage API
  * Supports both OAuth and direct API key authentication
  */
+export type CredentialType = 'oauth' | 'apiKey';
+
+export interface StoredCredential {
+    type: CredentialType;
+    token: string;
+}
+
 export class SecureApiKeyService {
     private static readonly API_KEY_KEY = 'lanonasis.apiKey';
     private static readonly AUTH_TOKEN_KEY = 'lanonasis.authToken';
     private static readonly REFRESH_TOKEN_KEY = 'lanonasis.refreshToken';
+    private static readonly CREDENTIAL_TYPE_KEY = 'lanonasis.credentialType';
     private static readonly CALLBACK_PORT = 8080;
     
     private context: vscode.ExtensionContext;
@@ -41,10 +49,9 @@ export class SecureApiKeyService {
         }
 
         // Check OAuth token
-        const authHeader = await this.getAuthenticationHeader();
-        if (authHeader) {
-            // Extract token from Bearer header
-            return authHeader.replace('Bearer ', '');
+        const credential = await this.getStoredCredentials();
+        if (credential?.type === 'oauth') {
+            return credential.token;
         }
 
         // Prompt user if not available
@@ -159,7 +166,7 @@ export class SecureApiKeyService {
         });
 
         if (apiKey) {
-            await this.storeApiKey(apiKey);
+            await this.storeApiKey(apiKey, 'apiKey');
             await this.context.secrets.delete(SecureApiKeyService.AUTH_TOKEN_KEY);
             await this.context.secrets.delete(SecureApiKeyService.REFRESH_TOKEN_KEY);
             this.log('API key stored securely');
@@ -242,7 +249,7 @@ export class SecureApiKeyService {
                                 const token = await this.exchangeCodeForToken(code, codeVerifier, redirectUri, authUrl);
 
                                 // Store token securely
-                                await this.storeApiKey(token.access_token);
+                                await this.storeApiKey(token.access_token, 'oauth');
                                 if (token.refresh_token) {
                                     await this.context.secrets.store(SecureApiKeyService.REFRESH_TOKEN_KEY, token.refresh_token);
                                 }
@@ -302,23 +309,37 @@ export class SecureApiKeyService {
      * Get authentication header (OAuth token or API key)
      */
     async getAuthenticationHeader(): Promise<string | null> {
-        // Check for OAuth token first
+        const credential = await this.getStoredCredentials();
+        if (credential?.type === 'oauth') {
+            return `Bearer ${credential.token}`;
+        }
+        return null;
+    }
+
+    /**
+     * Get the active credentials (OAuth token vs API key) for downstream services
+     */
+    async getStoredCredentials(): Promise<StoredCredential | null> {
+        // Prefer OAuth tokens when available
         const authToken = await this.context.secrets.get(SecureApiKeyService.AUTH_TOKEN_KEY);
         if (authToken) {
             try {
                 const token = JSON.parse(authToken);
-                if (this.isTokenValid(token)) {
-                    return `Bearer ${token.access_token}`;
+                if (token?.access_token && this.isTokenValid(token)) {
+                    return { type: 'oauth', token: token.access_token };
                 }
-            } catch {
-                // Invalid token format, continue to API key
+            } catch (error) {
+                this.logError('Failed to parse stored OAuth token', error);
             }
         }
 
-        // Fallback to API key
         const apiKey = await this.getApiKey();
         if (apiKey) {
-            return `Bearer ${apiKey}`;
+            const storedType = await this.context.secrets.get(SecureApiKeyService.CREDENTIAL_TYPE_KEY) as CredentialType | null;
+            const inferredType: CredentialType = storedType === 'oauth' || storedType === 'apiKey'
+                ? storedType
+                : (this.looksLikeJwt(apiKey) ? 'oauth' : 'apiKey');
+            return { type: inferredType, token: apiKey };
         }
 
         return null;
@@ -331,14 +352,16 @@ export class SecureApiKeyService {
         await this.context.secrets.delete(SecureApiKeyService.API_KEY_KEY);
         await this.context.secrets.delete(SecureApiKeyService.AUTH_TOKEN_KEY);
         await this.context.secrets.delete(SecureApiKeyService.REFRESH_TOKEN_KEY);
+        await this.context.secrets.delete(SecureApiKeyService.CREDENTIAL_TYPE_KEY);
         this.log('API key removed from secure storage');
     }
 
     /**
      * Store API key securely
      */
-    private async storeApiKey(apiKey: string): Promise<void> {
+    private async storeApiKey(apiKey: string, type: CredentialType): Promise<void> {
         await this.context.secrets.store(SecureApiKeyService.API_KEY_KEY, apiKey);
+        await this.context.secrets.store(SecureApiKeyService.CREDENTIAL_TYPE_KEY, type);
     }
 
     /**
@@ -362,7 +385,7 @@ export class SecureApiKeyService {
 
         if (legacyKey) {
             // Migrate to secure storage
-            await this.storeApiKey(legacyKey);
+            await this.storeApiKey(legacyKey, 'apiKey');
             this.log('Migrated API key from configuration to secure storage');
 
             // Optionally clear from config (but keep it for now for backward compatibility)
@@ -436,6 +459,15 @@ export class SecureApiKeyService {
     private isTokenValid(token: { expires_at?: number }): boolean {
         if (!token.expires_at) return true;
         return Date.now() < token.expires_at - 60000; // 1 minute buffer
+    }
+
+    private looksLikeJwt(value: string): boolean {
+        const parts = value.split('.');
+        if (parts.length !== 3) {
+            return false;
+        }
+        const jwtSegment = /^[A-Za-z0-9-_]+$/;
+        return parts.every(segment => jwtSegment.test(segment));
     }
 
     /**
