@@ -178,6 +178,50 @@ export function mcpCommands(program) {
         // Reload config from disk to get latest preference
         await client.init();
         const status = client.getConnectionStatus();
+        // Also perform a lightweight live health check against the MCP HTTP endpoint
+        const config = new CLIConfig();
+        await config.init();
+        let healthLabel = chalk.gray('Unknown');
+        let healthDetails;
+        try {
+            const axios = (await import('axios')).default;
+            // Derive MCP health URL from discovered REST base (e.g. https://mcp.lanonasis.com/api/v1 -> https://mcp.lanonasis.com/health)
+            const restUrl = config.getMCPRestUrl();
+            const rootBase = restUrl.replace(/\/api\/v1$/, '');
+            const healthUrl = `${rootBase}/health`;
+            const token = config.getToken();
+            const vendorKey = config.getVendorKey();
+            const headers = {};
+            if (vendorKey) {
+                headers['X-API-Key'] = vendorKey;
+                headers['X-Auth-Method'] = 'vendor_key';
+            }
+            else if (token) {
+                headers['Authorization'] = `Bearer ${token}`;
+                headers['X-Auth-Method'] = 'jwt';
+            }
+            const response = await axios.get(healthUrl, {
+                headers,
+                timeout: 5000
+            });
+            const overallStatus = String(response.data?.status ?? '').toLowerCase();
+            const ok = response.status === 200 && (!overallStatus || overallStatus === 'healthy');
+            if (ok) {
+                healthLabel = chalk.green('Reachable');
+            }
+            else {
+                healthLabel = chalk.yellow('Degraded');
+            }
+        }
+        catch (error) {
+            healthLabel = chalk.red('Unreachable');
+            if (error instanceof Error) {
+                healthDetails = error.message;
+            }
+            else if (error !== null && error !== undefined) {
+                healthDetails = String(error);
+            }
+        }
         console.log(chalk.cyan('\n📊 MCP Connection Status'));
         console.log(chalk.cyan('========================'));
         console.log(`Status: ${status.connected ? chalk.green('Connected') : chalk.red('Disconnected')}`);
@@ -198,6 +242,10 @@ export function mcpCommands(program) {
         }
         console.log(`Mode: ${modeDisplay}`);
         console.log(`Server: ${status.server}`);
+        console.log(`Health: ${healthLabel}`);
+        if (healthDetails && process.env.CLI_VERBOSE === 'true') {
+            console.log(chalk.gray(`Health details: ${healthDetails}`));
+        }
         if (status.connected) {
             if (status.mode === 'remote') {
                 console.log(`\n${chalk.cyan('Features:')}`);
