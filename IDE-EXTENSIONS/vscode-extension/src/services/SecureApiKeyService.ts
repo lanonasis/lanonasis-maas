@@ -260,7 +260,7 @@ export class SecureApiKeyService {
                                   <html>
                                     <head><title>Authentication Success</title></head>
                                     <body>
-                                      <h1 style="color: green;">? Authentication Successful!</h1>
+                                      <h1 style="color: green;">✓ Authentication Successful!</h1>
                                       <p>You can close this window and return to VS Code.</p>
                                       <script>setTimeout(() => window.close(), 2000);</script>
                                     </body>

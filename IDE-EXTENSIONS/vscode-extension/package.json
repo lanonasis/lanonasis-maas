@@ -2,7 +2,7 @@
   "name": "lanonasis-memory",
   "displayName": "LanOnasis Memory Assistant",
   "description": "Memory as a Service integration - AI-powered memory management with semantic search (Compatible with CLI v3.0.6+)",
-  "version": "1.5.3",
+  "version": "1.5.4",
   "publisher": "LanOnasis",
   "icon": "images/icon.png",
   "repository": {
@@ -418,5 +418,8 @@
     "typescript": "^5.8.3",
     "webpack": "^5.101.0",
     "webpack-cli": "^6.0.1"
+  },
+  "overrides": {
+    "js-yaml": "^4.1.1"
   }
 }
