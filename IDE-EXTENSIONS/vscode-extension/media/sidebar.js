@@ -9,6 +9,7 @@
         loading: true,
         enhancedMode: false,
         cliVersion: null,
+        cached: false,
         expandedGroups: new Set(['context', 'project', 'knowledge'])
     };
 
@@ -142,6 +143,7 @@
                         <span class="btn-icon">🔄 Refresh</span>
                     </button>
                 </div>
+                ${state.cached ? '<div class="cache-indicator">📦 Cached data (click refresh for latest)</div>' : ''}
             </div>
 
             ${hasMemories ? getMemoriesHTML() : getEmptyStateHTML()}

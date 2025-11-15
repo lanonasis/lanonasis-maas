@@ -64,8 +64,8 @@ class MemoryService {
         return null;
     }
     async loadClient() {
-        const apiUrl = this.config.get('apiUrl', 'https://api.lanonasis.com');
-        const gatewayUrl = this.config.get('gatewayUrl', 'https://api.lanonasis.com');
+        const apiUrl = this.config.get('apiUrl', 'https://mcp.lanonasis.com');
+        const gatewayUrl = this.config.get('gatewayUrl', 'https://mcp.lanonasis.com');
         const useGateway = this.config.get('useGateway', true);
         const effectiveUrl = useGateway ? gatewayUrl : apiUrl;
         // Try OAuth token first, then API key
@@ -122,8 +122,8 @@ class MemoryService {
         return this.authenticated;
     }
     async testConnection(apiKey) {
-        const apiUrl = this.config.get('apiUrl', 'https://api.lanonasis.com');
-        const gatewayUrl = this.config.get('gatewayUrl', 'https://api.lanonasis.com');
+        const apiUrl = this.config.get('apiUrl', 'https://mcp.lanonasis.com');
+        const gatewayUrl = this.config.get('gatewayUrl', 'https://mcp.lanonasis.com');
         const useGateway = this.config.get('useGateway', true);
         const effectiveUrl = useGateway ? gatewayUrl : apiUrl;
         let testClient = null;
