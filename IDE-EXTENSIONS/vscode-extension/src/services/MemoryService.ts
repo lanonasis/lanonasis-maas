@@ -38,8 +38,8 @@ export class MemoryService implements IMemoryService {
     }
 
     private async loadClient(): Promise<void> {
-        const apiUrl = this.config.get<string>('apiUrl', 'https://api.lanonasis.com');
-        const gatewayUrl = this.config.get<string>('gatewayUrl', 'https://api.lanonasis.com');
+        const apiUrl = this.config.get<string>('apiUrl', 'https://mcp.lanonasis.com');
+        const gatewayUrl = this.config.get<string>('gatewayUrl', 'https://mcp.lanonasis.com');
         const useGateway = this.config.get<boolean>('useGateway', true);
         const effectiveUrl = useGateway ? gatewayUrl : apiUrl;
 
@@ -103,8 +103,8 @@ export class MemoryService implements IMemoryService {
     }
 
     public async testConnection(apiKey?: string): Promise<void> {
-        const apiUrl = this.config.get<string>('apiUrl', 'https://api.lanonasis.com');
-        const gatewayUrl = this.config.get<string>('gatewayUrl', 'https://api.lanonasis.com');
+        const apiUrl = this.config.get<string>('apiUrl', 'https://mcp.lanonasis.com');
+        const gatewayUrl = this.config.get<string>('gatewayUrl', 'https://mcp.lanonasis.com');
         const useGateway = this.config.get<boolean>('useGateway', true);
         const effectiveUrl = useGateway ? gatewayUrl : apiUrl;
 

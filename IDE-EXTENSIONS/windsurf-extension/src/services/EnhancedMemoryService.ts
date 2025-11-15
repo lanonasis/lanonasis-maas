@@ -42,7 +42,7 @@ export class EnhancedMemoryService {
 
   updateConfiguration(): void {
     const config = vscode.workspace.getConfiguration('lanonasis');
-    const apiUrl = config.get<string>('apiUrl', 'https://api.lanonasis.com');
+    const apiUrl = config.get<string>('apiUrl', 'https://mcp.lanonasis.com');
     const useGateway = config.get<boolean>('useGateway', true);
     
     this.baseUrl = useGateway ? 
@@ -181,11 +181,11 @@ export class EnhancedMemoryService {
     
     if (caps.cliAvailable && caps.goldenContract) {
       vscode.window.showInformationMessage(
-        `${message}\n\n🚀 Enhanced performance with CLI v1.5.2+ + OAuth integration!`
+        `${message}\n\n🚀 Enhanced performance with CLI v3.0.6+ + OAuth integration!`
       );
     } else if (caps.authenticated) {
       vscode.window.showInformationMessage(
-        `${message}\n\n💡 Install @lanonasis/cli v1.5.2+ for enhanced performance.`
+        `${message}\n\n💡 Install @lanonasis/cli v3.0.6+ for enhanced performance.`
       );
     } else {
       vscode.window.showWarningMessage(message);
