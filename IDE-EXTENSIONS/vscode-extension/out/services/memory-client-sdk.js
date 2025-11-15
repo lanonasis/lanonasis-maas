@@ -188,11 +188,11 @@ exports.defaultConfigs = {
         timeout: 30000
     },
     production: {
-        apiUrl: 'https://api.lanonasis.com',
+        apiUrl: 'https://mcp.lanonasis.com',
         timeout: 10000
     },
     gateway: {
-        apiUrl: 'https://api.lanonasis.com',
+        apiUrl: 'https://mcp.lanonasis.com',
         timeout: 15000
     }
 };

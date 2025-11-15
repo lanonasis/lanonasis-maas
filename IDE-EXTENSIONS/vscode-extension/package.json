@@ -2,7 +2,7 @@
   "name": "lanonasis-memory",
   "displayName": "LanOnasis Memory Assistant",
   "description": "Memory as a Service integration - AI-powered memory management with semantic search (Compatible with CLI v3.0.6+)",
-  "version": "1.5.4",
+  "version": "1.5.5",
   "publisher": "LanOnasis",
   "icon": "images/icon.png",
   "repository": {
@@ -286,12 +286,12 @@
       "properties": {
         "lanonasis.apiUrl": {
           "type": "string",
-          "default": "https://api.lanonasis.com",
+          "default": "https://mcp.lanonasis.com",
           "markdownDescription": "Lanonasis Memory Service API URL. Change only if using a custom deployment."
         },
         "lanonasis.gatewayUrl": {
           "type": "string",
-          "default": "https://api.lanonasis.com",
+          "default": "https://mcp.lanonasis.com",
           "markdownDescription": "Onasis Gateway URL for centralized API management. Recommended for most users."
         },
         "lanonasis.useGateway": {
