@@ -101,7 +101,16 @@ export class ApiKeyTreeProvider implements vscode.TreeDataProvider<vscode.TreeIt
 
     async getChildren(element?: vscode.TreeItem): Promise<vscode.TreeItem[]> {                              
         if (!this.authenticated) {
-            return [];
+            const authItem = new vscode.TreeItem('Not authenticated', vscode.TreeItemCollapsibleState.None);
+            authItem.description = 'Click to authenticate';
+            authItem.iconPath = new vscode.ThemeIcon('key');
+            authItem.contextValue = 'notAuthenticated';
+            authItem.command = {
+                command: 'lanonasis.authenticate',
+                title: 'Authenticate',
+                arguments: ['oauth']
+            };
+            return [authItem];
         }
 
         try {
@@ -143,10 +152,28 @@ export class ApiKeyTreeProvider implements vscode.TreeDataProvider<vscode.TreeIt
             }
         } catch (error) {
             console.error('Error loading API keys:', error);
+            const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+            
+            // Check if it's an authentication error
+            if (errorMsg.includes('401') || errorMsg.includes('No token') || errorMsg.includes('AUTH_TOKEN_MISSING')) {
+                const authItem = new vscode.TreeItem('Authentication required', vscode.TreeItemCollapsibleState.None);
+                authItem.description = 'Click to authenticate';
+                authItem.iconPath = new vscode.ThemeIcon('warning');
+                authItem.contextValue = 'authRequired';
+                authItem.command = {
+                    command: 'lanonasis.authenticate',
+                    title: 'Authenticate',
+                    arguments: ['oauth']
+                };
+                authItem.tooltip = `Authentication error: ${errorMsg}`;
+                return [authItem];
+            }
+            
             const errorItem = new vscode.TreeItem('Error loading data', vscode.TreeItemCollapsibleState.None);
-            errorItem.description = error instanceof Error ? error.message : 'Unknown error';
+            errorItem.description = errorMsg.length > 50 ? errorMsg.substring(0, 50) + '...' : errorMsg;
             errorItem.iconPath = new vscode.ThemeIcon('error');
             errorItem.contextValue = 'error';
+            errorItem.tooltip = errorMsg;
             return [errorItem];
         }
         

@@ -2,7 +2,7 @@
   "name": "lanonasis-memory-cursor",
   "displayName": "LanOnasis Memory Assistant for Cursor",
   "description": "Memory as a Service integration for Cursor IDE - 17 enterprise tools with secure API management",
-  "version": "1.4.4",
+  "version": "1.4.5",
   "publisher": "LanOnasis",
   "icon": "images/icon.png",
   "repository": {
@@ -163,12 +163,12 @@
       "properties": {
         "lanonasis.apiUrl": {
           "type": "string",
-          "default": "https://api.lanonasis.com",
+          "default": "https://mcp.lanonasis.com",
           "description": "Lanonasis Memory Service API URL"
         },
         "lanonasis.gatewayUrl": {
           "type": "string",
-          "default": "https://api.lanonasis.com",
+          "default": "https://mcp.lanonasis.com",
           "description": "Onasis Gateway URL (if using gateway mode)"
         },
         "lanonasis.authUrl": {
@@ -219,7 +219,7 @@
         "lanonasis.preferCLI": {
           "type": "boolean",
           "default": true,
-          "description": "Prefer CLI integration when @lanonasis/cli v1.5.2+ is available"
+          "description": "Prefer CLI integration when @lanonasis/cli v3.0.6+ is available"
         },
         "lanonasis.enableMCP": {
           "type": "boolean",

@@ -82,11 +82,11 @@ export class EnhancedMemoryService implements IEnhancedMemoryService {
       const clientConfig = this.buildClientConfigFromCredential(credential);
 
       // Override with VSCode-specific settings
-      const apiUrl = this.config.get<string>('apiUrl', 'https://api.lanonasis.com');
+      const apiUrl = this.config.get<string>('apiUrl', 'https://mcp.lanonasis.com');
       const useGateway = this.config.get<boolean>('useGateway', true);
 
       clientConfig.apiUrl = useGateway ?
-        this.config.get<string>('gatewayUrl', 'https://api.lanonasis.com') :
+        this.config.get<string>('gatewayUrl', 'https://mcp.lanonasis.com') :
         apiUrl;
 
       // Enable CLI detection with shorter timeout for responsive UX

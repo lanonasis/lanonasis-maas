@@ -349,7 +349,7 @@ export class AuthenticationService {
 
     private async validateApiKey(apiKey: string): Promise<void> {
         const config = vscode.workspace.getConfiguration('lanonasis');
-        const apiUrl = config.get<string>('apiUrl', 'https://api.lanonasis.com');
+        const apiUrl = config.get<string>('apiUrl', 'https://mcp.lanonasis.com');
         const useGateway = config.get<boolean>('useGateway', true);
         
         const baseUrl = useGateway ? config.get<string>('gatewayUrl', apiUrl) : apiUrl;
