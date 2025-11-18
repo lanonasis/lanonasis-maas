@@ -3,18 +3,21 @@
 [![NPM Version](https://img.shields.io/npm/v/@lanonasis/repl-cli)](https://www.npmjs.com/package/@lanonasis/repl-cli)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-Lightweight REPL (Read-Eval-Print Loop) for LanOnasis Memory Service - Interactive command-line interface for memory operations with semantic search, MCP support, and intuitive commands.
+Intelligent REPL (Read-Eval-Print Loop) for LanOnasis Memory Service - Natural language interactive assistant with semantic search, AI orchestration, MCP support, and intuitive commands.
 
 ## ✨ Features
 
-- 🚀 **Interactive REPL** - Intuitive command-line interface
+- 🧠 **Natural Language Interface** - Talk naturally to your memory system
+- 🤖 **AI Orchestration** - OpenAI-powered intent understanding
+- 🚀 **Interactive REPL** - Dual-mode: natural language OR commands
 - 🔍 **Semantic Search** - AI-powered memory search
-- 💾 **Memory Operations** - Create, search, list, get, and delete memories
+- 💾 **Full Memory Operations** - Create, search, list, get, and delete
 - 🔌 **MCP Support** - Model Context Protocol integration
-- 🎨 **Colored Output** - Beautiful terminal experience
-- ⚡ **Fast & Lightweight** - Only 12.5 KB
+- 🎨 **Beautiful Output** - Colored, formatted terminal experience
+- ⚡ **Fast & Lightweight** - Only ~15 KB
 - 🔐 **Multiple Auth Methods** - API keys, tokens, vendor keys
 - 📝 **Config Persistence** - Settings saved between sessions
+- 💬 **Context Awareness** - Maintains conversation history
 
 ## 📦 Installation
 
@@ -49,8 +52,8 @@ onasis-repl start
 # Or using lrepl shorthand
 lrepl start
 
-# With authentication
-LANONASIS_API_KEY=your_key onasis-repl start
+# With OpenAI for natural language (recommended)
+OPENAI_API_KEY=sk-... LANONASIS_API_KEY=your_key onasis-repl start
 
 # With custom API endpoint
 onasis-repl start --api https://custom.api.com --token your_token
@@ -59,15 +62,64 @@ onasis-repl start --api https://custom.api.com --token your_token
 onasis-repl start --mcp
 ```
 
-### First Commands
+### Natural Language Interactions
 
 ```bash
-onasis> help              # Show all available commands
-onasis> status            # Display current REPL status
-onasis> create "Welcome" "My first memory"  # Create a memory
-onasis> search welcome    # Search for memories
-onasis> list 10          # List recent memories
-onasis> exit             # Exit REPL
+💭 Remember that I prefer TypeScript over JavaScript
+💭 What do I know about my API project?
+💭 Show me my recent memories
+💭 Find information about authentication
+💭 Save this: The meeting is on Friday at 3pm
+```
+
+### Traditional Commands
+
+```bash
+💭 help              # Show all available commands
+💭 status            # Display current REPL status
+💭 create "Welcome" "My first memory"  # Create a memory
+💭 search welcome    # Search for memories
+💭 list 10          # List recent memories
+💭 exit             # Exit REPL
+```
+
+## 🧠 Natural Language Mode
+
+The REPL supports intelligent natural language interactions powered by OpenAI. Just talk naturally!
+
+### How It Works
+
+1. **Intent Recognition** - AI understands what you want to do
+2. **Action Execution** - Automatically performs memory operations
+3. **Context Awareness** - Remembers conversation history
+4. **Smart Fallback** - Works without OpenAI using pattern matching
+
+### Natural Language Examples
+
+```bash
+# Creating memories
+💭 Remember that I prefer dark mode in my IDE
+💭 Save this for later: API key is in .env file
+💭 Store this note: Team meeting every Monday at 10am
+
+# Searching & retrieving
+💭 What do I know about TypeScript?
+💭 Find my notes about the authentication system
+💭 Show me information about project deployment
+
+# Listing & browsing
+💭 Show me my recent memories
+💭 What have I saved recently?
+💭 List my memories
+```
+
+### Toggle Natural Language Mode
+
+```bash
+💭 nl on      # Enable natural language (default)
+💭 nl off     # Use commands only
+💭 nl         # Check current mode
+💭 reset      # Clear conversation history
 ```
 
 ## 📚 Commands Reference
@@ -86,13 +138,15 @@ onasis> exit             # Exit REPL
 
 ### System Commands
 
-| Command                | Description           | Aliases     |
-| ---------------------- | --------------------- | ----------- |
-| `help`                 | Show all commands     | `?`, `h`    |
-| `status`               | Display REPL status   | -           |
-| `mode <remote\|local>` | Switch operation mode | -           |
-| `clear`                | Clear terminal screen | -           |
-| `exit`                 | Exit REPL             | `quit`, `q` |
+| Command                | Description                    | Aliases     |
+| ---------------------- | ------------------------------ | ----------- |
+| `help`                 | Show all commands              | `?`, `h`    |
+| `nl [on\|off]`         | Toggle natural language mode   | -           |
+| `reset`                | Clear conversation history     | -           |
+| `status`               | Display REPL status            | -           |
+| `mode <remote\|local>` | Switch operation mode          | -           |
+| `clear`                | Clear terminal screen          | -           |
+| `exit`                 | Exit REPL                      | `quit`, `q` |
 
 ## ⚙️ Configuration
 
@@ -103,10 +157,15 @@ Settings are automatically saved to `~/.lanonasis/repl-config.json`
 ### Environment Variables
 
 ```bash
+# Memory service authentication
 export MEMORY_API_URL=https://api.lanonasis.com
 export LANONASIS_API_KEY=your_api_key
 # or
 export MEMORY_API_KEY=your_api_key
+
+# OpenAI for natural language (optional, recommended)
+export OPENAI_API_KEY=sk-your-openai-key
+
 # Vendor key (optional)
 export LANONASIS_VENDOR_KEY=your_vendor_key
 ```
@@ -134,41 +193,86 @@ Options:
 }
 ```
 
-## Examples
+## 💡 Examples
+
+### Example Session with Natural Language
 
 ```bash
-# Start REPL
 $ lrepl
-🚀 LanOnasis REPL v0.1.0
+🚀 LanOnasis Interactive Memory Assistant
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Mode: remote | API: https://api.lanonasis.com
-Type "help" for commands, "exit" to quit
+Natural Language: ON
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-onasis> create "My First Memory" "This is the content of my memory"
+💡 You can interact naturally or use commands:
+   • Natural: "Remember that I prefer TypeScript"
+   • Natural: "What do I know about my projects?"
+   • Command: create <title> <content>
+   • Type "help" for all commands
+
+💭 Remember that I prefer using TypeScript over JavaScript
+
+I'll save that for you.
+
 ✓ Memory created: abc123-def456-ghi789
 
-onasis> search first
+💭 What do I know about TypeScript?
+
+Searching your memories...
+
+Found 1 result(s):
+
+[1] TypeScript Preference
+    I prefer using TypeScript over JavaScript
+    Relevance: 98.5%
+
+💭 list
+
+Here are your recent memories:
+
+Showing 1 memories:
+
+[1] TypeScript Preference
+    ID: abc123-def456-ghi789 | Type: context
+    I prefer using TypeScript over JavaScript
+
+💭 help
+🌟 LanOnasis REPL - Help
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📝 Natural Language Mode (default):
+  Just type naturally!
+  • "Remember that I prefer dark mode"
+  • "What do I know about TypeScript?"
+  • "Show me my recent memories"
+  ...
+
+💭 exit
+👋 Goodbye!
+```
+
+### Example Session with Commands Only
+
+```bash
+💭 nl off
+⚙️  Natural Language mode disabled
+Switched to command-only mode
+
+💭 create "My First Memory" "This is the content of my memory"
+✓ Memory created: abc123-def456-ghi789
+
+💭 search first
 [1] My First Memory
     This is the content of my memory...
 
-onasis> list 5
-[1] My First Memory (abc123-def456-ghi789)
-
-onasis> get abc123-def456-ghi789
-Title: My First Memory
-ID: abc123-def456-ghi789
-
-This is the content of my memory
-
-onasis> status
+💭 status
 REPL Status
 ════════════════════════════════════════
 Mode: remote
 API: https://api.lanonasis.com
 MCP: Disabled
 Auth: Configured
-
-onasis> exit
-👋 Goodbye!
 ```
 
 ## 🔐 Authentication
@@ -249,12 +353,17 @@ MIT © 2025 Lanonasis Team
 
 ## 🎯 Roadmap
 
+- [x] Natural language interface with AI orchestration
+- [x] OpenAI-powered intent recognition
+- [x] Context-aware conversations
 - [ ] Command history with arrow keys
 - [ ] Tab completion for commands
 - [ ] Multi-line input support
 - [ ] Result caching
 - [ ] Batch operations
 - [ ] Export/import functionality
+- [ ] Voice input support
+- [ ] Custom AI model selection (Claude, Gemini, etc.)
 
 ---
 

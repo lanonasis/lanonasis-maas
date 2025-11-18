@@ -1,8 +1,8 @@
 {
   "name": "@lanonasis/repl-cli",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "type": "module",
-  "description": "Lightweight REPL for LanOnasis Memory Service - Interactive command-line interface for memory operations",
+  "description": "Intelligent REPL for LanOnasis Memory Service - Natural language interactive assistant with AI orchestration",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "bin": {

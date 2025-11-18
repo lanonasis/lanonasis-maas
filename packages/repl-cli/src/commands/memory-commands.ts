@@ -24,14 +24,14 @@ export class MemoryCommands {
     }
     
     // Parse arguments for type and tags
-    let memory_type = 'context';
+    let memory_type: 'context' | 'project' | 'knowledge' | 'reference' | 'personal' | 'workflow' = 'context';
     let tags: string[] = [];
     const filteredArgs: string[] = [];
-    
+
     for (let i = 0; i < args.length; i++) {
       const arg = args[i];
       if (arg.startsWith('--type=')) {
-        memory_type = arg.substring(7);
+        memory_type = arg.substring(7) as any;
       } else if (arg.startsWith('--tags=')) {
         tags = arg.substring(7).split(',').map(t => t.trim()).filter(Boolean);
       } else {
