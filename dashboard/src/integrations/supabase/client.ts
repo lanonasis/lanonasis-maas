@@ -11,13 +11,14 @@ const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY=REDACTED
 // Determine correct redirect URL based on environment
 export const getRedirectUrl = () => {
   if (typeof window === 'undefined') return 'https://dashboard.lanonasis.com/';
-  
-  const isLocalhost = window.location.hostname === '127.0.0.1' || window.location.hostname === 'localhost';
-  
+
+  const isLocalhost =
+    window.location.hostname === '127.0.0.1' || window.location.hostname === 'localhost';
+
   if (isLocalhost) {
     return `${window.location.origin}/`;
   }
-  
+
   // Always redirect to dashboard.lanonasis.com root for OAuth (auth component will handle dashboard redirect)
   return 'https://dashboard.lanonasis.com/';
 };
@@ -25,24 +26,21 @@ export const getRedirectUrl = () => {
 // OAuth callback URL for provider configurations
 export const getOAuthCallbackUrl = () => {
   if (typeof window === 'undefined') return 'https://dashboard.lanonasis.com/auth/callback';
-  
-  const isLocalhost = window.location.hostname === '127.0.0.1' || window.location.hostname === 'localhost';
-  
+
+  const isLocalhost =
+    window.location.hostname === '127.0.0.1' || window.location.hostname === 'localhost';
+
   if (isLocalhost) {
     return `${window.location.origin}/auth/callback`;
   }
-  
+
   // Always use dashboard.lanonasis.com for OAuth callbacks
   return 'https://dashboard.lanonasis.com/auth/callback';
 };
 
-export const supabase = createClient<Database>(
-  SUPABASE_URL=https://<project-ref>.supabase.co
-  SUPABASE_PUBLISHABLE_KEY,
-  {
-    auth: {
-      redirectTo: getRedirectUrl(),
-      flowType: 'pkce',
-    },
-  }
-);
+export const supabase = createClient<Database>(SUPABASE_URL=https://<project-ref>.supabase.co
+  auth: {
+    redirectTo: getRedirectUrl(),
+    flowType: 'pkce',
+  },
+});
