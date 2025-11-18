@@ -4,6 +4,7 @@ export interface ReplConfig {
   mcpServerPath?: string;
   authToken?: string;
   vendorKey?: string;
+  openaiApiKey?: string;
   historyFile: string;
   maxHistorySize: number;
 }
