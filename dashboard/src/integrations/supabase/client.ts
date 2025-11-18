@@ -2,7 +2,9 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 
+// @ts-ignore - Vite env variables
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || 'https://lanonasis.supabase.co';
+// @ts-ignore - Vite env variables
 const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
 
 // Import the supabase client like this:
@@ -40,7 +42,6 @@ export const getOAuthCallbackUrl = () => {
 
 export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
   auth: {
-    redirectTo: getRedirectUrl(),
     flowType: 'pkce',
   },
 });
