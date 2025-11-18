@@ -12,6 +12,7 @@ const DEFAULT_CONFIG: ReplConfig = {
   mcpServerPath: undefined,
   authToken: process.env.LANONASIS_API_KEY || process.env.MEMORY_API_KEY,
   vendorKey: process.env.LANONASIS_VENDOR_KEY,
+  openaiApiKey: process.env.OPENAI_API_KEY=REDACTED_OPENAI_API_KEY
   historyFile: join(CONFIG_DIR, 'repl-history.txt'),
   maxHistorySize: 1000
 };
