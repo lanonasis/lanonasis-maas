@@ -2,7 +2,7 @@
   "name": "lanonasis-memory",
   "displayName": "LanOnasis Memory Assistant",
   "description": "Memory as a Service integration - AI-powered memory management with semantic search (Compatible with CLI v3.0.6+)",
-  "version": "1.5.6",
+  "version": "1.5.7",
   "publisher": "LanOnasis",
   "icon": "images/icon.png",
   "repository": {
@@ -143,6 +143,48 @@
         "title": "Show Extension Logs",
         "category": "Lanonasis",
         "icon": "$(output)"
+      },
+      {
+        "command": "lanonasis.refreshApiKeys",
+        "title": "Refresh API Keys",
+        "category": "Lanonasis",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "lanonasis.viewProjectDetails",
+        "title": "View Project Details",
+        "category": "Lanonasis",
+        "icon": "$(folder-opened)"
+      },
+      {
+        "command": "lanonasis.createApiKey",
+        "title": "Create API Key",
+        "category": "Lanonasis",
+        "icon": "$(key)"
+      },
+      {
+        "command": "lanonasis.deleteProject",
+        "title": "Delete Project",
+        "category": "Lanonasis",
+        "icon": "$(trash)"
+      },
+      {
+        "command": "lanonasis.viewApiKeyDetails",
+        "title": "View API Key Details",
+        "category": "Lanonasis",
+        "icon": "$(info)"
+      },
+      {
+        "command": "lanonasis.rotateApiKey",
+        "title": "Rotate API Key",
+        "category": "Lanonasis",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "lanonasis.deleteApiKey",
+        "title": "Delete API Key",
+        "category": "Lanonasis",
+        "icon": "$(trash)"
       }
     ],
     "keybindings": [
