@@ -42,17 +42,17 @@ export class MCPClient {
     }
   }
   
-  async callTool(name: string, args: unknown, timeout = 30000) {
+  async callTool(name: string, args: { [x: string]: unknown } | undefined, timeout = 30000) {
     if (!this.client) throw new Error('MCP not connected');
-    
+
     let timeoutHandle: NodeJS.Timeout | undefined;
-    
+
     try {
       // Add timeout to tool calls
       const timeoutPromise = new Promise<never>((_, reject) => {
         timeoutHandle = setTimeout(() => reject(new Error(`Tool call timeout: ${name}`)), timeout);
       });
-      
+
       return await Promise.race([
         this.client.callTool({
           name,
