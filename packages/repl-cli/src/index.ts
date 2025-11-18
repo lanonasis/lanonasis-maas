@@ -9,8 +9,8 @@ const program = new Command();
 
 program
   .name('onasis-repl')
-  .description('LanOnasis Lightweight REPL')
-  .version('0.1.0');
+  .description('LanOnasis Interactive Memory Assistant')
+  .version('0.2.0');
 
 program
   .command('start', { isDefault: true })
