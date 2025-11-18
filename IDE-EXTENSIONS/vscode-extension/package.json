@@ -2,7 +2,7 @@
   "name": "lanonasis-memory",
   "displayName": "LanOnasis Memory Assistant",
   "description": "Memory as a Service integration - AI-powered memory management with semantic search (Compatible with CLI v3.0.6+)",
-  "version": "1.5.7",
+  "version": "1.5.8",
   "publisher": "LanOnasis",
   "icon": "images/icon.png",
   "repository": {
