@@ -2,7 +2,7 @@
   "name": "lanonasis-memory",
   "displayName": "LanOnasis Memory Assistant",
   "description": "Memory as a Service integration - AI-powered memory management with semantic search (Compatible with CLI v3.0.6+)",
-  "version": "1.5.5",
+  "version": "1.5.6",
   "publisher": "LanOnasis",
   "icon": "images/icon.png",
   "repository": {
@@ -27,9 +27,7 @@
     "documentation"
   ],
   "activationEvents": [
-    "onStartupFinished",
-    "onView:lanonasis.sidebar",
-    "onView:lanonasisMemories"
+    "onStartupFinished"
   ],
   "main": "./out/extension.js",
   "browser": "./out/extension.js",
@@ -183,7 +181,7 @@
         },
         {
           "command": "lanonasis.authenticate",
-          "when": "view == lanonasisMemories && !lanonasis.authenticated",                                                      
+          "when": "view == lanonasisMemories && !lanonasis.authenticated",
           "group": "navigation"
         },
         {
@@ -198,7 +196,7 @@
         },
         {
           "command": "lanonasis.authenticate",
-          "when": "view == lanonasisApiKeys && !lanonasis.authenticated",                                                      
+          "when": "view == lanonasisApiKeys && !lanonasis.authenticated",
           "group": "navigation"
         }
       ],
