@@ -5,6 +5,7 @@ import open from 'open';
 import crypto from 'crypto';
 import http from 'http';
 import url from 'url';
+import axios from 'axios';
 import { apiClient } from '../utils/api.js';
 import { CLIConfig } from '../utils/config.js';
 
@@ -297,19 +298,44 @@ function createCallbackServer(port: number = 8888): Promise<{ code: string; stat
 async function exchangeCodeForTokens(
   code: string,
   verifier: string,
-  authBase: string
+  authBase: string,
+  redirectUri: string
 ): Promise<{ access_token: string; refresh_token: string; expires_in: number }> {
   const tokenEndpoint = `${authBase}/oauth/token`;
   
-  const response = await apiClient.post(tokenEndpoint, {
-    grant_type: 'authorization_code',
-    code,
-    code_verifier: verifier,
-    client_id: 'lanonasis-cli',
-    redirect_uri: 'http://localhost:8888/callback'
-  });
-  
-  return response;
+  try {
+    // Use axios directly to have full control over error handling
+    const response = await axios.post(tokenEndpoint, {
+      grant_type: 'authorization_code',
+      code,
+      code_verifier: verifier,
+      client_id: 'lanonasis-cli',
+      redirect_uri: redirectUri
+    }, {
+      headers: {
+        'Content-Type': 'application/json',
+      }
+    });
+    
+    return response.data;
+  } catch (error: any) {
+    // Extract detailed error information from axios error response
+    if (error.response) {
+      const errorData = error.response.data || {};
+      const status = error.response.status;
+      const errorMessage = errorData.error_description || errorData.error || error.message || `Request failed with status code ${status}`;
+      const details = errorData.details;
+      
+      const enhancedError: any = new Error(errorMessage);
+      enhancedError.response = error.response;
+      enhancedError.status = status;
+      enhancedError.details = details;
+      enhancedError.errorData = errorData;
+      throw enhancedError;
+    }
+    // If it's not an axios error, just rethrow
+    throw error;
+  }
 }
 
 /**
@@ -719,10 +745,11 @@ async function handleOAuthFlow(config: CLIConfig): Promise<void> {
 
     // Build OAuth2 authorization URL
     const authBase = config.getDiscoveredApiUrl();
+    const redirectUri = `http://localhost:${callbackPort}/callback`;
     const authUrl = new URL(`${authBase}/oauth/authorize`);
     authUrl.searchParams.set('response_type', 'code');
     authUrl.searchParams.set('client_id', 'lanonasis-cli');
-    authUrl.searchParams.set('redirect_uri', `http://localhost:${callbackPort}/callback`);
+    authUrl.searchParams.set('redirect_uri', redirectUri);
     authUrl.searchParams.set('scope', 'read write offline_access');
     authUrl.searchParams.set('code_challenge', pkce.challenge);
     authUrl.searchParams.set('code_challenge_method', 'S256');
@@ -744,7 +771,16 @@ async function handleOAuthFlow(config: CLIConfig): Promise<void> {
     // Exchange code for tokens
     spinner.text = 'Exchanging code for access tokens...';
     spinner.start();
-    const tokens = await exchangeCodeForTokens(code, pkce.verifier, authBase);
+    
+    // Debug logging in verbose mode
+    if (process.env.CLI_VERBOSE === 'true') {
+      console.log(chalk.dim(`   Code length: ${code.length}`));
+      console.log(chalk.dim(`   Verifier length: ${pkce.verifier.length}`));
+      console.log(chalk.dim(`   Redirect URI: ${redirectUri}`));
+      console.log(chalk.dim(`   Token endpoint: ${authBase}/oauth/token`));
+    }
+    
+    const tokens = await exchangeCodeForTokens(code, pkce.verifier, authBase, redirectUri);
     spinner.succeed('Access tokens received');
 
     // Store tokens
@@ -758,10 +794,56 @@ async function handleOAuthFlow(config: CLIConfig): Promise<void> {
     console.log(colors.info('You can now use Lanonasis services'));
     process.exit(0);
 
-  } catch (error) {
+  } catch (error: any) {
     console.error(chalk.red('✖ OAuth2 authentication failed'));
+    
+    // Display detailed error information
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     console.error(chalk.gray(`   ${errorMessage}`));
+    
+    // Show validation details if available
+    if (error.details) {
+      console.error(chalk.yellow('\n   Validation errors:'));
+      for (const [field, messages] of Object.entries(error.details)) {
+        const msgArray = Array.isArray(messages) ? messages : [messages];
+        msgArray.forEach((msg: string) => {
+          console.error(chalk.gray(`     • ${field}: ${msg}`));
+        });
+      }
+    }
+    
+    // Show error data if available
+    if (error.errorData) {
+      const errorData = error.errorData;
+      if (errorData.error) {
+        console.error(chalk.yellow(`\n   Error: ${errorData.error}`));
+      }
+      if (errorData.error_description) {
+        console.error(chalk.gray(`   ${errorData.error_description}`));
+      }
+      // Show details if not already shown above
+      if (!error.details && errorData.details) {
+        console.error(chalk.yellow('\n   Details:'));
+        console.error(chalk.gray(JSON.stringify(errorData.details, null, 2)));
+      }
+    }
+    
+    // Show full error response in verbose mode
+    if (process.env.CLI_VERBOSE === 'true') {
+      if (error.response?.data) {
+        console.error(chalk.dim('\n   Full error response:'));
+        console.error(chalk.dim(JSON.stringify(error.response.data, null, 2)));
+      }
+      if (error.response?.config) {
+        console.error(chalk.dim('\n   Request config:'));
+        console.error(chalk.dim(JSON.stringify({
+          url: error.response.config.url,
+          method: error.response.config.method,
+          data: error.response.config.data
+        }, null, 2)));
+      }
+    }
+    
     process.exit(1);
   }
 }
