@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 import { config } from '@/config/environment';
 import { logger } from '@/utils/logger';
 import crypto from 'crypto';
+import { hashApiKey } from '../shared/hash-utils';
 
 const supabase = createClient(config.SUPABASE_URL=https://<project-ref>.supabase.co
 
@@ -253,7 +254,9 @@ export const alignedAuthMiddleware = async (
  */
 export async function authenticateApiKey(apiKey: string): Promise<AlignedUser | null> {
   try {
-    // Hash the API key for comparison (in production, store hashed keys)
+    // ✅ CRITICAL FIX: Hash the incoming API key before database lookup
+    const apiKeyHash = hashApiKey(apiKey);
+    
     const { data: keyRecord, error } = await supabase
       .from('maas_api_keys')
       .select(`
@@ -262,7 +265,7 @@ export async function authenticateApiKey(apiKey: string): Promise<AlignedUser | 
         expires_at,
         maas_service_config!inner(plan)
       `)
-      .eq('key_hash', apiKey) // In production, hash the key
+      .eq('key_hash', apiKeyHash)  // ✅ Compare hashed key to stored hash
       .eq('is_active', true)
       .single();
 
@@ -279,7 +282,7 @@ export async function authenticateApiKey(apiKey: string): Promise<AlignedUser | 
     await supabase
       .from('maas_api_keys')
       .update({ last_used: new Date().toISOString() })
-      .eq('key_hash', apiKey);
+      .eq('key_hash', apiKeyHash);  // ✅ Use hashed key for update
 
     // Extract plan value using optional chaining
     const plan = keyRecord?.maas_service_config?.[0]?.plan || 'free';
