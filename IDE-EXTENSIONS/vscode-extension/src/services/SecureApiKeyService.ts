@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import * as http from 'http';
 import * as crypto from 'crypto';
 import { URL, URLSearchParams } from 'url';
+import { ensureApiKeyHash, isSha256Hash } from '../../../../shared/hash-utils';
 
 /**
  * Secure API Key Service
@@ -64,7 +65,19 @@ export class SecureApiKeyService {
     async getApiKey(): Promise<string | null> {
         try {
             const apiKey = await this.context.secrets.get(SecureApiKeyService.API_KEY_KEY);
-            return apiKey || null;
+            if (!apiKey) {
+                return null;
+            }
+
+            const normalized = isSha256Hash(apiKey) ? apiKey.toLowerCase() : ensureApiKeyHash(apiKey);
+
+            // Persist migration from legacy plaintext to hashed form
+            if (normalized !== apiKey) {
+                await this.context.secrets.store(SecureApiKeyService.API_KEY_KEY, normalized);
+            }
+
+            this.log('Retrieved API key hash from secure storage');
+            return normalized;
         } catch (error) {
             this.logError('Failed to retrieve API key from secure storage', error);
             return null;
@@ -360,7 +373,8 @@ export class SecureApiKeyService {
      * Store API key securely
      */
     private async storeApiKey(apiKey: string, type: CredentialType): Promise<void> {
-        await this.context.secrets.store(SecureApiKeyService.API_KEY_KEY, apiKey);
+        const hashedKey = ensureApiKeyHash(apiKey);
+        await this.context.secrets.store(SecureApiKeyService.API_KEY_KEY, hashedKey);
         await this.context.secrets.store(SecureApiKeyService.CREDENTIAL_TYPE_KEY, type);
     }
 

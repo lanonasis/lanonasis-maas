@@ -8,6 +8,13 @@
 import crypto from 'crypto';
 
 /**
+ * Determine if the provided value is already a SHA-256 hex digest
+ */
+export function isSha256Hash(value: string): boolean {
+  return typeof value === 'string' && /^[a-f0-9]{64}$/i.test(value.trim());
+}
+
+/**
  * Hash an API key with SHA-256 (Server-side)
  * Used for: Database storage, validation, lookups
  * 
@@ -38,12 +45,40 @@ export async function hashApiKeyBrowser(apiKey: string): Promise<string> {
   }
   
   // Use Web Crypto API
+  const subtle = (globalThis as any)?.crypto?.subtle || (crypto as any).webcrypto?.subtle;
+  if (!subtle) {
+    // Fallback to Node.js hash when Web Crypto is unavailable
+    return hashApiKey(apiKey);
+  }
+
   const data = new TextEncoder().encode(apiKey);
-  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const hashBuffer = await subtle.digest('SHA-256', data);
   const hashArray = Array.from(new Uint8Array(hashBuffer));
   const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
   
   return hashHex;
+}
+
+/**
+ * Normalize any API key input to a SHA-256 hex digest (sync, Node contexts)
+ * Leaves an existing 64-char hex hash untouched to prevent double hashing
+ */
+export function ensureApiKeyHash(apiKey: string): string {
+  if (isSha256Hash(apiKey)) {
+    return apiKey.toLowerCase();
+  }
+  return hashApiKey(apiKey);
+}
+
+/**
+ * Normalize any API key input to a SHA-256 hex digest (async, browser-safe)
+ * Uses Web Crypto when available, falls back to Node hash otherwise
+ */
+export async function ensureApiKeyHashBrowser(apiKey: string): Promise<string> {
+  if (isSha256Hash(apiKey)) {
+    return apiKey.toLowerCase();
+  }
+  return hashApiKeyBrowser(apiKey);
 }
 
 /**
