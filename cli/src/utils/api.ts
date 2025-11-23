@@ -2,6 +2,7 @@ import axios, { AxiosInstance, AxiosRequestConfig } from 'axios';
 import chalk from 'chalk';
 import { randomUUID } from 'crypto';
 import { CLIConfig } from './config.js';
+import { ensureApiKeyHash } from '../../../shared/hash-utils.js';
 
 // Type definitions for API responses and requests
 export interface AuthResponse {
@@ -201,7 +202,7 @@ export class APIClient {
       
       if (vendorKey) {
         // Vendor key authentication (validated server-side)
-        config.headers['X-API-Key'] = vendorKey;
+        config.headers['X-API-Key'] = ensureApiKeyHash(vendorKey);
         config.headers['X-Auth-Method'] = 'vendor_key';
       } else if (token) {
         // JWT token authentication

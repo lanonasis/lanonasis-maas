@@ -3,7 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 import { config } from '@/config/environment';
 import { logger } from '@/utils/logger';
 import { asyncHandler } from '@/middleware/errorHandler';
-import { hashApiKey } from '../shared/hash-utils';
+import { ensureApiKeyHash } from '../shared/hash-utils';
 
 const router = Router();
 const supabase = createClient(config.SUPABASE_URL, config.SUPABASE_SERVICE_KEY);
@@ -26,7 +26,7 @@ const authenticateApiKey = async (req: Request, res: Response, next: NextFunctio
 
   try {
     // ✅ CRITICAL FIX: Hash the incoming API key before database lookup
-    const apiKeyHash = hashApiKey(apiKey as string);
+    const apiKeyHash = ensureApiKeyHash(apiKey as string);
     
     // Validate API key against database
     const { data: keyData, error } = await supabase
