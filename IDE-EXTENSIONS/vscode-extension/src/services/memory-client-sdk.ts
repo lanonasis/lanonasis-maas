@@ -13,6 +13,7 @@ import {
   MemorySearchResult,
   UserMemoryStats 
 } from '../types/memory-aligned';
+import { ensureApiKeyHashBrowser } from '../../../../shared/hash-utils';
 
 export interface MaaSClientConfig {
   apiUrl: string;
@@ -53,8 +54,6 @@ export class MaaSClient {
 
     if (config.authToken) {
       this.baseHeaders['Authorization'] = `Bearer ${config.authToken}`;
-    } else if (config.apiKey) {
-      this.baseHeaders['X-API-Key'] = config.apiKey;
     }
   }
 
@@ -83,8 +82,15 @@ export class MaaSClient {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), this.config.timeout || 30000);
       
+      const headers: Record<string, string> = { ...this.baseHeaders, ...(options.headers as Record<string, string> | undefined) };
+
+      // Normalize API key to SHA-256 before sending so raw values never leave the client
+      if (this.config.apiKey && !this.config.authToken) {
+        headers['X-API-Key'] = await ensureApiKeyHashBrowser(this.config.apiKey);
+      }
+
       const response = await fetch(url, {
-        headers: { ...this.baseHeaders, ...options.headers },
+        headers,
         ...options,
         signal: controller.signal
       });

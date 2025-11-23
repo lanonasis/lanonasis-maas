@@ -3,7 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 import { config } from '@/config/environment';
 import { logger } from '@/utils/logger';
 import crypto from 'crypto';
-import { hashApiKey } from '../shared/hash-utils';
+import { ensureApiKeyHash } from '../shared/hash-utils';
 
 const supabase = createClient(config.SUPABASE_URL=https://<project-ref>.supabase.co
 
@@ -255,7 +255,7 @@ export const alignedAuthMiddleware = async (
 export async function authenticateApiKey(apiKey: string): Promise<AlignedUser | null> {
   try {
     // ✅ CRITICAL FIX: Hash the incoming API key before database lookup
-    const apiKeyHash = hashApiKey(apiKey);
+    const apiKeyHash = ensureApiKeyHash(apiKey);
     
     const { data: keyRecord, error } = await supabase
       .from('maas_api_keys')
