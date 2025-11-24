@@ -1,5 +1,15 @@
 # Change Log
 
+## [1.5.10] - 2025-11-24
+
+### Fixed
+- ♿ MemoryCard now supports keyboard activation (Enter/Space) for accessibility
+- 🧪 Vitest config excludes compiled `out/**` to prevent CJS re-import issues
+- 🧪 Updated component tests to reflect Enhanced UI copy and loading behavior
+
+### Changed
+- 📦 Bump to 1.5.10 for marketplace readiness (no runtime API changes)
+
 ## [1.5.6] - 2025-11-18
 
 ### Changed

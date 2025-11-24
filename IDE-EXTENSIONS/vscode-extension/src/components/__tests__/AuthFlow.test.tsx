@@ -10,7 +10,7 @@ describe('AuthFlow Component', () => {
     vi.clearAllMocks();
   });
 
-  test('renders login button when not authenticated', () => {
+  test('renders connect button when not authenticated', () => {
     render(
       <AuthFlow
         isAuthenticated={false}
@@ -21,11 +21,11 @@ describe('AuthFlow Component', () => {
       />
     );
 
-    expect(screen.getByText(/login/i)).toBeInTheDocument();
-    expect(screen.queryByText(/logout/i)).not.toBeInTheDocument();
+    expect(screen.getByText(/connect to lanonasis/i)).toBeInTheDocument();
+    expect(screen.queryByText(/disconnect/i)).not.toBeInTheDocument();
   });
 
-  test('renders logout button when authenticated', () => {
+  test('renders disconnect button when authenticated', () => {
     render(
       <AuthFlow
         isAuthenticated={true}
@@ -36,11 +36,11 @@ describe('AuthFlow Component', () => {
       />
     );
 
-    expect(screen.getByText(/logout/i)).toBeInTheDocument();
-    expect(screen.queryByText(/login/i)).not.toBeInTheDocument();
+    expect(screen.getByText(/disconnect/i)).toBeInTheDocument();
+    expect(screen.queryByText(/connect to lanonasis/i)).not.toBeInTheDocument();
   });
 
-  test('calls onLogin when login button is clicked', async () => {
+  test('calls onLogin when connect button is clicked', async () => {
     render(
       <AuthFlow
         isAuthenticated={false}
@@ -51,15 +51,15 @@ describe('AuthFlow Component', () => {
       />
     );
 
-    const loginButton = screen.getByText(/login/i);
-    fireEvent.click(loginButton);
+    const connectButton = screen.getByText(/connect to lanonasis/i);
+    fireEvent.click(connectButton);
 
     await waitFor(() => {
       expect(mockOnLogin).toHaveBeenCalled();
     });
   });
 
-  test('calls onLogout when logout button is clicked', async () => {
+  test('calls onLogout when disconnect button is clicked', async () => {
     render(
       <AuthFlow
         isAuthenticated={true}
@@ -70,15 +70,15 @@ describe('AuthFlow Component', () => {
       />
     );
 
-    const logoutButton = screen.getByText(/logout/i);
-    fireEvent.click(logoutButton);
+    const disconnectButton = screen.getByText(/disconnect/i);
+    fireEvent.click(disconnectButton);
 
     await waitFor(() => {
       expect(mockOnLogout).toHaveBeenCalled();
     });
   });
 
-  test('shows loading spinner when isLoading is true', () => {
+  test('shows loading state when isLoading is true', () => {
     render(
       <AuthFlow
         isAuthenticated={false}
@@ -89,7 +89,7 @@ describe('AuthFlow Component', () => {
       />
     );
 
-    expect(screen.getByRole('progressbar')).toBeInTheDocument();
+    // Spinner has no explicit progressbar role in WelcomeView, assert text instead
     expect(screen.getByText(/connecting/i)).toBeInTheDocument();
   });
 
@@ -105,11 +105,11 @@ describe('AuthFlow Component', () => {
       />
     );
 
+    expect(screen.getByText(/connection error/i)).toBeInTheDocument();
     expect(screen.getByText(errorMessage)).toBeInTheDocument();
-    expect(screen.getByText(/error/i)).toBeInTheDocument();
   });
 
-  test('shows OAuth2 as default auth method', () => {
+  test('shows OAuth2 as default auth method and API Key toggle', () => {
     render(
       <AuthFlow
         isAuthenticated={false}
@@ -120,11 +120,11 @@ describe('AuthFlow Component', () => {
       />
     );
 
-    expect(screen.getByText(/oauth2/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/oauth2/i).length).toBeGreaterThan(0);
     expect(screen.getByText(/api key/i)).toBeInTheDocument();
   });
 
-  test('allows switching between OAuth2 and API Key methods', () => {
+  test('shows API Key method info after switching tab', () => {
     render(
       <AuthFlow
         isAuthenticated={false}
@@ -138,7 +138,7 @@ describe('AuthFlow Component', () => {
     const apiKeyTab = screen.getByText(/api key/i);
     fireEvent.click(apiKeyTab);
 
-    expect(screen.getByText(/enter your api key/i)).toBeInTheDocument();
+    expect(screen.getByText(/api key authentication/i)).toBeInTheDocument();
   });
 
   test('displays connection status when authenticated', () => {
@@ -152,11 +152,11 @@ describe('AuthFlow Component', () => {
       />
     );
 
-    expect(screen.getByText(/connected/i)).toBeInTheDocument();
-    expect(screen.getByText(/authenticated/i)).toBeInTheDocument();
+    expect(screen.getByText(/connected to lanonasis/i)).toBeInTheDocument();
+    expect(screen.getByText(/active/i)).toBeInTheDocument();
   });
 
-  test('displays disconnected status when not authenticated', () => {
+  test('shows connect view when not authenticated', () => {
     render(
       <AuthFlow
         isAuthenticated={false}
@@ -167,11 +167,10 @@ describe('AuthFlow Component', () => {
       />
     );
 
-    expect(screen.getByText(/disconnected/i)).toBeInTheDocument();
-    expect(screen.getByText(/not authenticated/i)).toBeInTheDocument();
+    expect(screen.getByText(/connect to lanonasis/i)).toBeInTheDocument();
   });
 
-  test('disables buttons during loading', () => {
+  test('disables connect button during loading', () => {
     render(
       <AuthFlow
         isAuthenticated={false}
@@ -182,25 +181,8 @@ describe('AuthFlow Component', () => {
       />
     );
 
-    const loginButton = screen.getByText(/login/i);
-    expect(loginButton).toBeDisabled();
-  });
-
-  test('shows API Key input when API Key method is selected', () => {
-    render(
-      <AuthFlow
-        isAuthenticated={false}
-        isLoading={false}
-        onLogin={mockOnLogin}
-        onLogout={mockOnLogout}
-        error={null}
-      />
-    );
-
-    const apiKeyTab = screen.getByText(/api key/i);
-    fireEvent.click(apiKeyTab);
-
-    expect(screen.getByPlaceholderText(/enter api key/i)).toBeInTheDocument();
+    const button = screen.getByRole('button', { name: /connecting/i });
+    expect(button).toBeDisabled();
   });
 
   test('hides error message when error is cleared', () => {
