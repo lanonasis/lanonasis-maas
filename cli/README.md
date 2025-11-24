@@ -1,4 +1,4 @@
-# @lanonasis/cli v3.4.15 - Enhanced MCP & Interactive CLI Experience
+# @lanonasis/cli v3.7.0 - Enterprise Security & MCP Experience
 
 [![NPM Version](https://img.shields.io/npm/v/@lanonasis/cli)](https://www.npmjs.com/package/@lanonasis/cli)
 [![Downloads](https://img.shields.io/npm/dt/@lanonasis/cli)](https://www.npmjs.com/package/@lanonasis/cli)
@@ -53,7 +53,24 @@ memory list
 maas memory list
 ```
 
-## 🔐 Authentication Methods
+## 🔐 Security & Authentication
+
+### Enterprise-Grade SHA-256 Security (v3.7.0+)
+
+All API keys are now secured with SHA-256 cryptographic hashing:
+
+- ✅ **Automatic Hash Normalization**: Keys are automatically hashed before transmission
+- ✅ **Double-Hash Prevention**: Smart detection prevents re-hashing already hashed keys
+- ✅ **Cross-Platform Compatibility**: Works seamlessly across Node.js and browser environments
+- ✅ **Zero Configuration**: Security is automatic and transparent
+
+```typescript
+// Hash utilities are built-in and automatic
+// Your vendor keys are automatically secured
+onasis login --vendor-key pk_xxxxx.sk_xxxxx  // ✅ Automatically hashed
+```
+
+### Authentication Methods
 
 ### 1. Vendor Key Authentication (Recommended)
 

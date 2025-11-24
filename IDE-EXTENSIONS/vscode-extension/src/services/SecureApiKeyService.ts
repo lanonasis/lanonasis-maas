@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import * as http from 'http';
 import * as crypto from 'crypto';
 import { URL, URLSearchParams } from 'url';
-import { ensureApiKeyHash, isSha256Hash } from '../../../../shared/hash-utils';
+import { ensureApiKeyHash, isSha256Hash } from '../utils/hash-utils';
 
 /**
  * Secure API Key Service
@@ -300,8 +300,21 @@ export class SecureApiKeyService {
                     }
                 });
 
+                // Add error handling for server
+                server.on('error', (err: NodeJS.ErrnoException) => {
+                    if (timeoutId) clearTimeout(timeoutId);
+                    
+                    if (err.code === 'EADDRINUSE') {
+                        reject(new Error(`Port ${SecureApiKeyService.CALLBACK_PORT} is already in use. Please close any applications using this port and try again.`));
+                    } else {
+                        reject(new Error(`Failed to start OAuth callback server: ${err.message}`));
+                    }
+                });
+
                 server.listen(SecureApiKeyService.CALLBACK_PORT, 'localhost', () => {
-                    // Open browser
+                    this.outputChannel.appendLine(`OAuth callback server listening on port ${SecureApiKeyService.CALLBACK_PORT}`);
+                    
+                    // Open browser only after server is ready
                     vscode.env.openExternal(vscode.Uri.parse(authUrlObj.toString()));
                 });
 

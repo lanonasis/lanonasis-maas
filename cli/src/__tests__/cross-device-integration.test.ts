@@ -41,6 +41,10 @@ describe('Cross-Device Integration Tests', () => {
   let device3Dir: string;
 
   beforeEach(async () => {
+    // Set test environment to skip service discovery
+    process.env.NODE_ENV = 'test';
+    process.env.SKIP_SERVICE_DISCOVERY = 'true';
+
     // Create separate test directories for each "device"
     device1Dir = path.join(os.tmpdir(), `test-device1-${Date.now()}-${Math.random()}`);
     device2Dir = path.join(os.tmpdir(), `test-device2-${Date.now()}-${Math.random()}`);
@@ -89,6 +93,8 @@ describe('Cross-Device Integration Tests', () => {
 
     // Reset environment
     delete process.env.SKIP_SERVER_VALIDATION;
+    delete process.env.NODE_ENV;
+    delete process.env.SKIP_SERVICE_DISCOVERY;
   });
 
   describe('Same Credentials Working on Multiple Simulated Devices', () => {

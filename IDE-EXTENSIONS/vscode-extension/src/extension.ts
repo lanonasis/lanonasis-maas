@@ -3,6 +3,7 @@ import { MemoryTreeProvider } from './providers/MemoryTreeProvider';
 import { MemoryCompletionProvider } from './providers/MemoryCompletionProvider';
 import { ApiKeyTreeProvider, ApiKeyTreeItem, ProjectTreeItem } from './providers/ApiKeyTreeProvider';
 import { MemorySidebarProvider } from './panels/MemorySidebarProvider';
+import { EnhancedSidebarProvider } from './panels/EnhancedSidebarProvider';
 import { MemoryService } from './services/MemoryService';
 import { EnhancedMemoryService } from './services/EnhancedMemoryService';
 import type { IMemoryService } from './services/IMemoryService';
@@ -10,7 +11,8 @@ import { ApiKeyService } from './services/ApiKeyService';
 import type { ApiKey, Project, CreateApiKeyRequest } from './services/ApiKeyService';
 import { SecureApiKeyService } from './services/SecureApiKeyService';
 import { MemoryType, MemoryEntry, MemorySearchResult } from './types/memory-aligned';
-import { withRetry, showErrorWithRecovery, withProgressAndRetry } from './utils/errorRecovery';
+// Unused error recovery utils - available for future use
+// import { withRetry, showErrorWithRecovery, withProgressAndRetry } from './utils/errorRecovery';
 import { runDiagnostics, formatDiagnosticResults } from './utils/diagnostics';
 
 export async function activate(context: vscode.ExtensionContext) {
@@ -32,13 +34,31 @@ export async function activate(context: vscode.ExtensionContext) {
     }
     const apiKeyService = new ApiKeyService(secureApiKeyService);
 
-    const sidebarProvider = new MemorySidebarProvider(context.extensionUri, memoryService);
-    context.subscriptions.push(
-        vscode.window.registerWebviewViewProvider(
-            MemorySidebarProvider.viewType,
-            sidebarProvider
-        )
-    );
+    const configuration = vscode.workspace.getConfiguration('lanonasis');
+    const useEnhancedUI = configuration.get<boolean>('useEnhancedUI', false);
+    
+    let sidebarProvider: MemorySidebarProvider | EnhancedSidebarProvider;
+    
+    // Register sidebar provider based on feature flag
+    if (useEnhancedUI) {
+        sidebarProvider = new EnhancedSidebarProvider(context.extensionUri, memoryService);
+        context.subscriptions.push(
+            vscode.window.registerWebviewViewProvider(
+                EnhancedSidebarProvider.viewType,
+                sidebarProvider as EnhancedSidebarProvider
+            )
+        );
+        console.log('[Lanonasis] Using Enhanced UI with React components');
+    } else {
+        sidebarProvider = new MemorySidebarProvider(context.extensionUri, memoryService);
+        context.subscriptions.push(
+            vscode.window.registerWebviewViewProvider(
+                MemorySidebarProvider.viewType,
+                sidebarProvider as MemorySidebarProvider
+            )
+        );
+        console.log('[Lanonasis] Using original UI');
+    }
 
     const memoryTreeProvider = new MemoryTreeProvider(memoryService);
     const apiKeyTreeProvider = new ApiKeyTreeProvider(apiKeyService);
@@ -57,7 +77,6 @@ export async function activate(context: vscode.ExtensionContext) {
         )
     );
 
-    const configuration = vscode.workspace.getConfiguration('lanonasis');
     await vscode.commands.executeCommand('setContext', 'lanonasis.enabled', true);
     await vscode.commands.executeCommand(
         'setContext',
@@ -579,6 +598,8 @@ function openMemoryInEditor(memory: MemoryEntry | MemorySearchResult) {
     });
 }
 
+// Currently unused but available for future enhanced authentication checks
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 async function checkEnhancedAuthenticationStatus(enhancedService: EnhancedMemoryService) {
     const config = vscode.workspace.getConfiguration('lanonasis');
     const apiKey = config.get<string>('apiKey');
@@ -919,7 +940,7 @@ async function viewApiKeys(apiKeyService: ApiKeyService) {
     }
 }
 
-async function createApiKey(apiKeyService: ApiKeyService, apiKeyTreeProvider?: ApiKeyTreeProvider) {
+async function createApiKey(apiKeyService: ApiKeyService, _apiKeyTreeProvider?: ApiKeyTreeProvider) {
     try {
         // Get projects first
         const projects = await apiKeyService.getProjects();

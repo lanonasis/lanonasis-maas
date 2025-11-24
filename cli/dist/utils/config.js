@@ -169,6 +169,20 @@ export class CLIConfig {
     }
     // Enhanced Service Discovery Integration
     async discoverServices(verbose = false) {
+        // Skip service discovery in test environment
+        if (process.env.NODE_ENV === 'test' || process.env.SKIP_SERVICE_DISCOVERY === 'true') {
+            if (!this.config.discoveredServices) {
+                this.config.discoveredServices = {
+                    auth_base: 'https://auth.lanonasis.com',
+                    memory_base: 'https://mcp.lanonasis.com/api/v1',
+                    mcp_base: 'https://mcp.lanonasis.com/api/v1',
+                    mcp_ws_base: 'wss://mcp.lanonasis.com/ws',
+                    mcp_sse_base: 'https://mcp.lanonasis.com/api/v1/events',
+                    project_scope: 'lanonasis-maas'
+                };
+            }
+            return;
+        }
         const discoveryUrl = 'https://mcp.lanonasis.com/.well-known/onasis.json';
         try {
             // Use axios instead of fetch for consistency
