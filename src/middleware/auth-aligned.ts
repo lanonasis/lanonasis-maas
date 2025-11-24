@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 import { config } from '@/config/environment';
 import { logger } from '@/utils/logger';
 import crypto from 'crypto';
+import jwt from 'jsonwebtoken';
 import { ensureApiKeyHash } from '../shared/hash-utils';
 
 const supabase = createClient(config.SUPABASE_URL=https://<project-ref>.supabase.co
@@ -177,36 +178,64 @@ export const alignedAuthMiddleware = async (
         };
         logger.info(`[${req.id}] API key authentication successful for user ${user.id}`);
       } else {
-        // Handle JWT token authentication with Supabase
-        // For now, skip JWT validation and proceed with basic auth
-        // TODO: Implement proper JWT validation with Supabase v2
-        const user = {
-          id: 'jwt-user',
-          email: 'jwt-user@example.com',
-          user_metadata: {},
-          app_metadata: {}
-        };
+        // Handle JWT token authentication (from auth-gateway or Supabase)
+        const jwtSecret = process.env.JWT_SECRET=REDACTED_JWT_SECRET
+        if (!jwtSecret) {
+          logger.error(`[${req.id}] JWT_SECRET=REDACTED_JWT_SECRET
+          res.status(500).json(createErrorEnvelope(req,
+            'Server configuration error',
+            'ConfigError',
+            'JWT_SECRET=REDACTED_JWT_SECRET
+          ));
+          return;
+        }
 
-        // Get user plan from service config (using hardcoded user for now)
+        let decoded: any;
+        try {
+          // Verify JWT token
+          decoded = jwt.verify(token, jwtSecret);
+          logger.debug(`[${req.id}] JWT verified successfully`, { sub: decoded.sub });
+        } catch (err: any) {
+          logger.warn(`[${req.id}] JWT verification failed: ${err.message}`);
+          res.status(401).json(createErrorEnvelope(req,
+            err.name === 'TokenExpiredError' ? 'JWT token has expired' : 'Invalid or malformed JWT token',
+            'AuthError',
+            err.name === 'TokenExpiredError' ? 'TOKEN_EXPIRED' : 'INVALID_JWT'
+          ));
+          return;
+        }
+
+        // Extract user info from JWT payload
+        const userId = decoded.sub || decoded.userId || decoded.user_id;
+        if (!userId) {
+          logger.error(`[${req.id}] JWT missing user identifier`);
+          res.status(401).json(createErrorEnvelope(req,
+            'JWT token missing user identifier',
+            'AuthError',
+            'INVALID_JWT_CLAIMS'
+          ));
+          return;
+        }
+
+        // Get user plan from service config
         const { data: serviceConfig } = await supabase
           .from('maas_service_config')
           .select('plan')
-          .eq('user_id', user.id)
+          .eq('user_id', userId)
           .single();
 
         const alignedUser: UnifiedUser = {
-          // JWTPayload properties (from Supabase user)
-          userId: user.id,
-          organizationId: user.id, // For Supabase, use user ID as org ID
-          role: 'user',
-          plan: (serviceConfig && Array.isArray(serviceConfig) && serviceConfig.length > 0)
-            ? serviceConfig[0].plan
-            : 'free',
+          // JWTPayload properties (from JWT claims)
+          userId: userId,
+          organizationId: decoded.organization_id || decoded.organizationId || userId,
+          role: decoded.role || 'user',
+          plan: serviceConfig?.plan || decoded.plan || 'free',
           // Additional UnifiedUser properties
-          id: user.id,
-          email: user.email || '',
-          user_metadata: user.user_metadata || {},
-          app_metadata: user.app_metadata || {}
+          id: userId,
+          email: decoded.email || '',
+          user_metadata: decoded.user_metadata || {},
+          app_metadata: decoded.app_metadata || {},
+          project_scope: decoded.project_scope
         };
 
         req.user = { 
