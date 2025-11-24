@@ -973,7 +973,7 @@ const createMemorySchema = zod.z.object({
     topic_id: zod.z.string().uuid().optional(),
     project_ref: zod.z.string().max(100).optional(),
     tags: zod.z.array(zod.z.string().min(1).max(50)).max(20).default([]),
-    metadata: zod.z.record(zod.z.unknown()).optional()
+    metadata: zod.z.record(zod.z.string(), zod.z.unknown()).optional()
 });
 const updateMemorySchema = zod.z.object({
     title: zod.z.string().min(1).max(500).optional(),
@@ -984,7 +984,7 @@ const updateMemorySchema = zod.z.object({
     topic_id: zod.z.string().uuid().nullable().optional(),
     project_ref: zod.z.string().max(100).nullable().optional(),
     tags: zod.z.array(zod.z.string().min(1).max(50)).max(20).optional(),
-    metadata: zod.z.record(zod.z.unknown()).optional()
+    metadata: zod.z.record(zod.z.string(), zod.z.unknown()).optional()
 });
 const searchMemorySchema = zod.z.object({
     query: zod.z.string().min(1).max(1000),

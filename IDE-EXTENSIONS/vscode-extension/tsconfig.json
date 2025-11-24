@@ -20,7 +20,9 @@
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
     "types": ["vscode", "node"],
-    "moduleResolution": "node"
+    "moduleResolution": "node",
+    "jsx": "react-jsx",
+    "allowJs": true
   },
   "include": [
     "src/**/*"

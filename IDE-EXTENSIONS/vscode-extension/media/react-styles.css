@@ -1,0 +1,109 @@
+/* Tailwind CSS - processed by PostCSS */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* VS Code Theme Integration */
+body {
+  margin: 0;
+  padding: 0;
+  background-color: #1E1E1E;
+  color: #CCCCCC;
+  font-family: 'Segoe UI', 'Helvetica Neue', 'Helvetica', 'Arial', sans-serif;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+/* Loading State */
+.loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+  gap: 1rem;
+}
+
+.spinner {
+  width: 32px;
+  height: 32px;
+  border: 2px solid #007ACC;
+  border-top: 2px solid transparent;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #252526;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #424242;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #4C4C4C;
+}
+
+/* Focus styles */
+*:focus {
+  outline: 1px solid #007ACC;
+  outline-offset: 2px;
+}
+
+/* Selection styles */
+::selection {
+  background: #264F78;
+}
+
+/* VS Code button styles */
+.vscode-button {
+  background: #007ACC;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.vscode-button:hover {
+  background: #005A9E;
+}
+
+.vscode-button:disabled {
+  background: #424242;
+  color: #888888;
+  cursor: not-allowed;
+}
+
+/* Input styles */
+.vscode-input {
+  background: #252526;
+  border: 1px solid #2D2D2D;
+  color: #CCCCCC;
+  padding: 6px 12px;
+  border-radius: 3px;
+  font-size: 13px;
+}
+
+.vscode-input:focus {
+  border-color: #007ACC;
+  outline: none;
+}
+
+.vscode-input::placeholder {
+  color: #888888;
+}

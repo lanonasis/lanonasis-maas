@@ -13,7 +13,7 @@ import {
   MemorySearchResult,
   UserMemoryStats 
 } from '../types/memory-aligned';
-import { ensureApiKeyHashBrowser } from '../../../../shared/hash-utils';
+import { ensureApiKeyHashBrowser } from '../utils/hash-utils';
 
 export interface MaaSClientConfig {
   apiUrl: string;
@@ -99,22 +99,22 @@ export class MaaSClient {
 
       // Handle non-JSON responses
       const contentType = response.headers.get('content-type');
-      let data: any;
+      let data: Record<string, unknown>;
       
       if (contentType?.includes('application/json')) {
-        data = await response.json();
+        data = await response.json() as Record<string, unknown>;
       } else {
         const text = await response.text();
         data = { error: `Unexpected response: ${text.substring(0, 100)}` };
       }
 
       if (!response.ok) {
-        const errorMsg = data?.error || data?.message || `HTTP ${response.status}: ${response.statusText}`;
+        const errorMsg = (data?.error as string) || (data?.message as string) || `HTTP ${response.status}: ${response.statusText}`;
         console.error('[MaaSClient] Error:', errorMsg);
         return { error: errorMsg };
       }
 
-      return { data };
+      return { data: data as T };
     } catch (error) {
       if (error instanceof Error) {
         if (error.name === 'AbortError') {

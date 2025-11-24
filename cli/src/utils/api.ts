@@ -2,7 +2,7 @@ import axios, { AxiosInstance, AxiosRequestConfig } from 'axios';
 import chalk from 'chalk';
 import { randomUUID } from 'crypto';
 import { CLIConfig } from './config.js';
-import { ensureApiKeyHash } from '../../../shared/hash-utils.js';
+import { ensureApiKeyHash } from './hash-utils.js';
 
 // Type definitions for API responses and requests
 export interface AuthResponse {

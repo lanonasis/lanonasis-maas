@@ -2,7 +2,7 @@
   "name": "lanonasis-memory",
   "displayName": "LanOnasis Memory Assistant",
   "description": "Memory as a Service integration - AI-powered memory management with semantic search (Compatible with CLI v3.0.6+)",
-  "version": "1.5.8",
+  "version": "1.5.9",
   "publisher": "LanOnasis",
   "icon": "images/icon.png",
   "repository": {
@@ -421,6 +421,11 @@
           "default": false,
           "description": "Show traditional tree view alongside modern sidebar (for advanced users)"
         },
+        "lanonasis.useEnhancedUI": {
+          "type": "boolean",
+          "default": false,
+          "description": "Use enhanced React-based UI with modern design (experimental)"
+        },
         "lanonasis.enableLegacyViews": {
           "type": "boolean",
           "default": false,
@@ -438,17 +443,27 @@
     "pretest": "npm run compile && npm run lint",
     "lint": "eslint src --ext ts",
     "test": "node ./out/test/runTest.js",
-    "package": "npm run compile && vsce package --no-dependencies",
+    "package": "npm run compile && npm run build:react && vsce package --no-dependencies",
     "publish": "vsce publish",
-    "build:package": "npm run compile && vsce package --no-dependencies"
+    "build:package": "npm run compile && npm run build:react && vsce package --no-dependencies",
+    "build:react": "webpack --config webpack.react.config.js"
   },
   "dependencies": {
     "@lanonasis/memory-client": "^1.0.0",
-    "zod": "^3.23.8"
+    "zod": "^3.23.8",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "framer-motion": "^10.16.0",
+    "date-fns": "^2.30.0",
+    "lucide-react": "^0.263.1",
+    "clsx": "^2.0.0",
+    "tailwind-merge": "^1.14.0"
   },
   "devDependencies": {
     "@types/node": "^24.1.0",
     "@types/vscode": "^1.74.0",
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0",
     "@typescript-eslint/eslint-plugin": "^8.38.0",
     "@typescript-eslint/parser": "^8.38.0",
     "@vscode/test-electron": "^2.5.2",
@@ -457,7 +472,14 @@
     "ts-loader": "^9.5.2",
     "typescript": "^5.8.3",
     "webpack": "^5.101.0",
-    "webpack-cli": "^6.0.1"
+    "webpack-cli": "^6.0.1",
+    "style-loader": "^3.3.0",
+    "css-loader": "^6.8.0",
+    "postcss": "^8.4.0",
+    "postcss-loader": "^7.3.0",
+    "tailwindcss": "^3.3.0",
+    "autoprefixer": "^10.4.0",
+    "@svgr/webpack": "^8.1.0"
   },
   "overrides": {
     "js-yaml": "^4.1.1"
