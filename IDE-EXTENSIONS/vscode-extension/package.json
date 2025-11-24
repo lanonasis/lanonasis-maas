@@ -403,7 +403,7 @@
           "type": "number",
           "default": 2000,
           "minimum": 500,
-          "maximum": 10000,
+          "maximum": 1e4,
           "description": "CLI detection timeout in milliseconds"
         },
         "lanonasis.verboseLogging": {
@@ -477,7 +477,7 @@
     "@types/vscode": "^1.74.0",
     "@typescript-eslint/eslint-plugin": "^8.38.0",
     "@typescript-eslint/parser": "^8.38.0",
-    "@vitejs/plugin-react": "^4.7.0",
+    "@vitejs/plugin-react": "^5.1.1",
     "@vscode/test-electron": "^2.5.2",
     "@vscode/vsce": "^3.7.0",
     "autoprefixer": "^10.4.0",
@@ -491,7 +491,8 @@
     "tailwindcss": "^3.3.0",
     "ts-loader": "^9.5.2",
     "typescript": "^5.8.3",
-    "vitest": "^1.6.1",
+    "vite": "^6",
+    "vitest": "^4.0.13",
     "webpack": "^5.101.0",
     "webpack-cli": "^6.0.1"
   },
