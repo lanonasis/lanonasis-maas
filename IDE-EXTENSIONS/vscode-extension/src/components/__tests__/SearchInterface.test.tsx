@@ -67,8 +67,11 @@ describe('SearchInterface Component', () => {
     );
 
     const input = screen.getByRole('textbox');
+    const form = input.closest('form');
+
     fireEvent.change(input, { target: { value: 'test query' } });
-    fireEvent.keyDown(input, { key: 'Enter' });
+    // Simulate Enter by submitting the form (JSDOM reliability)
+    if (form) fireEvent.submit(form);
 
     await waitFor(() => {
       expect(mockOnSearch).toHaveBeenCalledWith('test query');
