@@ -8,6 +8,16 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: ['./src/test/setup.ts'],
     globals: true,
+    include: [
+      'src/**/*.{test,spec}.{ts,tsx}',
+      'src/**/__tests__/**/*.{ts,tsx}'
+    ],
+    exclude: [
+      'node_modules/**',
+      'out/**',
+      'dist/**',
+      'coverage/**'
+    ],
     coverage: {
       reporter: ['text', 'json', 'html'],
       exclude: [
@@ -16,7 +26,8 @@ export default defineConfig({
         '**/*.d.ts',
         '**/*.config.*',
         'dist/',
-        'coverage/'
+        'coverage/',
+        'out/'
       ],
       thresholds: {
         global: {
