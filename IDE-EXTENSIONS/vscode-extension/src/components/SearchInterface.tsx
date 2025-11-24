@@ -67,7 +67,11 @@ const SearchInterface: React.FC<SearchInterfaceProps> = ({
         
         {/* Loading Spinner */}
         {isLoading && (
-          <div className="animate-spin h-4 w-4 border-2 border-[#007ACC] border-t-transparent rounded-full flex-shrink-0" />
+          <div 
+            role="progressbar"
+            aria-label="Loading..."
+            className="animate-spin h-4 w-4 border-2 border-[#007ACC] border-t-transparent rounded-full flex-shrink-0" 
+          />
         )}
         
         {/* Clear Button */}
