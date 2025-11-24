@@ -24,6 +24,12 @@ const MemoryCard: React.FC<MemoryCardProps> = ({ id, title, type, date, tags, ic
       aria-label={`Memory: ${title}`}
       tabIndex={0}
       onClick={() => onSelect?.(id)}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onSelect?.(id);
+        }
+      }}
       className={cn(
         "p-3 rounded-lg border border-[#2D2D2D] bg-[#252526] hover:border-[#007ACC] cursor-pointer transition-all duration-200",
         className
