@@ -1,6 +1,6 @@
 {
   "name": "@lanonasis/memory-client",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Memory as a Service (MaaS) Client SDK for Lanonasis - Intelligent memory management with CLI/MCP integration and semantic search",
   "type": "module",
   "main": "dist/index.js",
@@ -63,31 +63,34 @@
     "node": ">=16.0.0"
   },
   "dependencies": {
-    "zod": "^3.23.8"
+    "zod": "^4.1.12"
   },
   "optionalDependencies": {
-    "child_process": "*"
+    "child_process": "^1.0.2"
   },
   "devDependencies": {
-    "@rollup/plugin-commonjs": "^28.0.1",
-    "@rollup/plugin-node-resolve": "^15.3.0",
-    "@rollup/plugin-typescript": "^12.1.1",
-    "@types/jest": "^29.5.14",
-    "@types/node": "^22.9.0",
-    "@typescript-eslint/eslint-plugin": "^8.15.0",
-    "@typescript-eslint/parser": "^8.15.0",
-    "eslint": "^9.16.0",
-    "jest": "^29.7.0",
-    "rimraf": "^6.0.1",
-    "rollup": "^4.28.1",
-    "rollup-plugin-dts": "^6.1.1",
-    "ts-jest": "^29.2.5",
+    "@rollup/plugin-commonjs": "^29.0.0",
+    "@rollup/plugin-node-resolve": "^16.0.3",
+    "@rollup/plugin-typescript": "^12.3.0",
+    "@types/jest": "^30.0.0",
+    "@types/node": "^24.10.1",
+    "@typescript-eslint/eslint-plugin": "^8.47.0",
+    "@typescript-eslint/parser": "^8.47.0",
+    "eslint": "^9.39.1",
+    "jest": "^30.2.0",
+    "rimraf": "^6.1.2",
+    "rollup": "^4.53.3",
+    "rollup-plugin-dts": "^6.2.3",
+    "ts-jest": "^29.4.5",
     "tslib": "^2.8.1",
-    "typescript": "^5.7.2"
+    "typescript": "^5.9.3"
   },
   "publishConfig": {
     "access": "public",
     "registry": "https://registry.npmjs.org/"
+  },
+  "overrides": {
+    "js-yaml": "4.1.1"
   },
   "funding": {
     "type": "github",
