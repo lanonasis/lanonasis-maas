@@ -13,16 +13,20 @@ export interface MemoryCardProps {
   tags: string[];
   content: string;
   iconType: 'terminal' | 'filecode' | 'hash' | 'calendar' | 'lightbulb' | 'briefcase' | 'user' | 'settings';
-  onSelect?: () => void;
+  onSelect?: (id: string) => void;
+  className?: string;
 }
 
-const MemoryCard: React.FC<MemoryCardProps> = ({ id, title, type, date, tags, iconType, onSelect }) => {
+const MemoryCard: React.FC<MemoryCardProps> = ({ id, title, type, date, tags, iconType, onSelect, className }) => {
   return (
-    <div
-      onClick={onSelect}
+    <div 
+      role="article"
+      aria-label={`Memory: ${title}`}
+      tabIndex={0}
+      onClick={() => onSelect?.(id)}
       className={cn(
-        "group relative flex flex-col gap-2 rounded-lg border border-[#2D2D2D] bg-gradient-to-br from-[#252526] to-[#1E1E1E] p-3 hover:from-[#2A2D2E] hover:to-[#252526] hover:border-[#007ACC]/50 transition-all duration-200",
-        onSelect && "cursor-pointer"
+        "p-3 rounded-lg border border-[#2D2D2D] bg-[#252526] hover:border-[#007ACC] cursor-pointer transition-all duration-200",
+        className
       )}
       data-testid={`memory-card-${id}`}
     >
@@ -39,7 +43,7 @@ const MemoryCard: React.FC<MemoryCardProps> = ({ id, title, type, date, tags, ic
       <div className="flex items-center gap-3 text-[10px] text-[#888888]">
         <div className="flex items-center gap-1">
           <Icon type={iconType} className="h-3 w-3" />
-          <span>{format(date, "MMM d")}</span>
+          <span>{format(new Date(date), "MMM d")}</span>
         </div>
         {tags.map((tag) => (
           <div key={tag} className="flex items-center gap-1 bg-[#007ACC]/10 px-1.5 py-0.5 rounded text-[#007ACC] text-[9px]">
