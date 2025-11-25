@@ -202,13 +202,13 @@ export declare const SystemConfigSchema: z.ZodObject<{
 }, "strip", z.ZodTypeAny, {
     value?: any;
     action?: "get" | "set" | "reset";
-    scope?: "user" | "global";
     key?: string;
+    scope?: "user" | "global";
 }, {
     value?: any;
     action?: "get" | "set" | "reset";
-    scope?: "user" | "global";
     key?: string;
+    scope?: "user" | "global";
 }>;
 export declare const BulkOperationSchema: z.ZodObject<{
     operation: z.ZodEnum<["create", "update", "delete"]>;
@@ -580,13 +580,13 @@ export declare const MCPSchemas: {
         }, "strip", z.ZodTypeAny, {
             value?: any;
             action?: "get" | "set" | "reset";
-            scope?: "user" | "global";
             key?: string;
+            scope?: "user" | "global";
         }, {
             value?: any;
             action?: "get" | "set" | "reset";
-            scope?: "user" | "global";
             key?: string;
+            scope?: "user" | "global";
         }>;
     };
     operations: {

@@ -83,6 +83,10 @@ export declare class MCPClient {
      */
     connect(options?: MCPConnectionOptions): Promise<boolean>;
     /**
+     * Persist successful connection mode and URLs to config for future use
+     */
+    private persistConnectionState;
+    /**
      * Connect to MCP server with retry logic and exponential backoff
      */
     private connectWithRetry;
