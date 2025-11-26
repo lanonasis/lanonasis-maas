@@ -3,11 +3,11 @@ import { ClientConfig, AuthToken } from '../types/common.js';
 import { MemoryClient } from '../memory/MemoryClient.js';
 import { ApiKeyClient } from '../api-keys/ApiKeyClient.js';
 import { MCPClient } from '../mcp/MCPClient.js';
-import { LanOnasisError, AuthenticationError } from '../errors/index.js';
+import { LanonasisError, AuthenticationError } from '../errors/index.js';
 import { DEFAULT_API_URL, DEFAULT_TIMEOUT } from '../constants.js';
 import { parseJWT } from '../utils/index.js';
 
-export interface LanOnasisClientConfig extends ClientConfig {
+export interface LanonasisClientConfig extends ClientConfig {
   /**
    * Base URL for the LanOnasis API
    * @default "https://api.lanonasis.com"
@@ -60,7 +60,7 @@ export interface LanOnasisClientConfig extends ClientConfig {
  * 
  * @example
  * ```typescript
- * const client = new LanOnasisClient({
+ * const client = new LanonasisClient({
  *   apiUrl: 'https://api.lanonasis.com',
  *   apiKey: 'your-api-key',
  *   organizationId: 'your-org-id'
@@ -72,9 +72,9 @@ export interface LanOnasisClientConfig extends ClientConfig {
  * const session = await client.mcp.requestAccess({...});
  * ```
  */
-export class LanOnasisClient {
+export class LanonasisClient {
   private httpClient: AxiosInstance;
-  private config: Required<LanOnasisClientConfig>;
+  private config: Required<LanonasisClientConfig>;
   private authToken?: AuthToken;
 
   // Sub-clients
@@ -82,7 +82,7 @@ export class LanOnasisClient {
   public readonly apiKeys: ApiKeyClient;
   public readonly mcp: MCPClient;
 
-  constructor(config: LanOnasisClientConfig = {}) {
+  constructor(config: LanonasisClientConfig = {}) {
     this.config = {
       apiUrl: config.apiUrl || DEFAULT_API_URL,
       apiKey: config.apiKey || '',
@@ -126,7 +126,7 @@ export class LanOnasisClient {
     });
 
     // Request interceptor for authentication
-    client.interceptors.request.use((config) => {
+    client.interceptors.request.use((config: any) => {
       if (this.config.apiKey) {
         config.headers['X-API-Key'] = this.config.apiKey;
       }
@@ -153,7 +153,7 @@ export class LanOnasisClient {
 
     // Response interceptor for error handling
     client.interceptors.response.use(
-      (response) => {
+      (response: any) => {
         if (this.config.debug) {
           console.log('[LanOnasis SDK] Response:', {
             status: response.status,
@@ -163,7 +163,7 @@ export class LanOnasisClient {
         }
         return response;
       },
-      async (error) => {
+      async (error: any) => {
         if (this.config.debug) {
           console.error('[LanOnasis SDK] Error:', {
             status: error.response?.status,
@@ -181,20 +181,20 @@ export class LanOnasisClient {
             case 401:
               throw new AuthenticationError(data.message || 'Authentication failed');
             case 403:
-              throw new LanOnasisError(data.message || 'Access forbidden', status);
+              throw new LanonasisError(data.message || 'Access forbidden', status);
             case 404:
-              throw new LanOnasisError(data.message || 'Resource not found', status);
+              throw new LanonasisError(data.message || 'Resource not found', status);
             case 429:
-              throw new LanOnasisError(data.message || 'Rate limit exceeded', status);
+              throw new LanonasisError(data.message || 'Rate limit exceeded', status);
             case 500:
-              throw new LanOnasisError(data.message || 'Internal server error', status);
+              throw new LanonasisError(data.message || 'Internal server error', status);
             default:
-              throw new LanOnasisError(data.message || 'API request failed', status);
+              throw new LanonasisError(data.message || 'API request failed', status);
           }
         }
 
         // Network or other errors
-        throw new LanOnasisError(error.message || 'Request failed');
+        throw new LanonasisError(error.message || 'Request failed');
       }
     );
 
@@ -270,7 +270,7 @@ export class LanOnasisClient {
         features: response.data.features || ['memory', 'api-keys', 'mcp']
       };
     } catch (error) {
-      throw new LanOnasisError('Connection test failed: ' + error.message);
+      throw new LanonasisError('Connection test failed: ' + (error instanceof Error ? error.message : String(error)));
     }
   }
 
@@ -290,7 +290,7 @@ export class LanOnasisClient {
       const response = await this.httpClient.get('/api/v1/auth/me');
       return response.data;
     } catch (error) {
-      throw new LanOnasisError('Failed to get current user: ' + error.message);
+      throw new LanonasisError('Failed to get current user: ' + (error instanceof Error ? error.message : String(error)));
     }
   }
 
@@ -306,7 +306,7 @@ export class LanOnasisClient {
       
       return { token, expiresAt };
     } catch (error) {
-      throw new AuthenticationError('Failed to refresh token: ' + error.message);
+      throw new AuthenticationError('Failed to refresh token: ' + (error instanceof Error ? error.message : String(error)));
     }
   }
 
@@ -339,7 +339,7 @@ export class LanOnasisClient {
       const response = await this.httpClient.get(`/api/v1/analytics/usage?days=${days}`);
       return response.data;
     } catch (error) {
-      throw new LanOnasisError('Failed to get usage stats: ' + error.message);
+      throw new LanonasisError('Failed to get usage stats: ' + (error instanceof Error ? error.message : String(error)));
     }
   }
 
@@ -360,15 +360,15 @@ export class LanOnasisClient {
   /**
    * Get the current configuration
    */
-  public getConfig(): Readonly<LanOnasisClientConfig> {
+  public getConfig(): Readonly<LanonasisClientConfig> {
     return { ...this.config };
   }
 
   /**
    * Create a new client instance with different configuration
    */
-  public clone(overrides: Partial<LanOnasisClientConfig> = {}): LanOnasisClient {
-    return new LanOnasisClient({
+  public clone(overrides: Partial<LanonasisClientConfig> = {}): LanonasisClient {
+    return new LanonasisClient({
       ...this.config,
       ...overrides
     });
