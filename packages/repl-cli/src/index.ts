@@ -10,7 +10,7 @@ const program = new Command();
 program
   .name('onasis-repl')
   .description('LanOnasis Interactive Memory Assistant')
-  .version('0.2.0');
+  .version('0.4.0');
 
 program
   .command('start', { isDefault: true })
@@ -18,11 +18,13 @@ program
   .option('--mcp', 'Use local MCP mode', false)
   .option('--api <url>', 'Override API URL')
   .option('--token <token>', 'Authentication token')
+  .option('--model <model>', 'OpenAI model to use (e.g., gpt-4-turbo-preview, gpt-4, gpt-3.5-turbo)')
   .action(async (options) => {
     const config = await loadConfig({
       useMCP: options.mcp || false,
       apiUrl: options.api,
-      authToken: options.token
+      authToken: options.token,
+      openaiModel: options.model
     });
     
     const repl = new ReplEngine(config);
