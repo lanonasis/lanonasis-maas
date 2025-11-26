@@ -35,7 +35,9 @@ export class ReplEngine {
     this.orchestrator = new NaturalLanguageOrchestrator({
       apiUrl: config.apiUrl,
       authToken: config.authToken,
-      openaiApiKey: config.openaiApiKey
+      openaiApiKey: config.openaiApiKey,
+      model: config.openaiModel,
+      userContext: config.userContext
     });
 
     this.registerCommands();
@@ -83,14 +85,24 @@ export class ReplEngine {
   
   async start() {
     this.running = true;
-    console.log(chalk.green('🚀 LanOnasis Interactive Memory Assistant'));
+    
+    // Fetch user context if available
+    await this.fetchUserContext();
+    
+    // Personalized welcome
+    const welcomeMessage = this.buildWelcomeMessage();
+    console.log(chalk.green(welcomeMessage));
     console.log(chalk.cyan('━'.repeat(50)));
     console.log(chalk.gray(`Mode: ${this.context.mode} | API: ${this.config.apiUrl}`));
     console.log(chalk.gray(`Natural Language: ${this.nlMode ? chalk.green('ON') : chalk.yellow('OFF')}`));
+    if (this.config.openaiModel) {
+      console.log(chalk.gray(`AI Model: ${this.config.openaiModel}`));
+    }
     console.log(chalk.cyan('━'.repeat(50)));
     console.log(chalk.white('\n💡 You can interact naturally or use commands:'));
     console.log(chalk.gray('   • Natural: "Remember that I prefer TypeScript"'));
     console.log(chalk.gray('   • Natural: "What do I know about my projects?"'));
+    console.log(chalk.gray('   • Natural: "Please refine this prompt: ..."'));
     console.log(chalk.gray('   • Command: create <title> <content>'));
     console.log(chalk.gray('   • Type "help" for all commands\n'));
 
@@ -141,8 +153,11 @@ export class ReplEngine {
     try {
       const response = await this.orchestrator.processNaturalLanguage(input);
 
-      // Display the response
-      console.log(chalk.white(`\n${response.response}\n`));
+      // Display main answer first
+      const mainAnswer = response.mainAnswer || response.response;
+      if (mainAnswer) {
+        console.log(chalk.white(`\n${mainAnswer}\n`));
+      }
 
       // If there's an action, execute it
       if (response.action) {
@@ -159,19 +174,49 @@ export class ReplEngine {
               break;
 
             case 'search':
-              const searchResults = result.data?.results || [];
-              if (searchResults.length === 0) {
-                console.log(chalk.gray('No results found'));
-              } else {
-                console.log(chalk.cyan(`Found ${searchResults.length} result(s):\n`));
-                searchResults.forEach((r: any, i: number) => {
-                  console.log(chalk.cyan(`[${i + 1}] ${r.title}`));
-                  console.log(chalk.gray(`    ${r.content.substring(0, 100)}...`));
-                  if (r.similarity) {
-                    console.log(chalk.gray(`    Relevance: ${(r.similarity * 100).toFixed(1)}%\n`));
+              // Enhanced search results with main answer + additional context
+              if (result.enhanced) {
+                const { mainResult, additionalResults } = result.enhanced;
+                
+                // Main result (most relevant)
+                if (mainResult) {
+                  console.log(chalk.cyan(`\n━━━ Primary Result ━━━`));
+                  console.log(chalk.white(`Title: ${mainResult.title}`));
+                  console.log(chalk.gray(`Content: ${mainResult.content.substring(0, 200)}${mainResult.content.length > 200 ? '...' : ''}`));
+                  if (mainResult.similarity) {
+                    console.log(chalk.green(`Relevance: ${(mainResult.similarity * 100).toFixed(1)}%\n`));
                   }
-                });
-                this.context.lastResult = searchResults;
+                }
+                
+                // Additional context
+                if (additionalResults && additionalResults.length > 0) {
+                  console.log(chalk.cyan(`\n📚 Related Context:\n`));
+                  additionalResults.forEach((r: any, i: number) => {
+                    console.log(chalk.cyan(`[${i + 1}] ${r.title}`));
+                    console.log(chalk.gray(`    ${r.content}${r.content.length > 200 ? '...' : ''}`));
+                    if (r.relevance) {
+                      console.log(chalk.gray(`    Relevance: ${r.relevance.toFixed(1)}%\n`));
+                    }
+                  });
+                }
+                
+                this.context.lastResult = [mainResult, ...additionalResults];
+              } else {
+                // Fallback to original format
+                const searchResults = result.data?.results || [];
+                if (searchResults.length === 0) {
+                  console.log(chalk.gray('No results found'));
+                } else {
+                  console.log(chalk.cyan(`Found ${searchResults.length} result(s):\n`));
+                  searchResults.forEach((r: any, i: number) => {
+                    console.log(chalk.cyan(`[${i + 1}] ${r.title}`));
+                    console.log(chalk.gray(`    ${r.content.substring(0, 100)}...`));
+                    if (r.similarity) {
+                      console.log(chalk.gray(`    Relevance: ${(r.similarity * 100).toFixed(1)}%\n`));
+                    }
+                  });
+                  this.context.lastResult = searchResults;
+                }
               }
               break;
 
@@ -205,13 +250,71 @@ export class ReplEngine {
             case 'delete':
               console.log(chalk.green('✓ Memory deleted successfully'));
               break;
+
+            case 'optimize_prompt':
+              if (result.data) {
+                console.log(chalk.cyan(`\n━━━ Optimized Prompt ━━━\n`));
+                console.log(chalk.white(result.data.optimized_prompt));
+                if (result.data.improvements && result.data.improvements.length > 0) {
+                  console.log(chalk.cyan(`\n✨ Key Improvements:\n`));
+                  result.data.improvements.forEach((imp: string, i: number) => {
+                    console.log(chalk.gray(`  ${i + 1}. ${imp}`));
+                  });
+                }
+                if (result.data.explanation) {
+                  console.log(chalk.gray(`\n💡 ${result.data.explanation}\n`));
+                }
+                console.log(chalk.yellow('\n💾 Would you like to save this optimized prompt? (Use "create" command)'));
+                this.context.lastResult = result.data;
+              }
+              break;
           }
         } else if (result?.error) {
           console.log(chalk.red(`Error: ${result.error}`));
         }
       }
+      
+      // Display additional context if available
+      if (response.additionalContext && response.additionalContext.length > 0) {
+        console.log(chalk.cyan(`\n📚 Additional Information:\n`));
+        response.additionalContext.forEach((ctx, i) => {
+          console.log(chalk.cyan(`[${i + 1}] ${ctx.title}`));
+          console.log(chalk.gray(`    ${ctx.content}`));
+          if (ctx.relevance) {
+            console.log(chalk.gray(`    Relevance: ${ctx.relevance.toFixed(1)}%\n`));
+          }
+        });
+      }
     } catch (error) {
       console.error(chalk.red('Error processing request:'), error instanceof Error ? error.message : String(error));
+    }
+  }
+
+  private buildWelcomeMessage(): string {
+    const userName = this.config.userContext?.name;
+    const projects = this.config.userContext?.projects;
+    
+    if (userName && projects && projects.length > 0) {
+      return `🚀 Welcome back, ${userName}! What magic should we pull off today?\n   Which of your projects are we focusing on? (${projects.join(', ')})`;
+    } else if (userName) {
+      return `🚀 Welcome back, ${userName}! What magic should we pull off today?`;
+    } else if (projects && projects.length > 0) {
+      return `🚀 LanOnasis Interactive Memory Assistant\n   Which of your projects are we focusing on? (${projects.join(', ')})`;
+    } else {
+      return '🚀 LanOnasis Interactive Memory Assistant';
+    }
+  }
+
+  private async fetchUserContext() {
+    // Try to fetch user context from memory service
+    // This is a placeholder - actual implementation would query the API
+    // For now, we'll check if there's any user info in memories
+    try {
+      // Could implement: search for user profile memory, project memories, etc.
+      // For now, we'll leave it as a hook for future implementation
+      // The config can be populated from environment or config file
+    } catch (error) {
+      // Silently fail - user context is optional
     }
   }
 
@@ -228,6 +331,7 @@ export class ReplEngine {
     console.log(chalk.gray('  • "What do I know about TypeScript?"'));
     console.log(chalk.gray('  • "Show me my recent memories"'));
     console.log(chalk.gray('  • "Find information about my projects"'));
+    console.log(chalk.gray('  • "Please refine this prompt: ..."'));
 
     console.log(chalk.yellow('\n⚙️  Direct Commands:'));
     console.log(chalk.white('  Memory Operations:'));
