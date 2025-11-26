@@ -316,39 +316,68 @@ program
       const { fileURLToPath } = await import('url');
       const { dirname, join, resolve } = await import('path');
       const { existsSync } = await import('fs');
+      const moduleLib = (await import('module')).default;
       
-      // Try multiple paths to find the REPL package
-      const candidates = [
-        // If running from monorepo root
-        join(process.cwd(), 'apps', 'lanonasis-maas', 'packages', 'repl-cli', 'dist', 'index.js'),
-        // If running from apps/lanonasis-maas
-        join(process.cwd(), 'packages', 'repl-cli', 'dist', 'index.js'),
-        // If running from packages/repl-cli
-        join(process.cwd(), 'dist', 'index.js'),
-        // If running from repl-cli subdirectory
-        join(process.cwd(), '..', 'dist', 'index.js'),
-        // Try to resolve from node_modules (if installed as package)
-        resolve(process.cwd(), 'node_modules', '@lanonasis', 'repl-cli', 'dist', 'index.js'),
-        // Try global install location
-        resolve(process.cwd(), '..', '..', '..', 'lib', 'node_modules', '@lanonasis', 'repl-cli', 'dist', 'index.js')
-      ];
+      const cliDir = dirname(fileURLToPath(import.meta.url));
+      const cliRoot = resolve(cliDir, '..');
+      const searchPaths = [process.cwd(), cliDir, cliRoot];
       
+      const attempted: string[] = [];
       let replPath: string | null = null;
-      for (const candidate of candidates) {
-        if (existsSync(candidate)) {
-          replPath = candidate;
-          break;
+      const addCandidate = (candidate: string | null | undefined) => {
+        if (!candidate) return;
+        const normalized = resolve(candidate);
+        if (attempted.includes(normalized)) return;
+        attempted.push(normalized);
+        if (!replPath && existsSync(normalized)) {
+          replPath = normalized;
         }
+      };
+      
+      const resolveRepl = () => {
+        try {
+          return require.resolve('@lanonasis/repl-cli/dist/index.js', { paths: searchPaths });
+        } catch {
+          // ignore resolution errors
+        }
+        try {
+          const pkgPath = require.resolve('@lanonasis/repl-cli/package.json', { paths: searchPaths });
+          return join(dirname(pkgPath), 'dist', 'index.js');
+        } catch {
+          return null;
+        }
+      };
+      
+      // Prefer Node resolution (local dependency or workspace)
+      addCandidate(resolveRepl());
+      
+      // Monorepo layouts (compiled or running from dist)
+      addCandidate(join(cliRoot, '..', 'packages', 'repl-cli', 'dist', 'index.js'));
+      addCandidate(join(cliRoot, '..', '..', 'packages', 'repl-cli', 'dist', 'index.js'));
+      addCandidate(join(process.cwd(), 'apps', 'lanonasis-maas', 'packages', 'repl-cli', 'dist', 'index.js'));
+      addCandidate(join(process.cwd(), 'packages', 'repl-cli', 'dist', 'index.js'));
+      addCandidate(join(process.cwd(), 'dist', 'index.js'));
+      addCandidate(join(process.cwd(), '..', 'dist', 'index.js'));
+      
+      // Project/local node_modules
+      for (const base of searchPaths) {
+        addCandidate(join(base, 'node_modules', '@lanonasis', 'repl-cli', 'dist', 'index.js'));
+      }
+      
+      // Global node_modules locations
+      const globalPaths: string[] = Array.isArray((moduleLib as any)?.globalPaths) ? (moduleLib as any).globalPaths : [];
+      for (const globalPath of globalPaths) {
+        addCandidate(join(globalPath, '@lanonasis', 'repl-cli', 'dist', 'index.js'));
       }
       
       if (!replPath) {
         console.error(colors.error('REPL package not found.'));
-        console.log(colors.muted('Tried locations:'));
-        candidates.forEach(c => console.log(colors.muted(`  - ${c}`)));
-        console.log(colors.cyan('\n💡 Options:'));
-        console.log(colors.cyan('  1. Run from monorepo root: cd /path/to/lan-onasis-monorepo && onasis repl'));
-        console.log(colors.cyan('  2. Use direct command: cd apps/lanonasis-maas/packages/repl-cli && node dist/index.js start'));
-        console.log(colors.cyan('  3. Install globally: npm install -g @lanonasis/repl-cli && onasis-repl start'));
+        console.log(colors.muted('Searched locations:'));
+        attempted.forEach(c => console.log(colors.muted(`  - ${c}`)));
+        console.log(colors.info('\n💡 Options:'));
+        console.log(colors.info('  1. Run from monorepo root: cd /path/to/lan-onasis-monorepo && onasis repl'));
+        console.log(colors.info('  2. Use direct command: cd apps/lanonasis-maas/packages/repl-cli && node dist/index.js start'));
+        console.log(colors.info('  3. Install globally: npm install -g @lanonasis/repl-cli && onasis-repl start'));
         process.exit(1);
       }
       
