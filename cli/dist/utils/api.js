@@ -101,64 +101,64 @@ export class APIClient {
     }
     // Memory operations - aligned with existing schema
     async createMemory(data) {
-        const response = await this.client.post('/api/v1/memory', data);
+        const response = await this.client.post('/memory', data);
         return response.data;
     }
     async getMemories(params = {}) {
-        const response = await this.client.get('/api/v1/memory', { params });
+        const response = await this.client.get('/memory', { params });
         return response.data;
     }
     async getMemory(id) {
-        const response = await this.client.get(`/api/v1/memory/${id}`);
+        const response = await this.client.get(`/memory/${id}`);
         return response.data;
     }
     async updateMemory(id, data) {
-        const response = await this.client.put(`/api/v1/memory/${id}`, data);
+        const response = await this.client.put(`/memory/${id}`, data);
         return response.data;
     }
     async deleteMemory(id) {
-        await this.client.delete(`/api/v1/memory/${id}`);
+        await this.client.delete(`/memory/${id}`);
     }
     async searchMemories(query, options = {}) {
-        const response = await this.client.post('/api/v1/memory/search', {
+        const response = await this.client.post('/memory/search', {
             query,
             ...options
         });
         return response.data;
     }
     async getMemoryStats() {
-        const response = await this.client.get('/api/v1/memory/stats');
+        const response = await this.client.get('/memory/stats');
         return response.data;
     }
     async bulkDeleteMemories(memoryIds) {
-        const response = await this.client.post('/api/v1/memory/bulk/delete', {
+        const response = await this.client.post('/memory/bulk/delete', {
             memory_ids: memoryIds
         });
         return response.data;
     }
     // Topic operations - working with existing memory_topics table
     async createTopic(data) {
-        const response = await this.client.post('/api/v1/topics', data);
+        const response = await this.client.post('/topics', data);
         return response.data;
     }
     async getTopics() {
-        const response = await this.client.get('/api/v1/topics');
+        const response = await this.client.get('/topics');
         return response.data;
     }
     async getTopic(id) {
-        const response = await this.client.get(`/api/v1/topics/${id}`);
+        const response = await this.client.get(`/topics/${id}`);
         return response.data;
     }
     async updateTopic(id, data) {
-        const response = await this.client.put(`/api/v1/topics/${id}`, data);
+        const response = await this.client.put(`/topics/${id}`, data);
         return response.data;
     }
     async deleteTopic(id) {
-        await this.client.delete(`/api/v1/topics/${id}`);
+        await this.client.delete(`/topics/${id}`);
     }
     // Health check
     async getHealth() {
-        const response = await this.client.get('/api/v1/health');
+        const response = await this.client.get('/health');
         return response.data;
     }
     // Generic HTTP methods
