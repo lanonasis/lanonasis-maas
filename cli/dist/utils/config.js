@@ -169,7 +169,17 @@ export class CLIConfig {
     getApiUrl() {
         return process.env.MEMORY_API_URL ||
             this.config.apiUrl ||
-            'https://mcp.lanonasis.com/api/v1';
+            'https://api.lanonasis.com';
+    }
+    // Get API URLs with fallbacks - try multiple endpoints
+    getApiUrlsWithFallbacks() {
+        const primary = this.getApiUrl();
+        const fallbacks = [
+            'https://api.lanonasis.com',
+            'https://mcp.lanonasis.com'
+        ];
+        // Remove duplicates and return primary first
+        return [primary, ...fallbacks.filter(url => url !== primary)];
     }
     // Enhanced Service Discovery Integration
     async discoverServices(verbose = false) {
@@ -187,21 +197,45 @@ export class CLIConfig {
             }
             return;
         }
-        const discoveryUrl = 'https://mcp.lanonasis.com/.well-known/onasis.json';
-        try {
-            // Use axios instead of fetch for consistency
-            const axios = (await import('axios')).default;
-            if (verbose) {
-                console.log(`🔍 Discovering services from ${discoveryUrl}...`);
-            }
-            const response = await axios.get(discoveryUrl, {
-                timeout: 10000,
-                maxRedirects: 5,
-                proxy: false, // Bypass proxy to avoid redirect loops
-                headers: {
-                    'User-Agent': 'Lanonasis-CLI/3.0.13'
+        // Try multiple discovery URLs with fallbacks
+        const discoveryUrls = [
+            'https://api.lanonasis.com/.well-known/onasis.json',
+            'https://mcp.lanonasis.com/.well-known/onasis.json'
+        ];
+        let response = null;
+        let lastError = null;
+        // Use axios instead of fetch for consistency
+        const axios = (await import('axios')).default;
+        for (const discoveryUrl of discoveryUrls) {
+            try {
+                if (verbose) {
+                    console.log(`🔍 Discovering services from ${discoveryUrl}...`);
                 }
-            });
+                response = await axios.get(discoveryUrl, {
+                    timeout: 10000,
+                    maxRedirects: 5,
+                    proxy: false, // Bypass proxy to avoid redirect loops
+                    headers: {
+                        'User-Agent': 'Lanonasis-CLI/3.0.13'
+                    }
+                });
+                if (verbose) {
+                    console.log(`✓ Successfully discovered services from ${discoveryUrl}`);
+                }
+                break; // Success, exit loop
+            }
+            catch (err) {
+                lastError = err;
+                if (verbose) {
+                    console.log(`⚠️  Failed to discover from ${discoveryUrl}, trying next...`);
+                }
+                continue;
+            }
+        }
+        if (!response) {
+            throw lastError || new Error('All service discovery URLs failed');
+        }
+        try {
             // Map discovery response to our config format
             const discovered = response.data;
             // Extract auth base, but filter out localhost URLs

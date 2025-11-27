@@ -34,6 +34,17 @@ onasis health                                 # Verify system health
 onasis memory create --title "Welcome" --content "My first memory"
 ```
 
+## 🤖 Claude Desktop Integration
+
+For instant Claude Desktop MCP integration with OAuth2 authentication, see our [Claude Desktop Setup Guide](./CLAUDE_DESKTOP_SETUP.md).
+
+**Quick Links**:
+- **Authorization Endpoint**: `https://auth.lanonasis.com/oauth/authorize`
+- **Client ID**: `claude-desktop`
+- **Scopes**: `mcp:full memories:read memories:write`
+
+The guide includes complete OAuth2 configuration, available MCP tools, and troubleshooting steps.
+
 ## 🎯 Command Aliases
 
 The CLI supports multiple command aliases for different use cases:
