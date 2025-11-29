@@ -3,6 +3,7 @@ import * as path from 'path';
 import * as os from 'os';
 import { jwtDecode } from 'jwt-decode';
 import { randomUUID } from 'crypto';
+import axios from 'axios';
 export class CLIConfig {
     configDir;
     configPath;
@@ -169,8 +170,10 @@ export class CLIConfig {
     }
     // Enhanced Service Discovery Integration
     async discoverServices(verbose = false) {
-        // Skip service discovery in test environment
-        if (process.env.NODE_ENV === 'test' || process.env.SKIP_SERVICE_DISCOVERY === 'true') {
+        const isTestEnvironment = process.env.NODE_ENV === 'test';
+        const forceDiscovery = process.env.FORCE_SERVICE_DISCOVERY === 'true';
+        // Skip service discovery in test environment unless explicitly forced
+        if ((isTestEnvironment && !forceDiscovery) || process.env.SKIP_SERVICE_DISCOVERY === 'true') {
             if (!this.config.discoveredServices) {
                 this.config.discoveredServices = {
                     auth_base: 'https://auth.lanonasis.com',
@@ -186,7 +189,6 @@ export class CLIConfig {
         const discoveryUrl = 'https://mcp.lanonasis.com/.well-known/onasis.json';
         try {
             // Use axios instead of fetch for consistency
-            const axios = (await import('axios')).default;
             if (verbose) {
                 console.log(`🔍 Discovering services from ${discoveryUrl}...`);
             }
@@ -431,9 +433,11 @@ export class CLIConfig {
         return true;
     }
     async validateVendorKeyWithServer(vendorKey) {
+        if (process.env.SKIP_SERVER_VALIDATION === 'true') {
+            return;
+        }
         try {
             // Import axios dynamically to avoid circular dependency
-            const axios = (await import('axios')).default;
             // Ensure service discovery is done
             await this.discoverServices();
             const authBase = this.config.discoveredServices?.auth_base || 'https://auth.lanonasis.com';
@@ -571,7 +575,6 @@ export class CLIConfig {
         // If not locally valid, attempt server verification before failing
         if (!locallyValid) {
             try {
-                const axios = (await import('axios')).default;
                 const endpoints = [
                     'http://localhost:4000/v1/auth/verify-token',
                     'https://auth.lanonasis.com/v1/auth/verify-token'
@@ -608,7 +611,6 @@ export class CLIConfig {
         }
         // Verify with server (security check) for tokens that haven't been validated recently
         try {
-            const axios = (await import('axios')).default;
             // Try auth-gateway first (port 4000), then fall back to Netlify function
             const endpoints = [
                 'http://localhost:4000/v1/auth/verify-token',
@@ -682,7 +684,6 @@ export class CLIConfig {
                 return false;
             }
             // Import axios dynamically to avoid circular dependency
-            const axios = (await import('axios')).default;
             // Ensure service discovery is done
             await this.discoverServices();
             const authBase = this.config.discoveredServices?.auth_base || 'https://auth.lanonasis.com';
@@ -727,7 +728,6 @@ export class CLIConfig {
             // Refresh if token expires within 5 minutes
             if (exp > 0 && (exp - now) < 300) {
                 // Import axios dynamically
-                const axios = (await import('axios')).default;
                 await this.discoverServices();
                 const authBase = this.config.discoveredServices?.auth_base || 'https://auth.lanonasis.com';
                 // Attempt token refresh
