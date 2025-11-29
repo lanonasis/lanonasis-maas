@@ -5,6 +5,8 @@ import { jwtDecode } from 'jwt-decode';
 import { randomUUID } from 'crypto';
 import { ApiKeyStorage } from '@lanonasis/oauth-client';
 import { getSecuritySDK } from '@lanonasis/security-sdk';
+import axios from 'axios';
+import type { AxiosInstance, AxiosRequestConfig } from 'axios';
 
 interface UserProfile {
   email: string;
@@ -48,6 +50,18 @@ interface CLIConfigData {
   lastAuthFailure?: string | undefined;
   [key: string]: unknown; // Allow dynamic properties
 }
+
+type ServiceDiscoveryError = {
+  code?: string;
+  message?: string;
+  response?: {
+    status?: number;
+    data?: {
+      error?: string;
+      message?: string;
+    };
+  };
+};
 
 export class CLIConfig {
   private configDir: string;
@@ -233,8 +247,10 @@ export class CLIConfig {
 
   // Enhanced Service Discovery Integration
   async discoverServices(verbose: boolean = false): Promise<void> {
-    // Skip service discovery in test environment
-    if (process.env.NODE_ENV === 'test' || process.env.SKIP_SERVICE_DISCOVERY === 'true') {
+    const isTestEnvironment = process.env.NODE_ENV === 'test';
+    const forceDiscovery = process.env.FORCE_SERVICE_DISCOVERY === 'true';
+
+    if ((isTestEnvironment && !forceDiscovery) || process.env.SKIP_SERVICE_DISCOVERY === 'true') {
       if (!this.config.discoveredServices) {
         this.config.discoveredServices = {
           auth_base: 'https://auth.lanonasis.com',
@@ -251,9 +267,6 @@ export class CLIConfig {
     const discoveryUrl = 'https://mcp.lanonasis.com/.well-known/onasis.json';
 
     try {
-      // Use axios instead of fetch for consistency
-      const axios = (await import('axios')).default;
-
       if (verbose) {
         console.log(`🔍 Discovering services from ${discoveryUrl}...`);
       }
@@ -261,18 +274,15 @@ export class CLIConfig {
       const response = await axios.get(discoveryUrl, {
         timeout: 10000,
         maxRedirects: 5,
-        proxy: false, // Bypass proxy to avoid redirect loops
+        proxy: false,
         headers: {
           'User-Agent': 'Lanonasis-CLI/3.0.13'
         }
       });
 
-      // Map discovery response to our config format
       const discovered = response.data;
 
-      // Extract auth base, but filter out localhost URLs
       let authBase = discovered.auth?.base || discovered.auth?.login?.replace('/auth/login', '') || '';
-      // Override localhost with production auth endpoint
       if (authBase.includes('localhost') || authBase.includes('127.0.0.1')) {
         authBase = 'https://auth.lanonasis.com';
       }
@@ -289,7 +299,6 @@ export class CLIConfig {
       };
       this.config.apiUrl = memoryBase;
 
-      // Mark discovery as successful
       this.config.lastServiceDiscovery = new Date().toISOString();
       await this.save();
 
@@ -300,13 +309,29 @@ export class CLIConfig {
         console.log(`  WebSocket: ${this.config.discoveredServices.mcp_ws_base}`);
       }
 
-    } catch (error: any) {
-      // Enhanced error handling with user-visible messages
-      await this.handleServiceDiscoveryFailure(error, verbose);
+    } catch (error: unknown) {
+      const normalizedError = this.normalizeServiceError(error);
+      await this.handleServiceDiscoveryFailure(normalizedError, verbose);
     }
   }
 
-  private async handleServiceDiscoveryFailure(error: any, verbose: boolean): Promise<void> {
+  private normalizeServiceError(error: unknown): ServiceDiscoveryError {
+    if (error && typeof error === 'object') {
+      if (error instanceof Error) {
+        return {
+          ...(error as ServiceDiscoveryError),
+          message: error.message
+        };
+      }
+      return error as ServiceDiscoveryError;
+    }
+
+    return {
+      message: typeof error === 'string' ? error : JSON.stringify(error)
+    };
+  }
+
+  private async handleServiceDiscoveryFailure(error: ServiceDiscoveryError, verbose: boolean): Promise<void> {
     const errorType = this.categorizeServiceDiscoveryError(error);
 
     if (verbose || process.env.CLI_VERBOSE === 'true') {
@@ -334,7 +359,6 @@ export class CLIConfig {
       }
     }
 
-    // Use cached endpoints if available and recent (within 24 hours)
     if (this.config.discoveredServices && this.config.lastServiceDiscovery) {
       const lastDiscovery = new Date(this.config.lastServiceDiscovery);
       const hoursSinceDiscovery = (Date.now() - lastDiscovery.getTime()) / (1000 * 60 * 60);
@@ -354,7 +378,6 @@ export class CLIConfig {
     };
     this.config.apiUrl = fallback.endpoints.memory_base;
 
-    // Mark as fallback (don't set lastServiceDiscovery)
     await this.save();
     this.logFallbackUsage(fallback.source, this.config.discoveredServices);
 
@@ -364,7 +387,7 @@ export class CLIConfig {
     }
   }
 
-  private categorizeServiceDiscoveryError(error: any): 'network_error' | 'timeout' | 'server_error' | 'invalid_response' | 'unknown' {
+  private categorizeServiceDiscoveryError(error: ServiceDiscoveryError): 'network_error' | 'timeout' | 'server_error' | 'invalid_response' | 'unknown' {
     if (error.code) {
       switch (error.code) {
         case 'ECONNREFUSED':
@@ -377,7 +400,7 @@ export class CLIConfig {
       }
     }
 
-    if (error.response?.status >= 500) {
+    if ((error.response?.status ?? 0) >= 500) {
       return 'server_error';
     }
 
@@ -464,7 +487,7 @@ export class CLIConfig {
   }
 
   private async pingAuthHealth(
-    axiosInstance: typeof import('axios').default,
+    axiosInstance: AxiosInstance,
     authBase: string,
     headers: Record<string, string>,
     options: { timeout?: number; proxy?: boolean } = {}
@@ -478,7 +501,7 @@ export class CLIConfig {
     let lastError: unknown;
     for (const endpoint of endpoints) {
       try {
-        const requestConfig: any = {
+        const requestConfig: AxiosRequestConfig = {
           headers,
           timeout: options.timeout ?? 10000
         };
@@ -505,9 +528,18 @@ export class CLIConfig {
       await this.discoverServices();
     }
 
+    const currentServices = this.config.discoveredServices ?? {
+      auth_base: 'https://auth.lanonasis.com',
+      memory_base: 'https://mcp.lanonasis.com/api/v1',
+      mcp_base: 'https://mcp.lanonasis.com/api/v1',
+      mcp_ws_base: 'wss://mcp.lanonasis.com/ws',
+      mcp_sse_base: 'https://mcp.lanonasis.com/api/v1/events',
+      project_scope: 'lanonasis-maas'
+    };
+
     // Merge manual overrides with existing endpoints
     this.config.discoveredServices = {
-      ...this.config.discoveredServices!,
+      ...currentServices,
       ...endpoints
     };
 
@@ -583,64 +615,33 @@ export class CLIConfig {
   }
 
   private async validateVendorKeyWithServer(vendorKey: string): Promise<void> {
+    if (process.env.SKIP_SERVER_VALIDATION === 'true') {
+      return;
+    }
+
     try {
       // Import axios dynamically to avoid circular dependency
-      const axios = (await import('axios')).default;
-
       // Ensure service discovery is done
       await this.discoverServices();
 
       const authBase = this.config.discoveredServices?.auth_base || 'https://auth.lanonasis.com';
-      const normalizedBase = authBase.replace(/\/$/, '');
-
-      // Try multiple validation endpoints
-      const validationEndpoints = [
-        `${normalizedBase}/api/v1/auth/validate`,
-        `${normalizedBase}/api/v1/auth/validate-vendor-key`,
-        `${normalizedBase}/v1/auth/validate`
-      ];
-
-      let lastError: any;
-      let validated = false;
-
-      for (const endpoint of validationEndpoints) {
-        try {
-          const response = await axios.post(
-            endpoint,
-            { key: vendorKey },
-            {
-              headers: {
-                'X-API-Key': vendorKey,
-                'X-Auth-Method': 'vendor_key',
-                'X-Project-Scope': 'lanonasis-maas',
-                'Content-Type': 'application/json'
-              },
-              timeout: 10000,
-              proxy: false
-            }
-          );
-
-          // Check if response indicates validation success
-          if (response.data && (response.data.valid === true || response.data.success === true)) {
-            validated = true;
-            break;
-          }
-        } catch (error: any) {
-          lastError = error;
-          // Continue to next endpoint if this one fails
-          continue;
-        }
-      }
-
-      if (!validated && lastError) {
-        throw lastError;
-      } else if (!validated) {
-        throw new Error('Vendor key validation failed: Unable to validate key with server');
-      }
-    } catch (error: any) {
+      
+      // Use pingAuthHealth for validation (simpler and more reliable)
+      await this.pingAuthHealth(
+        axios,
+        authBase,
+        {
+          'X-API-Key': vendorKey,
+          'X-Auth-Method': 'vendor_key',
+          'X-Project-Scope': 'lanonasis-maas'
+        },
+        { timeout: 10000, proxy: false }
+      );
+    } catch (error: unknown) {
+      const normalizedError = this.normalizeServiceError(error);
       // Provide specific error messages based on response
-      if (error.response?.status === 401) {
-        const errorData = error.response.data;
+      if (normalizedError.response?.status === 401) {
+        const errorData = normalizedError.response.data;
         if (errorData?.error?.includes('expired') || errorData?.message?.includes('expired')) {
           throw new Error('Vendor key validation failed: Key has expired. Please generate a new key from your dashboard.');
         } else if (errorData?.error?.includes('revoked') || errorData?.message?.includes('revoked')) {
@@ -650,22 +651,22 @@ export class CLIConfig {
         } else {
           throw new Error('Vendor key validation failed: Authentication failed. The key may be invalid, expired, or revoked.');
         }
-      } else if (error.response?.status === 403) {
+      } else if (normalizedError.response?.status === 403) {
         throw new Error('Vendor key access denied. The key may not have sufficient permissions for this operation.');
-      } else if (error.response?.status === 429) {
+      } else if (normalizedError.response?.status === 429) {
         throw new Error('Too many validation attempts. Please wait a moment before trying again.');
-      } else if (error.response?.status >= 500) {
+      } else if ((normalizedError.response?.status ?? 0) >= 500) {
         throw new Error('Server error during validation. Please try again in a few moments.');
-      } else if (error.code === 'ECONNREFUSED') {
+      } else if (normalizedError.code === 'ECONNREFUSED') {
         throw new Error('Cannot connect to authentication server. Please check your internet connection and try again.');
-      } else if (error.code === 'ENOTFOUND') {
+      } else if (normalizedError.code === 'ENOTFOUND') {
         throw new Error('Authentication server not found. Please check your internet connection.');
-      } else if (error.code === 'ETIMEDOUT') {
+      } else if (normalizedError.code === 'ETIMEDOUT') {
         throw new Error('Validation request timed out. Please check your internet connection and try again.');
-      } else if (error.code === 'ECONNRESET') {
+      } else if (normalizedError.code === 'ECONNRESET') {
         throw new Error('Connection was reset during validation. Please try again.');
       } else {
-        throw new Error(`Vendor key validation failed: ${error.message || 'Unknown error'}`);
+        throw new Error(`Vendor key validation failed: ${normalizedError.message || 'Unknown error'}`);
       }
     }
   }
@@ -844,7 +845,6 @@ export class CLIConfig {
     // If not locally valid, attempt server verification before failing
     if (!locallyValid) {
       try {
-        const axios = (await import('axios')).default;
         const endpoints = [
           'http://localhost:4000/v1/auth/verify-token',
           'https://auth.lanonasis.com/v1/auth/verify-token'
@@ -882,8 +882,6 @@ export class CLIConfig {
 
     // Verify with server (security check) for tokens that haven't been validated recently
     try {
-      const axios = (await import('axios')).default;
-
       // Try auth-gateway first (port 4000), then fall back to Netlify function
       const endpoints = [
         'http://localhost:4000/v1/auth/verify-token',
@@ -1004,8 +1002,6 @@ export class CLIConfig {
       }
 
       // Import axios dynamically to avoid circular dependency
-      const axios = (await import('axios')).default;
-
       // Ensure service discovery is done
       await this.discoverServices();
 
@@ -1058,8 +1054,6 @@ export class CLIConfig {
       // Refresh if token expires within 5 minutes
       if (exp > 0 && (exp - now) < 300) {
         // Import axios dynamically
-        const axios = (await import('axios')).default;
-
         await this.discoverServices();
         const authBase = this.config.discoveredServices?.auth_base || 'https://auth.lanonasis.com';
 
