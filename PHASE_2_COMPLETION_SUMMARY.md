@@ -109,7 +109,7 @@ archive/
 | `verify-services.sh` | `onasis health` | Comprehensive diagnostics |
 | `setup-essential-secrets.sh` | `onasis init && onasis login` | Guided setup |
 | `deploy.sh` | `onasis deploy status` | Real-time deployment info |
-| Manual auth setup | `onasis login --vendor-key pk_xxx.sk_xxx` | Secure, validated |
+| Manual auth setup | `onasis login --vendor-key <your-vendor-key>` | Secure, validated |
 
 ## 📚 Professional Documentation
 
