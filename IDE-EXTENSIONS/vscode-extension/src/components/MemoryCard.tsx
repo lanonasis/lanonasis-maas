@@ -1,64 +1,77 @@
-import React from "react";
-import format from "date-fns/format";
-import Badge from "./ui/Badge";
-import { cn } from "../utils/cn";
-import Icon from "./Icon";
+import React, { useState } from 'react';
+import { motion } from 'framer-motion';
+import { format } from 'date-fns';
+import { Copy, Check, Hash } from 'lucide-react';
+import Button from '@/components/ui/Button';
+import { cn } from '../utils/cn';
+import type { Memory } from '@/shared/types';
 
-// Memory types compatible with live extension
 export interface MemoryCardProps {
-  id: string;
-  title: string;
-  type: "conversation" | "knowledge" | "project" | "context" | "reference" | "personal" | "workflow";
-  date: Date;
-  tags: string[];
-  content: string;
-  iconType: 'terminal' | 'filecode' | 'hash' | 'calendar' | 'lightbulb' | 'briefcase' | 'user' | 'settings';
-  onSelect?: (id: string) => void;
-  className?: string;
+  memory: Memory;
 }
 
-const MemoryCard: React.FC<MemoryCardProps> = ({ id, title, type, date, tags, iconType, onSelect, className }) => {
+export const MemoryCard = ({ memory }: MemoryCardProps) => {
+  const [isHovered, setIsHovered] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    navigator.clipboard.writeText(memory.content);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
   return (
-    <div 
-      role="article"
-      aria-label={`Memory: ${title}`}
-      tabIndex={0}
-      onClick={() => onSelect?.(id)}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          onSelect?.(id);
-        }
-      }}
+    <motion.div
+      initial={{ opacity: 0, x: -5 }}
+      animate={{ opacity: 1, x: 0 }}
       className={cn(
-        "p-3 rounded-lg border border-[#2D2D2D] bg-[#252526] hover:border-[#007ACC] cursor-pointer transition-all duration-200",
-        className
+        'group relative flex flex-col gap-1.5 rounded-sm p-2 hover:bg-[var(--vscode-list-hoverBackground)] transition-colors duration-100 cursor-pointer border border-transparent hover:border-[var(--vscode-focusBorder)]',
       )}
-      data-testid={`memory-card-${id}`}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      data-testid={`memory-card-${memory.id}`}
     >
       <div className="flex items-start justify-between gap-2">
-        <h3 className="text-sm font-semibold text-[#CCCCCC] leading-tight line-clamp-2">
-          {title}
-        </h3>
-        <div className="scale-100 hover:scale-105 transition-transform">
-          <Badge variant="outline" className="text-[8px] bg-[#007ACC]/10 border-[#007ACC]/30 text-[#007ACC]">
-            {type}
-          </Badge>
+        <div className="flex items-center gap-2">
+          <memory.icon className="h-3.5 w-3.5 text-[var(--vscode-editor-foreground)] opacity-70 shrink-0" />
+          <h3 className="text-[13px] text-[var(--vscode-editor-foreground)] leading-tight line-clamp-1">
+            {memory.title}
+          </h3>
         </div>
+        {isHovered && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-5 w-5 text-[var(--vscode-editor-foreground)] hover:bg-[var(--vscode-button-secondaryHoverBackground)] -mt-0.5 -mr-1 shrink-0 rounded-sm"
+            onClick={handleCopy}
+            data-testid="btn-copy-memory"
+          >
+            {copied ? (
+              <Check className="h-3 w-3 text-green-400" />
+            ) : (
+              <Copy className="h-3 w-3" />
+            )}
+          </Button>
+        )}
       </div>
-      <div className="flex items-center gap-3 text-[10px] text-[#888888]">
-        <div className="flex items-center gap-1">
-          <Icon type={iconType} className="h-3 w-3" />
-          <span>{format(new Date(date), "MMM d")}</span>
+      <div className="flex items-center gap-3 text-[11px] text-[var(--vscode-descriptionForeground)] pl-5.5">
+        <div className="flex items-center gap-1 opacity-60">
+          <span data-testid="text-memory-date">
+            {format(memory.date, 'MMM d')}
+          </span>
         </div>
-        {tags.map((tag) => (
-          <div key={tag} className="flex items-center gap-1 bg-[#007ACC]/10 px-1.5 py-0.5 rounded text-[#007ACC] text-[9px]">
-            <span>#{tag}</span>
+        {memory.tags.map(tag => (
+          <div
+            key={tag}
+            className="flex items-center gap-0.5 px-1 rounded bg-[var(--vscode-badge-background)]/10 text-[var(--vscode-editor-foreground)] opacity-60"
+            data-testid={`tag-${tag}`}
+          >
+            <Hash className="h-2.5 w-2.5" />
+            <span>{tag}</span>
           </div>
         ))}
       </div>
-    </div>
+    </motion.div>
   );
 };
-
-export default MemoryCard;
