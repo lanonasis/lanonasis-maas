@@ -320,6 +320,9 @@ export function useSearchMemories(debounceMs: number = 300) {
 
       const result = await client.searchMemories({
         query,
+        status: options?.status ?? 'active',
+        limit: options?.limit ?? 20,
+        threshold: options?.threshold ?? 0.7,
         ...options
       });
 
