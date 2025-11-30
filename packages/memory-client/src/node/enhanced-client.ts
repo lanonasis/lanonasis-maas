@@ -61,19 +61,24 @@ export class EnhancedMemoryClient {
   }
 
   constructor(config: EnhancedMemoryClientConfig) {
-    this.config = {
-      preferCLI: true,
-      enableMCP: true,
-      cliDetectionTimeout: 5000,
-      fallbackToAPI: true,
-      minCLIVersion: '1.5.2',
-      verbose: false,
-      timeout: 30000,
+    // Merge config with defaults, ensuring all required fields are present
+    // Spread config first, then apply defaults only for undefined values
+    const mergedConfig: EnhancedMemoryClientConfig = {
+      ...config,
+      preferCLI: config.preferCLI ?? true,
+      enableMCP: config.enableMCP ?? true,
+      cliDetectionTimeout: config.cliDetectionTimeout ?? 5000,
+      fallbackToAPI: config.fallbackToAPI ?? true,
+      minCLIVersion: config.minCLIVersion ?? '1.5.2',
+      verbose: config.verbose ?? false,
+      timeout: config.timeout ?? 30000,
+      apiUrl: config.apiUrl || 'https://api.lanonasis.com',
       apiKey: config.apiKey || process.env.LANONASIS_API_KEY || '',
       authToken: config.authToken || '',
-      headers: config.headers || {},
-      ...config
+      headers: config.headers || {}
     };
+    
+    this.config = mergedConfig as Required<EnhancedMemoryClientConfig>;
 
     this.directClient = new CoreMemoryClient(config);
     this.cliIntegration = new CLIIntegration();
