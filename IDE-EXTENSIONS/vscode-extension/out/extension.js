@@ -68,7 +68,7 @@ async function activate(context) {
     let sidebarProvider;
     // Register sidebar provider based on feature flag
     if (useEnhancedUI) {
-        sidebarProvider = new EnhancedSidebarProvider_1.EnhancedSidebarProvider(context.extensionUri, memoryService);
+        sidebarProvider = new EnhancedSidebarProvider_1.EnhancedSidebarProvider(context.extensionUri, memoryService, apiKeyService);
         context.subscriptions.push(vscode.window.registerWebviewViewProvider(EnhancedSidebarProvider_1.EnhancedSidebarProvider.viewType, sidebarProvider));
         console.log('[Lanonasis] Using Enhanced UI with React components');
     }
@@ -369,6 +369,18 @@ async function activate(context) {
         }),
         vscode.commands.registerCommand('lanonasis.showLogs', () => {
             outputChannel.show();
+        }),
+        vscode.commands.registerCommand('lanonasis.logout', async () => {
+            try {
+                await secureApiKeyService.deleteApiKey();
+            }
+            catch (error) {
+                outputChannel.appendLine(`[Logout] Failed to clear stored credentials: ${error instanceof Error ? error.message : String(error)}`);
+            }
+            finally {
+                await handleAuthenticationCleared();
+                vscode.window.showInformationMessage('Signed out of Lanonasis Memory.');
+            }
         })
     ];
     context.subscriptions.push(...commands);
