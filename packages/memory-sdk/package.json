@@ -1,0 +1,57 @@
+{
+  "name": "@lanonasis/memory-sdk",
+  "version": "1.0.0",
+  "description": "Memory as a Service SDK for seamless integration with Lanonasis Memory Platform",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "type": "module",
+  "scripts": {
+    "build": "tsc && tsc-alias",
+    "dev": "tsx src/index.ts",
+    "test": "jest",
+    "lint": "eslint src/**/*.ts",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "memory",
+    "ai",
+    "sdk",
+    "lanonasis",
+    "maas",
+    "context",
+    "semantic-search",
+    "vector-database"
+  ],
+  "author": "Lanonasis (Seye Derick)",
+  "license": "MIT",
+  "dependencies": {
+    "axios": "^1.7.9",
+    "eventsource": "^4.0.0"
+  },
+  "devDependencies": {
+    "@types/jest": "^30.0.0",
+    "@types/node": "^22.10.2",
+    "@typescript-eslint/eslint-plugin": "^8.18.1",
+    "@typescript-eslint/parser": "^8.18.1",
+    "esbuild": "^0.25.8",
+    "eslint": "^9.17.0",
+    "jest": "^30.2.0",
+    "ts-jest": "^29.4.5",
+    "tsc-alias": "^1.8.10",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/thefixer3x/lan-onasis-monorepo",
+    "directory": "packages/memory-sdk"
+  },
+  "homepage": "https://docs.lanonasis.com/sdk",
+  "bugs": {
+    "url": "https://github.com/thefixer3x/lan-onasis-monorepo/issues"
+  }
+}

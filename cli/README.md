@@ -26,9 +26,9 @@ lanonasis --version  # or onasis --version
 onasis guide
 
 # Quick manual setup
-onasis init                                    # Initialize configuration
-onasis login --vendor-key pk_xxx.sk_xxx      # Authenticate with vendor key
-onasis health                                 # Verify system health
+onasis init                                      # Initialize configuration
+onasis login --vendor-key <your-vendor-key>      # Authenticate with vendor key
+onasis health                                   # Verify system health
 
 # Create your first memory
 onasis memory create --title "Welcome" --content "My first memory"
@@ -85,10 +85,10 @@ onasis login --vendor-key pk_xxxxx.sk_xxxxx  // ✅ Automatically hashed
 
 ### 1. Vendor Key Authentication (Recommended)
 
-Best for API integrations and automation:
+Best for API integrations and automation. Copy the vendor key value exactly as shown in your LanOnasis dashboard (keys may vary in format):
 
 ```bash
-onasis login --vendor-key pk_xxxxx.sk_xxxxx
+onasis login --vendor-key <your-vendor-key>
 ```
 
 ### 2. OAuth Browser Authentication
@@ -288,7 +288,7 @@ Location: `~/.maas/config.json`
   "apiUrl": "https://api.lanonasis.com/api/v1",
   "defaultOutputFormat": "table",
   "mcpPreference": "auto",
-  "vendorKey": "pk_xxxxx.sk_xxxxx"
+  "vendorKey": "<your-vendor-key>"
 }
 ```
 
@@ -374,7 +374,7 @@ onasis auth status
 
 # Re-authenticate
 onasis auth logout
-onasis login --vendor-key pk_xxx.sk_xxx
+onasis login --vendor-key <your-vendor-key>
 ```
 
 #### Connection Issues

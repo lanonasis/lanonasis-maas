@@ -62,7 +62,7 @@ onasis init
 
 # New method (professional vendor key auth)
 # ✅ Secure vendor key authentication
-onasis login --vendor-key pk_xxxxx.sk_xxxxx
+onasis login --vendor-key <your-vendor-key>
 
 # Verify authentication
 onasis auth status
@@ -100,7 +100,7 @@ onasis status             # Quick status overview
 
 # New CLI method
 onasis init               # Initialize configuration
-onasis login --vendor-key pk_xxx.sk_xxx  # Secure authentication
+onasis login --vendor-key <your-vendor-key>  # Secure authentication
 ```
 
 #### Deployment Operations
@@ -142,7 +142,7 @@ onasis config set apiUrl https://api.lanonasis.com/api/v1
 ### Authentication Operations
 | Legacy Method | CLI v1.5.2 Command | Notes |
 |--------------|---------------------|-------|
-| Manual token setup | `onasis login --vendor-key pk_xxx.sk_xxx` | Secure, validated format |
+| Manual token setup | `onasis login --vendor-key <your-vendor-key>` | Secure, validated format |
 | Manual OAuth | `onasis login --oauth` | Integrated browser flow |
 | Config file editing | `onasis auth status` | Check authentication |
 | - | `onasis auth logout` | Clean logout |
@@ -237,7 +237,7 @@ onasis auth status
 
 # Clear and re-authenticate
 onasis auth logout
-onasis login --vendor-key pk_xxx.sk_xxx
+onasis login --vendor-key <your-vendor-key>
 
 # Verbose debugging
 onasis --verbose health
