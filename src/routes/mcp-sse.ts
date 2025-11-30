@@ -3,7 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 import { config } from '@/config/environment';
 import { logger } from '@/utils/logger';
 import { asyncHandler } from '@/middleware/errorHandler';
-import { ensureApiKeyHash } from '../shared/hash-utils';
+import { ensureApiKeyHash } from '@lanonasis/security-sdk/hash-utils';
 
 const router = Router();
 const supabase = createClient(config.SUPABASE_URL=https://<project-ref>.supabase.co
