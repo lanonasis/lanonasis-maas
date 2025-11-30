@@ -5,6 +5,7 @@ import { asyncHandler } from '@/middleware/errorHandler';
 import { requirePlan, requireRole } from '@/middleware/auth-aligned';
 import type { UnifiedUser } from '@/middleware/auth-aligned';
 import { MemoryService, ListMemoryFilters } from '@/services/memoryService';
+import { resolveOrganizationId } from '@/services/organizationResolver';
 import {
   createMemorySchema,
   updateMemorySchema,
@@ -25,17 +26,46 @@ interface SearchMemoryFilters {
   topic_id?: string;
   user_id?: string;
 }
-import { logMemoryOperation } from '@/utils/logger';
+import { logMemoryOperation, logger } from '@/utils/logger';
 
 const router = Router();
 const memoryService = new MemoryService();
 
-const resolveUserContext = (user?: UnifiedUser) => {
+/**
+ * Resolve user context with intelligent organization ID handling
+ * Supports vendor API keys, regular API keys, and JWT tokens
+ */
+const resolveUserContext = async (user?: UnifiedUser) => {
   const userId = user?.userId ?? user?.sub ?? user?.id ?? user?.user_id;
-  const organizationId = user?.organizationId ?? user?.organization_id ?? userId;
+  const rawOrganizationId = user?.organizationId ?? user?.organization_id;
   const plan = (user?.plan as string | undefined) ?? 'free';
 
-  return { userId, organizationId, plan };
+  if (!userId) {
+    return { userId: '', organizationId: '', plan, isResolved: false };
+  }
+
+  // Use intelligent organization resolver to handle all patterns
+  const resolution = await resolveOrganizationId(rawOrganizationId, userId);
+
+  // Log if fallback was used
+  if (resolution.isFallback || resolution.isVendor) {
+    logger.info('Organization ID resolved with special handling', {
+      userId,
+      rawOrganizationId,
+      resolvedOrganizationId: resolution.organizationId,
+      source: resolution.source,
+      isVendor: resolution.isVendor,
+      isFallback: resolution.isFallback
+    });
+  }
+
+  return {
+    userId,
+    organizationId: resolution.organizationId,
+    plan,
+    isResolved: true,
+    isVendor: resolution.isVendor
+  };
 };
 
 /**
@@ -67,9 +97,9 @@ const resolveUserContext = (user?: UnifiedUser) => {
  */
 router.post('/', asyncHandler(async (req: Request, res: Response) => {
   const validatedData = createMemorySchema.parse(req.body) as CreateMemoryRequest;
-  const { userId, organizationId, plan } = resolveUserContext(req.user);
+  const { userId, organizationId, plan, isResolved } = await resolveUserContext(req.user);
 
-  if (!req.user || !userId || !organizationId) {
+  if (!req.user || !userId || !organizationId || !isResolved) {
     res.status(401).json({
       error: 'Unauthorized',
       message: 'Valid authentication required'
@@ -186,7 +216,7 @@ router.post('/', asyncHandler(async (req: Request, res: Response) => {
  *                       type: integer
  */
 router.get('/', asyncHandler(async (req: Request, res: Response) => {
-  const { userId, organizationId } = resolveUserContext(req.user);
+  const { userId, organizationId } = await resolveUserContext(req.user);
   const role = req.user?.role ?? 'user';
 
   if (!req.user || !organizationId) {
@@ -275,7 +305,7 @@ router.get('/', asyncHandler(async (req: Request, res: Response) => {
  */
 router.post('/search', asyncHandler(async (req: Request, res: Response) => {
   const validatedData = searchMemorySchema.parse(req.body) as SearchMemoryRequest;
-  const { userId, organizationId } = resolveUserContext(req.user);
+  const { userId, organizationId } = await resolveUserContext(req.user);
   const role = req.user?.role ?? 'user';
 
   if (!req.user || !userId || !organizationId) {
@@ -368,7 +398,7 @@ router.get('/:id', asyncHandler(async (req: Request, res: Response) => {
     return;
   }
 
-  const { userId, organizationId } = resolveUserContext(req.user);
+  const { userId, organizationId } = await resolveUserContext(req.user);
   const role = req.user?.role ?? 'user';
 
   if (!req.user || !userId || !organizationId) {
@@ -454,7 +484,7 @@ router.put('/:id', asyncHandler(async (req: Request, res: Response) => {
   }
 
   const validatedData = updateMemorySchema.parse(req.body) as UpdateMemoryRequest;
-  const { userId, organizationId } = resolveUserContext(req.user);
+  const { userId, organizationId } = await resolveUserContext(req.user);
   const role = req.user?.role ?? 'user';
 
   if (!req.user || !userId || !organizationId) {
@@ -528,7 +558,7 @@ router.delete('/:id', asyncHandler(async (req: Request, res: Response) => {
     return;
   }
 
-  const { userId, organizationId } = resolveUserContext(req.user);
+  const { userId, organizationId } = await resolveUserContext(req.user);
   const role = req.user?.role ?? 'user';
 
   if (!req.user || !userId || !organizationId) {
@@ -645,7 +675,7 @@ router.post('/bulk/delete',
   requirePlan(['pro', 'enterprise']),
   asyncHandler(async (req: Request, res: Response) => {
     const { memory_ids } = req.body;
-    const { userId, organizationId } = resolveUserContext(req.user);
+    const { userId, organizationId } = await resolveUserContext(req.user);
 
     if (!req.user || !userId || !organizationId) {
       res.status(401).json({
