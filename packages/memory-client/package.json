@@ -1,7 +1,7 @@
 {
   "name": "@lanonasis/memory-client",
-  "version": "1.0.1",
-  "description": "Memory as a Service (MaaS) Client SDK for Lanonasis - Intelligent memory management with CLI/MCP integration and semantic search",
+  "version": "2.0.0",
+  "description": "Universal Memory as a Service (MaaS) Client SDK - Works everywhere: Browser, Node.js, React, Vue, Edge Functions",
   "type": "module",
   "main": "dist/index.js",
   "module": "dist/index.esm.js",
@@ -10,7 +10,35 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.esm.js",
-      "require": "./dist/index.js"
+      "require": "./dist/index.js",
+      "default": "./dist/index.esm.js"
+    },
+    "./core": {
+      "types": "./dist/core/index.d.ts",
+      "import": "./dist/core/index.js",
+      "browser": "./dist/core/index.js",
+      "default": "./dist/core/index.js"
+    },
+    "./node": {
+      "types": "./dist/node/index.d.ts",
+      "node": "./dist/node/index.js",
+      "import": "./dist/node/index.js",
+      "default": null
+    },
+    "./react": {
+      "types": "./dist/react/index.d.ts",
+      "import": "./dist/react/index.js",
+      "default": "./dist/react/index.js"
+    },
+    "./vue": {
+      "types": "./dist/vue/index.d.ts",
+      "import": "./dist/vue/index.js",
+      "default": "./dist/vue/index.js"
+    },
+    "./presets": {
+      "types": "./dist/presets/index.d.ts",
+      "import": "./dist/presets/index.js",
+      "default": "./dist/presets/index.js"
     }
   },
   "files": [
@@ -30,6 +58,13 @@
     "clean": "rimraf dist",
     "publish:both": "./scripts/publish-sdk.sh"
   },
+  "browser": {
+    "./dist/node/index.js": false,
+    "child_process": false,
+    "fs": false,
+    "os": false,
+    "util": false
+  },
   "keywords": [
     "memory",
     "ai",
@@ -43,7 +78,14 @@
     "memory-as-a-service",
     "cli-integration",
     "mcp",
-    "model-context-protocol"
+    "model-context-protocol",
+    "react",
+    "vue",
+    "universal",
+    "edge-functions",
+    "cloudflare-workers",
+    "browser",
+    "nodejs"
   ],
   "author": {
     "name": "Lanonasis Team",
@@ -65,8 +107,17 @@
   "dependencies": {
     "zod": "^4.1.12"
   },
-  "optionalDependencies": {
-    "child_process": "^1.0.2"
+  "peerDependencies": {
+    "react": ">=16.8.0",
+    "vue": ">=3.0.0"
+  },
+  "peerDependenciesMeta": {
+    "react": {
+      "optional": true
+    },
+    "vue": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "@rollup/plugin-commonjs": "^29.0.0",
