@@ -1,5 +1,5 @@
 import React from "react";
-import { format } from "date-fns";
+import format from "date-fns/format";
 import Badge from "./ui/Badge";
 import { cn } from "../utils/cn";
 import Icon from "./Icon";
