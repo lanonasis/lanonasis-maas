@@ -7,11 +7,11 @@
 #### API Key Management
 ```bash
 # ✅ GOOD: Use environment variables
-export LANONASIS_API_KEY="pk_xxxxx.sk_xxxxx"
+export LANONASIS_API_KEY="<your-vendor-key>"
 onasis login --vendor-key $LANONASIS_API_KEY
 
 # ❌ BAD: Never hardcode in code
-const apiKey = "pk_xxxxx.sk_xxxxx" // DON'T DO THIS
+const apiKey = "<your-vendor-key>" // DON'T DO THIS
 ```
 
 #### Secure Token Storage
@@ -24,7 +24,7 @@ const config = {
 
 // ❌ BAD: Hardcoded sensitive data
 const config = {
-  apiKey: "pk_xxxxx.sk_xxxxx",  // DON'T DO THIS
+  apiKey: "<your-vendor-key>",  // DON'T DO THIS
   apiUrl: "https://api.lanonasis.com"
 };
 ```
