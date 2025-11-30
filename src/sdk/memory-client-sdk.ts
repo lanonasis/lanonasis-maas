@@ -13,7 +13,7 @@ import {
   MemorySearchResult,
   UserMemoryStats 
 } from '../types/memory-aligned';
-import { ensureApiKeyHashBrowser } from '../../shared/hash-utils';
+import { ensureApiKeyHashBrowser } from '@lanonasis/security-sdk/hash-utils';
 
 export interface MaaSClientConfig {
   apiUrl: string;

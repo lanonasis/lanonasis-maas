@@ -12,7 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
-import { hashApiKeyBrowser } from "../../../shared/hash-utils";
+import { hashApiKeyBrowser } from "@lanonasis/security-sdk/hash-utils";
 
 export const ApiKeyManager = () => {
   const [isOpen, setIsOpen] = useState(false);
