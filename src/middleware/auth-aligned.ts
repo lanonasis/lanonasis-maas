@@ -5,6 +5,7 @@ import { logger } from '@/utils/logger';
 import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
 import { ensureApiKeyHash } from '../shared/hash-utils';
+import { resolveOrganizationId } from '@/services/organizationResolver';
 
 const supabase = createClient(config.SUPABASE_URL, config.SUPABASE_SERVICE_KEY);
 
@@ -224,10 +225,14 @@ export const alignedAuthMiddleware = async (
           .eq('user_id', userId)
           .single();
 
+        // Resolve organization ID intelligently (handles missing/invalid org IDs)
+        const rawOrgId = decoded.organization_id || decoded.organizationId || decoded.org_id;
+        const orgResolution = await resolveOrganizationId(rawOrgId, userId);
+
         const alignedUser: UnifiedUser = {
           // JWTPayload properties (from JWT claims)
           userId: userId,
-          organizationId: decoded.organization_id || decoded.organizationId || userId,
+          organizationId: orgResolution.organizationId, // Resolved valid UUID
           role: decoded.role || 'user',
           plan: serviceConfig?.plan || decoded.plan || 'free',
           // Additional UnifiedUser properties
@@ -238,12 +243,12 @@ export const alignedAuthMiddleware = async (
           project_scope: decoded.project_scope
         };
 
-        req.user = { 
-          ...alignedUser, 
+        req.user = {
+          ...alignedUser,
           id: alignedUser.id || alignedUser.userId || '',
-          auth_type: 'jwt' 
+          auth_type: 'jwt'
         };
-        logger.info(`[${req.id}] JWT authentication successful for user ${alignedUser.id}`);
+        logger.info(`[${req.id}] JWT authentication successful for user ${alignedUser.id} (org: ${orgResolution.organizationId}, source: ${orgResolution.source})`);
       }
 
       logger.debug('User authenticated', {
@@ -316,10 +321,13 @@ export async function authenticateApiKey(apiKey: string): Promise<AlignedUser | 
     // Extract plan value using optional chaining
     const plan = keyRecord?.maas_service_config?.[0]?.plan || 'free';
 
+    // Resolve organization ID intelligently (handles missing/invalid org IDs)
+    const orgResolution = await resolveOrganizationId(undefined, keyRecord.user_id);
+
     const unifiedUser: UnifiedUser = {
       // JWTPayload properties
       userId: keyRecord.user_id,
-      organizationId: keyRecord.user_id, // For API keys, use user ID as org ID
+      organizationId: orgResolution.organizationId, // Resolved valid UUID
       role: 'user', // Default role for API key users
       plan: plan,
       // Additional UnifiedUser properties
