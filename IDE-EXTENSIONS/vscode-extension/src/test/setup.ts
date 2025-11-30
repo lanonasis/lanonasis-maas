@@ -36,15 +36,18 @@ Object.defineProperty(window, 'removeEventListener', {
   writable: true,
 });
 
+import type { Memory } from '../shared/types';
+import { Lightbulb } from 'lucide-react';
+
 // Test utilities with proper types
-export const createMockMemory = (overrides = {}) => ({
+export const createMockMemory = (overrides: Partial<Memory> = {}): Memory => ({
   id: 'test-memory-1',
   title: 'Test Memory',
   content: 'Test content',
-  type: 'context' as const,
+  type: 'context',
   date: new Date('2024-01-15T10:30:00Z'), // Date object, not string
   tags: ['test', 'mock'],
-  iconType: 'lightbulb' as const,
+  icon: Lightbulb,
   ...overrides,
 });
 

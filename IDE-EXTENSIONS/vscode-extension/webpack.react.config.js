@@ -14,6 +14,8 @@ module.exports = {
     alias: {
       '@': path.resolve(__dirname, 'src'),
       '@components': path.resolve(__dirname, 'src/components'),
+      '@lib': path.resolve(__dirname, 'src/utils'),
+      '@shared': path.resolve(__dirname, 'src/shared'),
       '@utils': path.resolve(__dirname, 'src/utils'),
       '@bridges': path.resolve(__dirname, 'src/bridges')
     }
@@ -22,8 +24,14 @@ module.exports = {
     rules: [
       {
         test: /\.tsx?$/,
-        use: 'ts-loader',
-        exclude: /node_modules/
+        use: {
+          loader: 'ts-loader',
+          options: {
+            transpileOnly: true
+          }
+        },
+        // Exclude tests from the production React bundle to avoid type noise during packaging
+        exclude: /(node_modules|__tests__)/
       },
       {
         test: /\.css$/,
