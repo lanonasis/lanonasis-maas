@@ -41,8 +41,7 @@ export default [
         tsconfig: './tsconfig.json',
         declaration: false,
         declarationMap: false,
-        outDir: 'dist/core',
-        rootDir: 'src/core'
+        outDir: 'dist/core'
       }),
     ],
     external: ['zod'], // Only zod is external
@@ -81,8 +80,7 @@ export default [
         tsconfig: './tsconfig.json',
         declaration: false,
         declarationMap: false,
-        outDir: 'dist/node',
-        rootDir: 'src/node'
+        outDir: 'dist/node'
       }),
     ],
     external: ['zod', 'child_process', 'util', 'fs', 'os', '../core/client', '../core/types'],
@@ -122,7 +120,7 @@ export default [
         declaration: false,
         declarationMap: false,
         outDir: 'dist/react',
-        rootDir: 'src/react'
+        jsx: 'react'
       }),
     ],
     external: ['react', 'zod', '../core/client', '../core/types'],
@@ -162,7 +160,7 @@ export default [
         declaration: false,
         declarationMap: false,
         outDir: 'dist/vue',
-        rootDir: 'src/vue'
+        skipLibCheck: true
       }),
     ],
     external: ['vue', 'zod', '../core/client', '../core/types'],
@@ -201,8 +199,7 @@ export default [
         tsconfig: './tsconfig.json',
         declaration: false,
         declarationMap: false,
-        outDir: 'dist/presets',
-        rootDir: 'src/presets'
+        outDir: 'dist/presets'
       }),
     ],
     external: ['zod', '../core/client'],

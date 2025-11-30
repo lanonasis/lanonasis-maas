@@ -123,6 +123,7 @@
     "@rollup/plugin-commonjs": "^29.0.0",
     "@rollup/plugin-node-resolve": "^16.0.3",
     "@rollup/plugin-typescript": "^12.3.0",
+    "@types/eventsource": "^1.1.15",
     "@types/jest": "^30.0.0",
     "@types/node": "^24.10.1",
     "@typescript-eslint/eslint-plugin": "^8.47.0",
@@ -134,7 +135,8 @@
     "rollup-plugin-dts": "^6.2.3",
     "ts-jest": "^29.4.5",
     "tslib": "^2.8.1",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "vue": "^3.5.25"
   },
   "publishConfig": {
     "access": "public",
