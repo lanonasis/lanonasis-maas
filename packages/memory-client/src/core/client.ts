@@ -28,6 +28,10 @@ export interface CoreMemoryClientConfig {
   apiKey?: string;
   /** Bearer token for authentication (alternative to API key) */
   authToken?: string;
+  /** Organization ID (optional - will be auto-resolved if not provided) */
+  organizationId?: string;
+  /** User ID (optional - used as fallback for organization ID) */
+  userId?: string;
   /** Request timeout in milliseconds (default: 30000) */
   timeout?: number;
   /** Custom headers to include with requests */
@@ -94,8 +98,8 @@ export interface PaginatedResponse<T> {
  * It uses only standard web APIs (fetch, AbortController, etc.)
  */
 export class CoreMemoryClient {
-  private config: Required<Omit<CoreMemoryClientConfig, 'apiKey' | 'authToken' | 'headers' | 'retry' | 'cache' | 'onError' | 'onRequest' | 'onResponse'>> &
-    Pick<CoreMemoryClientConfig, 'apiKey' | 'authToken' | 'headers' | 'retry' | 'cache' | 'onError' | 'onRequest' | 'onResponse'>;
+  private config: Required<Omit<CoreMemoryClientConfig, 'apiKey' | 'authToken' | 'organizationId' | 'userId' | 'headers' | 'retry' | 'cache' | 'onError' | 'onRequest' | 'onResponse'>> &
+    Pick<CoreMemoryClientConfig, 'apiKey' | 'authToken' | 'organizationId' | 'userId' | 'headers' | 'retry' | 'cache' | 'onError' | 'onRequest' | 'onResponse'>;
   private baseHeaders: Record<string, string>;
 
   constructor(config: CoreMemoryClientConfig) {
@@ -116,6 +120,33 @@ export class CoreMemoryClient {
     } else if (config.apiKey) {
       this.baseHeaders['X-API-Key'] = config.apiKey;
     }
+
+    // Add organization ID header if provided
+    if (config.organizationId) {
+      this.baseHeaders['X-Organization-ID'] = config.organizationId;
+    }
+  }
+
+  /**
+   * Enrich request body with organization context if configured
+   * This ensures the API has the organization_id even if not in auth token
+   */
+  private enrichWithOrgContext<T extends Record<string, unknown>>(body: T): T {
+    // If organizationId is configured, include it in the request body
+    if (this.config.organizationId && !body.organization_id) {
+      return {
+        ...body,
+        organization_id: this.config.organizationId
+      };
+    }
+    // Fallback to userId if no organizationId configured
+    if (!this.config.organizationId && this.config.userId && !body.organization_id) {
+      return {
+        ...body,
+        organization_id: this.config.userId
+      };
+    }
+    return body;
   }
 
   /**
@@ -245,9 +276,10 @@ export class CoreMemoryClient {
    * Create a new memory
    */
   async createMemory(memory: CreateMemoryRequest): Promise<ApiResponse<MemoryEntry>> {
+    const enrichedMemory = this.enrichWithOrgContext(memory as Record<string, unknown>);
     return this.request<MemoryEntry>('/memory', {
       method: 'POST',
-      body: JSON.stringify(memory)
+      body: JSON.stringify(enrichedMemory)
     });
   }
 
@@ -317,9 +349,10 @@ export class CoreMemoryClient {
     total_results: number;
     search_time_ms: number;
   }>> {
+    const enrichedRequest = this.enrichWithOrgContext(request as Record<string, unknown>);
     return this.request('/memory/search', {
       method: 'POST',
-      body: JSON.stringify(request)
+      body: JSON.stringify(enrichedRequest)
     });
   }
 
@@ -330,9 +363,10 @@ export class CoreMemoryClient {
     deleted_count: number;
     failed_ids: string[];
   }>> {
+    const enrichedRequest = this.enrichWithOrgContext({ memory_ids: memoryIds });
     return this.request('/memory/bulk/delete', {
       method: 'POST',
-      body: JSON.stringify({ memory_ids: memoryIds })
+      body: JSON.stringify(enrichedRequest)
     });
   }
 
@@ -342,9 +376,10 @@ export class CoreMemoryClient {
    * Create a new topic
    */
   async createTopic(topic: CreateTopicRequest): Promise<ApiResponse<MemoryTopic>> {
+    const enrichedTopic = this.enrichWithOrgContext(topic as Record<string, unknown>);
     return this.request<MemoryTopic>('/topics', {
       method: 'POST',
-      body: JSON.stringify(topic)
+      body: JSON.stringify(enrichedTopic)
     });
   }
 
