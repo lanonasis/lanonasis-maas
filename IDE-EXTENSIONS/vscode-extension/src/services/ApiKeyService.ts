@@ -231,7 +231,8 @@ export class ApiKeyService {
 
     async testConnection(): Promise<boolean> {
         try {
-            await this.makeRequest<{ status: string }>('/api/v1/health');
+            // Use /health endpoint which exists on auth-gateway (not /api/v1/health)
+            await this.makeRequest<{ status: string }>('/health');
             return true;
         } catch {
             return false;

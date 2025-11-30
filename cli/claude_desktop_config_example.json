@@ -1,0 +1,18 @@
+{
+  "mcpServers": {
+    "lanonasis": {
+      "url": "https://mcp.lanonasis.com/api/v1",
+      "transport": {
+        "type": "http"
+      },
+      "authentication": {
+        "type": "oauth2",
+        "authorizationUrl": "https://auth.lanonasis.com/oauth/authorize",
+        "tokenUrl": "https://auth.lanonasis.com/oauth/token",
+        "clientId": "claude-desktop",
+        "scope": "mcp:full memories:read memories:write",
+        "usePKCE": true
+      }
+    }
+  }
+}

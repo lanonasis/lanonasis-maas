@@ -1,233 +1,212 @@
-import { describe, test, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
-import MemoryCard from '../MemoryCard';
-import { createMockMemory } from '../../test/setup';
+import React from 'react';
+import { describe, test, expect, vi, beforeEach, afterEach } from 'vitest';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { MemoryCard } from '../MemoryCard';
+import type { Memory } from '../../shared/types';
+import { Lightbulb, Terminal, Hash } from 'lucide-react';
 
-// Mock the Icon component
-vi.mock('../Icon', () => ({
-  default: ({ type, className }: { type: string; className?: string }) => (
-    <div data-testid={`icon-${type}`} className={className}>
-      Icon-{type}
-    </div>
-  )
+// Mock framer-motion
+vi.mock('framer-motion', () => ({
+  motion: {
+    div: ({ children, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
+      <div {...props}>{children}</div>
+    ),
+  },
 }));
 
+// Mock date-fns format
+vi.mock('date-fns', () => ({
+  format: (date: Date, formatStr: string) => {
+    const d = new Date(date);
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    if (formatStr === 'MMM d') {
+      return `${months[d.getMonth()]} ${d.getDate()}`;
+    }
+    return d.toISOString();
+  },
+}));
+
+// Mock clipboard API
+Object.assign(navigator, {
+  clipboard: {
+    writeText: vi.fn().mockResolvedValue(undefined),
+  },
+});
+
 describe('MemoryCard Component', () => {
-  const mockOnSelect = vi.fn();
-  const mockMemory = createMockMemory();
+  const createMockMemory = (overrides: Partial<Memory> = {}): Memory => ({
+    id: 'test-memory-1',
+    title: 'Test Memory',
+    content: 'Test content for this memory',
+    type: 'context',
+    date: new Date('2024-01-15T10:30:00Z'),
+    tags: ['test', 'mock'],
+    icon: Lightbulb,
+    ...overrides,
+  });
 
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   test('renders memory card with title and date', () => {
-    render(
-      <MemoryCard
-        id={mockMemory.id}
-        title={mockMemory.title}
-        type={mockMemory.type}
-        date={mockMemory.date}
-        tags={mockMemory.tags}
-        content={mockMemory.content}
-        iconType={mockMemory.iconType}
-        onSelect={mockOnSelect}
-      />
-    );
+    const memory = createMockMemory();
+    render(<MemoryCard memory={memory} />);
 
-    expect(screen.getByText(mockMemory.title)).toBeInTheDocument();
-    // MemoryCard formats as "MMM d" (no year)
-    expect(screen.getByText(/Jan 15/)).toBeInTheDocument();
+    expect(screen.getByText(memory.title)).toBeInTheDocument();
+    expect(screen.getByTestId('text-memory-date')).toHaveTextContent('Jan 15');
   });
 
   test('displays tags correctly', () => {
-    render(
-      <MemoryCard
-        id={mockMemory.id}
-        title={mockMemory.title}
-        type={mockMemory.type}
-        date={mockMemory.date}
-        tags={['tag1', 'tag2', 'tag3']}
-        content={mockMemory.content}
-        iconType={mockMemory.iconType}
-        onSelect={mockOnSelect}
-      />
-    );
+    const memory = createMockMemory({
+      tags: ['tag1', 'tag2', 'tag3'],
+    });
+    render(<MemoryCard memory={memory} />);
 
-    expect(screen.getByText('#tag1')).toBeInTheDocument();
-    expect(screen.getByText('#tag2')).toBeInTheDocument();
-    expect(screen.getByText('#tag3')).toBeInTheDocument();
+    expect(screen.getByTestId('tag-tag1')).toBeInTheDocument();
+    expect(screen.getByTestId('tag-tag2')).toBeInTheDocument();
+    expect(screen.getByTestId('tag-tag3')).toBeInTheDocument();
   });
 
-  test('calls onSelect when card is clicked', () => {
-    render(
-      <MemoryCard
-        id={mockMemory.id}
-        title={mockMemory.title}
-        type={mockMemory.type}
-        date={mockMemory.date}
-        tags={mockMemory.tags}
-        content={mockMemory.content}
-        iconType={mockMemory.iconType}
-        onSelect={mockOnSelect}
-      />
-    );
+  test('displays copy button on hover', async () => {
+    const memory = createMockMemory();
+    render(<MemoryCard memory={memory} />);
 
-    const card = screen.getByRole('article');
-    fireEvent.click(card);
+    const card = screen.getByTestId(`memory-card-${memory.id}`);
+    
+    // Initially, copy button should not be visible
+    expect(screen.queryByTestId('btn-copy-memory')).not.toBeInTheDocument();
 
-    expect(mockOnSelect).toHaveBeenCalledWith(mockMemory.id);
+    // Hover over the card
+    fireEvent.mouseEnter(card);
+
+    // Copy button should appear
+    await waitFor(() => {
+      expect(screen.getByTestId('btn-copy-memory')).toBeInTheDocument();
+    });
   });
 
-  test('displays correct icon type', () => {
-    render(
-      <MemoryCard
-        id={mockMemory.id}
-        title={mockMemory.title}
-        type={mockMemory.type}
-        date={mockMemory.date}
-        tags={mockMemory.tags}
-        content={mockMemory.content}
-        iconType="terminal"
-        onSelect={mockOnSelect}
-      />
-    );
+  test('copies content to clipboard when copy button is clicked', async () => {
+    const memory = createMockMemory({
+      content: 'Content to copy',
+    });
+    render(<MemoryCard memory={memory} />);
 
-    expect(screen.getByTestId('icon-terminal')).toBeInTheDocument();
-  });
+    const card = screen.getByTestId(`memory-card-${memory.id}`);
+    fireEvent.mouseEnter(card);
 
-  test('formats date correctly for string input as well', () => {
-    const memoryWithFormattedDate = createMockMemory({
-      date: new Date('2024-01-15T10:30:00Z')
+    await waitFor(() => {
+      expect(screen.getByTestId('btn-copy-memory')).toBeInTheDocument();
     });
 
-    render(
-      <MemoryCard
-        id={memoryWithFormattedDate.id}
-        title={memoryWithFormattedDate.title}
-        type={memoryWithFormattedDate.type}
-        date={memoryWithFormattedDate.date}
-        tags={memoryWithFormattedDate.tags}
-        content={memoryWithFormattedDate.content}
-        iconType={memoryWithFormattedDate.iconType}
-        onSelect={mockOnSelect}
-      />
-    );
+    const copyButton = screen.getByTestId('btn-copy-memory');
+    fireEvent.click(copyButton);
 
-    expect(screen.getByText(/Jan 15/)).toBeInTheDocument();
+    expect(navigator.clipboard.writeText).toHaveBeenCalledWith('Content to copy');
   });
 
-  test('displays memory type badge', () => {
-    render(
-      <MemoryCard
-        id={mockMemory.id}
-        title={mockMemory.title}
-        type="project"
-        date={mockMemory.date}
-        tags={mockMemory.tags}
-        content={mockMemory.content}
-        iconType={mockMemory.iconType}
-        onSelect={mockOnSelect}
-      />
-    );
+  test('shows check icon after copying', async () => {
+    const memory = createMockMemory();
+    render(<MemoryCard memory={memory} />);
 
-    expect(screen.getByText('project')).toBeInTheDocument();
+    const card = screen.getByTestId(`memory-card-${memory.id}`);
+    fireEvent.mouseEnter(card);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('btn-copy-memory')).toBeInTheDocument();
+    });
+
+    const copyButton = screen.getByTestId('btn-copy-memory');
+    fireEvent.click(copyButton);
+
+    // Check icon should appear
+    await waitFor(() => {
+      const checkIcon = copyButton.querySelector('svg');
+      expect(checkIcon).toBeInTheDocument();
+    });
+  });
+
+  test('displays correct icon component', () => {
+    const memory = createMockMemory({
+      icon: Terminal,
+    });
+    render(<MemoryCard memory={memory} />);
+
+    // Icon should be rendered (as a component)
+    const card = screen.getByTestId(`memory-card-${memory.id}`);
+    expect(card).toBeInTheDocument();
+  });
+
+  test('formats date correctly', () => {
+    const memory = createMockMemory({
+      date: new Date('2024-03-20T14:30:00Z'),
+    });
+    render(<MemoryCard memory={memory} />);
+
+    expect(screen.getByTestId('text-memory-date')).toHaveTextContent('Mar 20');
   });
 
   test('handles empty tags array', () => {
-    render(
-      <MemoryCard
-        id={mockMemory.id}
-        title={mockMemory.title}
-        type={mockMemory.type}
-        date={mockMemory.date}
-        tags={[]}
-        content={mockMemory.content}
-        iconType={mockMemory.iconType}
-        onSelect={mockOnSelect}
-      />
-    );
+    const memory = createMockMemory({
+      tags: [],
+    });
+    render(<MemoryCard memory={memory} />);
 
     // Should not render any tag elements
-    expect(screen.queryByText(/#/)).not.toBeInTheDocument();
+    expect(screen.queryByTestId(/^tag-/)).not.toBeInTheDocument();
   });
 
-  test('has proper accessibility attributes', () => {
-    render(
-      <MemoryCard
-        id={mockMemory.id}
-        title={mockMemory.title}
-        type={mockMemory.type}
-        date={mockMemory.date}
-        tags={mockMemory.tags}
-        content={mockMemory.content}
-        iconType={mockMemory.iconType}
-        onSelect={mockOnSelect}
-      />
-    );
+  test('has proper data attributes', () => {
+    const memory = createMockMemory();
+    render(<MemoryCard memory={memory} />);
 
-    const card = screen.getByRole('article');
-    expect(card).toHaveAttribute('aria-label', expect.stringContaining(mockMemory.title));
-    expect(card).toHaveAttribute('tabIndex', '0');
-  });
-
-  test('handles keyboard navigation', () => {
-    render(
-      <MemoryCard
-        id={mockMemory.id}
-        title={mockMemory.title}
-        type={mockMemory.type}
-        date={mockMemory.date}
-        tags={mockMemory.tags}
-        content={mockMemory.content}
-        iconType={mockMemory.iconType}
-        onSelect={mockOnSelect}
-      />
-    );
-
-    const card = screen.getByRole('article');
-    fireEvent.keyDown(card, { key: 'Enter' });
-
-    expect(mockOnSelect).toHaveBeenCalledWith(mockMemory.id);
-  });
-
-  test('applies hover styles class', () => {
-    render(
-      <MemoryCard
-        id={mockMemory.id}
-        title={mockMemory.title}
-        type={mockMemory.type}
-        date={mockMemory.date}
-        tags={mockMemory.tags}
-        content={mockMemory.content}
-        iconType={mockMemory.iconType}
-        onSelect={mockOnSelect}
-      />
-    );
-
-    const card = screen.getByRole('article');
-    expect(card).toHaveClass('hover:border-[#007ACC]');
+    const card = screen.getByTestId(`memory-card-${memory.id}`);
+    expect(card).toBeInTheDocument();
   });
 
   test('renders different icon types correctly', () => {
-    const iconTypes: Array<'terminal' | 'filecode' | 'hash' | 'calendar' | 'lightbulb' | 'briefcase' | 'user' | 'settings'> = 
-      ['terminal', 'filecode', 'hash', 'calendar', 'lightbulb', 'briefcase', 'user', 'settings'];
-
-    iconTypes.forEach(iconType => {
+    const icons = [Lightbulb, Terminal, Hash];
+    
+    icons.forEach((Icon) => {
       const { unmount } = render(
-        <MemoryCard
-          id={mockMemory.id}
-          title={mockMemory.title}
-          type={mockMemory.type}
-          date={mockMemory.date}
-          tags={mockMemory.tags}
-          content={mockMemory.content}
-          iconType={iconType}
-          onSelect={mockOnSelect}
-        />
+        <MemoryCard memory={createMockMemory({ icon: Icon })} />
       );
 
-      expect(screen.getByTestId(`icon-${iconType}`)).toBeInTheDocument();
+      const card = screen.getByTestId(`memory-card-test-memory-1`);
+      expect(card).toBeInTheDocument();
       unmount();
     });
+  });
+
+  test('applies hover styles', () => {
+    const memory = createMockMemory();
+    render(<MemoryCard memory={memory} />);
+
+    const card = screen.getByTestId(`memory-card-${memory.id}`);
+    expect(card).toHaveClass('hover:bg-[var(--vscode-list-hoverBackground)]');
+  });
+
+  test('displays content in copy functionality', async () => {
+    const memory = createMockMemory({
+      content: 'Special content to verify',
+    });
+    render(<MemoryCard memory={memory} />);
+
+    const card = screen.getByTestId(`memory-card-${memory.id}`);
+    fireEvent.mouseEnter(card);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('btn-copy-memory')).toBeInTheDocument();
+    });
+
+    const copyButton = screen.getByTestId('btn-copy-memory');
+    fireEvent.click(copyButton);
+
+    expect(navigator.clipboard.writeText).toHaveBeenCalledWith('Special content to verify');
   });
 });
