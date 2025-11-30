@@ -353,7 +353,8 @@ export class AuthenticationService {
         const useGateway = config.get<boolean>('useGateway', true);
         
         const baseUrl = useGateway ? config.get<string>('gatewayUrl', apiUrl) : apiUrl;
-        const testUrl = new URL('/api/v1/health', baseUrl);
+        // Use /health endpoint which exists on auth-gateway (not /api/v1/health)
+        const testUrl = new URL('/health', baseUrl);
         
         const response = await fetch(testUrl.toString(), {
             headers: {
