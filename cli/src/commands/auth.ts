@@ -368,6 +368,50 @@ async function refreshOAuth2Token(config: CLIConfig): Promise<boolean> {
   }
 }
 
+/**
+ * Exchange Supabase JWT token for auth-gateway API key
+ * This enables CLI to work with MCP WebSocket and all services seamlessly
+ */
+async function exchangeSupabaseTokenForApiKey(
+  supabaseToken: string,
+  config: CLIConfig
+): Promise<{ access_token: string; user: any } | null> {
+  try {
+    const discoveredServices = config.get('discoveredServices') as any;
+    const authBase = discoveredServices?.auth_base || 'https://auth.lanonasis.com';
+
+    if (process.env.CLI_VERBOSE === 'true') {
+      console.log(chalk.dim(`   Exchanging token at: ${authBase}/v1/auth/token/exchange`));
+    }
+
+    const response = await axios.post(
+      `${authBase}/v1/auth/token/exchange`,
+      {
+        project_scope: 'lanonasis-maas',
+        platform: 'cli'
+      },
+      {
+        headers: {
+          'Authorization': `Bearer ${supabaseToken}`,
+          'Content-Type': 'application/json',
+          'X-Project-Scope': 'lanonasis-maas'
+        }
+      }
+    );
+
+    return {
+      access_token: response.data.access_token,
+      user: response.data.user
+    };
+  } catch (error: any) {
+    console.error(chalk.yellow('⚠️  Token exchange failed:', error.message));
+    if (process.env.CLI_VERBOSE === 'true' && error.response) {
+      console.error(chalk.dim('   Response:', JSON.stringify(error.response.data, null, 2)));
+    }
+    return null;
+  }
+}
+
 
 export async function diagnoseCommand(): Promise<void> {
   const config = new CLIConfig();
@@ -783,15 +827,39 @@ async function handleOAuthFlow(config: CLIConfig): Promise<void> {
     const tokens = await exchangeCodeForTokens(code, pkce.verifier, authBase, redirectUri);
     spinner.succeed('Access tokens received');
 
-    // Store tokens
+    // Store OAuth tokens
     await config.setToken(tokens.access_token);
     await config.set('refresh_token', tokens.refresh_token);
     await config.set('token_expires_at', Date.now() + (tokens.expires_in * 1000));
-    await config.set('authMethod', 'oauth2');
 
-    console.log();
-    console.log(chalk.green('✓ OAuth2 authentication successful'));
-    console.log(colors.info('You can now use Lanonasis services'));
+    // Exchange for unified API key
+    spinner.text = 'Configuring unified access...';
+    spinner.start();
+
+    const exchangeResult = await exchangeSupabaseTokenForApiKey(tokens.access_token, config);
+
+    if (exchangeResult) {
+      // Store the auth-gateway API key for MCP and other services
+      await config.setVendorKey(exchangeResult.access_token);
+      await config.set('authMethod', 'oauth2');
+
+      spinner.succeed('Unified authentication configured');
+
+      console.log();
+      console.log(chalk.green('✓ OAuth2 authentication successful'));
+      console.log(colors.info('You can now use all Lanonasis services'));
+      console.log(chalk.gray('✓ MCP, API, and CLI access configured'));
+    } else {
+      // Fallback
+      await config.set('authMethod', 'oauth2');
+      spinner.warn('Token exchange failed, OAuth token stored');
+
+      console.log();
+      console.log(chalk.green('✓ OAuth2 authentication successful'));
+      console.log(colors.info('You can now use Lanonasis services'));
+      console.log(chalk.yellow('⚠️  Some services may require re-authentication'));
+    }
+
     process.exit(0);
 
   } catch (error: any) {
@@ -891,18 +959,39 @@ async function handleCredentialsFlow(options: LoginOptions, config: CLIConfig): 
   try {
     const response = await apiClient.login(email, password);
 
-    // Store token and user info
-    await config.setToken(response.token);
+    if (process.env.CLI_VERBOSE === 'true') {
+      console.log(chalk.dim('   Login response:'), JSON.stringify(response, null, 2));
+    }
+
+    // The auth-gateway login endpoint already returns the correct token format
+    // No need to exchange - this token works with all services (MCP, API, CLI)
+    const authToken = response.token || (response as any).access_token;
+
+    if (!authToken) {
+      throw new Error('No token received from login response');
+    }
+
+    if (process.env.CLI_VERBOSE === 'true') {
+      console.log(chalk.dim(`   JWT received (length: ${authToken.length})`));
+    }
+
+    // Store JWT token for API authentication
+    await config.setToken(authToken);
+    await config.set('authMethod', 'jwt');
 
     spinner.succeed('Login successful');
 
     console.log();
     console.log(chalk.green('✓ Authenticated successfully'));
     console.log(`Welcome, ${response.user.email}!`);
-    if (response.user.organization_id) {
-      console.log(`Organization: ${response.user.organization_id}`);
+    if (response.user.role) {
+      console.log(`Role: ${response.user.role}`);
     }
-    console.log(`Plan: ${response.user.plan || 'free'}`);
+    console.log(chalk.gray('✓ API access configured'));
+    console.log();
+    console.log(chalk.dim('Note: MCP WebSocket commands require a vendor key.'));
+    console.log(chalk.dim('Run'), chalk.white('onasis auth vendor-key <key>'), chalk.dim('to configure MCP access.'));
+
 
   } catch (error: unknown) {
     spinner.fail('Login failed');
