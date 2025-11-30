@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import WelcomeView from './WelcomeView';
+import { WelcomeView } from './WelcomeView';
 import { cn } from '../utils/cn';
 
 export interface AuthFlowProps {
@@ -104,8 +104,7 @@ const AuthFlow: React.FC<AuthFlowProps> = ({
 
       {/* Welcome View */}
       <WelcomeView 
-        onLogin={() => onLogin()} 
-        isConnecting={isLoading}
+        onLogin={() => onLogin()}
       />
 
       {/* Auth Method Info */}
