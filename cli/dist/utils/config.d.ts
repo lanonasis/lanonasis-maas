@@ -61,6 +61,7 @@ export declare class CLIConfig {
     private acquireLock;
     private releaseLock;
     getApiUrl(): string;
+    getApiUrlsWithFallbacks(): string[];
     discoverServices(verbose?: boolean): Promise<void>;
     private handleServiceDiscoveryFailure;
     private categorizeServiceDiscoveryError;
