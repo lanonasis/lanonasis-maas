@@ -7,6 +7,7 @@ import * as vscode from 'vscode';
 import * as http from 'http';
 import * as crypto from 'crypto';
 import { URL, URLSearchParams } from 'url';
+import xss from 'xss';
 
 export interface SecureStorageProvider {
   store(key: string, value: string): Promise<void>;
@@ -315,7 +316,9 @@ export class ExtensionAuthHandler {
               
               if (error) {
                 res.writeHead(400, { 'Content-Type': 'text/html' });
-                res.end(`<h1>OAuth Error: ${error}</h1>`);
+                // Sanitize error message to prevent XSS
+                const sanitizedError = xss(error);
+                res.end(`<h1>OAuth Error: ${sanitizedError}</h1>`);
                 cleanup(server);
                 reject(new Error(`OAuth error: ${error}`));
                 return;
@@ -358,7 +361,10 @@ export class ExtensionAuthHandler {
             }
           } catch (err) {
             res.writeHead(500, { 'Content-Type': 'text/html' });
-            res.end(`<h1>Error: ${err instanceof Error ? err.message : 'Unknown error'}</h1>`);
+            // Sanitize error message to prevent XSS
+            const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+            const sanitizedError = xss(errorMessage);
+            res.end(`<h1>Error: ${sanitizedError}</h1>`);
             cleanup(server);
             reject(err);
           }

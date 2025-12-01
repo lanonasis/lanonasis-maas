@@ -8,12 +8,15 @@ Intelligent REPL (Read-Eval-Print Loop) for LanOnasis Memory Service - Natural l
 ## ✨ Features
 
 - 🧠 **Natural Language Interface** - Talk naturally to your memory system
-- 🤖 **AI Orchestration** - OpenAI-powered intent understanding
+- 🤖 **LZero AI Orchestration** - Enhanced OpenAI-powered intent understanding with personalization
 - 🚀 **Interactive REPL** - Dual-mode: natural language OR commands
-- 🔍 **Semantic Search** - AI-powered memory search
+- 🔍 **Enhanced Semantic Search** - AI-powered memory search with main answer + additional context
 - 💾 **Full Memory Operations** - Create, search, list, get, and delete
+- ✨ **Prompt Optimization** - Refine and enhance prompts for better AI results
+- 🎯 **Model Configuration** - User-configurable AI model selection (GPT-4, GPT-3.5, etc.)
+- 👤 **Personalized Experience** - Context-aware welcome messages and user personalization
 - 🔌 **MCP Support** - Model Context Protocol integration
-- 🎨 **Beautiful Output** - Colored, formatted terminal experience
+- 🎨 **Beautiful Output** - Colored, formatted terminal experience with rich responses
 - ⚡ **Fast & Lightweight** - Only ~15 KB
 - 🔐 **Multiple Auth Methods** - API keys, tokens, vendor keys
 - 📝 **Config Persistence** - Settings saved between sessions
@@ -58,6 +61,9 @@ OPENAI_API_KEY=REDACTED_OPENAI_API_KEY
 # With custom API endpoint
 onasis-repl start --api https://custom.api.com --token your_token
 
+# With custom AI model
+onasis-repl start --model gpt-4
+
 # Enable MCP mode
 onasis-repl start --mcp
 ```
@@ -70,6 +76,7 @@ onasis-repl start --mcp
 💭 Show me my recent memories
 💭 Find information about authentication
 💭 Save this: The meeting is on Friday at 3pm
+💭 Please refine this prompt: "Write a function"
 ```
 
 ### Traditional Commands
@@ -106,6 +113,11 @@ The REPL supports intelligent natural language interactions powered by OpenAI. J
 💭 What do I know about TypeScript?
 💭 Find my notes about the authentication system
 💭 Show me information about project deployment
+💭 remind me the url i setup for security sdk?
+
+# Prompt optimization
+💭 Please refine this prompt for better results: "Write code"
+💭 Optimize this prompt: "Create a function"
 
 # Listing & browsing
 💭 Show me my recent memories
@@ -165,6 +177,7 @@ export MEMORY_API_KEY=your_api_key
 
 # OpenAI for natural language (optional, recommended)
 export OPENAI_API_KEY=REDACTED_OPENAI_API_KEY
+export OPENAI_MODEL=gpt-4-turbo-preview  # Optional: specify AI model
 
 # Vendor key (optional)
 export LANONASIS_VENDOR_KEY=your_vendor_key
@@ -179,6 +192,7 @@ Options:
   --mcp            Use local MCP mode (default: false)
   --api <url>      Override API URL
   --token <token>  Authentication token
+  --model <model>  OpenAI model to use (e.g., gpt-4-turbo-preview, gpt-4, gpt-3.5-turbo)
   -h, --help       Display help for command
 ```
 
@@ -356,6 +370,11 @@ MIT © 2025 Lanonasis Team
 - [x] Natural language interface with AI orchestration
 - [x] OpenAI-powered intent recognition
 - [x] Context-aware conversations
+- [x] Enhanced system prompt with personalization
+- [x] Prompt optimization function
+- [x] Custom AI model selection
+- [x] Enhanced response format (main answer + context)
+- [x] Personalized welcome experience
 - [ ] Command history with arrow keys
 - [ ] Tab completion for commands
 - [ ] Multi-line input support
@@ -363,7 +382,7 @@ MIT © 2025 Lanonasis Team
 - [ ] Batch operations
 - [ ] Export/import functionality
 - [ ] Voice input support
-- [ ] Custom AI model selection (Claude, Gemini, etc.)
+- [ ] Additional AI model support (Claude, Gemini, etc.)
 
 ---
 

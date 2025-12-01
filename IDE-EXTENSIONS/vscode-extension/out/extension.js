@@ -40,10 +40,13 @@ const MemoryTreeProvider_1 = require("./providers/MemoryTreeProvider");
 const MemoryCompletionProvider_1 = require("./providers/MemoryCompletionProvider");
 const ApiKeyTreeProvider_1 = require("./providers/ApiKeyTreeProvider");
 const MemorySidebarProvider_1 = require("./panels/MemorySidebarProvider");
+const EnhancedSidebarProvider_1 = require("./panels/EnhancedSidebarProvider");
 const MemoryService_1 = require("./services/MemoryService");
 const EnhancedMemoryService_1 = require("./services/EnhancedMemoryService");
 const ApiKeyService_1 = require("./services/ApiKeyService");
 const SecureApiKeyService_1 = require("./services/SecureApiKeyService");
+// Unused error recovery utils - available for future use
+// import { withRetry, showErrorWithRecovery, withProgressAndRetry } from './utils/errorRecovery';
 const diagnostics_1 = require("./utils/diagnostics");
 async function activate(context) {
     console.log('Lanonasis Memory Extension is now active');
@@ -60,14 +63,25 @@ async function activate(context) {
         memoryService = new MemoryService_1.MemoryService(secureApiKeyService);
     }
     const apiKeyService = new ApiKeyService_1.ApiKeyService(secureApiKeyService);
-    const sidebarProvider = new MemorySidebarProvider_1.MemorySidebarProvider(context.extensionUri, memoryService);
-    context.subscriptions.push(vscode.window.registerWebviewViewProvider(MemorySidebarProvider_1.MemorySidebarProvider.viewType, sidebarProvider));
+    const configuration = vscode.workspace.getConfiguration('lanonasis');
+    const useEnhancedUI = configuration.get('useEnhancedUI', false);
+    let sidebarProvider;
+    // Register sidebar provider based on feature flag
+    if (useEnhancedUI) {
+        sidebarProvider = new EnhancedSidebarProvider_1.EnhancedSidebarProvider(context.extensionUri, memoryService, apiKeyService);
+        context.subscriptions.push(vscode.window.registerWebviewViewProvider(EnhancedSidebarProvider_1.EnhancedSidebarProvider.viewType, sidebarProvider));
+        console.log('[Lanonasis] Using Enhanced UI with React components');
+    }
+    else {
+        sidebarProvider = new MemorySidebarProvider_1.MemorySidebarProvider(context.extensionUri, memoryService);
+        context.subscriptions.push(vscode.window.registerWebviewViewProvider(MemorySidebarProvider_1.MemorySidebarProvider.viewType, sidebarProvider));
+        console.log('[Lanonasis] Using original UI');
+    }
     const memoryTreeProvider = new MemoryTreeProvider_1.MemoryTreeProvider(memoryService);
     const apiKeyTreeProvider = new ApiKeyTreeProvider_1.ApiKeyTreeProvider(apiKeyService);
     context.subscriptions.push(vscode.window.registerTreeDataProvider('lanonasisMemories', memoryTreeProvider), vscode.window.registerTreeDataProvider('lanonasisApiKeys', apiKeyTreeProvider));
     const completionProvider = new MemoryCompletionProvider_1.MemoryCompletionProvider(memoryService);
     context.subscriptions.push(vscode.languages.registerCompletionItemProvider({ scheme: 'file' }, completionProvider, '@', '#', '//'));
-    const configuration = vscode.workspace.getConfiguration('lanonasis');
     await vscode.commands.executeCommand('setContext', 'lanonasis.enabled', true);
     await vscode.commands.executeCommand('setContext', 'lanonasis.enableApiKeyManagement', configuration.get('enableApiKeyManagement', true));
     await vscode.commands.executeCommand('setContext', 'lanonasis.authenticated', false);
@@ -355,6 +369,18 @@ async function activate(context) {
         }),
         vscode.commands.registerCommand('lanonasis.showLogs', () => {
             outputChannel.show();
+        }),
+        vscode.commands.registerCommand('lanonasis.logout', async () => {
+            try {
+                await secureApiKeyService.deleteApiKey();
+            }
+            catch (error) {
+                outputChannel.appendLine(`[Logout] Failed to clear stored credentials: ${error instanceof Error ? error.message : String(error)}`);
+            }
+            finally {
+                await handleAuthenticationCleared();
+                vscode.window.showInformationMessage('Signed out of Lanonasis Memory.');
+            }
         })
     ];
     context.subscriptions.push(...commands);
@@ -508,6 +534,8 @@ function openMemoryInEditor(memory) {
         vscode.window.showTextDocument(doc);
     });
 }
+// Currently unused but available for future enhanced authentication checks
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 async function checkEnhancedAuthenticationStatus(enhancedService) {
     const config = vscode.workspace.getConfiguration('lanonasis');
     const apiKey = config.get('apiKey');
@@ -816,7 +844,7 @@ async function viewApiKeys(apiKeyService) {
         vscode.window.showErrorMessage(`Failed to load API keys: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
 }
-async function createApiKey(apiKeyService, apiKeyTreeProvider) {
+async function createApiKey(apiKeyService, _apiKeyTreeProvider) {
     try {
         // Get projects first
         const projects = await apiKeyService.getProjects();

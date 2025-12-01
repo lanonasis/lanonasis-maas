@@ -368,6 +368,17 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       }
       
       if (data.session) {
+        console.log('OAuth callback successful, setting user state...');
+        
+        // Update state immediately to prevent blank page
+        setSession(data.session);
+        setUser(data.session.user);
+        
+        // Fetch profile if user exists
+        if (data.session.user) {
+          await fetchProfile(data.session.user.id);
+        }
+        
         console.log('OAuth callback successful, redirecting to dashboard');
         toast({
           title: "Welcome!",
@@ -377,7 +388,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         // Get redirect path from localStorage or default to dashboard
         const redirectPath = localStorage.getItem('redirectAfterLogin') || '/dashboard';
         localStorage.removeItem('redirectAfterLogin');
-        navigate(redirectPath);
+        
+        // Small delay to ensure state is set before navigation
+        setTimeout(() => {
+          navigate(redirectPath);
+        }, 100);
         return true;
       }
     } catch (error: any) {

@@ -12,6 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
+import { hashApiKeyBrowser } from "@lanonasis/security-sdk/hash-utils";
 
 export const ApiKeyManager = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -86,7 +87,7 @@ export const ApiKeyManager = () => {
         () => Math.floor(Math.random() * 36).toString(36)
       ).join("");
       
-      const formattedKey = `vx_${randomKey}`;
+      const formattedKey = `lns_${randomKey}`; // Use lns_ prefix for consistency
       setGeneratedKey(formattedKey);
       
       if (user) {
@@ -96,13 +97,19 @@ export const ApiKeyManager = () => {
             ? new Date(customExpiration).toISOString() 
             : new Date(Date.now() + parseInt(keyExpiration) * 86400000).toISOString();
         
-        // Save the API key to the database
+        // ✅ CRITICAL FIX: Hash the API key before storing
+        const keyHash = await hashApiKeyBrowser(formattedKey);
+        
+        // Save the HASHED API key to the database (never store plaintext!)
         const { error } = await supabase.from("api_keys").insert({
-          key: formattedKey,
+          key_hash: keyHash,  // Store hash, not raw key
+          name: keyName,
           service: keyService,
           user_id: user.id as any,
           expires_at: expirationDate,
           rate_limited: rateLimit,
+          created_at: new Date().toISOString(),
+          last_used: null,
         } as any);
         
         if (error) throw error;

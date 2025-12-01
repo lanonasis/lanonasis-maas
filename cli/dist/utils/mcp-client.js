@@ -59,6 +59,36 @@ export class MCPClient {
         return this.connectWithRetry(options);
     }
     /**
+     * Persist successful connection mode and URLs to config for future use
+     */
+    async persistConnectionState(mode, url) {
+        try {
+            // Save the successful connection mode as preference
+            this.config.set('mcpConnectionMode', mode);
+            this.config.set('mcpPreference', mode);
+            // Save the specific URL that worked
+            if (url) {
+                if (mode === 'websocket') {
+                    this.config.set('mcpWebSocketUrl', url);
+                }
+                else if (mode === 'remote') {
+                    this.config.set('mcpServerUrl', url);
+                }
+                else if (mode === 'local') {
+                    this.config.set('mcpServerPath', url);
+                }
+            }
+            // Save to disk
+            await this.config.save();
+        }
+        catch (error) {
+            // Don't fail connection if persistence fails, just log
+            if (process.env.CLI_VERBOSE === 'true') {
+                console.warn('⚠️  Failed to persist connection state:', error);
+            }
+        }
+    }
+    /**
      * Connect to MCP server with retry logic and exponential backoff
      */
     async connectWithRetry(options = {}) {
@@ -104,6 +134,8 @@ export class MCPClient {
                     this.isConnected = true;
                     this.activeConnectionMode = 'websocket';
                     this.retryAttempts = 0;
+                    // Persist successful connection state
+                    await this.persistConnectionState('websocket', wsUrl);
                     this.startHealthMonitoring();
                     return true;
                 }
@@ -125,6 +157,8 @@ export class MCPClient {
                     this.isConnected = true;
                     this.activeConnectionMode = 'remote';
                     this.retryAttempts = 0;
+                    // Persist successful connection state
+                    await this.persistConnectionState('remote', serverUrl);
                     this.startHealthMonitoring();
                     return true;
                 }
@@ -172,6 +206,8 @@ export class MCPClient {
                     this.isConnected = true;
                     this.activeConnectionMode = 'local';
                     this.retryAttempts = 0;
+                    // Persist successful connection state
+                    await this.persistConnectionState('local', serverPath);
                     console.log(chalk.green('✓ Connected to MCP server'));
                     this.startHealthMonitoring();
                     return true;
@@ -188,6 +224,8 @@ export class MCPClient {
                     this.isConnected = true;
                     this.activeConnectionMode = 'remote';
                     this.retryAttempts = 0;
+                    // Persist successful connection state
+                    await this.persistConnectionState('remote', serverUrl);
                     this.startHealthMonitoring();
                     return true;
                 }

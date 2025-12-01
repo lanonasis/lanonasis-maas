@@ -9,7 +9,7 @@
  */
 
 // Core clients
-export { LanOnasisClient } from './client/LanOnasisClient.js';
+export { LanonasisClient } from './client/LanonasisClient.js';
 export { MemoryClient } from './memory/MemoryClient.js';
 export { ApiKeyClient } from './api-keys/ApiKeyClient.js';
 export { MCPClient } from './mcp/MCPClient.js';
@@ -74,7 +74,7 @@ export type {
 
 // Error classes
 export {
-  LanOnasisError,
+  LanonasisError,
   AuthenticationError,
   ValidationError,
   NotFoundError,
@@ -108,17 +108,21 @@ export {
 export type {
   // Common memory operations
   Memory as MemoryEntry,
-  SearchMemoryResponse as MemorySearchResponse,
-  
+  SearchMemoryResponse as MemorySearchResponse
+} from './memory/types.js';
+
+export type {
   // Common API key operations
   ApiKey as StoredApiKey,
   MCPTool as RegisteredTool,
-  MCPSession as ActiveSession,
-  
+  MCPSession as ActiveSession
+} from './api-keys/types.js';
+
+export type {
   // Authentication
   AuthToken as Token,
   ClientConfig as Config
-} from './types/index.js';
+} from './types/common.js';
 
 /**
  * Default export - Main LanOnasis client
@@ -155,4 +159,4 @@ export type {
  * });
  * ```
  */
-export { LanOnasisClient as default } from './client/LanOnasisClient.js';
+export { LanonasisClient as default } from './client/LanonasisClient.js';
