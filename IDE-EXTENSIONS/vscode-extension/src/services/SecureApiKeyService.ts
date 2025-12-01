@@ -355,6 +355,7 @@ export class SecureApiKeyService {
 
     /**
      * Get the active credentials (OAuth token vs API key) for downstream services
+     * Automatically refreshes expired OAuth tokens using stored refresh token
      */
     async getStoredCredentials(): Promise<StoredCredential | null> {
         // Prefer OAuth tokens when available
@@ -362,8 +363,23 @@ export class SecureApiKeyService {
         if (authToken) {
             try {
                 const token = JSON.parse(authToken);
-                if (token?.access_token && this.isTokenValid(token)) {
-                    return { type: 'oauth', token: token.access_token };
+                if (token?.access_token) {
+                    // Check if token is still valid
+                    if (this.isTokenValid(token)) {
+                        return { type: 'oauth', token: token.access_token };
+                    }
+                    
+                    // Token expired - try to refresh
+                    this.log('Access token expired, attempting refresh...');
+                    const refreshedToken = await this.refreshAccessToken();
+                    if (refreshedToken) {
+                        return { type: 'oauth', token: refreshedToken };
+                    }
+                    
+                    // Refresh failed - clear expired credentials
+                    this.log('Token refresh failed, clearing expired credentials');
+                    await this.deleteApiKey();
+                    return null;
                 }
             } catch (error) {
                 this.logError('Failed to parse stored OAuth token', error);
@@ -380,6 +396,82 @@ export class SecureApiKeyService {
         }
 
         return null;
+    }
+
+    /**
+     * Refresh access token using stored refresh token
+     * Returns new access token on success, null on failure
+     */
+    private async refreshAccessToken(): Promise<string | null> {
+        try {
+            const refreshToken = await this.context.secrets.get(SecureApiKeyService.REFRESH_TOKEN_KEY);
+            if (!refreshToken) {
+                this.log('No refresh token available');
+                return null;
+            }
+
+            // Get auth URL from configuration
+            const config = vscode.workspace.getConfiguration('lanonasis');
+            const authUrl = config.get<string>('authUrl') || 'https://auth.lanonasis.com';
+            const tokenUrl = new URL('/oauth/token', authUrl);
+
+            this.log(`Refreshing token via ${tokenUrl.toString()}`);
+
+            const body = new URLSearchParams({
+                grant_type: 'refresh_token',
+                client_id: 'vscode-extension',
+                refresh_token: refreshToken
+            });
+
+            const response = await fetch(tokenUrl.toString(), {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'Accept': 'application/json'
+                },
+                body: body.toString()
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                this.logError(`Token refresh failed: ${response.status}`, errorText);
+                
+                // If refresh token is invalid/expired, clear it
+                if (response.status === 400 || response.status === 401) {
+                    await this.context.secrets.delete(SecureApiKeyService.REFRESH_TOKEN_KEY);
+                }
+                return null;
+            }
+
+            const tokenData = await response.json() as {
+                access_token: string;
+                refresh_token?: string;
+                expires_in?: number;
+            };
+
+            // Store new access token with expiration
+            const newToken = {
+                access_token: tokenData.access_token,
+                expires_at: Date.now() + (tokenData.expires_in ? tokenData.expires_in * 1000 : 3600000)
+            };
+            await this.context.secrets.store(SecureApiKeyService.AUTH_TOKEN_KEY, JSON.stringify(newToken));
+            
+            // Also update the API_KEY_KEY for backward compatibility
+            await this.storeApiKey(tokenData.access_token, 'oauth');
+
+            // Update refresh token if a new one was issued (token rotation)
+            if (tokenData.refresh_token) {
+                await this.context.secrets.store(SecureApiKeyService.REFRESH_TOKEN_KEY, tokenData.refresh_token);
+                this.log('Refresh token rotated');
+            }
+
+            this.log('Access token refreshed successfully');
+            return tokenData.access_token;
+
+        } catch (error) {
+            this.logError('Token refresh error', error);
+            return null;
+        }
     }
 
     /**
