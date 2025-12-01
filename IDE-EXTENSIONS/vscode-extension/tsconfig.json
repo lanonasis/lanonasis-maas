@@ -20,13 +20,23 @@
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
     "types": ["vscode", "node"],
-    "moduleResolution": "node"
+    "moduleResolution": "node",
+    "jsx": "react-jsx",
+    "allowJs": true,
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"],
+      "@/components/*": ["src/components/*"],
+      "@/lib/*": ["src/utils/*"],
+      "@/shared/*": ["src/shared/*"]
+    }
   },
   "include": [
     "src/**/*"
   ],
   "exclude": [
     "node_modules",
-    "out"
+    "out",
+    "**/__tests__/**"
   ]
 }

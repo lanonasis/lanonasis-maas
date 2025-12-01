@@ -3,6 +3,7 @@ import * as path from 'path';
 import * as os from 'os';
 import { jwtDecode } from 'jwt-decode';
 import { randomUUID } from 'crypto';
+import axios from 'axios';
 export class CLIConfig {
     configDir;
     configPath;
@@ -165,25 +166,75 @@ export class CLIConfig {
     getApiUrl() {
         return process.env.MEMORY_API_URL ||
             this.config.apiUrl ||
-            'https://mcp.lanonasis.com/api/v1';
+            'https://api.lanonasis.com';
+    }
+    // Get API URLs with fallbacks - try multiple endpoints
+    getApiUrlsWithFallbacks() {
+        const primary = this.getApiUrl();
+        const fallbacks = [
+            'https://api.lanonasis.com',
+            'https://mcp.lanonasis.com'
+        ];
+        // Remove duplicates and return primary first
+        return [primary, ...fallbacks.filter(url => url !== primary)];
     }
     // Enhanced Service Discovery Integration
     async discoverServices(verbose = false) {
-        const discoveryUrl = 'https://mcp.lanonasis.com/.well-known/onasis.json';
-        try {
-            // Use axios instead of fetch for consistency
-            const axios = (await import('axios')).default;
-            if (verbose) {
-                console.log(`🔍 Discovering services from ${discoveryUrl}...`);
+        const isTestEnvironment = process.env.NODE_ENV === 'test';
+        const forceDiscovery = process.env.FORCE_SERVICE_DISCOVERY === 'true';
+        // Skip service discovery in test environment unless explicitly forced
+        if ((isTestEnvironment && !forceDiscovery) || process.env.SKIP_SERVICE_DISCOVERY === 'true') {
+            if (!this.config.discoveredServices) {
+                this.config.discoveredServices = {
+                    auth_base: 'https://auth.lanonasis.com',
+                    memory_base: 'https://mcp.lanonasis.com/api/v1',
+                    mcp_base: 'https://mcp.lanonasis.com/api/v1',
+                    mcp_ws_base: 'wss://mcp.lanonasis.com/ws',
+                    mcp_sse_base: 'https://mcp.lanonasis.com/api/v1/events',
+                    project_scope: 'lanonasis-maas'
+                };
             }
-            const response = await axios.get(discoveryUrl, {
-                timeout: 10000,
-                maxRedirects: 5,
-                proxy: false, // Bypass proxy to avoid redirect loops
-                headers: {
-                    'User-Agent': 'Lanonasis-CLI/3.0.13'
+            return;
+        }
+        // Try multiple discovery URLs with fallbacks
+        const discoveryUrls = [
+            'https://api.lanonasis.com/.well-known/onasis.json',
+            'https://mcp.lanonasis.com/.well-known/onasis.json'
+        ];
+        let response = null;
+        let lastError = null;
+        // Use axios instead of fetch for consistency
+        const axios = (await import('axios')).default;
+        for (const discoveryUrl of discoveryUrls) {
+            try {
+                if (verbose) {
+                    console.log(`🔍 Discovering services from ${discoveryUrl}...`);
                 }
-            });
+                response = await axios.get(discoveryUrl, {
+                    timeout: 10000,
+                    maxRedirects: 5,
+                    proxy: false, // Bypass proxy to avoid redirect loops
+                    headers: {
+                        'User-Agent': 'Lanonasis-CLI/3.0.13'
+                    }
+                });
+                if (verbose) {
+                    console.log(`✓ Successfully discovered services from ${discoveryUrl}`);
+                }
+                break; // Success, exit loop
+            }
+            catch (err) {
+                lastError = err;
+                if (verbose) {
+                    console.log(`⚠️  Failed to discover from ${discoveryUrl}, trying next...`);
+                }
+                continue;
+            }
+        }
+        if (!response) {
+            throw lastError || new Error('All service discovery URLs failed');
+        }
+        try {
             // Map discovery response to our config format
             const discovered = response.data;
             // Extract auth base, but filter out localhost URLs
@@ -417,9 +468,11 @@ export class CLIConfig {
         return true;
     }
     async validateVendorKeyWithServer(vendorKey) {
+        if (process.env.SKIP_SERVER_VALIDATION === 'true') {
+            return;
+        }
         try {
             // Import axios dynamically to avoid circular dependency
-            const axios = (await import('axios')).default;
             // Ensure service discovery is done
             await this.discoverServices();
             const authBase = this.config.discoveredServices?.auth_base || 'https://auth.lanonasis.com';
@@ -557,7 +610,6 @@ export class CLIConfig {
         // If not locally valid, attempt server verification before failing
         if (!locallyValid) {
             try {
-                const axios = (await import('axios')).default;
                 const endpoints = [
                     'http://localhost:4000/v1/auth/verify-token',
                     'https://auth.lanonasis.com/v1/auth/verify-token'
@@ -594,7 +646,6 @@ export class CLIConfig {
         }
         // Verify with server (security check) for tokens that haven't been validated recently
         try {
-            const axios = (await import('axios')).default;
             // Try auth-gateway first (port 4000), then fall back to Netlify function
             const endpoints = [
                 'http://localhost:4000/v1/auth/verify-token',
@@ -668,7 +719,6 @@ export class CLIConfig {
                 return false;
             }
             // Import axios dynamically to avoid circular dependency
-            const axios = (await import('axios')).default;
             // Ensure service discovery is done
             await this.discoverServices();
             const authBase = this.config.discoveredServices?.auth_base || 'https://auth.lanonasis.com';
@@ -713,7 +763,6 @@ export class CLIConfig {
             // Refresh if token expires within 5 minutes
             if (exp > 0 && (exp - now) < 300) {
                 // Import axios dynamically
-                const axios = (await import('axios')).default;
                 await this.discoverServices();
                 const authBase = this.config.discoveredServices?.auth_base || 'https://auth.lanonasis.com';
                 // Attempt token refresh

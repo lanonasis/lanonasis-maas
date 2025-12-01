@@ -2,10 +2,17 @@ import * as vscode from 'vscode';
 import { EnhancedMemoryService } from '../services/EnhancedMemoryService';
 import type { IMemoryService } from '../services/IMemoryService';
 
+interface CachedMemory {
+    id: string;
+    content: string;
+    metadata?: Record<string, unknown>;
+    createdAt?: string;
+}
+
 export class MemorySidebarProvider implements vscode.WebviewViewProvider {
     public static readonly viewType = 'lanonasis.sidebar';
     private _view?: vscode.WebviewView;
-    private _cachedMemories: any[] = [];
+    private _cachedMemories: CachedMemory[] = [];
     private _cacheTimestamp: number = 0;
     private readonly CACHE_DURATION = 30000; // 30 seconds
 

@@ -42,6 +42,7 @@ export declare class CLIConfig {
     private static readonly CONFIG_VERSION;
     private authCheckCache;
     private readonly AUTH_CACHE_TTL;
+    private apiKeyStorage;
     constructor();
     /**
      * Overrides the configuration storage directory. Primarily used for tests.
@@ -60,6 +61,7 @@ export declare class CLIConfig {
     private acquireLock;
     private releaseLock;
     getApiUrl(): string;
+    getApiUrlsWithFallbacks(): string[];
     discoverServices(verbose?: boolean): Promise<void>;
     private handleServiceDiscoveryFailure;
     private categorizeServiceDiscoveryError;
@@ -74,6 +76,15 @@ export declare class CLIConfig {
     validateVendorKeyFormat(vendorKey: string): string | boolean;
     private validateVendorKeyWithServer;
     getVendorKey(): string | undefined;
+    /**
+     * Synchronous wrapper for async retrieve operation
+     * Note: ApiKeyStorage.retrieve() is async but we need sync for existing code
+     */
+    private getVendorKeySync;
+    /**
+     * Async method to get vendor key from secure storage
+     */
+    getVendorKeyAsync(): Promise<string | undefined>;
     hasVendorKey(): boolean;
     setApiUrl(url: string): Promise<void>;
     setToken(token: string): Promise<void>;

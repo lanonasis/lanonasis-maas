@@ -11,7 +11,7 @@ export interface ApiKey {
     createdAt: string;
     expiresAt?: string;
     tags: string[];
-    metadata: Record<string, any>;
+    metadata: Record<string, unknown>;
 }
 
 export interface Project {
@@ -21,7 +21,7 @@ export interface Project {
     organizationId: string;
     createdAt: string;
     teamMembers: string[];
-    settings: Record<string, any>;
+    settings: Record<string, unknown>;
 }
 
 export interface CreateApiKeyRequest {
@@ -34,7 +34,7 @@ export interface CreateApiKeyRequest {
     tags?: string[];
     expiresAt?: string;
     rotationFrequency?: number;
-    metadata?: Record<string, any>;
+    metadata?: Record<string, unknown>;
 }
 
 export interface CreateProjectRequest {
@@ -42,7 +42,7 @@ export interface CreateProjectRequest {
     description?: string;
     organizationId: string;
     teamMembers?: string[];
-    settings?: Record<string, any>;
+    settings?: Record<string, unknown>;
 }
 
 export class ApiKeyService {
@@ -178,7 +178,7 @@ export class ApiKeyService {
 
     async getApiKeys(projectId?: string): Promise<ApiKey[]> {
         const endpoint = projectId ? `/api/v1/projects/${projectId}/api-keys` : '/api/v1/auth/api-keys';                                                        
-        const response = await this.makeRequest<any>(endpoint);
+        const response = await this.makeRequest<ApiKey[] | { success: boolean; data: ApiKey[] }>(endpoint);
         
         // Handle wrapped response format from /api/v1/auth/api-keys
         // which returns { success: true, data: [...] }
@@ -231,14 +231,38 @@ export class ApiKeyService {
 
     async testConnection(): Promise<boolean> {
         try {
-            await this.makeRequest<any>('/api/v1/health');
+            const credentials = await this.resolveCredentials();
+
+            // For OAuth tokens, use proper token introspection endpoint
+            if (credentials.type === 'oauth') {
+                // POST to /oauth/introspect with the token for proper validation
+                const response = await fetch(`${this.baseUrl}/oauth/introspect`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'Authorization': `Bearer ${credentials.token}`
+                    },
+                    body: new URLSearchParams({ token: credentials.token })
+                });
+
+                if (!response.ok) {
+                    return false;
+                }
+
+                const data = await response.json() as { active?: boolean };
+                return data.active === true;
+            }
+
+            // For API keys, use /health endpoint to verify connectivity
+            // (API key validation happens server-side via X-API-Key header)
+            await this.makeRequest<{ status: string }>('/health');
             return true;
-        } catch (error) {
+        } catch {
             return false;
         }
     }
 
-    async getUserInfo(): Promise<any> {
-        return this.makeRequest<any>('/api/v1/auth/me');
+    async getUserInfo(): Promise<{ id: string; email: string; name?: string }> {
+        return this.makeRequest<{ id: string; email: string; name?: string }>('/api/v1/auth/me');
     }
 }

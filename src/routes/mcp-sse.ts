@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 import { config } from '@/config/environment';
 import { logger } from '@/utils/logger';
 import { asyncHandler } from '@/middleware/errorHandler';
+import { ensureApiKeyHash } from '@lanonasis/security-sdk/hash-utils';
 
 const router = Router();
 const supabase = createClient(config.SUPABASE_URL, config.SUPABASE_SERVICE_KEY);
@@ -24,6 +25,9 @@ const authenticateApiKey = async (req: Request, res: Response, next: NextFunctio
   }
 
   try {
+    // ✅ CRITICAL FIX: Hash the incoming API key before database lookup
+    const apiKeyHash = ensureApiKeyHash(apiKey as string);
+    
     // Validate API key against database
     const { data: keyData, error } = await supabase
       .from('maas_api_keys')
@@ -37,7 +41,7 @@ const authenticateApiKey = async (req: Request, res: Response, next: NextFunctio
         usage_count,
         rate_limit_per_minute
       `)
-      .eq('key_hash', apiKey)
+      .eq('key_hash', apiKeyHash)  // ✅ Compare hashed key to stored hash
       .eq('is_active', true)
       .single();
 

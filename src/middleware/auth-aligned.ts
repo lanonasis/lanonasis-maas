@@ -3,6 +3,9 @@ import { createClient } from '@supabase/supabase-js';
 import { config } from '@/config/environment';
 import { logger } from '@/utils/logger';
 import crypto from 'crypto';
+import jwt from 'jsonwebtoken';
+import { ensureApiKeyHash } from '@lanonasis/security-sdk/hash-utils';
+import { resolveOrganizationId } from '@/services/organizationResolver';
 
 const supabase = createClient(config.SUPABASE_URL, config.SUPABASE_SERVICE_KEY);
 
@@ -176,44 +179,76 @@ export const alignedAuthMiddleware = async (
         };
         logger.info(`[${req.id}] API key authentication successful for user ${user.id}`);
       } else {
-        // Handle JWT token authentication with Supabase
-        // For now, skip JWT validation and proceed with basic auth
-        // TODO: Implement proper JWT validation with Supabase v2
-        const user = {
-          id: 'jwt-user',
-          email: 'jwt-user@example.com',
-          user_metadata: {},
-          app_metadata: {}
-        };
+        // Handle JWT token authentication (from auth-gateway or Supabase)
+        const jwtSecret = process.env.JWT_SECRET || config.JWT_SECRET;
+        if (!jwtSecret) {
+          logger.error(`[${req.id}] JWT_SECRET not configured`);
+          res.status(500).json(createErrorEnvelope(req,
+            'Server configuration error',
+            'ConfigError',
+            'JWT_SECRET_MISSING'
+          ));
+          return;
+        }
 
-        // Get user plan from service config (using hardcoded user for now)
+        let decoded: any;
+        try {
+          // Verify JWT token
+          decoded = jwt.verify(token, jwtSecret);
+          logger.debug(`[${req.id}] JWT verified successfully`, { sub: decoded.sub });
+        } catch (err: any) {
+          logger.warn(`[${req.id}] JWT verification failed: ${err.message}`);
+          res.status(401).json(createErrorEnvelope(req,
+            err.name === 'TokenExpiredError' ? 'JWT token has expired' : 'Invalid or malformed JWT token',
+            'AuthError',
+            err.name === 'TokenExpiredError' ? 'TOKEN_EXPIRED' : 'INVALID_JWT'
+          ));
+          return;
+        }
+
+        // Extract user info from JWT payload
+        const userId = decoded.sub || decoded.userId || decoded.user_id;
+        if (!userId) {
+          logger.error(`[${req.id}] JWT missing user identifier`);
+          res.status(401).json(createErrorEnvelope(req,
+            'JWT token missing user identifier',
+            'AuthError',
+            'INVALID_JWT_CLAIMS'
+          ));
+          return;
+        }
+
+        // Get user plan from service config
         const { data: serviceConfig } = await supabase
           .from('maas_service_config')
           .select('plan')
-          .eq('user_id', user.id)
+          .eq('user_id', userId)
           .single();
 
+        // Resolve organization ID intelligently (handles missing/invalid org IDs)
+        const rawOrgId = decoded.organization_id || decoded.organizationId || decoded.org_id;
+        const orgResolution = await resolveOrganizationId(rawOrgId, userId);
+
         const alignedUser: UnifiedUser = {
-          // JWTPayload properties (from Supabase user)
-          userId: user.id,
-          organizationId: user.id, // For Supabase, use user ID as org ID
-          role: 'user',
-          plan: (serviceConfig && Array.isArray(serviceConfig) && serviceConfig.length > 0)
-            ? serviceConfig[0].plan
-            : 'free',
+          // JWTPayload properties (from JWT claims)
+          userId: userId,
+          organizationId: orgResolution.organizationId, // Resolved valid UUID
+          role: decoded.role || 'user',
+          plan: serviceConfig?.plan || decoded.plan || 'free',
           // Additional UnifiedUser properties
-          id: user.id,
-          email: user.email || '',
-          user_metadata: user.user_metadata || {},
-          app_metadata: user.app_metadata || {}
+          id: userId,
+          email: decoded.email || '',
+          user_metadata: decoded.user_metadata || {},
+          app_metadata: decoded.app_metadata || {},
+          project_scope: decoded.project_scope
         };
 
-        req.user = { 
-          ...alignedUser, 
+        req.user = {
+          ...alignedUser,
           id: alignedUser.id || alignedUser.userId || '',
-          auth_type: 'jwt' 
+          auth_type: 'jwt'
         };
-        logger.info(`[${req.id}] JWT authentication successful for user ${alignedUser.id}`);
+        logger.info(`[${req.id}] JWT authentication successful for user ${alignedUser.id} (org: ${orgResolution.organizationId}, source: ${orgResolution.source})`);
       }
 
       logger.debug('User authenticated', {
@@ -253,7 +288,9 @@ export const alignedAuthMiddleware = async (
  */
 export async function authenticateApiKey(apiKey: string): Promise<AlignedUser | null> {
   try {
-    // Hash the API key for comparison (in production, store hashed keys)
+    // ✅ CRITICAL FIX: Hash the incoming API key before database lookup
+    const apiKeyHash = ensureApiKeyHash(apiKey);
+    
     const { data: keyRecord, error } = await supabase
       .from('maas_api_keys')
       .select(`
@@ -262,7 +299,7 @@ export async function authenticateApiKey(apiKey: string): Promise<AlignedUser | 
         expires_at,
         maas_service_config!inner(plan)
       `)
-      .eq('key_hash', apiKey) // In production, hash the key
+      .eq('key_hash', apiKeyHash)  // ✅ Compare hashed key to stored hash
       .eq('is_active', true)
       .single();
 
@@ -279,15 +316,18 @@ export async function authenticateApiKey(apiKey: string): Promise<AlignedUser | 
     await supabase
       .from('maas_api_keys')
       .update({ last_used: new Date().toISOString() })
-      .eq('key_hash', apiKey);
+      .eq('key_hash', apiKeyHash);  // ✅ Use hashed key for update
 
     // Extract plan value using optional chaining
     const plan = keyRecord?.maas_service_config?.[0]?.plan || 'free';
 
+    // Resolve organization ID intelligently (handles missing/invalid org IDs)
+    const orgResolution = await resolveOrganizationId(undefined, keyRecord.user_id);
+
     const unifiedUser: UnifiedUser = {
       // JWTPayload properties
       userId: keyRecord.user_id,
-      organizationId: keyRecord.user_id, // For API keys, use user ID as org ID
+      organizationId: orgResolution.organizationId, // Resolved valid UUID
       role: 'user', // Default role for API key users
       plan: plan,
       // Additional UnifiedUser properties

@@ -71,11 +71,15 @@ export class CLIMCPServer {
 
     candidates.add(join(process.cwd(), 'mcp-server/dist/cli-aligned-mcp-server.js'));
     candidates.add(join(__dirname, '../../../mcp-server/dist/cli-aligned-mcp-server.js'));
-
-    for (const candidate of candidates) {
-      if (candidate && existsSync(candidate)) {
-        return candidate;
+    let resolvedPath: string | null = null;
+    candidates.forEach(candidate => {
+      if (!resolvedPath && candidate && existsSync(candidate)) {
+        resolvedPath = candidate;
       }
+    });
+
+    if (resolvedPath) {
+      return resolvedPath;
     }
 
     throw new Error(
