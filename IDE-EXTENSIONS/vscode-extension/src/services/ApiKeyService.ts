@@ -231,7 +231,30 @@ export class ApiKeyService {
 
     async testConnection(): Promise<boolean> {
         try {
-            // Use /health endpoint which exists on auth-gateway (not /api/v1/health)
+            const credentials = await this.resolveCredentials();
+
+            // For OAuth tokens, use proper token introspection endpoint
+            if (credentials.type === 'oauth') {
+                // POST to /oauth/introspect with the token for proper validation
+                const response = await fetch(`${this.baseUrl}/oauth/introspect`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'Authorization': `Bearer ${credentials.token}`
+                    },
+                    body: new URLSearchParams({ token: credentials.token })
+                });
+
+                if (!response.ok) {
+                    return false;
+                }
+
+                const data = await response.json() as { active?: boolean };
+                return data.active === true;
+            }
+
+            // For API keys, use /health endpoint to verify connectivity
+            // (API key validation happens server-side via X-API-Key header)
             await this.makeRequest<{ status: string }>('/health');
             return true;
         } catch {

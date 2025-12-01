@@ -61,6 +61,7 @@ export class SecureApiKeyService {
 
     /**
      * Get API key from secure storage
+     * CRITICAL FIX: OAuth tokens must not be hashed - return them as-is
      */
     async getApiKey(): Promise<string | null> {
         try {
@@ -69,9 +70,19 @@ export class SecureApiKeyService {
                 return null;
             }
 
+            // Check if this is an OAuth token (stored unhashed with credential type)
+            const storedType = await this.context.secrets.get(SecureApiKeyService.CREDENTIAL_TYPE_KEY) as CredentialType | null;
+
+            // OAuth tokens should NEVER be hashed - they are signed JWTs
+            if (storedType === 'oauth' || this.looksLikeJwt(apiKey)) {
+                this.log('Retrieved OAuth token from secure storage (unhashed)');
+                return apiKey;
+            }
+
+            // Only hash regular API keys
             const normalized = isSha256Hash(apiKey) ? apiKey.toLowerCase() : ensureApiKeyHash(apiKey);
 
-            // Persist migration from legacy plaintext to hashed form
+            // Persist migration from legacy plaintext to hashed form for API keys only
             if (normalized !== apiKey) {
                 await this.context.secrets.store(SecureApiKeyService.API_KEY_KEY, normalized);
             }
@@ -384,10 +395,13 @@ export class SecureApiKeyService {
 
     /**
      * Store API key securely
+     * NOTE: OAuth tokens should NOT be hashed - they are signed JWTs that must be sent as-is
+     * Only regular API keys (lns_...) should be hashed for security
      */
     private async storeApiKey(apiKey: string, type: CredentialType): Promise<void> {
-        const hashedKey = ensureApiKeyHash(apiKey);
-        await this.context.secrets.store(SecureApiKeyService.API_KEY_KEY, hashedKey);
+        // CRITICAL FIX: Do not hash OAuth tokens! Only hash regular API keys
+        const tokenToStore = type === 'oauth' ? apiKey : ensureApiKeyHash(apiKey);
+        await this.context.secrets.store(SecureApiKeyService.API_KEY_KEY, tokenToStore);
         await this.context.secrets.store(SecureApiKeyService.CREDENTIAL_TYPE_KEY, type);
     }
 
