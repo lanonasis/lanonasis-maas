@@ -62,6 +62,10 @@ describe('MCP Connection Reliability Tests', () => {
   let testConfigDir: string;
 
   beforeEach(async () => {
+    // Set test environment to skip service discovery
+    process.env.NODE_ENV = 'test';
+    process.env.SKIP_SERVICE_DISCOVERY = 'true';
+
     // Create temporary test directory
     testConfigDir = path.join(os.tmpdir(), `test-mcp-reliability-${Date.now()}-${Math.random()}`);
     await fs.mkdir(testConfigDir, { recursive: true });
@@ -97,7 +101,11 @@ describe('MCP Connection Reliability Tests', () => {
 
   afterEach(async () => {
     // Disconnect and cleanup
-    await mcpClient.disconnect();
+    try {
+      await mcpClient.disconnect();
+    } catch (error) {
+      // Ignore disconnect errors in tests
+    }
 
     // Clean up test directory
     try {
@@ -108,6 +116,8 @@ describe('MCP Connection Reliability Tests', () => {
 
     // Reset environment
     delete process.env.SKIP_SERVER_VALIDATION;
+    delete process.env.NODE_ENV;
+    delete process.env.SKIP_SERVICE_DISCOVERY;
   });
 
   describe('Connection Retry Logic with Simulated Failures', () => {

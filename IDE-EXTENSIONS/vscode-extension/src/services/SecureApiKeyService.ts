@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import * as http from 'http';
 import * as crypto from 'crypto';
 import { URL, URLSearchParams } from 'url';
+import { ensureApiKeyHash, isSha256Hash } from '../utils/hash-utils';
 
 /**
  * Secure API Key Service
@@ -60,11 +61,34 @@ export class SecureApiKeyService {
 
     /**
      * Get API key from secure storage
+     * CRITICAL FIX: OAuth tokens must not be hashed - return them as-is
      */
     async getApiKey(): Promise<string | null> {
         try {
             const apiKey = await this.context.secrets.get(SecureApiKeyService.API_KEY_KEY);
-            return apiKey || null;
+            if (!apiKey) {
+                return null;
+            }
+
+            // Check if this is an OAuth token (stored unhashed with credential type)
+            const storedType = await this.context.secrets.get(SecureApiKeyService.CREDENTIAL_TYPE_KEY) as CredentialType | null;
+
+            // OAuth tokens should NEVER be hashed - they are signed JWTs
+            if (storedType === 'oauth' || this.looksLikeJwt(apiKey)) {
+                this.log('Retrieved OAuth token from secure storage (unhashed)');
+                return apiKey;
+            }
+
+            // Only hash regular API keys
+            const normalized = isSha256Hash(apiKey) ? apiKey.toLowerCase() : ensureApiKeyHash(apiKey);
+
+            // Persist migration from legacy plaintext to hashed form for API keys only
+            if (normalized !== apiKey) {
+                await this.context.secrets.store(SecureApiKeyService.API_KEY_KEY, normalized);
+            }
+
+            this.log('Retrieved API key hash from secure storage');
+            return normalized;
         } catch (error) {
             this.logError('Failed to retrieve API key from secure storage', error);
             return null;
@@ -287,8 +311,21 @@ export class SecureApiKeyService {
                     }
                 });
 
+                // Add error handling for server
+                server.on('error', (err: NodeJS.ErrnoException) => {
+                    if (timeoutId) clearTimeout(timeoutId);
+                    
+                    if (err.code === 'EADDRINUSE') {
+                        reject(new Error(`Port ${SecureApiKeyService.CALLBACK_PORT} is already in use. Please close any applications using this port and try again.`));
+                    } else {
+                        reject(new Error(`Failed to start OAuth callback server: ${err.message}`));
+                    }
+                });
+
                 server.listen(SecureApiKeyService.CALLBACK_PORT, 'localhost', () => {
-                    // Open browser
+                    this.outputChannel.appendLine(`OAuth callback server listening on port ${SecureApiKeyService.CALLBACK_PORT}`);
+                    
+                    // Open browser only after server is ready
                     vscode.env.openExternal(vscode.Uri.parse(authUrlObj.toString()));
                 });
 
@@ -358,9 +395,13 @@ export class SecureApiKeyService {
 
     /**
      * Store API key securely
+     * NOTE: OAuth tokens should NOT be hashed - they are signed JWTs that must be sent as-is
+     * Only regular API keys (lns_...) should be hashed for security
      */
     private async storeApiKey(apiKey: string, type: CredentialType): Promise<void> {
-        await this.context.secrets.store(SecureApiKeyService.API_KEY_KEY, apiKey);
+        // CRITICAL FIX: Do not hash OAuth tokens! Only hash regular API keys
+        const tokenToStore = type === 'oauth' ? apiKey : ensureApiKeyHash(apiKey);
+        await this.context.secrets.store(SecureApiKeyService.API_KEY_KEY, tokenToStore);
         await this.context.secrets.store(SecureApiKeyService.CREDENTIAL_TYPE_KEY, type);
     }
 

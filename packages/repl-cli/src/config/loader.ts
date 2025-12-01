@@ -13,8 +13,12 @@ const DEFAULT_CONFIG: ReplConfig = {
   authToken: process.env.LANONASIS_API_KEY || process.env.MEMORY_API_KEY,
   vendorKey: process.env.LANONASIS_VENDOR_KEY,
   openaiApiKey: process.env.OPENAI_API_KEY,
+  openaiModel: process.env.OPENAI_MODEL || 'gpt-4-turbo-preview',
   historyFile: join(CONFIG_DIR, 'repl-history.txt'),
-  maxHistorySize: 1000
+  maxHistorySize: 1000,
+  userContext: process.env.USER_NAME || process.env.USER ? {
+    name: process.env.USER_NAME || process.env.USER
+  } : undefined
 };
 
 export async function loadConfig(overrides: Partial<ReplConfig>): Promise<ReplConfig> {
