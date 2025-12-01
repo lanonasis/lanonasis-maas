@@ -28,7 +28,7 @@ export interface OrchestratorResponse {
     relevance?: number;
   }>;
   action?: {
-    type: 'create' | 'search' | 'list' | 'get' | 'delete' | 'update' | 'optimize_prompt';
+    type: 'create' | 'search' | 'list' | 'get' | 'delete' | 'optimize_prompt';
     params: Record<string, any>;
   };
   context?: any;
@@ -162,85 +162,103 @@ Remember: You are LZero - be helpful, conversational, and make the experience fe
       body: JSON.stringify({
         model: this.model,
         messages: this.conversationHistory,
-        functions: [
+        tools: [
           {
-            name: 'create_memory',
-            description: 'Create a new memory entry',
-            parameters: {
-              type: 'object',
-              properties: {
-                title: { type: 'string', description: 'Title of the memory' },
-                content: { type: 'string', description: 'Content to remember' },
-                memory_type: {
-                  type: 'string',
-                  enum: ['context', 'project', 'knowledge', 'reference', 'personal', 'workflow'],
-                  description: 'Type of memory'
+            type: 'function',
+            function: {
+              name: 'create_memory',
+              description: 'Create a new memory entry',
+              parameters: {
+                type: 'object',
+                properties: {
+                  title: { type: 'string', description: 'Title of the memory' },
+                  content: { type: 'string', description: 'Content to remember' },
+                  memory_type: {
+                    type: 'string',
+                    enum: ['context', 'project', 'knowledge', 'reference', 'personal', 'workflow'],
+                    description: 'Type of memory'
+                  },
+                  tags: { type: 'array', items: { type: 'string' }, description: 'Tags for categorization' }
                 },
-                tags: { type: 'array', items: { type: 'string' }, description: 'Tags for categorization' }
-              },
-              required: ['title', 'content']
-            }
-          },
-          {
-            name: 'search_memories',
-            description: 'Search for memories using semantic search',
-            parameters: {
-              type: 'object',
-              properties: {
-                query: { type: 'string', description: 'Search query' },
-                limit: { type: 'number', description: 'Maximum number of results' },
-                memory_type: { type: 'string', description: 'Filter by memory type' }
-              },
-              required: ['query']
-            }
-          },
-          {
-            name: 'list_memories',
-            description: 'List recent memories',
-            parameters: {
-              type: 'object',
-              properties: {
-                limit: { type: 'number', description: 'Maximum number of results', default: 10 }
+                required: ['title', 'content']
               }
             }
           },
           {
-            name: 'get_memory',
-            description: 'Get a specific memory by ID',
-            parameters: {
-              type: 'object',
-              properties: {
-                id: { type: 'string', description: 'Memory ID' }
-              },
-              required: ['id']
+            type: 'function',
+            function: {
+              name: 'search_memories',
+              description: 'Search for memories using semantic search',
+              parameters: {
+                type: 'object',
+                properties: {
+                  query: { type: 'string', description: 'Search query' },
+                  limit: { type: 'number', description: 'Maximum number of results' },
+                  memory_type: { type: 'string', description: 'Filter by memory type' }
+                },
+                required: ['query']
+              }
             }
           },
           {
-            name: 'delete_memory',
-            description: 'Delete a memory by ID',
-            parameters: {
-              type: 'object',
-              properties: {
-                id: { type: 'string', description: 'Memory ID' }
-              },
-              required: ['id']
+            type: 'function',
+            function: {
+              name: 'list_memories',
+              description: 'List recent memories',
+              parameters: {
+                type: 'object',
+                properties: {
+                  limit: { type: 'number', description: 'Maximum number of results', default: 10 }
+                }
+              }
             }
           },
           {
-            name: 'optimize_prompt',
-            description: 'Optimize or refine a prompt for better AI results. Use this when users ask to improve, refine, enhance, or optimize a prompt.',
-            parameters: {
-              type: 'object',
-              properties: {
-                original_prompt: { type: 'string', description: 'The original prompt to optimize' },
-                context: { type: 'string', description: 'Additional context about what the prompt should achieve' },
-                improvements: { type: 'array', items: { type: 'string' }, description: 'List of specific improvements made' }
-              },
-              required: ['original_prompt']
+            type: 'function',
+            function: {
+              name: 'get_memory',
+              description: 'Get a specific memory by ID',
+              parameters: {
+                type: 'object',
+                properties: {
+                  id: { type: 'string', description: 'Memory ID' }
+                },
+                required: ['id']
+              }
+            }
+          },
+          {
+            type: 'function',
+            function: {
+              name: 'delete_memory',
+              description: 'Delete a memory by ID',
+              parameters: {
+                type: 'object',
+                properties: {
+                  id: { type: 'string', description: 'Memory ID' }
+                },
+                required: ['id']
+              }
+            }
+          },
+          {
+            type: 'function',
+            function: {
+              name: 'optimize_prompt',
+              description: 'Optimize or refine a prompt for better AI results. Use this when users ask to improve, refine, enhance, or optimize a prompt.',
+              parameters: {
+                type: 'object',
+                properties: {
+                  original_prompt: { type: 'string', description: 'The original prompt to optimize' },
+                  context: { type: 'string', description: 'Additional context about what the prompt should achieve' },
+                  improvements: { type: 'array', items: { type: 'string' }, description: 'List of specific improvements made' }
+                },
+                required: ['original_prompt']
+              }
             }
           }
         ],
-        function_call: 'auto',
+        tool_choice: 'auto',
         temperature: 0.7,
         max_tokens: 500
       })
@@ -253,20 +271,39 @@ Remember: You are LZero - be helpful, conversational, and make the experience fe
     const data: any = await response.json();
     const message = data.choices[0].message;
 
-    // Check if OpenAI wants to call a function
+    // Map function/tool names to internal action types
+    const actionMap: Record<string, 'create' | 'search' | 'list' | 'get' | 'delete' | 'optimize_prompt'> = {
+      'create_memory': 'create',
+      'search_memories': 'search',
+      'list_memories': 'list',
+      'get_memory': 'get',
+      'delete_memory': 'delete',
+      'optimize_prompt': 'optimize_prompt'
+    };
+
+    // Preferred: tools API (tool_calls)
+    if (message.tool_calls && message.tool_calls.length > 0) {
+      const toolCall = message.tool_calls[0];
+      const functionName = toolCall.function.name;
+      const functionArgs = toolCall.function.arguments
+        ? JSON.parse(toolCall.function.arguments)
+        : {};
+
+      return {
+        response: message.content || this.getDefaultResponse(functionName),
+        action: {
+          type: actionMap[functionName],
+          params: functionArgs
+        }
+      };
+    }
+
+    // Backwards compatibility: legacy function_call API
     if (message.function_call) {
       const functionName = message.function_call.name;
-      const functionArgs = JSON.parse(message.function_call.arguments);
-
-      // Map function names to action types
-      const actionMap: Record<string, 'create' | 'search' | 'list' | 'get' | 'delete' | 'update' | 'optimize_prompt'> = {
-        'create_memory': 'create',
-        'search_memories': 'search',
-        'list_memories': 'list',
-        'get_memory': 'get',
-        'delete_memory': 'delete',
-        'optimize_prompt': 'optimize_prompt'
-      };
+      const functionArgs = message.function_call.arguments
+        ? JSON.parse(message.function_call.arguments)
+        : {};
 
       return {
         response: message.content || this.getDefaultResponse(functionName),

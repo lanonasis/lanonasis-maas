@@ -10,7 +10,7 @@ const program = new Command();
 program
   .name('onasis-repl')
   .description('LanOnasis Interactive Memory Assistant')
-  .version('0.4.0');
+  .version('0.5.0');
 
 program
   .command('start', { isDefault: true })
