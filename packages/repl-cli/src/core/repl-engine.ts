@@ -73,6 +73,9 @@ export class ReplEngine {
         this.nlMode = false;
         console.log(chalk.yellow('⚙️  Natural Language mode disabled'));
         console.log(chalk.gray('Switched to command-only mode'));
+      } else {
+        console.log(chalk.red(`Unknown option: ${toggle}`));
+        console.log(chalk.gray('Usage: nl [on|off]'));
       }
     });
 
@@ -166,14 +169,15 @@ export class ReplEngine {
         // Display results based on action type
         if (result && !result.error) {
           switch (response.action.type) {
-            case 'create':
+            case 'create': {
               if (result.data) {
                 console.log(chalk.green(`✓ Memory created: ${result.data.id}`));
                 this.context.lastResult = result.data;
               }
               break;
+            }
 
-            case 'search':
+            case 'search': {
               // Enhanced search results with main answer + additional context
               if (result.enhanced) {
                 const { mainResult, additionalResults } = result.enhanced;
@@ -219,8 +223,9 @@ export class ReplEngine {
                 }
               }
               break;
+            }
 
-            case 'list':
+            case 'list': {
               if (result.data && result.data.data && result.data.data.length > 0) {
                 console.log(chalk.cyan(`\nShowing ${result.data.data.length} memories:\n`));
                 result.data.data.forEach((r: any, i: number) => {
@@ -233,8 +238,9 @@ export class ReplEngine {
                 console.log(chalk.gray('No memories found'));
               }
               break;
+            }
 
-            case 'get':
+            case 'get': {
               if (result.data) {
                 console.log(chalk.cyan(`\n━━━ ${result.data.title} ━━━`));
                 console.log(chalk.gray(`ID: ${result.data.id}`));
@@ -246,12 +252,14 @@ export class ReplEngine {
                 this.context.lastResult = result.data;
               }
               break;
+            }
 
-            case 'delete':
+            case 'delete': {
               console.log(chalk.green('✓ Memory deleted successfully'));
               break;
+            }
 
-            case 'optimize_prompt':
+            case 'optimize_prompt': {
               if (result.data) {
                 console.log(chalk.cyan(`\n━━━ Optimized Prompt ━━━\n`));
                 console.log(chalk.white(result.data.optimized_prompt));
@@ -268,6 +276,7 @@ export class ReplEngine {
                 this.context.lastResult = result.data;
               }
               break;
+            }
           }
         } else if (result?.error) {
           console.log(chalk.red(`Error: ${result.error}`));
