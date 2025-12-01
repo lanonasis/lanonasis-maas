@@ -1,7 +1,23 @@
-import { MemoryClient, createMemoryClient } from '@lanonasis/memory-client';
+import {
+  type MemoryClient,
+  type MemoryEntry,
+  type MemorySearchResult,
+  createMemoryClient
+} from '@lanonasis/memory-client';
 import chalk from 'chalk';
 import ora from 'ora';
 import { CommandContext } from '../config/types.js';
+
+const VALID_MEMORY_TYPES = [
+  'context',
+  'project',
+  'knowledge',
+  'reference',
+  'personal',
+  'workflow'
+] as const;
+
+type MemoryType = (typeof VALID_MEMORY_TYPES)[number];
 
 export class MemoryCommands {
   private client: MemoryClient | null = null;
@@ -24,14 +40,24 @@ export class MemoryCommands {
     }
     
     // Parse arguments for type and tags
-    let memory_type: 'context' | 'project' | 'knowledge' | 'reference' | 'personal' | 'workflow' = 'context';
+    let memory_type: MemoryType = 'context';
     let tags: string[] = [];
     const filteredArgs: string[] = [];
 
     for (let i = 0; i < args.length; i++) {
       const arg = args[i];
       if (arg.startsWith('--type=')) {
-        memory_type = arg.substring(7) as any;
+        const candidate = arg.substring(7) as MemoryType;
+        if ((VALID_MEMORY_TYPES as readonly string[]).includes(candidate)) {
+          memory_type = candidate;
+        } else {
+          console.log(
+            chalk.yellow(
+              `Warning: Invalid memory type "${candidate}". Using default "context".\n` +
+              `Valid types: ${VALID_MEMORY_TYPES.join(', ')}`
+            )
+          );
+        }
       } else if (arg.startsWith('--tags=')) {
         tags = arg.substring(7).split(',').map(t => t.trim()).filter(Boolean);
       } else {
@@ -92,12 +118,12 @@ export class MemoryCommands {
         return;
       }
       
-      const results = result.data?.results || [];
+      const results = (result.data?.results || []) as MemorySearchResult[];
       if (results.length === 0) {
         console.log(chalk.gray('No results found'));
       } else {
-        results.forEach((r, i) => {
-          console.log(chalk.cyan(`[${i+1}] ${r.title}`));
+        results.forEach((r: MemorySearchResult, i: number) => {
+          console.log(chalk.cyan(`[${i + 1}] ${r.title}`));
           console.log(chalk.gray(`    ${r.content.substring(0, 80)}...`));
         });
       }
@@ -121,11 +147,12 @@ export class MemoryCommands {
         return;
       }
       
-      if (result.data && result.data.data && result.data.data.length > 0) {
-        result.data.data.forEach((r, i) => {
-          console.log(chalk.cyan(`[${i+1}] ${r.title} (${r.id})`));
+      const items = (result.data?.data || []) as MemoryEntry[];
+      if (items.length > 0) {
+        items.forEach((r: MemoryEntry, i: number) => {
+          console.log(chalk.cyan(`[${i + 1}] ${r.title} (${r.id})`));
         });
-        context.lastResult = result.data.data;
+        context.lastResult = items;
       } else {
         console.log(chalk.gray('No memories found'));
       }

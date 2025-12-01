@@ -2,7 +2,7 @@
   "compilerOptions": {
     "target": "ES2022",
     "module": "ESNext",
-    "lib": ["ES2022"],
+    "lib": ["ES2022", "DOM"],
     "moduleResolution": "node",
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
@@ -11,7 +11,13 @@
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
     "outDir": "./dist",
-    "rootDir": "./src",
+    "rootDir": "../..",
+    "baseUrl": ".",
+    "paths": {
+      "@lanonasis/memory-client": [
+        "../memory-client/src"
+      ]
+    },
     "declaration": true,
     "declarationMap": true,
     "sourceMap": true
