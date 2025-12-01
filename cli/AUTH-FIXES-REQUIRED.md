@@ -92,12 +92,14 @@ const authUrl = 'https://mcp.lanonasis.com/auth/cli-login';
 
 **Location:** `src/commands/auth.ts` lines 552-590
 
-**Current Format:** `pk_xxx.sk_xxx`
+**Current Format:** Vendor key format is no longer fixed.
 
-**Problem:**
+**Problem (original):**
 - Auth-gateway may use different format
 - No documentation on correct format for new system
 - Validation logic hardcoded for old format
+
+**Status:** ✅ Addressed — CLI now accepts any non-empty vendor key and relies on server-side validation.
 
 ---
 

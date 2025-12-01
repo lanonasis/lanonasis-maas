@@ -2,7 +2,7 @@
   "name": "lanonasis-memory",
   "displayName": "LanOnasis Memory Assistant",
   "description": "Memory as a Service integration - AI-powered memory management with semantic search (Compatible with CLI v3.0.6+)",
-  "version": "1.5.6",
+  "version": "2.0.3",
   "publisher": "LanOnasis",
   "icon": "images/icon.png",
   "repository": {
@@ -143,6 +143,48 @@
         "title": "Show Extension Logs",
         "category": "Lanonasis",
         "icon": "$(output)"
+      },
+      {
+        "command": "lanonasis.refreshApiKeys",
+        "title": "Refresh API Keys",
+        "category": "Lanonasis",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "lanonasis.viewProjectDetails",
+        "title": "View Project Details",
+        "category": "Lanonasis",
+        "icon": "$(folder-opened)"
+      },
+      {
+        "command": "lanonasis.createApiKey",
+        "title": "Create API Key",
+        "category": "Lanonasis",
+        "icon": "$(key)"
+      },
+      {
+        "command": "lanonasis.deleteProject",
+        "title": "Delete Project",
+        "category": "Lanonasis",
+        "icon": "$(trash)"
+      },
+      {
+        "command": "lanonasis.viewApiKeyDetails",
+        "title": "View API Key Details",
+        "category": "Lanonasis",
+        "icon": "$(info)"
+      },
+      {
+        "command": "lanonasis.rotateApiKey",
+        "title": "Rotate API Key",
+        "category": "Lanonasis",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "lanonasis.deleteApiKey",
+        "title": "Delete API Key",
+        "category": "Lanonasis",
+        "icon": "$(trash)"
       }
     ],
     "keybindings": [
@@ -361,7 +403,7 @@
           "type": "number",
           "default": 2000,
           "minimum": 500,
-          "maximum": 10000,
+          "maximum": 1e4,
           "description": "CLI detection timeout in milliseconds"
         },
         "lanonasis.verboseLogging": {
@@ -378,6 +420,11 @@
           "type": "boolean",
           "default": false,
           "description": "Show traditional tree view alongside modern sidebar (for advanced users)"
+        },
+        "lanonasis.useEnhancedUI": {
+          "type": "boolean",
+          "default": false,
+          "description": "Use enhanced React-based UI with modern design (experimental)"
         },
         "lanonasis.enableLegacyViews": {
           "type": "boolean",
@@ -396,24 +443,57 @@
     "pretest": "npm run compile && npm run lint",
     "lint": "eslint src --ext ts",
     "test": "node ./out/test/runTest.js",
-    "package": "npm run compile && vsce package --no-dependencies",
+    "test:unit": "vitest run",
+    "test:unit:watch": "vitest",
+    "test:unit:coverage": "vitest run --coverage",
+    "test:components": "vitest run src/components/__tests__",
+    "test:integration": "vitest run src/integration/__tests__",
+    "test:e2e": "playwright test",
+    "test:all": "npm run test:unit && npm run test:e2e",
+    "package": "npm run compile && npm run build:react && vsce package --no-dependencies",
     "publish": "vsce publish",
-    "build:package": "npm run compile && vsce package --no-dependencies"
+    "build:package": "npm run compile && npm run build:react && vsce package --no-dependencies",
+    "build:css": "tailwindcss -i ./src/react/styles.css -o ./media/react-styles.css --minify",
+    "build:react": "npm run build:css && webpack --config webpack.react.config.js"
   },
   "dependencies": {
     "@lanonasis/memory-client": "^1.0.0",
+    "clsx": "^2.0.0",
+    "date-fns": "^2.30.0",
+    "framer-motion": "^10.16.0",
+    "lucide-react": "^0.263.1",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "tailwind-merge": "^1.14.0",
     "zod": "^3.23.8"
   },
   "devDependencies": {
+    "@svgr/webpack": "^8.1.0",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^14.3.1",
+    "@testing-library/user-event": "^14.6.1",
     "@types/node": "^24.1.0",
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0",
     "@types/vscode": "^1.74.0",
     "@typescript-eslint/eslint-plugin": "^8.38.0",
     "@typescript-eslint/parser": "^8.38.0",
+    "@vitejs/plugin-react": "^5.1.1",
     "@vscode/test-electron": "^2.5.2",
     "@vscode/vsce": "^3.7.0",
+    "autoprefixer": "^10.4.0",
+    "css-loader": "^6.8.0",
     "eslint": "^9.32.0",
+    "jsdom": "^23.2.0",
+    "playwright": "^1.56.1",
+    "postcss": "^8.4.0",
+    "postcss-loader": "^7.3.0",
+    "style-loader": "^3.3.0",
+    "tailwindcss": "^3.3.0",
     "ts-loader": "^9.5.2",
     "typescript": "^5.8.3",
+    "vite": "^6",
+    "vitest": "^4.0.14",
     "webpack": "^5.101.0",
     "webpack-cli": "^6.0.1"
   },

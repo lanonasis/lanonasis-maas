@@ -7,6 +7,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.defaultConfigs = exports.isNode = exports.isBrowser = exports.MaaSClient = void 0;
 exports.createMaaSClient = createMaaSClient;
 exports.useMaaSClient = useMaaSClient;
+const hash_utils_1 = require("../utils/hash-utils");
 class MaaSClient {
     constructor(config) {
         this.config = {
@@ -18,9 +19,6 @@ class MaaSClient {
         };
         if (config.authToken) {
             this.baseHeaders['Authorization'] = `Bearer ${config.authToken}`;
-        }
-        else if (config.apiKey) {
-            this.baseHeaders['X-API-Key'] = config.apiKey;
         }
     }
     async request(endpoint, options = {}) {
@@ -40,8 +38,13 @@ class MaaSClient {
         try {
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), this.config.timeout || 30000);
+            const headers = { ...this.baseHeaders, ...options.headers };
+            // Normalize API key to SHA-256 before sending so raw values never leave the client
+            if (this.config.apiKey && !this.config.authToken) {
+                headers['X-API-Key'] = await (0, hash_utils_1.ensureApiKeyHashBrowser)(this.config.apiKey);
+            }
             const response = await fetch(url, {
-                headers: { ...this.baseHeaders, ...options.headers },
+                headers,
                 ...options,
                 signal: controller.signal
             });
@@ -61,7 +64,7 @@ class MaaSClient {
                 console.error('[MaaSClient] Error:', errorMsg);
                 return { error: errorMsg };
             }
-            return { data };
+            return { data: data };
         }
         catch (error) {
             if (error instanceof Error) {

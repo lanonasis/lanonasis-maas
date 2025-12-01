@@ -1,10 +1,12 @@
 import * as vscode from 'vscode';
-import { MemoryTreeProvider } from './providers/MemoryTreeProvider';
-import { MemoryCompletionProvider } from './providers/MemoryCompletionProvider';
-import { ApiKeyTreeProvider } from './providers/ApiKeyTreeProvider';
 import { EnhancedMemoryService } from './services/EnhancedMemoryService';
-import { ApiKeyService } from './services/ApiKeyService';
 import { SecureApiKeyService } from './services/SecureApiKeyService';
+import { MemoryTreeProvider } from './providers/MemoryTreeProvider';
+import { ApiKeyTreeProvider } from './providers/ApiKeyTreeProvider';
+import { MemoryCompletionProvider } from './providers/MemoryCompletionProvider';
+import { ApiKeyService } from './services/ApiKeyService';
+import type { IMemoryService } from './services/IMemoryService';
+import type { MemoryEntry } from './types/memory-aligned';
 import { MemoryType } from './types/memory-aligned';
 
 let enhancedMemoryService: EnhancedMemoryService;
@@ -26,14 +28,14 @@ export async function activate(context: vscode.ExtensionContext) {
     const apiKeyService = new ApiKeyService(secureApiKeyService);
 
     // Initialize tree providers
-    const memoryTreeProvider = new MemoryTreeProvider(enhancedMemoryService as any);
+    const memoryTreeProvider = new MemoryTreeProvider(enhancedMemoryService as IMemoryService);
     const apiKeyTreeProvider = new ApiKeyTreeProvider(apiKeyService);
 
     vscode.window.registerTreeDataProvider('lanonasisMemories', memoryTreeProvider);
     vscode.window.registerTreeDataProvider('lanonasisApiKeys', apiKeyTreeProvider);
 
     // Initialize completion provider
-    const completionProvider = new MemoryCompletionProvider(enhancedMemoryService as any);
+    const completionProvider = new MemoryCompletionProvider(enhancedMemoryService as IMemoryService);
     context.subscriptions.push(
         vscode.languages.registerCompletionItemProvider(
             { scheme: 'file' },
@@ -70,7 +72,7 @@ export async function activate(context: vscode.ExtensionContext) {
             memoryTreeProvider.refresh();
         }),
 
-        vscode.commands.registerCommand('lanonasis.openMemory', (memory: any) => {
+        vscode.commands.registerCommand('lanonasis.openMemory', (memory: Partial<MemoryEntry>) => {
             openMemoryInEditor(memory);
         }),
 
@@ -187,7 +189,7 @@ async function searchMemories() {
     }
 }
 
-async function showSearchResults(results: any[], query: string) {
+async function showSearchResults(results: MemoryEntry[], query: string) {
     if (results.length === 0) {
         vscode.window.showInformationMessage(`No memories found for "${query}"`);
         return;
@@ -195,7 +197,7 @@ async function showSearchResults(results: any[], query: string) {
 
     const items = results.map(memory => ({
         label: memory.title,
-        description: memory.type,
+        description: memory.memory_type,
         detail: memory.content.substring(0, 100) + (memory.content.length > 100 ? '...' : ''),
         memory
     }));
@@ -339,13 +341,18 @@ async function authenticate() {
     }
 }
 
-function openMemoryInEditor(memory: any) {
+function openMemoryInEditor(memory: Partial<MemoryEntry>) {
     const capabilities = enhancedMemoryService.getCapabilities();
     const connectionInfo = capabilities?.cliAvailable ?
         (capabilities.mcpSupport ? 'CLI+MCP' : 'CLI') :
         'API';
 
-    const content = `# ${memory.title}\n\n**Type:** ${memory.type}\n**Created:** ${new Date(memory.created_at).toLocaleString()}\n**Connection:** ${connectionInfo}\n\n---\n\n${memory.content}`;
+    const title = memory.title || 'Untitled Memory';
+    const memoryType = memory.memory_type || 'unknown';
+    const createdAt = memory.created_at ? new Date(memory.created_at).toLocaleString() : 'Unknown';
+    const memoryContent = memory.content || '';
+
+    const content = `# ${title}\n\n**Type:** ${memoryType}\n**Created:** ${createdAt}\n**Connection:** ${connectionInfo}\n\n---\n\n${memoryContent}`;
 
     vscode.workspace.openTextDocument({
         content,
@@ -466,15 +473,15 @@ async function switchConnectionMode() {
 
 // Import existing API key management functions from original extension
 // These remain the same as they don't need CLI integration
-export async function manageApiKeys(apiKeyService: ApiKeyService) {
+export async function manageApiKeys(_apiKeyService: ApiKeyService) {
     // ... (implementation same as original)
 }
 
-export async function createProject(apiKeyService: ApiKeyService, apiKeyTreeProvider: ApiKeyTreeProvider) {
+export async function createProject(_apiKeyService: ApiKeyService, _apiKeyTreeProvider: ApiKeyTreeProvider) {
     // ... (implementation same as original) 
 }
 
-export async function viewProjects(apiKeyService: ApiKeyService) {
+export async function viewProjects(_apiKeyService: ApiKeyService) {
     // ... (implementation same as original)
 }
 

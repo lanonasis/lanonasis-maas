@@ -1,5 +1,45 @@
 # Changelog - @lanonasis/cli
 
+## [3.7.0] - 2025-11-23
+
+### 🔐 Security Infrastructure Upgrade
+
+#### Enhanced API Key Security with SHA-256
+- **Cross-Platform SHA-256 Hashing**: Unified hash utilities for consistent API key hashing across all platforms
+- **Local Hash Implementation**: Isolated hash utilities (`src/utils/hash-utils.ts`) for CLI independence
+- **Double-Hash Prevention**: Smart detection of pre-hashed keys to prevent double-hashing errors
+- **Server-Side Validation**: Constant-time comparison for timing-attack prevention
+- **Future NPM Package Ready**: Designed for eventual migration to `@lanonasis/security` npm package
+
+#### Technical Improvements
+- **Build Stability**: Fixed TypeScript `rootDir` compilation errors
+- **Zero Deprecation Warnings**: All dependencies verified for production readiness
+- **Cross-Platform Compatibility**: Node.js crypto for server-side, Web Crypto API fallback for browser contexts
+- **Type Safety**: Full TypeScript support with exported hash types (`ApiKeyHash`, `ApiKey`)
+
+#### Hash Utility Functions
+```typescript
+// Available in CLI
+ensureApiKeyHash(apiKey: string): string  // Smart hash normalization
+hashApiKey(apiKey: string): string        // SHA-256 hashing
+isSha256Hash(value: string): boolean      // Hash detection
+```
+
+### 🛡️ Security Features
+- ✅ SHA-256 cryptographic hashing for all API keys
+- ✅ Prevents plaintext key transmission
+- ✅ Constant-time hash comparison
+- ✅ Automatic hash detection and normalization
+- ✅ Compatible with existing vendor key authentication
+
+### 🔄 Breaking Changes
+None - Fully backward compatible
+
+### 📦 Dependencies
+- No new external dependencies
+- Uses native Node.js `crypto` module
+- Clean build with zero deprecation warnings
+
 ## [3.0.1] - 2025-10-08
 
 ### 🚀 Major Version Bump
