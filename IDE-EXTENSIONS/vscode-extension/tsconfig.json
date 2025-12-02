@@ -2,7 +2,10 @@
   "compilerOptions": {
     "module": "commonjs",
     "target": "ES2020",
-    "lib": ["ES2020", "DOM"],
+    "lib": [
+      "ES2020",
+      "DOM"
+    ],
     "outDir": "out",
     "rootDir": "src",
     "sourceMap": true,
@@ -19,16 +22,28 @@
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
-    "types": ["vscode", "node"],
-    "moduleResolution": "node",
+    "types": [
+      "vscode",
+      "node"
+    ],
+    "moduleResolution": "node16",
     "jsx": "react-jsx",
     "allowJs": true,
+    "ignoreDeprecations": "6.0",
     "baseUrl": ".",
     "paths": {
-      "@/*": ["src/*"],
-      "@/components/*": ["src/components/*"],
-      "@/lib/*": ["src/utils/*"],
-      "@/shared/*": ["src/shared/*"]
+      "@/*": [
+        "src/*"
+      ],
+      "@/components/*": [
+        "src/components/*"
+      ],
+      "@/lib/*": [
+        "src/utils/*"
+      ],
+      "@/shared/*": [
+        "src/shared/*"
+      ]
     }
   },
   "include": [
