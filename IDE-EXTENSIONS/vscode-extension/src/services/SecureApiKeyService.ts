@@ -22,7 +22,7 @@ export class SecureApiKeyService {
     private static readonly REFRESH_TOKEN_KEY = 'lanonasis.refreshToken';
     private static readonly CREDENTIAL_TYPE_KEY = 'lanonasis.credentialType';
     private static readonly CALLBACK_PORT = 8080;
-    
+
     private context: vscode.ExtensionContext;
     private outputChannel: vscode.OutputChannel;
     private migrationCompleted: boolean = false;
@@ -314,7 +314,7 @@ export class SecureApiKeyService {
                 // Add error handling for server
                 server.on('error', (err: NodeJS.ErrnoException) => {
                     if (timeoutId) clearTimeout(timeoutId);
-                    
+
                     if (err.code === 'EADDRINUSE') {
                         reject(new Error(`Port ${SecureApiKeyService.CALLBACK_PORT} is already in use. Please close any applications using this port and try again.`));
                     } else {
@@ -324,7 +324,7 @@ export class SecureApiKeyService {
 
                 server.listen(SecureApiKeyService.CALLBACK_PORT, 'localhost', () => {
                     this.outputChannel.appendLine(`OAuth callback server listening on port ${SecureApiKeyService.CALLBACK_PORT}`);
-                    
+
                     // Open browser only after server is ready
                     vscode.env.openExternal(vscode.Uri.parse(authUrlObj.toString()));
                 });
@@ -368,14 +368,14 @@ export class SecureApiKeyService {
                     if (this.isTokenValid(token)) {
                         return { type: 'oauth', token: token.access_token };
                     }
-                    
+
                     // Token expired - try to refresh
                     this.log('Access token expired, attempting refresh...');
                     const refreshedToken = await this.refreshAccessToken();
                     if (refreshedToken) {
                         return { type: 'oauth', token: refreshedToken };
                     }
-                    
+
                     // Refresh failed - clear expired credentials
                     this.log('Token refresh failed, clearing expired credentials');
                     await this.deleteApiKey();
@@ -435,7 +435,7 @@ export class SecureApiKeyService {
             if (!response.ok) {
                 const errorText = await response.text();
                 this.logError(`Token refresh failed: ${response.status}`, errorText);
-                
+
                 // If refresh token is invalid/expired, clear it
                 if (response.status === 400 || response.status === 401) {
                     await this.context.secrets.delete(SecureApiKeyService.REFRESH_TOKEN_KEY);
@@ -455,7 +455,7 @@ export class SecureApiKeyService {
                 expires_at: Date.now() + (tokenData.expires_in ? tokenData.expires_in * 1000 : 3600000)
             };
             await this.context.secrets.store(SecureApiKeyService.AUTH_TOKEN_KEY, JSON.stringify(newToken));
-            
+
             // Also update the API_KEY_KEY for backward compatibility
             await this.storeApiKey(tokenData.access_token, 'oauth');
 
