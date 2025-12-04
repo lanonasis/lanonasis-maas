@@ -15,5 +15,8 @@ export * from './types';
 // Export adapters
 export * from './adapters/IIDEAdapter';
 
-// Note: Services will be exported once implemented
-// export * from './services';
+// Export services
+export { SecureApiKeyService } from './services/SecureApiKeyService';
+
+// Export utilities
+export * from './utils/crypto';
