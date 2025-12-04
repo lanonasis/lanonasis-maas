@@ -75,7 +75,7 @@ export interface ISecureAuthService {
   /**
    * Store API key in secure storage
    */
-  storeApiKey(apiKey: string): Promise<void>;
+  storeApiKey(apiKey: string, type?: CredentialType): Promise<void>;
   
   /**
    * Get stored credentials with type information
