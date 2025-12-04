@@ -86,13 +86,15 @@ export interface IContext {
   
   /**
    * Get workspace state value
+   * Returns undefined if workspace state is not supported by the IDE
    */
-  getWorkspaceState?<T>(key: string): T | undefined;
+  getWorkspaceState<T>(key: string): T | undefined;
   
   /**
    * Set workspace state value
+   * No-op if workspace state is not supported by the IDE
    */
-  setWorkspaceState?<T>(key: string, value: T): Promise<void>;
+  setWorkspaceState<T>(key: string, value: T): Promise<void>;
   
   /**
    * Subscribe to disposal
