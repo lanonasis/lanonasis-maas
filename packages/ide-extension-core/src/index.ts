@@ -14,6 +14,7 @@ export * from './types';
 
 // Export adapters
 export * from './adapters/IIDEAdapter';
+export { VSCodeAdapter, createVSCodeAdapter } from './adapters/VSCodeAdapter';
 
 // Export services
 export { SecureApiKeyService } from './services/SecureApiKeyService';
