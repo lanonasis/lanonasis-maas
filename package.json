@@ -54,7 +54,7 @@
   "author": "Seye Derick",
   "license": "MIT",
   "dependencies": {
-    "@genkit-ai/mcp": "^1.22.0",
+    "@genkit-ai/mcp": "^1.25.0",
     "@lanonasis/oauth-client": "^1.0.0",
     "@lanonasis/security-sdk": "^1.0.3",
     "@netlify/functions": "^2.8.2",
@@ -68,7 +68,7 @@
     "express-rate-limit": "^8.0.1",
     "express-validator": "^7.2.0",
     "helmet": "^8.0.0",
-    "jsonwebtoken": "^9.0.2",
+    "jsonwebtoken": "^9.0.3",
     "node-fetch": "^2.7.0",
     "openai": "^4.76.1",
     "react": "^19.1.1",
