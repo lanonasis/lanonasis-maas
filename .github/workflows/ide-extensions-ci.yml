@@ -38,10 +38,23 @@ jobs:
           fi
 
       - name: Lint
-        run: bun run lint || echo "No lint script found"
+        run: |
+          # Check if lint script exists in package.json
+          if grep -q '"lint"' package.json 2>/dev/null; then
+            bun run lint
+          else
+            echo "No lint script found, skipping"
+          fi
 
       - name: Test
-        run: bun test || echo "No test script found"
+        run: |
+          # Use 'bun run test' to execute the package.json test script
+          # (not 'bun test' which runs Bun's built-in test runner)
+          if grep -q '"test"' package.json 2>/dev/null; then
+            bun run test
+          else
+            echo "No test script found, skipping"
+          fi
 
       - name: Compile
         run: bun run compile
