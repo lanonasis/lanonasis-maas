@@ -460,11 +460,36 @@ export class EnhancedMemoryService implements IEnhancedMemoryService {
     const { ConfigPresets } = this.sdk;
     const config = ConfigPresets.ideExtension(
       credential.type === 'apiKey' ? credential.token : undefined
-    );
+    ) as EnhancedMemoryClientConfig & { userId?: string; organizationId?: string };
 
     if (credential.type === 'oauth') {
       config.apiKey = undefined;
       config.authToken = credential.token;
+      
+      // Try to extract user_id from JWT for fallback organization context
+      try {
+        const parts = credential.token.split('.');
+        if (parts.length >= 2) {
+          const payload = JSON.parse(Buffer.from(parts[1], 'base64').toString());
+          // Set userId as fallback for organization - individual users don't need org_id
+          if (payload.sub || payload.user_id) {
+            config.userId = payload.sub || payload.user_id;
+          }
+        }
+      } catch {
+        // JWT decode failed, not critical - server will handle it
+      }
+    }
+
+    // Include organization ID from VS Code configuration via custom headers (optional for teams)
+    const vscodeConfig = vscode.workspace.getConfiguration('lanonasis');
+    const organizationId = vscodeConfig.get<string>('organizationId');
+    if (organizationId) {
+      config.headers = {
+        ...config.headers,
+        'X-Organization-ID': organizationId
+      };
+      config.organizationId = organizationId;
     }
 
     return config;

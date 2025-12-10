@@ -1,6 +1,6 @@
 import React from 'react';
 import Button from '@/components/ui/Button';
-import { Send } from 'lucide-react';
+import { Send, Paperclip, ClipboardPaste } from 'lucide-react';
 
 interface ChatInterfaceProps {
   value: string;
@@ -9,25 +9,8 @@ interface ChatInterfaceProps {
   isAuthenticated: boolean;
   disabled?: boolean;
   isLoading?: boolean;
-}
-
-function PaperclipIcon(props: React.SVGProps<SVGSVGElement>) {
-  return (
-    <svg
-      {...props}
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48" />
-    </svg>
-  );
+  attachedCount?: number;
+  onPaste?: () => void;
 }
 
 export const ChatInterface = ({
@@ -37,6 +20,8 @@ export const ChatInterface = ({
   isAuthenticated,
   disabled = false,
   isLoading = false,
+  attachedCount = 0,
+  onPaste,
 }: ChatInterfaceProps) => {
   const handleSend = () => {
     if (value.trim() && isAuthenticated && !disabled && !isLoading) {
@@ -51,6 +36,7 @@ export const ChatInterface = ({
       handleSend();
     }
   };
+
   return (
     <div className="p-3 bg-[var(--vscode-sideBar-background)] border-t border-[var(--vscode-panel-border)]">
       <div className="relative bg-[var(--vscode-input-background)] border border-[var(--vscode-input-border)] focus-within:border-[var(--vscode-focusBorder)] rounded-[2px] transition-colors">
@@ -59,7 +45,11 @@ export const ChatInterface = ({
             value={value}
             onChange={e => onChange(e.target.value)}
             placeholder={
-              isAuthenticated ? 'Refine context...' : 'Connect to chat'
+              isAuthenticated 
+                ? attachedCount > 0 
+                  ? `Ask about ${attachedCount} attached memor${attachedCount > 1 ? 'ies' : 'y'}...`
+                  : 'Ask a question or search memories...' 
+                : 'Connect to start chatting'
             }
             disabled={!isAuthenticated || disabled || isLoading}
             onKeyDown={handleKeyDown}
@@ -68,17 +58,35 @@ export const ChatInterface = ({
           />
         </div>
         <div className="absolute left-2 bottom-1.5 flex gap-1">
+          {/* Context indicator */}
+          {attachedCount > 0 && (
+            <div className="flex items-center gap-1 px-1.5 h-6 rounded-[2px] bg-[var(--vscode-badge-background)] text-[var(--vscode-badge-foreground)] text-[10px]">
+              <Paperclip className="h-3 w-3" />
+              <span>{attachedCount}</span>
+            </div>
+          )}
+          
+          {/* Paste from clipboard button */}
           <Button
             size="icon"
             variant="ghost"
             className="h-6 w-6 text-[var(--vscode-icon-foreground)] hover:bg-[var(--vscode-list-hoverBackground)] rounded-[2px]"
             disabled={!isAuthenticated || disabled}
-            data-testid="btn-attach"
+            onClick={onPaste}
+            title="Paste from clipboard to create memory"
+            data-testid="btn-paste"
           >
-            <PaperclipIcon className="h-3.5 w-3.5" />
+            <ClipboardPaste className="h-3.5 w-3.5" />
           </Button>
         </div>
-        <div className="absolute right-2 bottom-1.5">
+        <div className="absolute right-2 bottom-1.5 flex items-center gap-1">
+          {/* Character count for long messages */}
+          {value.length > 100 && (
+            <span className="text-[10px] text-[var(--vscode-descriptionForeground)] opacity-60 mr-1">
+              {value.length}
+            </span>
+          )}
+          
           <Button
             size="icon"
             className="h-6 w-6 bg-[var(--vscode-button-background)] hover:bg-[var(--vscode-button-hoverBackground)] text-[var(--vscode-button-foreground)] rounded-[2px] disabled:opacity-50"
@@ -93,6 +101,12 @@ export const ChatInterface = ({
             )}
           </Button>
         </div>
+      </div>
+      
+      {/* Help text */}
+      <div className="mt-1 flex items-center justify-between text-[10px] text-[var(--vscode-descriptionForeground)] opacity-60">
+        <span>Press Enter to send, Shift+Enter for new line</span>
+        <span>⌘⇧S to quick capture</span>
       </div>
     </div>
   );

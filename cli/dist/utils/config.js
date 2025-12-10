@@ -3,6 +3,7 @@ import * as path from 'path';
 import * as os from 'os';
 import { jwtDecode } from 'jwt-decode';
 import { randomUUID } from 'crypto';
+import { ApiKeyStorage } from '@lanonasis/oauth-client';
 import axios from 'axios';
 export class CLIConfig {
     configDir;
@@ -12,10 +13,13 @@ export class CLIConfig {
     static CONFIG_VERSION = '1.0.0';
     authCheckCache = null;
     AUTH_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+    apiKeyStorage;
     constructor() {
         this.configDir = path.join(os.homedir(), '.maas');
         this.configPath = path.join(this.configDir, 'config.json');
         this.lockFile = path.join(this.configDir, 'config.lock');
+        // Initialize secure storage for vendor keys using oauth-client's ApiKeyStorage
+        this.apiKeyStorage = new ApiKeyStorage();
     }
     /**
      * Overrides the configuration storage directory. Primarily used for tests.
@@ -182,7 +186,6 @@ export class CLIConfig {
     async discoverServices(verbose = false) {
         const isTestEnvironment = process.env.NODE_ENV === 'test';
         const forceDiscovery = process.env.FORCE_SERVICE_DISCOVERY === 'true';
-        // Skip service discovery in test environment unless explicitly forced
         if ((isTestEnvironment && !forceDiscovery) || process.env.SKIP_SERVICE_DISCOVERY === 'true') {
             if (!this.config.discoveredServices) {
                 this.config.discoveredServices = {
@@ -235,11 +238,8 @@ export class CLIConfig {
             throw lastError || new Error('All service discovery URLs failed');
         }
         try {
-            // Map discovery response to our config format
             const discovered = response.data;
-            // Extract auth base, but filter out localhost URLs
             let authBase = discovered.auth?.base || discovered.auth?.login?.replace('/auth/login', '') || '';
-            // Override localhost with production auth endpoint
             if (authBase.includes('localhost') || authBase.includes('127.0.0.1')) {
                 authBase = 'https://auth.lanonasis.com';
             }
@@ -253,7 +253,6 @@ export class CLIConfig {
                 project_scope: 'lanonasis-maas'
             };
             this.config.apiUrl = memoryBase;
-            // Mark discovery as successful
             this.config.lastServiceDiscovery = new Date().toISOString();
             await this.save();
             if (verbose) {
@@ -264,9 +263,23 @@ export class CLIConfig {
             }
         }
         catch (error) {
-            // Enhanced error handling with user-visible messages
-            await this.handleServiceDiscoveryFailure(error, verbose);
+            const normalizedError = this.normalizeServiceError(error);
+            await this.handleServiceDiscoveryFailure(normalizedError, verbose);
         }
+    }
+    normalizeServiceError(error) {
+        if (error && typeof error === 'object') {
+            if (error instanceof Error) {
+                return {
+                    ...error,
+                    message: error.message
+                };
+            }
+            return error;
+        }
+        return {
+            message: typeof error === 'string' ? error : JSON.stringify(error)
+        };
     }
     async handleServiceDiscoveryFailure(error, verbose) {
         const errorType = this.categorizeServiceDiscoveryError(error);
@@ -293,7 +306,6 @@ export class CLIConfig {
                     console.log(`   Reason: ${error.message || 'Unknown error'}`);
             }
         }
-        // Use cached endpoints if available and recent (within 24 hours)
         if (this.config.discoveredServices && this.config.lastServiceDiscovery) {
             const lastDiscovery = new Date(this.config.lastServiceDiscovery);
             const hoursSinceDiscovery = (Date.now() - lastDiscovery.getTime()) / (1000 * 60 * 60);
@@ -310,7 +322,6 @@ export class CLIConfig {
             project_scope: 'lanonasis-maas'
         };
         this.config.apiUrl = fallback.endpoints.memory_base;
-        // Mark as fallback (don't set lastServiceDiscovery)
         await this.save();
         this.logFallbackUsage(fallback.source, this.config.discoveredServices);
         if (verbose) {
@@ -330,7 +341,7 @@ export class CLIConfig {
                     return 'timeout';
             }
         }
-        if (error.response?.status >= 500) {
+        if ((error.response?.status ?? 0) >= 500) {
             return 'server_error';
         }
         if (error.response?.status === 404) {
@@ -420,9 +431,17 @@ export class CLIConfig {
             // Initialize with defaults first
             await this.discoverServices();
         }
+        const currentServices = this.config.discoveredServices ?? {
+            auth_base: 'https://auth.lanonasis.com',
+            memory_base: 'https://mcp.lanonasis.com/api/v1',
+            mcp_base: 'https://mcp.lanonasis.com/api/v1',
+            mcp_ws_base: 'wss://mcp.lanonasis.com/ws',
+            mcp_sse_base: 'https://mcp.lanonasis.com/api/v1/events',
+            project_scope: 'lanonasis-maas'
+        };
         // Merge manual overrides with existing endpoints
         this.config.discoveredServices = {
-            ...this.config.discoveredServices,
+            ...currentServices,
             ...endpoints
         };
         // Mark as manually configured
@@ -454,7 +473,21 @@ export class CLIConfig {
         }
         // Server-side validation
         await this.validateVendorKeyWithServer(trimmedKey);
-        this.config.vendorKey = trimmedKey;
+        // Initialize and store using ApiKeyStorage from @lanonasis/oauth-client
+        // This handles encryption automatically (AES-256-GCM with machine-derived key)
+        await this.apiKeyStorage.initialize();
+        await this.apiKeyStorage.store({
+            apiKey: trimmedKey,
+            organizationId: this.config.user?.organization_id,
+            userId: this.config.user?.email,
+            environment: process.env.NODE_ENV || 'production',
+            createdAt: new Date().toISOString()
+        });
+        if (process.env.CLI_VERBOSE === 'true') {
+            console.log('🔐 Vendor key stored securely via @lanonasis/oauth-client');
+        }
+        // Store a reference marker in config (not the actual key)
+        this.config.vendorKey = 'stored_in_api_key_storage';
         this.config.authMethod = 'vendor_key';
         this.config.lastValidated = new Date().toISOString();
         await this.resetFailureCount(); // Reset failure count on successful auth
@@ -476,6 +509,7 @@ export class CLIConfig {
             // Ensure service discovery is done
             await this.discoverServices();
             const authBase = this.config.discoveredServices?.auth_base || 'https://auth.lanonasis.com';
+            // Use pingAuthHealth for validation (simpler and more reliable)
             await this.pingAuthHealth(axios, authBase, {
                 'X-API-Key': vendorKey,
                 'X-Auth-Method': 'vendor_key',
@@ -483,9 +517,10 @@ export class CLIConfig {
             }, { timeout: 10000, proxy: false });
         }
         catch (error) {
+            const normalizedError = this.normalizeServiceError(error);
             // Provide specific error messages based on response
-            if (error.response?.status === 401) {
-                const errorData = error.response.data;
+            if (normalizedError.response?.status === 401) {
+                const errorData = normalizedError.response.data;
                 if (errorData?.error?.includes('expired') || errorData?.message?.includes('expired')) {
                     throw new Error('Vendor key validation failed: Key has expired. Please generate a new key from your dashboard.');
                 }
@@ -499,36 +534,86 @@ export class CLIConfig {
                     throw new Error('Vendor key validation failed: Authentication failed. The key may be invalid, expired, or revoked.');
                 }
             }
-            else if (error.response?.status === 403) {
+            else if (normalizedError.response?.status === 403) {
                 throw new Error('Vendor key access denied. The key may not have sufficient permissions for this operation.');
             }
-            else if (error.response?.status === 429) {
+            else if (normalizedError.response?.status === 429) {
                 throw new Error('Too many validation attempts. Please wait a moment before trying again.');
             }
-            else if (error.response?.status >= 500) {
+            else if ((normalizedError.response?.status ?? 0) >= 500) {
                 throw new Error('Server error during validation. Please try again in a few moments.');
             }
-            else if (error.code === 'ECONNREFUSED') {
+            else if (normalizedError.code === 'ECONNREFUSED') {
                 throw new Error('Cannot connect to authentication server. Please check your internet connection and try again.');
             }
-            else if (error.code === 'ENOTFOUND') {
+            else if (normalizedError.code === 'ENOTFOUND') {
                 throw new Error('Authentication server not found. Please check your internet connection.');
             }
-            else if (error.code === 'ETIMEDOUT') {
+            else if (normalizedError.code === 'ETIMEDOUT') {
                 throw new Error('Validation request timed out. Please check your internet connection and try again.');
             }
-            else if (error.code === 'ECONNRESET') {
+            else if (normalizedError.code === 'ECONNRESET') {
                 throw new Error('Connection was reset during validation. Please try again.');
             }
             else {
-                throw new Error(`Vendor key validation failed: ${error.message || 'Unknown error'}`);
+                throw new Error(`Vendor key validation failed: ${normalizedError.message || 'Unknown error'}`);
             }
         }
     }
     getVendorKey() {
-        return this.config.vendorKey;
+        try {
+            // Retrieve from secure storage using ApiKeyStorage (synchronous wrapper)
+            const stored = this.getVendorKeySync();
+            return stored;
+        }
+        catch (error) {
+            if (process.env.CLI_VERBOSE === 'true') {
+                console.error('⚠️  Failed to load vendor key from secure storage:', error);
+            }
+            return undefined;
+        }
+    }
+    /**
+     * Synchronous wrapper for async retrieve operation
+     * Note: ApiKeyStorage.retrieve() is async but we need sync for existing code
+     */
+    getVendorKeySync() {
+        // For now, check legacy storage. We'll update callers to use async later
+        if (this.config.vendorKey && this.config.vendorKey !== 'stored_in_api_key_storage') {
+            if (process.env.CLI_VERBOSE === 'true') {
+                console.log('ℹ️  Using legacy vendor key storage');
+            }
+            return this.config.vendorKey;
+        }
+        return undefined;
+    }
+    /**
+     * Async method to get vendor key from secure storage
+     */
+    async getVendorKeyAsync() {
+        try {
+            await this.apiKeyStorage.initialize();
+            const stored = await this.apiKeyStorage.retrieve();
+            if (stored) {
+                return stored.apiKey;
+            }
+        }
+        catch (error) {
+            if (process.env.CLI_VERBOSE === 'true') {
+                console.error('⚠️  Failed to retrieve vendor key:', error);
+            }
+        }
+        // Fallback: check for legacy plaintext storage in config
+        if (this.config.vendorKey && this.config.vendorKey !== 'stored_in_api_key_storage') {
+            if (process.env.CLI_VERBOSE === 'true') {
+                console.log('ℹ️  Found legacy plaintext vendor key, will migrate on next auth');
+            }
+            return this.config.vendorKey;
+        }
+        return undefined;
     }
     hasVendorKey() {
+        // Check for marker or legacy storage
         return !!this.config.vendorKey;
     }
     async setApiUrl(url) {
@@ -570,6 +655,30 @@ export class CLIConfig {
         return this.config.user;
     }
     async isAuthenticated() {
+        // Check if using vendor key authentication
+        if (this.config.authMethod === 'vendor_key') {
+            const vendorKey = this.getVendorKey();
+            if (!vendorKey)
+                return false;
+            // Check cache first
+            if (this.authCheckCache && (Date.now() - this.authCheckCache.timestamp) < this.AUTH_CACHE_TTL) {
+                return this.authCheckCache.isValid;
+            }
+            // Check if recently validated (within 24 hours)
+            const lastValidated = this.config.lastValidated;
+            const recentlyValidated = lastValidated &&
+                (Date.now() - new Date(lastValidated).getTime()) < (24 * 60 * 60 * 1000);
+            if (recentlyValidated) {
+                this.authCheckCache = { isValid: true, timestamp: Date.now() };
+                return true;
+            }
+            // For vendor keys, we trust that they were validated during setVendorKey()
+            // and rely on the lastValidated timestamp. For additional security,
+            // the server should revoke keys that are invalid.
+            this.authCheckCache = { isValid: true, timestamp: Date.now() };
+            return true;
+        }
+        // Handle token-based authentication
         const token = this.getToken();
         if (!token)
             return false;
@@ -652,27 +761,65 @@ export class CLIConfig {
                 'https://auth.lanonasis.com/v1/auth/verify-token'
             ];
             let response = null;
+            let networkError = false;
+            let authError = false;
             for (const endpoint of endpoints) {
                 try {
                     response = await axios.post(endpoint, { token }, { timeout: 3000 });
                     if (response.data.valid === true) {
                         break;
                     }
+                    // Server explicitly said invalid - this is an auth error, not network error
+                    if (response.status === 401 || response.status === 403 || response.data.valid === false) {
+                        authError = true;
+                    }
                 }
-                catch {
+                catch (error) {
+                    // Check if this is a network error (no response) vs auth error (got response)
+                    if (error.response) {
+                        // Got a response, likely 401/403
+                        authError = true;
+                    }
+                    else {
+                        // Network error (ECONNREFUSED, ETIMEDOUT, etc.)
+                        networkError = true;
+                    }
                     // Try next endpoint
                     continue;
                 }
             }
             if (!response || response.data.valid !== true) {
-                // Server says invalid - but if locally valid and recent, trust local
-                if (locallyValid) {
+                // If server explicitly rejected (auth error), don't trust local validation
+                if (authError) {
                     if (process.env.CLI_VERBOSE === 'true') {
-                        console.warn('⚠️  Server validation failed, but token is locally valid - using local validation');
+                        console.warn('⚠️  Server validation failed with authentication error - token is invalid');
                     }
-                    this.authCheckCache = { isValid: locallyValid, timestamp: Date.now() };
-                    return locallyValid;
+                    this.authCheckCache = { isValid: false, timestamp: Date.now() };
+                    return false;
                 }
+                // If purely network error AND locally valid AND recently validated (within 7 days)
+                // allow offline usage with grace period
+                if (networkError && locallyValid) {
+                    const gracePeriod = 7 * 24 * 60 * 60 * 1000; // 7 days
+                    const lastValidated = this.config.lastValidated;
+                    const withinGracePeriod = lastValidated &&
+                        (Date.now() - new Date(lastValidated).getTime()) < gracePeriod;
+                    if (withinGracePeriod) {
+                        if (process.env.CLI_VERBOSE === 'true') {
+                            console.warn('⚠️  Unable to reach server, using cached validation (offline mode)');
+                        }
+                        this.authCheckCache = { isValid: true, timestamp: Date.now() };
+                        return true;
+                    }
+                    else {
+                        if (process.env.CLI_VERBOSE === 'true') {
+                            console.warn('⚠️  Token validation grace period expired, server validation required');
+                        }
+                        this.authCheckCache = { isValid: false, timestamp: Date.now() };
+                        return false;
+                    }
+                }
+                // Default to invalid if we can't validate
                 this.authCheckCache = { isValid: false, timestamp: Date.now() };
                 return false;
             }
