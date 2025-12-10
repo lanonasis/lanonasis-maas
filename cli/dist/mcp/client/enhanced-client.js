@@ -45,11 +45,11 @@ export class EnhancedMCPClient extends EventEmitter {
         }));
         await Promise.allSettled(connectionPromises);
         // Start health monitoring for connected servers
-        for (const [name, success] of results) {
+        results.forEach((success, name) => {
             if (success) {
                 this.startHealthMonitoring(name);
             }
-        }
+        });
         return results;
     }
     /**
@@ -327,12 +327,12 @@ export class EnhancedMCPClient extends EventEmitter {
      */
     async disconnectAll() {
         // Stop all health monitoring
-        for (const interval of this.healthCheckIntervals.values()) {
+        this.healthCheckIntervals.forEach(interval => {
             clearInterval(interval);
-        }
+        });
         this.healthCheckIntervals.clear();
         // Disconnect all clients
-        for (const [name, client] of this.clients) {
+        await Promise.all(Array.from(this.clients.entries()).map(async ([name, client]) => {
             try {
                 await client.close();
                 console.log(chalk.gray(`Disconnected from ${name}`));
@@ -340,7 +340,7 @@ export class EnhancedMCPClient extends EventEmitter {
             catch {
                 console.log(chalk.yellow(`Warning: Error disconnecting from ${name}`));
             }
-        }
+        }));
         this.clients.clear();
         this.transports.clear();
         this.connectionStatus.clear();

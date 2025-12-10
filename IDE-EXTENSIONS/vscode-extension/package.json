@@ -2,7 +2,7 @@
   "name": "lanonasis-memory",
   "displayName": "LanOnasis Memory Assistant",
   "description": "Memory as a Service integration - AI-powered memory management with semantic search (Compatible with CLI v3.0.6+)",
-  "version": "2.0.4",
+  "version": "2.0.5",
   "publisher": "LanOnasis",
   "icon": "images/icon.png",
   "repository": {
@@ -42,6 +42,33 @@
     }
   },
   "contributes": {
+    "chatParticipants": [
+      {
+        "id": "lanonasis-memory.memory-assistant",
+        "name": "lanonasis",
+        "fullName": "LanOnasis Memory",
+        "description": "Search, recall, and manage your memory bank",
+        "isSticky": true,
+        "commands": [
+          {
+            "name": "recall",
+            "description": "Search and recall memories semantically"
+          },
+          {
+            "name": "save",
+            "description": "Save current context or selection as a memory"
+          },
+          {
+            "name": "list",
+            "description": "List recent memories"
+          },
+          {
+            "name": "context",
+            "description": "Get relevant context for current file/project"
+          }
+        ]
+      }
+    ],
     "commands": [
       {
         "command": "lanonasis.searchMemory",
@@ -185,6 +212,24 @@
         "title": "Delete API Key",
         "category": "Lanonasis",
         "icon": "$(trash)"
+      },
+      {
+        "command": "lanonasis.captureContext",
+        "title": "Capture to Memory",
+        "category": "Lanonasis",
+        "icon": "$(save)"
+      },
+      {
+        "command": "lanonasis.captureClipboard",
+        "title": "Capture Clipboard to Memory",
+        "category": "Lanonasis",
+        "icon": "$(clippy)"
+      },
+      {
+        "command": "lanonasis.quickCapture",
+        "title": "Quick Capture (Selection or Clipboard)",
+        "category": "Lanonasis",
+        "icon": "$(zap)"
       }
     ],
     "keybindings": [
@@ -205,6 +250,23 @@
         "key": "ctrl+shift+k",
         "mac": "cmd+shift+k",
         "when": "editorTextFocus"
+      },
+      {
+        "command": "lanonasis.captureContext",
+        "key": "ctrl+shift+c",
+        "mac": "cmd+shift+c",
+        "when": "editorHasSelection || terminalFocus || panelFocus"
+      },
+      {
+        "command": "lanonasis.captureClipboard",
+        "key": "ctrl+alt+v",
+        "mac": "cmd+alt+v"
+      },
+      {
+        "command": "lanonasis.quickCapture",
+        "key": "ctrl+shift+s",
+        "mac": "cmd+shift+s",
+        "when": "!editorTextFocus || editorHasSelection"
       }
     ],
     "menus": {
@@ -212,6 +274,44 @@
         {
           "command": "lanonasis.createMemory",
           "when": "editorHasSelection",
+          "group": "lanonasis"
+        },
+        {
+          "command": "lanonasis.captureContext",
+          "when": "editorHasSelection",
+          "group": "lanonasis"
+        }
+      ],
+      "terminal/context": [
+        {
+          "command": "lanonasis.captureClipboard",
+          "group": "lanonasis"
+        },
+        {
+          "command": "lanonasis.quickCapture",
+          "group": "lanonasis"
+        }
+      ],
+      "explorer/context": [
+        {
+          "command": "lanonasis.createMemoryFromFile",
+          "when": "resourceScheme == file",
+          "group": "lanonasis"
+        },
+        {
+          "command": "lanonasis.quickCapture",
+          "group": "lanonasis"
+        }
+      ],
+      "scm/resourceState/context": [
+        {
+          "command": "lanonasis.quickCapture",
+          "group": "lanonasis"
+        }
+      ],
+      "comments/comment/context": [
+        {
+          "command": "lanonasis.quickCapture",
           "group": "lanonasis"
         }
       ],

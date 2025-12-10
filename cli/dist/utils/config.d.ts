@@ -63,6 +63,7 @@ export declare class CLIConfig {
     getApiUrl(): string;
     getApiUrlsWithFallbacks(): string[];
     discoverServices(verbose?: boolean): Promise<void>;
+    private normalizeServiceError;
     private handleServiceDiscoveryFailure;
     private categorizeServiceDiscoveryError;
     private resolveFallbackEndpoints;

@@ -411,9 +411,9 @@ export class MCPTransportManager {
      */
     getStatuses() {
         const statuses = {};
-        for (const [name, transport] of this.transports) {
+        this.transports.forEach((transport, name) => {
             statuses[name] = transport.isConnected();
-        }
+        });
         return statuses;
     }
     /**
