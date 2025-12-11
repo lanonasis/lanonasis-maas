@@ -29,8 +29,9 @@ const authenticateApiKey = async (req: Request, res: Response, next: NextFunctio
     const apiKeyHash = ensureApiKeyHash(apiKey as string);
     
     // Validate API key against database
+    // ✅ ALIGNED: Use public.api_keys (same as Dashboard/CLI)
     const { data: keyData, error } = await supabase
-      .from('maas_api_keys')
+      .from('api_keys')
       .select(`
         id,
         name,
@@ -38,8 +39,7 @@ const authenticateApiKey = async (req: Request, res: Response, next: NextFunctio
         is_active,
         expires_at,
         last_used_at,
-        usage_count,
-        rate_limit_per_minute
+        usage_count
       `)
       .eq('key_hash', apiKeyHash)  // ✅ Compare hashed key to stored hash
       .eq('is_active', true)
@@ -62,11 +62,12 @@ const authenticateApiKey = async (req: Request, res: Response, next: NextFunctio
     }
 
     // Update last used timestamp and usage count
+    // ✅ ALIGNED: Use public.api_keys
     await supabase
-      .from('maas_api_keys')
+      .from('api_keys')
       .update({
         last_used_at: new Date().toISOString(),
-        usage_count: keyData.usage_count + 1
+        usage_count: (keyData.usage_count || 0) + 1
       })
       .eq('id', keyData.id);
 
