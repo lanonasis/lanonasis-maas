@@ -218,15 +218,16 @@ export const alignedAuthMiddleware = async (
           return;
         }
 
-        // Get user plan from service config
-        const { data: serviceConfig } = await supabase
-          .from('maas_service_config')
-          .select('plan')
-          .eq('user_id', userId)
+        // Get user's organization from public.users table
+        // Note: maas schema is being deprecated, use public schema only
+        const { data: userData } = await supabase
+          .from('users')
+          .select('organization_id')
+          .eq('id', userId)
           .single();
 
         // Resolve organization ID intelligently (handles missing/invalid org IDs)
-        const rawOrgId = decoded.organization_id || decoded.organizationId || decoded.org_id;
+        const rawOrgId = decoded.organization_id || decoded.organizationId || decoded.org_id || userData?.organization_id;
         const orgResolution = await resolveOrganizationId(rawOrgId, userId);
 
         const alignedUser: UnifiedUser = {
@@ -234,7 +235,7 @@ export const alignedAuthMiddleware = async (
           userId: userId,
           organizationId: orgResolution.organizationId, // Resolved valid UUID
           role: decoded.role || 'user',
-          plan: serviceConfig?.plan || decoded.plan || 'free',
+          plan: decoded.plan || 'free', // Plan from JWT claims, default to free
           // Additional UnifiedUser properties
           id: userId,
           email: decoded.email || '',
@@ -284,7 +285,8 @@ export const alignedAuthMiddleware = async (
 };
 
 /**
- * Authenticate using API key from maas_api_keys table
+ * Authenticate using API key from public.api_keys table
+ * ALIGNED: Dashboard and CLI both write to public.api_keys
  */
 export async function authenticateApiKey(apiKey: string): Promise<AlignedUser | null> {
   try {
@@ -292,12 +294,14 @@ export async function authenticateApiKey(apiKey: string): Promise<AlignedUser | 
     const apiKeyHash = ensureApiKeyHash(apiKey);
     
     const { data: keyRecord, error } = await supabase
-      .from('maas_api_keys')
+      .from('api_keys')  // ✅ ALIGNED: Use public.api_keys (same as Dashboard/CLI)
       .select(`
+        id,
         user_id,
         is_active,
         expires_at,
-        maas_service_config!inner(plan)
+        name,
+        service
       `)
       .eq('key_hash', apiKeyHash)  // ✅ Compare hashed key to stored hash
       .eq('is_active', true)
@@ -312,14 +316,19 @@ export async function authenticateApiKey(apiKey: string): Promise<AlignedUser | 
       return null;
     }
 
-    // Update last_used timestamp
-    await supabase
-      .from('maas_api_keys')
-      .update({ last_used: new Date().toISOString() })
-      .eq('key_hash', apiKeyHash);  // ✅ Use hashed key for update
+    // Note: last_used_at column doesn't exist in current schema
+    // Skipping last_used update until migration adds the column
 
-    // Extract plan value using optional chaining
-    const plan = keyRecord?.maas_service_config?.[0]?.plan || 'free';
+    // Get user's organization from public.users table
+    // Note: maas schema is being deprecated, use public schema only
+    const { data: userData } = await supabase
+      .from('users')
+      .select('organization_id')
+      .eq('id', keyRecord.user_id)
+      .single();
+    
+    // Plan defaults to 'free' - no plan column in current schema
+    const plan = 'free';
 
     // Resolve organization ID intelligently (handles missing/invalid org IDs)
     const orgResolution = await resolveOrganizationId(undefined, keyRecord.user_id);
@@ -464,30 +473,42 @@ export const planBasedRateLimit = () => {
 };
 
 /**
- * Initialize user service configuration if it doesn't exist
+ * Ensure user exists in maas.users with an organization
+ * ALIGNED: Uses maas schema for MaaS-specific user data
  */
-export async function ensureUserServiceConfig(userId: string): Promise<void> {
+export async function ensureMaasUser(userId: string, email?: string): Promise<void> {
   try {
     const { data: existing } = await supabase
-      .from('maas_service_config')
+      .from('maas.users')
       .select('id')
       .eq('user_id', userId)
       .single();
 
     if (!existing) {
-      await supabase
-        .from('maas_service_config')
+      // First, create or get a default organization for this user
+      const { data: org } = await supabase
+        .from('maas.organizations')
         .insert({
-          user_id: userId,
-          plan: 'free',
-          memory_limit: 100,
-          api_calls_per_minute: 60,
-          features: {},
-          settings: {}
-        });
+          name: `User ${userId.slice(0, 8)} Organization`,
+          slug: `user-${userId.slice(0, 8)}-${Date.now()}`,
+          plan: 'free'
+        })
+        .select('id')
+        .single();
+
+      if (org) {
+        await supabase
+          .from('maas.users')
+          .insert({
+            user_id: userId,
+            organization_id: org.id,
+            email: email || '',
+            role: 'admin' // Owner of their own org
+          });
+      }
     }
   } catch (error) {
-    logger.warn('Failed to ensure user service config', { error, userId });
+    logger.warn('Failed to ensure MaaS user', { error, userId });
   }
 }
 
