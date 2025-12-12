@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { EnhancedMemoryService } from '../services/EnhancedMemoryService';
 import type { IMemoryService } from '../services/IMemoryService';
+import { createMemorySchema, updateMemorySchema } from '../types/memory-aligned';
 
 interface CachedMemory {
     id: string;
@@ -60,7 +61,22 @@ export class MemorySidebarProvider implements vscode.WebviewViewProvider {
                             await this.handleSearch(data.query);
                             break;
                         case 'createMemory':
-                            await vscode.commands.executeCommand('lanonasis.createMemory');
+                            await this.handleCreateFromWebview(data.payload);
+                            break;
+                        case 'updateMemory':
+                            await this.handleUpdateFromWebview(data.id, data.payload);
+                            break;
+                        case 'deleteMemory':
+                            await this.handleDeleteFromWebview(data.id);
+                            break;
+                        case 'bulkDelete':
+                            await this.handleBulkDeleteFromWebview(data.ids);
+                            break;
+                        case 'bulkTag':
+                            await this.handleBulkTagFromWebview(data.ids, data.tags);
+                            break;
+                        case 'restoreMemory':
+                            await this.handleCreateFromWebview(data.payload);
                             break;
                         case 'openMemory':
                             await vscode.commands.executeCommand('lanonasis.openMemory', data.memory);

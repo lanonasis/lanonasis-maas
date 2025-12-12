@@ -61,12 +61,10 @@ const authenticateApiKey = async (req: Request, res: Response, next: NextFunctio
       });
     }
 
-    // Update last used timestamp and usage count
-    // ✅ ALIGNED: Use public.api_keys
+    // Update usage count only (last_used_at may not exist in all environments)
     await supabase
       .from('api_keys')
       .update({
-        last_used_at: new Date().toISOString(),
         usage_count: (keyData.usage_count || 0) + 1
       })
       .eq('id', keyData.id);

@@ -180,8 +180,8 @@ Built into `SecureApiKeyService`:
   - 🔲 Test token refresh logic
   - 🔲 Test migration from legacy storage
   - 🔲 Mock HTTP server for callback testing
-- [ ] **Cursor Adapter**: Create `src/adapters/CursorAdapter.ts`
-- [ ] **Windsurf Adapter**: Create `src/adapters/WindsurfAdapter.ts`
+- ✅ **Cursor Adapter**: `src/adapters/CursorAdapter.ts`
+- ✅ **Windsurf Adapter**: `src/adapters/WindsurfAdapter.ts`
 
 ---
 
@@ -442,13 +442,13 @@ All implemented code is working and tested within its scope.
 - [x] IDE adapter interface complete
 - [x] Basic tests passing
 
-### Phase 2 ⚡ IN PROGRESS (80% Complete)
+### Phase 2 ⚡ IN PROGRESS (completed adapters; auth UI/tests pending)
 - [x] Authentication service implemented
 - [x] OAuth2 + PKCE working
 - [x] Token refresh working
 - [x] VSCode adapter complete
-- [ ] Cursor adapter complete
-- [ ] Windsurf adapter complete
+- [x] Cursor adapter complete
+- [x] Windsurf adapter complete
 - [ ] Comprehensive tests written
 
 ### Phase 11 🎯 READY TO START

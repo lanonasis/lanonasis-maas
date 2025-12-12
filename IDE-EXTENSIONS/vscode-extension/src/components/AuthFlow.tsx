@@ -5,7 +5,7 @@ import { cn } from '../utils/cn';
 export interface AuthFlowProps {
   isAuthenticated: boolean;
   isLoading: boolean;
-  onLogin: () => void;
+  onLogin: (mode?: 'oauth' | 'apikey') => void;
   onLogout?: () => void;
   error?: string | null;
   className?: string;
@@ -104,7 +104,12 @@ const AuthFlow: React.FC<AuthFlowProps> = ({
 
       {/* Welcome View */}
       <WelcomeView 
-        onLogin={() => onLogin()}
+        onLogin={(mode) => {
+          const selected = mode ?? authMethod;
+          setAuthMethod(selected);
+          onLogin(selected);
+        }}
+        isLoading={isLoading}
       />
 
       {/* Auth Method Info */}
