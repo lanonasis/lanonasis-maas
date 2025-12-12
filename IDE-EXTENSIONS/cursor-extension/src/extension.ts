@@ -8,12 +8,31 @@ import { EnhancedMemoryService } from './services/EnhancedMemoryService';
 import { ApiKeyService } from './services/ApiKeyService';
 import { AuthenticationService } from './auth/AuthenticationService';
 import { MemoryType, MemoryEntry } from './types/memory';
+import {
+    createCursorAdapter,
+    SecureApiKeyService
+} from '@lanonasis/ide-extension-core';
 
 export async function activate(context: vscode.ExtensionContext) {
     console.log('Lanonasis Memory Extension for Cursor is now active');
 
-    // Initialize authentication service with auto-redirect capabilities
-    const authService = new AuthenticationService(context);
+    const extensionVersion = '1.4.5';
+    const outputChannel = vscode.window.createOutputChannel('LanOnasis');
+    const adapter = createCursorAdapter(
+        { context, outputChannel, vscode },
+        {
+            ideName: 'Cursor',
+            extensionName: 'lanonasis-memory-cursor',
+            extensionDisplayName: 'LanOnasis Memory Assistant',
+            commandPrefix: 'lanonasis',
+            userAgent: `Cursor/${vscode.version} LanOnasis/${extensionVersion}`
+        }
+    );
+
+    // Initialize authentication service with shared core (OAuth + API key + secure storage)
+    const secureAuthService = new SecureApiKeyService(adapter);
+    const authService = new AuthenticationService(adapter, secureAuthService);
+    await authService.initialize();
     
     // Initialize services - use Enhanced version when available
     let memoryService: MemoryService | EnhancedMemoryService;
@@ -27,7 +46,7 @@ export async function activate(context: vscode.ExtensionContext) {
         console.warn('Enhanced Memory Service not available, using basic service:', error);
         memoryService = new MemoryService(authService);
     }
-    const apiKeyService = new ApiKeyService(context);
+    const apiKeyService = new ApiKeyService();
     // Set auth service for secure API key access
     apiKeyService.setAuthService(authService);
     
@@ -139,9 +158,13 @@ export async function activate(context: vscode.ExtensionContext) {
     const refreshInterval = config.get<number>('autoRefreshInterval', 300000); // 5 minutes default
     
     const refreshTimer = setInterval(() => {
-        if (authService.isAuthenticated()) {
-            memoryTreeProvider.refresh();
-        }
+        authService.checkAuthenticationStatus()
+            .then(isAuthed => {
+                if (isAuthed) {
+                    memoryTreeProvider.refresh();
+                }
+            })
+            .catch(() => undefined);
     }, refreshInterval);
     
     context.subscriptions.push({ dispose: () => clearInterval(refreshTimer) });

@@ -521,6 +521,23 @@
           "default": false,
           "description": "Show traditional tree view alongside modern sidebar (for advanced users)"
         },
+        "lanonasis.enableBulkActions": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable bulk selection, tag, delete, and export actions in the sidebar"
+        },
+        "lanonasis.memoryTemplates": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [
+            "Bug report: Steps to reproduce / Expected / Actual / Logs",
+            "Note: Context / Key points / Next steps",
+            "Spec: Goal / Scope / Constraints / Open questions"
+          ],
+          "description": "Templates shown in the create form; each entry is a preset body"
+        },
         "lanonasis.useEnhancedUI": {
           "type": "boolean",
           "default": false,
@@ -530,6 +547,16 @@
           "type": "boolean",
           "default": false,
           "description": "Enable legacy tree providers (Memories/API keys) when you prefer the older explorer views"
+        },
+        "lanonasis.refineEndpoint": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "Optional: HTTP endpoint for prompt refinement. If unset, local refinement is used."
+        },
+        "lanonasis.refineApiKey": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "Bearer token for the refine endpoint. Stored in settings; keep scoped to backend refine service."
         }
       }
     }
@@ -557,44 +584,44 @@
     "build:react": "npm run build:css && webpack --config webpack.react.config.js"
   },
   "dependencies": {
-    "@lanonasis/memory-client": "^1.0.0",
-    "clsx": "^2.0.0",
-    "date-fns": "^2.30.0",
-    "framer-motion": "^10.16.0",
-    "lucide-react": "^0.263.1",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
-    "tailwind-merge": "^1.14.0",
-    "zod": "^3.23.8"
+    "@lanonasis/memory-client": "^2.0.0",
+    "clsx": "^2.1.1",
+    "date-fns": "^4.1.0",
+    "framer-motion": "^12.23.26",
+    "lucide-react": "^0.560.0",
+    "react": "^19.2.3",
+    "react-dom": "^19.2.3",
+    "tailwind-merge": "^3.4.0",
+    "zod": "^4.1.13"
   },
   "devDependencies": {
     "@svgr/webpack": "^8.1.0",
     "@testing-library/jest-dom": "^6.9.1",
-    "@testing-library/react": "^14.3.1",
+    "@testing-library/react": "^16.3.0",
     "@testing-library/user-event": "^14.6.1",
-    "@types/node": "^24.1.0",
-    "@types/react": "^18.2.0",
-    "@types/react-dom": "^18.2.0",
-    "@types/vscode": "^1.74.0",
-    "@typescript-eslint/eslint-plugin": "^8.38.0",
-    "@typescript-eslint/parser": "^8.38.0",
-    "@vitejs/plugin-react": "^5.1.1",
+    "@types/node": "^25.0.0",
+    "@types/react": "^19.2.7",
+    "@types/react-dom": "^19.2.3",
+    "@types/vscode": "^1.107.0",
+    "@typescript-eslint/eslint-plugin": "^8.49.0",
+    "@typescript-eslint/parser": "^8.49.0",
+    "@vitejs/plugin-react": "^5.1.2",
     "@vscode/test-electron": "^2.5.2",
-    "@vscode/vsce": "^3.7.0",
-    "autoprefixer": "^10.4.0",
-    "css-loader": "^6.8.0",
-    "eslint": "^9.32.0",
-    "jsdom": "^23.2.0",
-    "playwright": "^1.56.1",
-    "postcss": "^8.4.0",
-    "postcss-loader": "^7.3.0",
-    "style-loader": "^3.3.0",
-    "tailwindcss": "^3.3.0",
-    "ts-loader": "^9.5.2",
-    "typescript": "^5.8.3",
-    "vite": "^6",
-    "vitest": "^4.0.14",
-    "webpack": "^5.101.0",
+    "@vscode/vsce": "^3.7.1",
+    "autoprefixer": "^10.4.22",
+    "css-loader": "^7.1.2",
+    "eslint": "^9.39.1",
+    "jsdom": "^27.3.0",
+    "playwright": "^1.57.0",
+    "postcss": "^8.5.6",
+    "postcss-loader": "^8.2.0",
+    "style-loader": "^4.0.0",
+    "tailwindcss": "^4.1.18",
+    "ts-loader": "^9.5.4",
+    "typescript": "^5.9.3",
+    "vite": "^7.2.7",
+    "vitest": "^4.0.15",
+    "webpack": "^5.103.0",
     "webpack-cli": "^6.0.1"
   },
   "overrides": {

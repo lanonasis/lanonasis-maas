@@ -43,7 +43,9 @@ export default defineConfig({
     alias: {
       '@': path.resolve(__dirname, './src'),
       '@components': path.resolve(__dirname, './src/components'),
-      '@utils': path.resolve(__dirname, './src/utils')
+      '@utils': path.resolve(__dirname, './src/utils'),
+      // Mock VS Code APIs for Vitest runs
+      vscode: path.resolve(__dirname, './src/test/mocks/vscode.ts')
     }
   }
 });

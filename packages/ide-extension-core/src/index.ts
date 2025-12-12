@@ -15,6 +15,8 @@ export * from './types';
 // Export adapters
 export * from './adapters/IIDEAdapter';
 export { VSCodeAdapter, createVSCodeAdapter } from './adapters/VSCodeAdapter';
+export { CursorAdapter, createCursorAdapter } from './adapters/CursorAdapter';
+export { WindsurfAdapter, createWindsurfAdapter } from './adapters/WindsurfAdapter';
 
 // Export services
 export { SecureApiKeyService } from './services/SecureApiKeyService';

@@ -251,6 +251,23 @@
           "type": "boolean",
           "default": true,
           "description": "Enable Windsurf-specific context awareness features"
+        },
+        "lanonasis.enableBulkActions": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable bulk selection, tag, delete, and export actions in the sidebar"
+        },
+        "lanonasis.memoryTemplates": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [
+            "Bug report: Steps to reproduce / Expected / Actual / Logs",
+            "Note: Context / Key points / Next steps",
+            "Spec: Goal / Scope / Constraints / Open questions"
+          ],
+          "description": "Templates shown in the create form; each entry is a preset body"
         }
       }
     }
@@ -280,7 +297,8 @@
   },
   "dependencies": {
     "zod": "^3.23.8",
-    "@lanonasis/memory-client": "file:../../packages/memory-client"
+    "@lanonasis/memory-client": "file:../../packages/memory-client",
+    "@lanonasis/ide-extension-core": "file:../../packages/ide-extension-core"
   },
   "author": "Lanonasis Team",
   "license": "MIT"
