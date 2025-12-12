@@ -1,4 +1,10 @@
 import { z } from 'zod';
+import {
+  CreateMemoryRequestSchema as CoreCreateMemoryRequestSchema,
+  UpdateMemoryRequestSchema as CoreUpdateMemoryRequestSchema,
+  SearchMemoryRequestSchema as CoreSearchMemoryRequestSchema,
+  MemoryType as CoreMemoryType
+} from '@lanonasis/ide-extension-core';
 
 /**
  * Aligned types for sd-ghost-protocol memory system
@@ -175,15 +181,18 @@ export interface MemoryTopic {
  *         metadata:
  *           type: object
  */
+const coreCreate = CoreCreateMemoryRequestSchema.shape;
+const ExtendedMemoryType = z.union([CoreMemoryType, z.literal('conversation')]);
+
 export const createMemorySchema = z.object({
-  title: z.string().min(1).max(500),
-  content: z.string().min(1).max(50000),
+  title: coreCreate.title.max(500),
+  content: coreCreate.content.max(50000),
   summary: z.string().max(1000).optional(),
-  memory_type: z.enum(['conversation', 'knowledge', 'project', 'context', 'reference']).default('context'),
+  memory_type: ExtendedMemoryType.default('context'),
   topic_id: z.string().uuid().optional(),
   project_ref: z.string().max(100).optional(),
-  tags: z.array(z.string().min(1).max(50)).max(20).default([]),
-  metadata: z.record(z.unknown()).optional()
+  tags: coreCreate.tags.max(20),
+  metadata: coreCreate.metadata
 });
 
 /**
@@ -228,16 +237,17 @@ export const createMemorySchema = z.object({
  *         metadata:
  *           type: object
  */
+const coreUpdate = CoreUpdateMemoryRequestSchema.shape;
 export const updateMemorySchema = z.object({
-  title: z.string().min(1).max(500).optional(),
-  content: z.string().min(1).max(50000).optional(),
+  title: coreUpdate.title?.max(500),
+  content: coreUpdate.content?.max(50000),
   summary: z.string().max(1000).optional(),
-  memory_type: z.enum(['conversation', 'knowledge', 'project', 'context', 'reference']).optional(),
+  memory_type: ExtendedMemoryType.optional(),
   status: z.enum(['active', 'archived', 'draft', 'deleted']).optional(),
   topic_id: z.string().uuid().nullable().optional(),
   project_ref: z.string().max(100).nullable().optional(),
-  tags: z.array(z.string().min(1).max(50)).max(20).optional(),
-  metadata: z.record(z.unknown()).optional()
+  tags: coreUpdate.tags?.max(20),
+  metadata: coreUpdate.metadata
 });
 
 /**
@@ -282,15 +292,16 @@ export const updateMemorySchema = z.object({
  *           maximum: 1
  *           default: 0.7
  */
+const coreSearch = CoreSearchMemoryRequestSchema.shape;
 export const searchMemorySchema = z.object({
-  query: z.string().min(1).max(1000),
-  memory_types: z.array(z.enum(['conversation', 'knowledge', 'project', 'context', 'reference'])).optional(),
-  tags: z.array(z.string()).optional(),
+  query: coreSearch.query.max(1000),
+  memory_types: z.array(ExtendedMemoryType).optional(),
+  tags: coreSearch.tags,
   topic_id: z.string().uuid().optional(),
   project_ref: z.string().optional(),
   status: z.enum(['active', 'archived', 'draft', 'deleted']).default('active'),
-  limit: z.number().int().min(1).max(100).default(20),
-  threshold: z.number().min(0).max(1).default(0.7)
+  limit: coreSearch.limit,
+  threshold: coreSearch.threshold
 });
 
 /**
