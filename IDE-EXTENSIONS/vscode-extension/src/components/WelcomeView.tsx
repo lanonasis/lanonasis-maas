@@ -5,9 +5,10 @@ import { Separator } from '@/components/ui/separator';
 
 export interface WelcomeViewProps {
   onLogin: (mode?: 'oauth' | 'apikey') => void;
+  isLoading?: boolean;
 }
 
-export const WelcomeView: React.FC<WelcomeViewProps> = ({ onLogin }) => {
+export const WelcomeView: React.FC<WelcomeViewProps> = ({ onLogin, isLoading }) => {
   return (
     <div className="p-4 space-y-6 select-none">
       <div className="space-y-4">
@@ -21,17 +22,29 @@ export const WelcomeView: React.FC<WelcomeViewProps> = ({ onLogin }) => {
           <Button
             className="w-full vscode-button"
             onClick={() => onLogin('oauth')}
+            disabled={isLoading}
             data-testid="btn-connect-browser"
+            aria-busy={isLoading}
           >
-            Connect in Browser
+            {isLoading ? 'Connecting…' : 'Connect in Browser'}
           </Button>
           <Button
             className="w-full vscode-button vscode-button-secondary"
             onClick={() => onLogin('apikey')}
+            disabled={isLoading}
             data-testid="btn-enter-key"
+            aria-busy={isLoading}
           >
-            Enter API Key
+            {isLoading ? 'Validating…' : 'Enter API Key'}
           </Button>
+          <a
+            className="block text-[12px] text-[#4FA3FF] hover:underline text-center"
+            href="https://docs.lanonasis.com/api-keys"
+            target="_blank"
+            rel="noreferrer noopener"
+          >
+            Get API Key (docs)
+          </a>
         </div>
       </div>
       <Separator className="bg-[var(--vscode-panel-border)]" />

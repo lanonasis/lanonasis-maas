@@ -18,6 +18,7 @@ export interface StoredCredential {
 
 export class SecureApiKeyService {
     private static readonly API_KEY_KEY = 'lanonasis.apiKey';
+  private static readonly API_KEY_RAW_KEY = 'lanonasis.apiKey.raw';
     private static readonly AUTH_TOKEN_KEY = 'lanonasis.authToken';
     private static readonly REFRESH_TOKEN_KEY = 'lanonasis.refreshToken';
     private static readonly CREDENTIAL_TYPE_KEY = 'lanonasis.credentialType';
@@ -65,6 +66,11 @@ export class SecureApiKeyService {
      */
     async getApiKey(): Promise<string | null> {
         try {
+      const rawKey = await this.context.secrets.get(SecureApiKeyService.API_KEY_RAW_KEY);
+      if (rawKey) {
+        return rawKey;
+      }
+
             const apiKey = await this.context.secrets.get(SecureApiKeyService.API_KEY_KEY);
             if (!apiKey) {
                 return null;
@@ -79,16 +85,30 @@ export class SecureApiKeyService {
                 return apiKey;
             }
 
-            // Only hash regular API keys
-            const normalized = isSha256Hash(apiKey) ? apiKey.toLowerCase() : ensureApiKeyHash(apiKey);
+      // If the stored value is a hash, prompt user to re-enter raw key to migrate
+      if (isSha256Hash(apiKey)) {
+        const selection = await vscode.window.showWarningMessage(
+          'Your API key needs to be re-entered to finish authentication.',
+          'Re-enter API Key',
+          'Cancel'
+        );
 
-            // Persist migration from legacy plaintext to hashed form for API keys only
-            if (normalized !== apiKey) {
-                await this.context.secrets.store(SecureApiKeyService.API_KEY_KEY, normalized);
-            }
+        if (selection === 'Re-enter API Key') {
+          const newKey = await this.promptForApiKeyEntry();
+          if (newKey) {
+            // Ensure migration stores the raw key even if prompt was mocked
+            await this.storeApiKey(newKey, 'apiKey');
+            return newKey;
+          }
+        }
 
-            this.log('Retrieved API key hash from secure storage');
-            return normalized;
+        return null;
+      }
+
+      // Legacy plaintext API key stored in API_KEY_KEY - migrate to raw slot
+      await this.context.secrets.store(SecureApiKeyService.API_KEY_RAW_KEY, apiKey);
+      this.log('Migrated plaintext API key to raw storage');
+      return apiKey;
         } catch (error) {
             this.logError('Failed to retrieve API key from secure storage', error);
             return null;
@@ -479,6 +499,7 @@ export class SecureApiKeyService {
      */
     async deleteApiKey(): Promise<void> {
         await this.context.secrets.delete(SecureApiKeyService.API_KEY_KEY);
+    await this.context.secrets.delete(SecureApiKeyService.API_KEY_RAW_KEY);
         await this.context.secrets.delete(SecureApiKeyService.AUTH_TOKEN_KEY);
         await this.context.secrets.delete(SecureApiKeyService.REFRESH_TOKEN_KEY);
         await this.context.secrets.delete(SecureApiKeyService.CREDENTIAL_TYPE_KEY);
@@ -487,13 +508,24 @@ export class SecureApiKeyService {
 
     /**
      * Store API key securely
+   *
+   * Transport vs storage contract:
+   * - Transport: always use RAW secret for outbound auth (X-API-Key or Bearer).
+   * - Storage/DB compare: keep a hash only for at-rest verification, never send the hash as a credential.
      * NOTE: OAuth tokens should NOT be hashed - they are signed JWTs that must be sent as-is
      * Only regular API keys (lns_...) should be hashed for security
      */
     private async storeApiKey(apiKey: string, type: CredentialType): Promise<void> {
-        // CRITICAL FIX: Do not hash OAuth tokens! Only hash regular API keys
-        const tokenToStore = type === 'oauth' ? apiKey : ensureApiKeyHash(apiKey);
-        await this.context.secrets.store(SecureApiKeyService.API_KEY_KEY, tokenToStore);
+    // Store raw key for transport; store hash separately for legacy/backward-compat
+    if (type === 'oauth') {
+      await this.context.secrets.store(SecureApiKeyService.API_KEY_RAW_KEY, apiKey);
+      await this.context.secrets.store(SecureApiKeyService.API_KEY_KEY, apiKey);
+      await this.context.secrets.store(SecureApiKeyService.CREDENTIAL_TYPE_KEY, type);
+      return;
+    }
+
+    await this.context.secrets.store(SecureApiKeyService.API_KEY_RAW_KEY, apiKey);
+    await this.context.secrets.store(SecureApiKeyService.API_KEY_KEY, ensureApiKeyHash(apiKey));
         await this.context.secrets.store(SecureApiKeyService.CREDENTIAL_TYPE_KEY, type);
     }
 

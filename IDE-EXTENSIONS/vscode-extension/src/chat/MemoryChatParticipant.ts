@@ -24,6 +24,7 @@ export const SLASH_COMMANDS: ChatSlashCommand[] = [
     { name: 'save', description: 'Save current context or selection as a memory' },
     { name: 'list', description: 'List recent memories' },
     { name: 'context', description: 'Get relevant context for current file/project' },
+    { name: 'refine', description: 'Refine a prompt using your memories as context' },
 ];
 
 /**
@@ -105,6 +106,9 @@ async function handleSlashCommand(
 
         case 'context':
             return await handleContextCommand(prompt, memoryService, stream, token);
+
+        case 'refine':
+            return await handleRefineCommand(prompt, memoryService, stream, token);
 
         default:
             stream.markdown(`Unknown command: \`/${command}\`. Available commands: ${SLASH_COMMANDS.map(c => `/${c.name}`).join(', ')}`);
@@ -369,9 +373,11 @@ async function handleSemanticQuery(
         });
     }
 
-    // Suggest follow-up questions
-    stream.markdown(`\n---\n\n💡 **Suggested follow-ups:**\n`);
-    
+    const refined = await maybeCallRefineEndpoint(prompt, results);
+    if (refined) {
+        stream.markdown(`\n### ✨ Refined Prompt Suggestion\n\`\`\`\n${refined}\n\`\`\`\n`);
+    }
+
     return {
         metadata: {
             query: prompt,
@@ -395,5 +401,90 @@ function getTypeEmoji(type: string): string {
         conversation: '💬'
     };
     return emojiMap[type] || '📝';
+}
+
+async function handleRefineCommand(
+    prompt: string,
+    memoryService: IMemoryService,
+    stream: vscode.ChatResponseStream,
+    token: vscode.CancellationToken
+): Promise<vscode.ChatResult> {
+    if (!prompt.trim()) {
+        stream.markdown('Paste a prompt to refine. Example: `@lanonasis /refine Generate a deployment checklist`');
+        return {};
+    }
+
+    stream.progress('Retrieving context for refinement...');
+    const results = await memoryService.searchMemories(prompt, { limit: 5 });
+    if (token.isCancellationRequested) return { errorDetails: { message: 'Refine cancelled' } };
+
+    const refined = await maybeCallRefineEndpoint(prompt, results);
+
+    stream.markdown('### ✨ Refined Prompt\n');
+    stream.markdown('```\n' + refined + '\n```');
+
+    if (results.length) {
+        stream.markdown('\n#### Context used\n');
+        results.forEach((r, idx) => {
+            stream.markdown(`${idx + 1}. ${r.title}${r.tags?.length ? ` — tags: ${r.tags.join(', ')}` : ''}`);
+        });
+    }
+
+    return {
+        metadata: {
+            command: 'refine',
+            resultCount: results.length
+        }
+    };
+}
+
+function buildRefinedPrompt(prompt: string, results: any[]): string {
+    const top = results.slice(0, 3).map(r => `- ${r.title}${r.tags?.length ? ` (tags: ${r.tags.join(', ')})` : ''}`).join('\n');
+    const contextBlock = top ? `Context:\n${top}\n\n` : '';
+    return `${contextBlock}Task: ${prompt}\n\nPlease use the above context, be concise, and include any relevant IDs, tags, or steps.`;
+}
+
+async function maybeCallRefineEndpoint(
+    prompt: string,
+    results: any[]
+): Promise<string> {
+    const refinedLocal = buildRefinedPrompt(prompt, results);
+    const config = vscode.workspace.getConfiguration('lanonasis');
+    const endpoint = config.get<string>('refineEndpoint');
+    const apiKey = config.get<string>('refineApiKey');
+    if (!endpoint || !apiKey) {
+        return refinedLocal;
+    }
+
+    try {
+        const payload = {
+            prompt,
+            context: results.slice(0, 5).map(r => ({
+                title: r.title,
+                tags: r.tags,
+                snippet: r.content?.substring(0, 500) || ''
+            }))
+        };
+
+        const resp = await fetch(endpoint, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${apiKey}`
+            },
+            body: JSON.stringify(payload)
+        });
+
+        if (!resp.ok) {
+            return refinedLocal;
+        }
+
+        const data = await resp.json();
+        const refined = data?.refinedPrompt || data?.refined_prompt || data?.prompt;
+        return typeof refined === 'string' && refined.trim().length > 0 ? refined : refinedLocal;
+    } catch (err) {
+        console.warn('[lanonasis] refine endpoint failed, falling back to local prompt builder', err);
+        return refinedLocal;
+    }
 }
 

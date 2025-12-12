@@ -6,32 +6,34 @@ This implementation plan breaks down the IDE Extension UX Enhancement project in
 
 All tasks reference specific requirements from the requirements document and follow the design specifications. Tasks marked with `*` are optional and can be skipped to focus on core functionality first.
 
+**Status snapshot (2025-12-11):** Phase 1 ✅ complete; Phase 2 ⚡ in progress (5/7 done — remaining Cursor/Windsurf adapters, auth UI polish, and auth tests); Phases 3-17 not started.
+
 ---
 
 ## Phase 1: Shared Core Library Foundation
 
-- [ ] 1. Create shared core package structure
+- [x] 1. Create shared core package structure
   - Create `packages/ide-extension-core` directory with proper TypeScript configuration
   - Set up package.json with dependencies (@lanonasis/memory-client, zod, etc.)
   - Configure tsconfig.json for library compilation
   - Set up build scripts and export configuration
   - _Requirements: 10.2_
 
-- [ ] 1.1 Define core interfaces and types
+- [x] 1.1 Define core interfaces and types
   - Create `src/types/memory-aligned.ts` with Zod schemas for MemoryEntry, CreateMemoryRequest, SearchMemoryRequest
   - Define ISecureAuthService interface with authentication methods
   - Define IMemoryService and IEnhancedMemoryService interfaces
   - Create configuration schema with ExtensionConfigSchema
   - _Requirements: 2.1, 7.1_
 
-- [ ] 1.2 Implement IDE adapter interface
+- [x] 1.2 Implement IDE adapter interface
   - Create `src/adapters/IIDEAdapter.ts` with platform-agnostic interfaces
   - Define SecretStorage, OutputChannel, and Context abstractions
   - Create factory function `createExtension()` for IDE-specific instantiation
   - Add branding configuration interface
   - _Requirements: 10.2, 10.4_
 
-- [ ] 1.3 Set up testing infrastructure
+- [x] 1.3 Set up testing infrastructure
   - Configure Jest with TypeScript support
   - Create mock implementations for IDE adapters
   - Set up test utilities and helpers
@@ -42,42 +44,42 @@ All tasks reference specific requirements from the requirements document and fol
 
 ## Phase 2: Unified Secure Authentication
 
-- [ ] 2. Implement SecureApiKeyService in shared core
+- [x] 2. Implement SecureApiKeyService in shared core
   - Extract SecureApiKeyService from VSCode extension to shared core
   - Make it IDE-agnostic using IIDEAdapter interface
   - Implement OAuth2 with PKCE flow (code verifier, challenge generation)
   - Add token refresh logic with expiration checking
   - _Requirements: 2.1, 2.2, 2.3, 2.5, 2.6_
 
-- [ ] 2.1 Add secure storage abstraction
+- [x] 2.1 Add secure storage abstraction (VSCode, Cursor, Windsurf complete)
   - Create platform-agnostic secure storage interface
   - Implement VSCode adapter using context.secrets
   - Implement Cursor adapter using Electron safeStorage
   - Implement Windsurf adapter using platform keychain
   - _Requirements: 2.1, 2.8_
 
-- [ ] 2.2 Implement OAuth callback server
+- [x] 2.2 Implement OAuth callback server
   - Create local HTTP server for OAuth callbacks
   - Add state parameter validation
   - Implement PKCE code exchange
   - Add timeout handling (5 minutes)
   - _Requirements: 2.2, 2.4_
 
-- [ ] 2.3 Add authentication UI components
+- [ ] 2.3 Add authentication UI components (needs loading indicators + docs link)
   - Create authentication modal with OAuth and API key options
   - Add loading indicators for OAuth flow
   - Implement success/error notifications
   - Add "Get API Key" link to documentation
   - _Requirements: 2.2, 2.3, 2.4_
 
-- [ ] 2.4 Implement token management
+- [x] 2.4 Implement token management
   - Add automatic token refresh before expiration
   - Implement request queuing during token refresh
   - Add token validation and expiry checking
   - Store refresh tokens securely
   - _Requirements: 2.6_
 
-- [ ] 2.5 Add legacy migration support
+- [x] 2.5 Add legacy migration support
   - Detect API keys in plaintext configuration
   - Prompt user to migrate to secure storage
   - Automatically migrate on user consent
@@ -202,42 +204,42 @@ All tasks reference specific requirements from the requirements document and fol
 
 ## Phase 5: Enhanced Memory Operations
 
-- [ ] 5. Improve memory creation flow
+- [x] 5. Improve memory creation flow
   - Create inline form with smart defaults
   - Auto-detect memory type from file context
   - Add real-time Zod validation
   - Implement keyboard-only navigation
   - _Requirements: 5.1, 5.2, 5.3, 5.4_
 
-- [ ] 5.1 Add validation feedback
+- [x] 5.1 Add validation feedback
   - Show validation errors inline
   - Highlight invalid fields with red border
   - Display specific error messages
   - Preserve user input on validation errors
   - _Requirements: 5.4, 5.7_
 
-- [ ] 5.2 Implement memory editing
+- [x] 5.2 Implement memory editing
   - Add edit button to memory items
   - Open edit form with current values
   - Support inline editing in sidebar
   - Show save/cancel buttons
   - _Requirements: 9.5_
 
-- [ ] 5.3 Add memory deletion with confirmation
+- [x] 5.3 Add memory deletion with confirmation
   - Show confirmation dialog before delete
   - Implement undo functionality (5 second window)
   - Update UI immediately after delete
   - Show success notification
   - _Requirements: 5.6_
 
-- [ ] 5.4 Implement bulk operations
+- [x] 5.4 Implement bulk operations
   - Add multi-select for memories
   - Support bulk delete
   - Support bulk tag editing
   - Support bulk export
   - _Requirements: 14.2_
 
-- [ ] 5.5 Add memory templates
+- [x] 5.5 Add memory templates
   - Create pre-defined memory templates
   - Allow users to create custom templates
   - Implement template selection UI

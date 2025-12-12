@@ -7,6 +7,7 @@ export interface IMemoryService {
   isAuthenticated(): boolean;
   testConnection(apiKey?: string): Promise<void>;
   createMemory(memory: CreateMemoryRequest): Promise<MemoryEntry>;
+  updateMemory(id: string, memory: Partial<CreateMemoryRequest>): Promise<MemoryEntry>;
   searchMemories(query: string, options?: Partial<SearchMemoryRequest>): Promise<MemorySearchResult[]>;
   getMemory(id: string): Promise<MemoryEntry>;
   listMemories(limit?: number): Promise<MemoryEntry[]>;
