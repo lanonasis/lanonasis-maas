@@ -6,6 +6,9 @@
 // Export main client
 export { default as MemoryClient } from './memory-client-sdk.js';
 
+// Export client config and response types
+export type { MaaSClientConfig, ApiResponse, PaginatedResponse } from './memory-client-sdk.js';
+
 // Export multi-modal client
 export { default as MultiModalMemoryClient } from './multimodal-memory.js';
 
