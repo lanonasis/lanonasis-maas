@@ -1,10 +1,17 @@
 {
-  "name": "@lanonasis/memory-sdk",
-  "version": "1.0.0",
-  "description": "Memory as a Service SDK for seamless integration with Lanonasis Memory Platform",
+  "name": "@lanonasis/memory-sdk-standalone",
+  "version": "1.1.0",
+  "description": "Standalone Memory SDK - drop into any project for multi-agent orchestration with persistent memory",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
   "scripts": {
     "build": "tsc && tsc-alias",
     "dev": "tsx src/index.ts",
@@ -45,10 +52,14 @@
     "dist",
     "README.md"
   ],
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/thefixer3x/lan-onasis-monorepo",
-    "directory": "packages/memory-sdk"
+    "directory": "apps/lanonasis-maas/packages/memory-sdk"
   },
   "homepage": "https://docs.lanonasis.com/sdk",
   "bugs": {
