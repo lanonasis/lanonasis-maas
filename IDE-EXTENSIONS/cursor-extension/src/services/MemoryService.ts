@@ -20,7 +20,7 @@ export class MemoryService {
 
     updateConfiguration(): void {
         const config = vscode.workspace.getConfiguration('lanonasis');
-        const apiUrl = config.get<string>('apiUrl', 'https://api.lanonasis.com');
+        const apiUrl = config.get<string>('apiUrl', 'https://mcp.lanonasis.com');
         const useGateway = config.get<boolean>('useGateway', true);
         
         this.baseUrl = useGateway ? 

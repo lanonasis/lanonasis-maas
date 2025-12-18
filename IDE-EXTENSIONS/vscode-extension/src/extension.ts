@@ -1,8 +1,9 @@
 import * as vscode from 'vscode';
 import { MemoryTreeProvider } from './providers/MemoryTreeProvider';
 import { MemoryCompletionProvider } from './providers/MemoryCompletionProvider';
-import { ApiKeyTreeProvider } from './providers/ApiKeyTreeProvider';
+import { ApiKeyTreeProvider, ApiKeyTreeItem, ProjectTreeItem } from './providers/ApiKeyTreeProvider';
 import { MemorySidebarProvider } from './panels/MemorySidebarProvider';
+import { EnhancedSidebarProvider } from './panels/EnhancedSidebarProvider';
 import { MemoryService } from './services/MemoryService';
 import { EnhancedMemoryService } from './services/EnhancedMemoryService';
 import type { IMemoryService } from './services/IMemoryService';
@@ -10,8 +11,10 @@ import { ApiKeyService } from './services/ApiKeyService';
 import type { ApiKey, Project, CreateApiKeyRequest } from './services/ApiKeyService';
 import { SecureApiKeyService } from './services/SecureApiKeyService';
 import { MemoryType, MemoryEntry, MemorySearchResult } from './types/memory-aligned';
-import { withRetry, showErrorWithRecovery, withProgressAndRetry } from './utils/errorRecovery';
+// Unused error recovery utils - available for future use
+// import { withRetry, showErrorWithRecovery, withProgressAndRetry } from './utils/errorRecovery';
 import { runDiagnostics, formatDiagnosticResults } from './utils/diagnostics';
+import { registerMemoryChatParticipant } from './chat/MemoryChatParticipant';
 
 export async function activate(context: vscode.ExtensionContext) {
     console.log('Lanonasis Memory Extension is now active');
@@ -32,13 +35,31 @@ export async function activate(context: vscode.ExtensionContext) {
     }
     const apiKeyService = new ApiKeyService(secureApiKeyService);
 
-    const sidebarProvider = new MemorySidebarProvider(context.extensionUri, memoryService);
-    context.subscriptions.push(
-        vscode.window.registerWebviewViewProvider(
-            MemorySidebarProvider.viewType,
-            sidebarProvider
-        )
-    );
+    const configuration = vscode.workspace.getConfiguration('lanonasis');
+    const useEnhancedUI = configuration.get<boolean>('useEnhancedUI', false);
+    
+    let sidebarProvider: MemorySidebarProvider | EnhancedSidebarProvider;
+    
+    // Register sidebar provider based on feature flag
+    if (useEnhancedUI) {
+        sidebarProvider = new EnhancedSidebarProvider(context.extensionUri, memoryService, apiKeyService);
+        context.subscriptions.push(
+            vscode.window.registerWebviewViewProvider(
+                EnhancedSidebarProvider.viewType,
+                sidebarProvider as EnhancedSidebarProvider
+            )
+        );
+        console.log('[Lanonasis] Using Enhanced UI with React components');
+    } else {
+        sidebarProvider = new MemorySidebarProvider(context.extensionUri, memoryService);
+        context.subscriptions.push(
+            vscode.window.registerWebviewViewProvider(
+                MemorySidebarProvider.viewType,
+                sidebarProvider as MemorySidebarProvider
+            )
+        );
+        console.log('[Lanonasis] Using original UI');
+    }
 
     const memoryTreeProvider = new MemoryTreeProvider(memoryService);
     const apiKeyTreeProvider = new ApiKeyTreeProvider(apiKeyService);
@@ -47,6 +68,15 @@ export async function activate(context: vscode.ExtensionContext) {
         vscode.window.registerTreeDataProvider('lanonasisMemories', memoryTreeProvider),
         vscode.window.registerTreeDataProvider('lanonasisApiKeys', apiKeyTreeProvider)
     );
+
+    // Register @lanonasis Chat Participant for GitHub Copilot Chat integration
+    try {
+        registerMemoryChatParticipant(context, memoryService);
+        console.log('[Lanonasis] Chat Participant @lanonasis registered for Copilot Chat');
+    } catch (error) {
+        // Chat API might not be available (requires Copilot)
+        console.log('[Lanonasis] Chat Participant not available (requires GitHub Copilot)');
+    }
 
     const completionProvider = new MemoryCompletionProvider(memoryService);
     context.subscriptions.push(
@@ -57,7 +87,6 @@ export async function activate(context: vscode.ExtensionContext) {
         )
     );
 
-    const configuration = vscode.workspace.getConfiguration('lanonasis');
     await vscode.commands.executeCommand('setContext', 'lanonasis.enabled', true);
     await vscode.commands.executeCommand(
         'setContext',
@@ -176,6 +205,15 @@ export async function activate(context: vscode.ExtensionContext) {
             await createMemoryFromFile(memoryService);
         }),
 
+        // Universal capture commands
+        vscode.commands.registerCommand('lanonasis.captureContext', async () => {
+            await captureContextToMemory(memoryService);
+        }),
+
+        vscode.commands.registerCommand('lanonasis.captureClipboard', async () => {
+            await captureClipboardToMemory(memoryService);
+        }),
+
         // Note: lanonasis.authenticate is registered earlier (line 125) to prevent timing issues
 
         vscode.commands.registerCommand('lanonasis.refreshMemories', async () => {
@@ -205,8 +243,47 @@ export async function activate(context: vscode.ExtensionContext) {
             await viewProjects(apiKeyService);
         }),
 
-        vscode.commands.registerCommand('lanonasis.refreshApiKeys', async () => {
+        vscode.commands.registerCommand('lanonasis.refreshApiKeys', async () => {                                               
             apiKeyTreeProvider.refresh(true);
+        }),
+
+        // Context menu commands for API Keys tree
+        vscode.commands.registerCommand('lanonasis.viewProjectDetails', async (item: ProjectTreeItem) => {
+            if (item && item.project) {
+                await showProjectDetails(item.project, apiKeyService);
+            }
+        }),
+
+        vscode.commands.registerCommand('lanonasis.viewApiKeyDetails', async (item: ApiKeyTreeItem) => {
+            if (item && item.apiKey) {
+                await showApiKeyDetails(item.apiKey);
+            }
+        }),
+
+        vscode.commands.registerCommand('lanonasis.createApiKey', async (item: ProjectTreeItem) => {
+            if (item && item.project) {
+                await createApiKeyForProject(item.project, apiKeyService, apiKeyTreeProvider);
+            } else {
+                await createApiKey(apiKeyService, apiKeyTreeProvider);
+            }
+        }),
+
+        vscode.commands.registerCommand('lanonasis.rotateApiKey', async (item: ApiKeyTreeItem) => {
+            if (item && item.apiKey) {
+                await rotateApiKey(item.apiKey, apiKeyService, apiKeyTreeProvider);
+            }
+        }),
+
+        vscode.commands.registerCommand('lanonasis.deleteApiKey', async (item: ApiKeyTreeItem) => {
+            if (item && item.apiKey) {
+                await deleteApiKey(item.apiKey, apiKeyService, apiKeyTreeProvider);
+            }
+        }),
+
+        vscode.commands.registerCommand('lanonasis.deleteProject', async (item: ProjectTreeItem) => {
+            if (item && item.project) {
+                await deleteProject(item.project, apiKeyService, apiKeyTreeProvider);
+            }
         }),
 
         vscode.commands.registerCommand('lanonasis.showConnectionInfo', async () => {
@@ -364,6 +441,36 @@ export async function activate(context: vscode.ExtensionContext) {
 
         vscode.commands.registerCommand('lanonasis.showLogs', () => {
             outputChannel.show();
+        }),
+
+        vscode.commands.registerCommand('lanonasis.logout', async () => {
+            try {
+                await secureApiKeyService.deleteApiKey();
+            } catch (error) {
+                outputChannel.appendLine(`[Logout] Failed to clear stored credentials: ${error instanceof Error ? error.message : String(error)}`);
+            } finally {
+                await handleAuthenticationCleared();
+                vscode.window.showInformationMessage('Signed out of Lanonasis Memory.');
+            }
+        }),
+
+        // Universal capture commands
+        vscode.commands.registerCommand('lanonasis.captureContext', async () => {
+            await captureContextToMemory(memoryService);
+        }),
+
+        vscode.commands.registerCommand('lanonasis.captureClipboard', async () => {
+            await captureClipboardToMemory(memoryService);
+        }),
+
+        vscode.commands.registerCommand('lanonasis.quickCapture', async () => {
+            // Smart capture: prefers selection, falls back to clipboard
+            const editor = vscode.window.activeTextEditor;
+            if (editor && !editor.selection.isEmpty) {
+                await captureContextToMemory(memoryService);
+            } else {
+                await captureClipboardToMemory(memoryService);
+            }
         })
     ];
 
@@ -540,6 +647,8 @@ function openMemoryInEditor(memory: MemoryEntry | MemorySearchResult) {
     });
 }
 
+// Currently unused but available for future enhanced authentication checks
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 async function checkEnhancedAuthenticationStatus(enhancedService: EnhancedMemoryService) {
     const config = vscode.workspace.getConfiguration('lanonasis');
     const apiKey = config.get<string>('apiKey');
@@ -880,7 +989,7 @@ async function viewApiKeys(apiKeyService: ApiKeyService) {
     }
 }
 
-async function createApiKey(apiKeyService: ApiKeyService) {
+async function createApiKey(apiKeyService: ApiKeyService, _apiKeyTreeProvider?: ApiKeyTreeProvider) {
     try {
         // Get projects first
         const projects = await apiKeyService.getProjects();
@@ -1135,6 +1244,305 @@ ${JSON.stringify(project.settings, null, 2)}
         });
     } catch (error) {
         vscode.window.showErrorMessage(`Failed to load project details: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+}
+
+async function createApiKeyForProject(project: Project, apiKeyService: ApiKeyService, apiKeyTreeProvider?: ApiKeyTreeProvider) {
+    try {
+        const name = await vscode.window.showInputBox({
+            prompt: 'API Key Name',
+            placeHolder: 'Enter a name for your API key'
+        });
+
+        if (!name) return;
+
+        const value = await vscode.window.showInputBox({
+            prompt: 'API Key Value',
+            placeHolder: 'Enter the API key value',
+            password: true
+        });
+
+        if (!value) return;
+
+        type KeyTypeOption = vscode.QuickPickItem & { value: CreateApiKeyRequest['keyType'] };
+        const keyTypes: KeyTypeOption[] = [
+            { label: 'API Key', value: 'api_key' },
+            { label: 'Database URL', value: 'database_url' },
+            { label: 'OAuth Token', value: 'oauth_token' },
+            { label: 'Certificate', value: 'certificate' },
+            { label: 'SSH Key', value: 'ssh_key' },
+            { label: 'Webhook Secret', value: 'webhook_secret' },
+            { label: 'Encryption Key', value: 'encryption_key' }
+        ];
+
+        const selectedKeyType = await vscode.window.showQuickPick(keyTypes, {
+            placeHolder: 'Select key type'
+        });
+
+        if (!selectedKeyType) return;
+
+        const environments: vscode.QuickPickItem[] = [
+            { label: 'Development', description: 'For development use' },
+            { label: 'Staging', description: 'For staging/testing' },
+            { label: 'Production', description: 'For production use' }
+        ];
+
+        const selectedEnv = await vscode.window.showQuickPick(environments, {
+            placeHolder: 'Select environment'
+        });
+
+        if (!selectedEnv) return;
+
+        const accessLevels: vscode.QuickPickItem[] = [
+            { label: 'Public', description: 'Publicly accessible' },
+            { label: 'Authenticated', description: 'Requires authentication' },
+            { label: 'Team', description: 'Team members only' },
+            { label: 'Admin', description: 'Administrators only' },
+            { label: 'Enterprise', description: 'Enterprise level access' }
+        ];
+
+        const selectedAccess = await vscode.window.showQuickPick(accessLevels, {
+            placeHolder: 'Select access level'
+        });
+
+        if (!selectedAccess) return;
+
+        const request: CreateApiKeyRequest = {
+            name,
+            value,
+            keyType: selectedKeyType.value,
+            environment: selectedEnv.label.toLowerCase() as 'development' | 'staging' | 'production',
+            accessLevel: selectedAccess.label.toLowerCase() as 'public' | 'authenticated' | 'team' | 'admin' | 'enterprise',
+            projectId: project.id
+        };
+
+        await vscode.window.withProgress({
+            location: vscode.ProgressLocation.Notification,
+            title: 'Creating API key...',
+            cancellable: false
+        }, async () => {
+            const apiKey = await apiKeyService.createApiKey(request);
+            vscode.window.showInformationMessage(`API key "${apiKey.name}" created successfully!`);
+            
+            if (apiKeyTreeProvider) {
+                await apiKeyTreeProvider.addApiKey(project.id, apiKey);
+            }
+        });
+    } catch (error) {
+        vscode.window.showErrorMessage(`Failed to create API key: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+}
+
+async function rotateApiKey(apiKey: ApiKey, apiKeyService: ApiKeyService, apiKeyTreeProvider?: ApiKeyTreeProvider) {
+    try {
+        const confirmed = await vscode.window.showWarningMessage(
+            `Are you sure you want to rotate API key "${apiKey.name}"? The old key will be invalidated.`,
+            { modal: true },
+            'Rotate Key'
+        );
+
+        if (confirmed !== 'Rotate Key') return;
+
+        await vscode.window.withProgress({
+            location: vscode.ProgressLocation.Notification,
+            title: 'Rotating API key...',
+            cancellable: false
+        }, async () => {
+            const rotated = await apiKeyService.rotateApiKey(apiKey.id);
+            vscode.window.showInformationMessage(`API key "${rotated.name}" rotated successfully!`);
+            
+            if (apiKeyTreeProvider) {
+                await apiKeyTreeProvider.updateApiKey(apiKey.projectId, rotated);
+            }
+        });
+    } catch (error) {
+        vscode.window.showErrorMessage(`Failed to rotate API key: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+}
+
+async function deleteApiKey(apiKey: ApiKey, apiKeyService: ApiKeyService, apiKeyTreeProvider?: ApiKeyTreeProvider) {
+    try {
+        const confirmed = await vscode.window.showWarningMessage(
+            `Are you sure you want to delete API key "${apiKey.name}"? This action cannot be undone.`,
+            { modal: true },
+            'Delete'
+        );
+
+        if (confirmed !== 'Delete') return;
+
+        await vscode.window.withProgress({
+            location: vscode.ProgressLocation.Notification,
+            title: 'Deleting API key...',
+            cancellable: false
+        }, async () => {
+            await apiKeyService.deleteApiKey(apiKey.id);
+            vscode.window.showInformationMessage(`API key "${apiKey.name}" deleted successfully.`);
+            
+            if (apiKeyTreeProvider) {
+                await apiKeyTreeProvider.removeApiKey(apiKey.projectId, apiKey.id);
+            }
+        });
+    } catch (error) {
+        vscode.window.showErrorMessage(`Failed to delete API key: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+}
+
+async function deleteProject(project: Project, apiKeyService: ApiKeyService, apiKeyTreeProvider?: ApiKeyTreeProvider) {
+    try {
+        const confirmed = await vscode.window.showWarningMessage(
+            `Are you sure you want to delete project "${project.name}"? All API keys in this project will also be deleted. This action cannot be undone.`,
+            { modal: true },
+            'Delete'
+        );
+
+        if (confirmed !== 'Delete') return;
+
+        await vscode.window.withProgress({
+            location: vscode.ProgressLocation.Notification,
+            title: 'Deleting project...',
+            cancellable: false
+        }, async () => {
+            await apiKeyService.deleteProject(project.id);
+            vscode.window.showInformationMessage(`Project "${project.name}" deleted successfully.`);
+            
+            if (apiKeyTreeProvider) {
+                await apiKeyTreeProvider.removeProject(project.id);
+            }
+        });
+    } catch (error) {
+        vscode.window.showErrorMessage(`Failed to delete project: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+}
+
+// ============================================================================
+// UNIVERSAL CAPTURE FUNCTIONS
+// ============================================================================
+
+async function captureContextToMemory(memoryService: IMemoryService) {
+    try {
+        let content: string | undefined;
+        let source = 'selection';
+
+        // Try to get content from various sources
+        const editor = vscode.window.activeTextEditor;
+        if (editor && !editor.selection.isEmpty) {
+            content = editor.document.getText(editor.selection);
+            source = 'editor';
+        } else {
+            // Fall back to clipboard
+            content = await vscode.env.clipboard.readText();
+            source = 'clipboard';
+        }
+
+        if (!content || !content.trim()) {
+            vscode.window.showWarningMessage('No content to capture. Select text or copy something to clipboard first.');
+            return;
+        }
+
+        // Show quick input for title
+        const defaultTitle = content.substring(0, 50).replace(/\n/g, ' ').trim();
+        const title = await vscode.window.showInputBox({
+            prompt: 'Title for this memory',
+            placeHolder: 'Enter a title...',
+            value: defaultTitle
+        });
+
+        if (!title) return; // User cancelled
+
+        // Show quick pick for memory type
+        const memoryType = await vscode.window.showQuickPick(
+            ['context', 'knowledge', 'reference', 'project', 'personal', 'workflow'],
+            { 
+                placeHolder: 'Select memory type',
+                title: 'Memory Type'
+            }
+        ) as MemoryType | undefined;
+
+        if (!memoryType) return; // User cancelled
+
+        // Create the memory
+        await vscode.window.withProgress({
+            location: vscode.ProgressLocation.Notification,
+            title: 'Creating memory...',
+            cancellable: false
+        }, async () => {
+            await memoryService.createMemory({
+                title,
+                content,
+                memory_type: memoryType,
+                tags: ['captured', source, 'vscode'],
+                metadata: {
+                    source,
+                    capturedAt: new Date().toISOString(),
+                    editor: editor?.document.fileName
+                }
+            });
+        });
+
+        vscode.window.showInformationMessage(`📝 Memory captured: "${title}"`);
+        vscode.commands.executeCommand('lanonasis.refreshMemories');
+
+    } catch (error) {
+        vscode.window.showErrorMessage(`Failed to capture context: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+}
+
+async function captureClipboardToMemory(memoryService: IMemoryService) {
+    try {
+        const clipboardContent = await vscode.env.clipboard.readText();
+
+        if (!clipboardContent || !clipboardContent.trim()) {
+            vscode.window.showWarningMessage('Clipboard is empty. Copy some content first.');
+            return;
+        }
+
+        // Show quick input for title
+        const defaultTitle = clipboardContent.substring(0, 50).replace(/\n/g, ' ').trim();
+        const title = await vscode.window.showInputBox({
+            prompt: 'Title for this memory',
+            placeHolder: 'Enter a title...',
+            value: defaultTitle
+        });
+
+        if (!title) return; // User cancelled
+
+        // Quick memory type selection with defaults
+        const typeItems = [
+            { label: '📝 Context', description: 'General contextual information', value: 'context' as MemoryType },
+            { label: '📚 Knowledge', description: 'Learning or reference material', value: 'knowledge' as MemoryType },
+            { label: '🔗 Reference', description: 'Quick reference snippet', value: 'reference' as MemoryType },
+            { label: '📁 Project', description: 'Project-specific note', value: 'project' as MemoryType },
+        ];
+
+        const selectedType = await vscode.window.showQuickPick(typeItems, {
+            placeHolder: 'Select memory type'
+        });
+
+        if (!selectedType) return; // User cancelled
+
+        // Create the memory
+        await vscode.window.withProgress({
+            location: vscode.ProgressLocation.Notification,
+            title: 'Capturing from clipboard...',
+            cancellable: false
+        }, async () => {
+            await memoryService.createMemory({
+                title,
+                content: clipboardContent,
+                memory_type: selectedType.value,
+                tags: ['clipboard', 'captured', 'vscode'],
+                metadata: {
+                    source: 'clipboard',
+                    capturedAt: new Date().toISOString()
+                }
+            });
+        });
+
+        vscode.window.showInformationMessage(`📋 Clipboard captured: "${title}"`);
+        vscode.commands.executeCommand('lanonasis.refreshMemories');
+
+    } catch (error) {
+        vscode.window.showErrorMessage(`Failed to capture clipboard: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
 }
 

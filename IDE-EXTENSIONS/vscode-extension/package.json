@@ -2,7 +2,7 @@
   "name": "lanonasis-memory",
   "displayName": "LanOnasis Memory Assistant",
   "description": "Memory as a Service integration - AI-powered memory management with semantic search (Compatible with CLI v3.0.6+)",
-  "version": "1.5.0",
+  "version": "2.0.5",
   "publisher": "LanOnasis",
   "icon": "images/icon.png",
   "repository": {
@@ -27,9 +27,7 @@
     "documentation"
   ],
   "activationEvents": [
-    "onStartupFinished",
-    "onView:lanonasis.sidebar",
-    "onView:lanonasisMemories"
+    "onStartupFinished"
   ],
   "main": "./out/extension.js",
   "browser": "./out/extension.js",
@@ -44,6 +42,33 @@
     }
   },
   "contributes": {
+    "chatParticipants": [
+      {
+        "id": "lanonasis-memory.memory-assistant",
+        "name": "lanonasis",
+        "fullName": "LanOnasis Memory",
+        "description": "Search, recall, and manage your memory bank",
+        "isSticky": true,
+        "commands": [
+          {
+            "name": "recall",
+            "description": "Search and recall memories semantically"
+          },
+          {
+            "name": "save",
+            "description": "Save current context or selection as a memory"
+          },
+          {
+            "name": "list",
+            "description": "List recent memories"
+          },
+          {
+            "name": "context",
+            "description": "Get relevant context for current file/project"
+          }
+        ]
+      }
+    ],
     "commands": [
       {
         "command": "lanonasis.searchMemory",
@@ -145,6 +170,66 @@
         "title": "Show Extension Logs",
         "category": "Lanonasis",
         "icon": "$(output)"
+      },
+      {
+        "command": "lanonasis.refreshApiKeys",
+        "title": "Refresh API Keys",
+        "category": "Lanonasis",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "lanonasis.viewProjectDetails",
+        "title": "View Project Details",
+        "category": "Lanonasis",
+        "icon": "$(folder-opened)"
+      },
+      {
+        "command": "lanonasis.createApiKey",
+        "title": "Create API Key",
+        "category": "Lanonasis",
+        "icon": "$(key)"
+      },
+      {
+        "command": "lanonasis.deleteProject",
+        "title": "Delete Project",
+        "category": "Lanonasis",
+        "icon": "$(trash)"
+      },
+      {
+        "command": "lanonasis.viewApiKeyDetails",
+        "title": "View API Key Details",
+        "category": "Lanonasis",
+        "icon": "$(info)"
+      },
+      {
+        "command": "lanonasis.rotateApiKey",
+        "title": "Rotate API Key",
+        "category": "Lanonasis",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "lanonasis.deleteApiKey",
+        "title": "Delete API Key",
+        "category": "Lanonasis",
+        "icon": "$(trash)"
+      },
+      {
+        "command": "lanonasis.captureContext",
+        "title": "Capture to Memory",
+        "category": "Lanonasis",
+        "icon": "$(save)"
+      },
+      {
+        "command": "lanonasis.captureClipboard",
+        "title": "Capture Clipboard to Memory",
+        "category": "Lanonasis",
+        "icon": "$(clippy)"
+      },
+      {
+        "command": "lanonasis.quickCapture",
+        "title": "Quick Capture (Selection or Clipboard)",
+        "category": "Lanonasis",
+        "icon": "$(zap)"
       }
     ],
     "keybindings": [
@@ -165,6 +250,23 @@
         "key": "ctrl+shift+k",
         "mac": "cmd+shift+k",
         "when": "editorTextFocus"
+      },
+      {
+        "command": "lanonasis.captureContext",
+        "key": "ctrl+shift+c",
+        "mac": "cmd+shift+c",
+        "when": "editorHasSelection || terminalFocus || panelFocus"
+      },
+      {
+        "command": "lanonasis.captureClipboard",
+        "key": "ctrl+alt+v",
+        "mac": "cmd+alt+v"
+      },
+      {
+        "command": "lanonasis.quickCapture",
+        "key": "ctrl+shift+s",
+        "mac": "cmd+shift+s",
+        "when": "!editorTextFocus || editorHasSelection"
       }
     ],
     "menus": {
@@ -172,6 +274,44 @@
         {
           "command": "lanonasis.createMemory",
           "when": "editorHasSelection",
+          "group": "lanonasis"
+        },
+        {
+          "command": "lanonasis.captureContext",
+          "when": "editorHasSelection",
+          "group": "lanonasis"
+        }
+      ],
+      "terminal/context": [
+        {
+          "command": "lanonasis.captureClipboard",
+          "group": "lanonasis"
+        },
+        {
+          "command": "lanonasis.quickCapture",
+          "group": "lanonasis"
+        }
+      ],
+      "explorer/context": [
+        {
+          "command": "lanonasis.createMemoryFromFile",
+          "when": "resourceScheme == file",
+          "group": "lanonasis"
+        },
+        {
+          "command": "lanonasis.quickCapture",
+          "group": "lanonasis"
+        }
+      ],
+      "scm/resourceState/context": [
+        {
+          "command": "lanonasis.quickCapture",
+          "group": "lanonasis"
+        }
+      ],
+      "comments/comment/context": [
+        {
+          "command": "lanonasis.quickCapture",
           "group": "lanonasis"
         }
       ],
@@ -185,6 +325,53 @@
           "command": "lanonasis.authenticate",
           "when": "view == lanonasisMemories && !lanonasis.authenticated",
           "group": "navigation"
+        },
+        {
+          "command": "lanonasis.refreshApiKeys",
+          "when": "view == lanonasisApiKeys",
+          "group": "navigation"
+        },
+        {
+          "command": "lanonasis.createProject",
+          "when": "view == lanonasisApiKeys && lanonasis.authenticated",
+          "group": "navigation"
+        },
+        {
+          "command": "lanonasis.authenticate",
+          "when": "view == lanonasisApiKeys && !lanonasis.authenticated",
+          "group": "navigation"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "lanonasis.viewProjectDetails",
+          "when": "view == lanonasisApiKeys && viewItem == project",
+          "group": "inline"
+        },
+        {
+          "command": "lanonasis.createApiKey",
+          "when": "view == lanonasisApiKeys && viewItem == project",
+          "group": "inline"
+        },
+        {
+          "command": "lanonasis.deleteProject",
+          "when": "view == lanonasisApiKeys && viewItem == project",
+          "group": "inline@2"
+        },
+        {
+          "command": "lanonasis.viewApiKeyDetails",
+          "when": "view == lanonasisApiKeys && viewItem == apiKey",
+          "group": "inline"
+        },
+        {
+          "command": "lanonasis.rotateApiKey",
+          "when": "view == lanonasisApiKeys && viewItem == apiKey",
+          "group": "inline@1"
+        },
+        {
+          "command": "lanonasis.deleteApiKey",
+          "when": "view == lanonasisApiKeys && viewItem == apiKey",
+          "group": "inline@2"
         }
       ]
     },
@@ -239,12 +426,12 @@
       "properties": {
         "lanonasis.apiUrl": {
           "type": "string",
-          "default": "https://api.lanonasis.com",
+          "default": "https://mcp.lanonasis.com",
           "markdownDescription": "Lanonasis Memory Service API URL. Change only if using a custom deployment."
         },
         "lanonasis.gatewayUrl": {
           "type": "string",
-          "default": "https://api.lanonasis.com",
+          "default": "https://mcp.lanonasis.com",
           "markdownDescription": "Onasis Gateway URL for centralized API management. Recommended for most users."
         },
         "lanonasis.useGateway": {
@@ -316,7 +503,7 @@
           "type": "number",
           "default": 2000,
           "minimum": 500,
-          "maximum": 10000,
+          "maximum": 1e4,
           "description": "CLI detection timeout in milliseconds"
         },
         "lanonasis.verboseLogging": {
@@ -334,10 +521,42 @@
           "default": false,
           "description": "Show traditional tree view alongside modern sidebar (for advanced users)"
         },
+        "lanonasis.enableBulkActions": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable bulk selection, tag, delete, and export actions in the sidebar"
+        },
+        "lanonasis.memoryTemplates": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [
+            "Bug report: Steps to reproduce / Expected / Actual / Logs",
+            "Note: Context / Key points / Next steps",
+            "Spec: Goal / Scope / Constraints / Open questions"
+          ],
+          "description": "Templates shown in the create form; each entry is a preset body"
+        },
+        "lanonasis.useEnhancedUI": {
+          "type": "boolean",
+          "default": false,
+          "description": "Use enhanced React-based UI with modern design (experimental)"
+        },
         "lanonasis.enableLegacyViews": {
           "type": "boolean",
           "default": false,
           "description": "Enable legacy tree providers (Memories/API keys) when you prefer the older explorer views"
+        },
+        "lanonasis.refineEndpoint": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "Optional: HTTP endpoint for prompt refinement. If unset, local refinement is used."
+        },
+        "lanonasis.refineApiKey": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "Bearer token for the refine endpoint. Stored in settings; keep scoped to backend refine service."
         }
       }
     }
@@ -351,25 +570,61 @@
     "pretest": "npm run compile && npm run lint",
     "lint": "eslint src --ext ts",
     "test": "node ./out/test/runTest.js",
-    "package": "npm run compile && vsce package --no-dependencies",
+    "test:unit": "vitest run",
+    "test:unit:watch": "vitest",
+    "test:unit:coverage": "vitest run --coverage",
+    "test:components": "vitest run src/components/__tests__",
+    "test:integration": "vitest run src/integration/__tests__",
+    "test:e2e": "playwright test",
+    "test:all": "npm run test:unit && npm run test:e2e",
+    "package": "npm run compile && npm run build:react && vsce package --no-dependencies",
     "publish": "vsce publish",
-    "build:package": "npm run compile && vsce package --no-dependencies"
+    "build:package": "npm run compile && npm run build:react && vsce package --no-dependencies",
+    "build:css": "tailwindcss -i ./src/react/styles.css -o ./media/react-styles.css --minify",
+    "build:react": "npm run build:css && webpack --config webpack.react.config.js"
   },
   "dependencies": {
-    "@lanonasis/memory-client": "^1.0.0",
-    "zod": "^3.23.8"
+    "@lanonasis/memory-client": "^2.0.0",
+    "clsx": "^2.1.1",
+    "date-fns": "^4.1.0",
+    "framer-motion": "^12.23.26",
+    "lucide-react": "^0.560.0",
+    "react": "^19.2.3",
+    "react-dom": "^19.2.3",
+    "tailwind-merge": "^3.4.0",
+    "zod": "^4.1.13"
   },
   "devDependencies": {
-    "@types/node": "^24.1.0",
-    "@types/vscode": "^1.74.0",
-    "@typescript-eslint/eslint-plugin": "^8.38.0",
-    "@typescript-eslint/parser": "^8.38.0",
+    "@svgr/webpack": "^8.1.0",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.0",
+    "@testing-library/user-event": "^14.6.1",
+    "@types/node": "^25.0.0",
+    "@types/react": "^19.2.7",
+    "@types/react-dom": "^19.2.3",
+    "@types/vscode": "^1.107.0",
+    "@typescript-eslint/eslint-plugin": "^8.49.0",
+    "@typescript-eslint/parser": "^8.49.0",
+    "@vitejs/plugin-react": "^5.1.2",
     "@vscode/test-electron": "^2.5.2",
-    "@vscode/vsce": "^3.7.0",
-    "eslint": "^9.32.0",
-    "ts-loader": "^9.5.2",
-    "typescript": "^5.8.3",
-    "webpack": "^5.101.0",
+    "@vscode/vsce": "^3.7.1",
+    "autoprefixer": "^10.4.22",
+    "css-loader": "^7.1.2",
+    "eslint": "^9.39.1",
+    "jsdom": "^27.3.0",
+    "playwright": "^1.57.0",
+    "postcss": "^8.5.6",
+    "postcss-loader": "^8.2.0",
+    "style-loader": "^4.0.0",
+    "tailwindcss": "^4.1.18",
+    "ts-loader": "^9.5.4",
+    "typescript": "^5.9.3",
+    "vite": "^7.2.7",
+    "vitest": "^4.0.15",
+    "webpack": "^5.103.0",
     "webpack-cli": "^6.0.1"
+  },
+  "overrides": {
+    "js-yaml": "^4.1.1"
   }
 }

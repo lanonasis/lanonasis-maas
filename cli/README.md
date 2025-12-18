@@ -1,4 +1,4 @@
-# @lanonasis/cli v3.4.15 - Enhanced MCP & Interactive CLI Experience
+# @lanonasis/cli v3.7.0 - Enterprise Security & MCP Experience
 
 [![NPM Version](https://img.shields.io/npm/v/@lanonasis/cli)](https://www.npmjs.com/package/@lanonasis/cli)
 [![Downloads](https://img.shields.io/npm/dt/@lanonasis/cli)](https://www.npmjs.com/package/@lanonasis/cli)
@@ -26,13 +26,24 @@ lanonasis --version  # or onasis --version
 onasis guide
 
 # Quick manual setup
-onasis init                                    # Initialize configuration
-onasis login --vendor-key pk_xxx.sk_xxx      # Authenticate with vendor key
-onasis health                                 # Verify system health
+onasis init                                      # Initialize configuration
+onasis login --vendor-key <your-vendor-key>      # Authenticate with vendor key
+onasis health                                   # Verify system health
 
 # Create your first memory
 onasis memory create --title "Welcome" --content "My first memory"
 ```
+
+## 🤖 Claude Desktop Integration
+
+For instant Claude Desktop MCP integration with OAuth2 authentication, see our [Claude Desktop Setup Guide](./CLAUDE_DESKTOP_SETUP.md).
+
+**Quick Links**:
+- **Authorization Endpoint**: `https://auth.lanonasis.com/oauth/authorize`
+- **Client ID**: `claude-desktop`
+- **Scopes**: `mcp:full memories:read memories:write`
+
+The guide includes complete OAuth2 configuration, available MCP tools, and troubleshooting steps.
 
 ## 🎯 Command Aliases
 
@@ -53,14 +64,31 @@ memory list
 maas memory list
 ```
 
-## 🔐 Authentication Methods
+## 🔐 Security & Authentication
+
+### Enterprise-Grade SHA-256 Security (v3.7.0+)
+
+All API keys are now secured with SHA-256 cryptographic hashing:
+
+- ✅ **Automatic Hash Normalization**: Keys are automatically hashed before transmission
+- ✅ **Double-Hash Prevention**: Smart detection prevents re-hashing already hashed keys
+- ✅ **Cross-Platform Compatibility**: Works seamlessly across Node.js and browser environments
+- ✅ **Zero Configuration**: Security is automatic and transparent
+
+```typescript
+// Hash utilities are built-in and automatic
+// Your vendor keys are automatically secured
+onasis login --vendor-key pk_xxxxx.sk_xxxxx  // ✅ Automatically hashed
+```
+
+### Authentication Methods
 
 ### 1. Vendor Key Authentication (Recommended)
 
-Best for API integrations and automation:
+Best for API integrations and automation. Copy the vendor key value exactly as shown in your LanOnasis dashboard (keys may vary in format):
 
 ```bash
-onasis login --vendor-key pk_xxxxx.sk_xxxxx
+onasis login --vendor-key <your-vendor-key>
 ```
 
 ### 2. OAuth Browser Authentication
@@ -260,7 +288,7 @@ Location: `~/.maas/config.json`
   "apiUrl": "https://api.lanonasis.com/api/v1",
   "defaultOutputFormat": "table",
   "mcpPreference": "auto",
-  "vendorKey": "pk_xxxxx.sk_xxxxx"
+  "vendorKey": "<your-vendor-key>"
 }
 ```
 
@@ -346,7 +374,7 @@ onasis auth status
 
 # Re-authenticate
 onasis auth logout
-onasis login --vendor-key pk_xxx.sk_xxx
+onasis login --vendor-key <your-vendor-key>
 ```
 
 #### Connection Issues

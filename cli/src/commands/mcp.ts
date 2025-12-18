@@ -7,6 +7,16 @@ import { EnhancedMCPClient } from '../mcp/client/enhanced-client.js';
 import { CLIConfig } from '../utils/config.js';
 import WebSocket from 'ws';
 
+/**
+ * Register MCP-related CLI commands (mcp and mcp-server) on a Commander program.
+ *
+ * Adds commands and subcommands for MCP server initialization, connection management,
+ * status reporting, tool listing and invocation, memory create/search operations,
+ * preference configuration, and diagnostic routines, wiring each command to its
+ * corresponding action handlers.
+ *
+ * @param program - Commander program instance to extend with MCP commands
+ */
 export function mcpCommands(program: Command) {
   const mcp = program
     .command('mcp')
@@ -87,8 +97,9 @@ export function mcpCommands(program: Command) {
         } else if (options.local) {
           connectionMode = 'local';
         } else {
-          // Default to remote if authenticated, otherwise local
-          connectionMode = config.get('token') ? 'remote' : 'local';
+          // Default to websocket (production mode) for all users
+          // Local mode should only be used explicitly for development
+          connectionMode = 'websocket';
         }
 
         // Save preferences
@@ -177,6 +188,55 @@ export function mcpCommands(program: Command) {
       await client.init();
       const status = client.getConnectionStatus();
 
+      // Also perform a lightweight live health check against the MCP HTTP endpoint
+      const config = new CLIConfig();
+      await config.init();
+
+      let healthLabel = chalk.gray('Unknown');
+      let healthDetails: string | undefined;
+
+      try {
+        const axios = (await import('axios')).default;
+
+        // Derive MCP health URL from discovered REST base (e.g. https://mcp.lanonasis.com/api/v1 -> https://mcp.lanonasis.com/health)
+        const restUrl = config.getMCPRestUrl();
+        const rootBase = restUrl.replace(/\/api\/v1$/, '');
+        const healthUrl = `${rootBase}/health`;
+
+        const token = config.getToken();
+        const vendorKey = config.getVendorKey();
+
+        const headers: Record<string, string> = {};
+        if (vendorKey) {
+          headers['X-API-Key'] = vendorKey;
+          headers['X-Auth-Method'] = 'vendor_key';
+        } else if (token) {
+          headers['Authorization'] = `Bearer ${token}`;
+          headers['X-Auth-Method'] = 'jwt';
+        }
+
+        const response = await axios.get(healthUrl, {
+          headers,
+          timeout: 5000
+        });
+
+        const overallStatus = String(response.data?.status ?? '').toLowerCase();
+        const ok = response.status === 200 && (!overallStatus || overallStatus === 'healthy');
+
+        if (ok) {
+          healthLabel = chalk.green('Reachable');
+        } else {
+          healthLabel = chalk.yellow('Degraded');
+        }
+      } catch (error: unknown) {
+        healthLabel = chalk.red('Unreachable');
+        if (error instanceof Error) {
+          healthDetails = error.message;
+        } else if (error !== null && error !== undefined) {
+          healthDetails = String(error);
+        }
+      }
+
       console.log(chalk.cyan('\n📊 MCP Connection Status'));
       console.log(chalk.cyan('========================'));
       console.log(`Status: ${status.connected ? chalk.green('Connected') : chalk.red('Disconnected')}`);
@@ -198,6 +258,11 @@ export function mcpCommands(program: Command) {
       }
       console.log(`Mode: ${modeDisplay}`);
       console.log(`Server: ${status.server}`);
+      console.log(`Health: ${healthLabel}`);
+
+      if (healthDetails && process.env.CLI_VERBOSE === 'true') {
+        console.log(chalk.gray(`Health details: ${healthDetails}`));
+      }
 
       if (status.connected) {
         if (status.mode === 'remote') {
@@ -401,18 +466,22 @@ export function mcpCommands(program: Command) {
   // Configure MCP preferences
   mcp.command('config')
     .description('Configure MCP preferences')
-    .option('--prefer-remote', 'Prefer remote MCP server when available')
-    .option('--prefer-local', 'Prefer local MCP server')
+    .option('--prefer-websocket', 'Prefer WebSocket MCP connection (recommended for production)')
+    .option('--prefer-remote', 'Prefer remote MCP server (REST/SSE mode)')
+    .option('--prefer-local', 'Prefer local MCP server (development only)')
     .option('--auto', 'Auto-detect best connection mode')
     .action(async (options) => {
       const config = new CLIConfig();
 
-      if (options.preferRemote) {
+      if (options.preferWebsocket) {
+        await config.setAndSave('mcpPreference', 'websocket');
+        console.log(chalk.green('✓ Set MCP preference to WebSocket (production mode)'));
+      } else if (options.preferRemote) {
         await config.setAndSave('mcpPreference', 'remote');
-        console.log(chalk.green('✓ Set MCP preference to remote'));
+        console.log(chalk.green('✓ Set MCP preference to remote (REST/SSE mode)'));
       } else if (options.preferLocal) {
         await config.setAndSave('mcpPreference', 'local');
-        console.log(chalk.green('✓ Set MCP preference to local'));
+        console.log(chalk.green('✓ Set MCP preference to local (development only)'));
       } else if (options.auto) {
         await config.setAndSave('mcpPreference', 'auto');
         console.log(chalk.green('✓ Set MCP preference to auto-detect'));
@@ -420,9 +489,10 @@ export function mcpCommands(program: Command) {
         const current = config.get('mcpPreference') || 'auto';
         console.log(`Current MCP preference: ${chalk.cyan(current)}`);
         console.log('\nOptions:');
-        console.log('  --prefer-remote : Use remote MCP server (mcp.lanonasis.com)');
-        console.log('  --prefer-local  : Use local MCP server');
-        console.log('  --auto          : Auto-detect based on authentication');
+        console.log('  --prefer-websocket : Use WebSocket mode (recommended for production)');
+        console.log('  --prefer-remote    : Use remote REST/SSE mode (alternative)');
+        console.log('  --prefer-local     : Use local stdio mode (development only)');
+        console.log('  --auto             : Auto-detect based on configuration (default)');
       }
     });
 

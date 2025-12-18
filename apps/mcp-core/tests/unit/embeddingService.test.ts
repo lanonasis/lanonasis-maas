@@ -19,7 +19,7 @@ describe('EmbeddingService', () => {
       data: [{ embedding: [0.1, 0.2, 0.3] }],
       model: 'text-embedding-3-small',
       usage: { total_tokens: 16 }
-    });
+    } as any);
 
     const { EmbeddingService } = await import('../../src/services/embedding');
 
@@ -39,7 +39,7 @@ describe('EmbeddingService', () => {
     jest.resetModules();
     setupModule = await import('../setup');
     const fallbackOpenAI = setupModule.getOpenAIStub();
-    fallbackOpenAI.embeddings.create.mockRejectedValue(new Error('rate limit'));
+    fallbackOpenAI.embeddings.create.mockRejectedValue(new Error('rate limit') as any);
 
     const { EmbeddingService } = await import('../../src/services/embedding');
 

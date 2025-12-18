@@ -916,7 +916,7 @@ Please choose an option (1-4):`
             connectionsByTransport: {}
         };
         const fiveMinutesAgo = Date.now() - (5 * 60 * 1000);
-        for (const connection of this.connectionPool.values()) {
+        this.connectionPool.forEach(connection => {
             // Count as active if there was activity in the last 5 minutes
             if (connection.lastActivity.getTime() > fiveMinutesAgo) {
                 stats.activeConnections++;
@@ -926,7 +926,7 @@ Please choose an option (1-4):`
             }
             stats.connectionsByTransport[connection.transport] =
                 (stats.connectionsByTransport[connection.transport] || 0) + 1;
-        }
+        });
         return stats;
     }
     /**
@@ -953,12 +953,13 @@ Please choose an option (1-4):`
     cleanupStaleConnections() {
         const tenMinutesAgo = Date.now() - (10 * 60 * 1000);
         const staleConnections = [];
-        for (const [clientId, connection] of this.connectionPool.entries()) {
+        this.connectionPool.forEach((connection, clientId) => {
             if (connection.lastActivity.getTime() < tenMinutesAgo) {
                 staleConnections.push(clientId);
             }
-        }
-        for (const clientId of staleConnections) {
+        });
+        for (let i = 0; i < staleConnections.length; i++) {
+            const clientId = staleConnections[i];
             this.removeConnection(clientId);
             if (this.options.verbose) {
                 console.log(chalk.yellow(`🧹 Cleaned up stale connection: ${clientId}`));
@@ -1385,12 +1386,12 @@ Please choose an option (1-4):`
      */
     getTransportStatus() {
         const failures = {};
-        for (const [transport, failure] of this.transportFailures.entries()) {
+        this.transportFailures.forEach((failure, transport) => {
             failures[transport] = {
                 count: failure.count,
                 lastFailure: failure.lastFailure.toISOString()
             };
-        }
+        });
         return {
             supportedTransports: this.supportedTransports,
             preferredTransport: this.options.preferredTransport || 'stdio',

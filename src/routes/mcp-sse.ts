@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 import { config } from '@/config/environment';
 import { logger } from '@/utils/logger';
 import { asyncHandler } from '@/middleware/errorHandler';
+import { ensureApiKeyHash } from '@lanonasis/security-sdk/hash-utils';
 
 const router = Router();
 const supabase = createClient(config.SUPABASE_URL, config.SUPABASE_SERVICE_KEY);
@@ -24,9 +25,13 @@ const authenticateApiKey = async (req: Request, res: Response, next: NextFunctio
   }
 
   try {
+    // ✅ CRITICAL FIX: Hash the incoming API key before database lookup
+    const apiKeyHash = ensureApiKeyHash(apiKey as string);
+    
     // Validate API key against database
+    // ✅ ALIGNED: Use public.api_keys (same as Dashboard/CLI)
     const { data: keyData, error } = await supabase
-      .from('maas_api_keys')
+      .from('api_keys')
       .select(`
         id,
         name,
@@ -34,10 +39,9 @@ const authenticateApiKey = async (req: Request, res: Response, next: NextFunctio
         is_active,
         expires_at,
         last_used_at,
-        usage_count,
-        rate_limit_per_minute
+        usage_count
       `)
-      .eq('key_hash', apiKey)
+      .eq('key_hash', apiKeyHash)  // ✅ Compare hashed key to stored hash
       .eq('is_active', true)
       .single();
 
@@ -57,12 +61,11 @@ const authenticateApiKey = async (req: Request, res: Response, next: NextFunctio
       });
     }
 
-    // Update last used timestamp and usage count
+    // Update usage count only (last_used_at may not exist in all environments)
     await supabase
-      .from('maas_api_keys')
+      .from('api_keys')
       .update({
-        last_used_at: new Date().toISOString(),
-        usage_count: keyData.usage_count + 1
+        usage_count: (keyData.usage_count || 0) + 1
       })
       .eq('id', keyData.id);
 
