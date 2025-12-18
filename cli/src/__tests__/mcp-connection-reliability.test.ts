@@ -30,7 +30,6 @@ jest.mock('chalk', () => ({
   }
 }));
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const mockAxios: any = {
   get: jest.fn(),
   post: jest.fn()
@@ -372,7 +371,6 @@ describe('MCP Connection Reliability Tests', () => {
       // Mock successful HTTP connection but SSE failure
       mockAxios.get.mockResolvedValue({ status: 200, data: { status: 'ok' } });
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const mockSSEInstance: any = {
         onmessage: null,
         onerror: null,
@@ -440,7 +438,6 @@ describe('MCP Connection Reliability Tests', () => {
         readyState: WebSocket.OPEN
       };
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       let onCloseCallback: any = null;
 
       mockWSInstance.on.mockImplementation((event, callback) => {
@@ -671,6 +668,7 @@ describe('MCP Connection Reliability Tests', () => {
 
       const tools = await mcpClient.listTools();
 
+      expect(sdkClientMock.listTools).toHaveBeenCalledTimes(1);
       expect(Array.isArray(tools)).toBe(true);
       expect(tools.length).toBeGreaterThan(0);
       expect(tools[0]).toHaveProperty('name', 'memory_create_memory');
