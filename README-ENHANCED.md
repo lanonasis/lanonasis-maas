@@ -41,6 +41,7 @@
 ## 📊 Feature Status
 
 ### ✅ Fully Implemented & Production Ready
+
 - **Core Memory Operations**: Create, read, update, delete, search
 - **Authentication & Authorization**: JWT tokens, API keys, vendor keys  
 - **State Management**: Active, paused, archived, deleted states
@@ -52,6 +53,7 @@
 - **Service Discovery**: Golden Contract compliance
 
 ### 🚧 In Progress / Placeholder
+
 - **Bulk Operations CLI**: Commands exist but are placeholders
   - Backend methods (`bulkUpdateMemoryState`) are implemented
   - CLI wiring to backend is pending
@@ -62,6 +64,7 @@
 - **Related Memory Discovery**: Backend logic exists, CLI integration pending
 
 ### 🔮 Planned Features
+
 - AI-Powered Categorization: Automatic memory categorization using LLMs
 - Advanced Relationship Detection: ML-based memory relationship discovery
 - Multi-Tenant Architecture: Complete organization isolation
@@ -74,6 +77,7 @@
 
 Before getting started, ensure you have:
 
+- **Node.js**: v18.0.0 or higher
 - **Node.js**: v18.0.0 or higher
 - **Docker**: v20.10 or higher (for containerized deployment)
 - **Docker Compose**: v2.0 or higher
@@ -114,7 +118,7 @@ cd cli && npm install && npm link
 onasis init --enhanced
 
 # Login with vendor key
-onasis login --vendor-key pk_xxx.sk_xxx
+onasis login --vendor-key <your-vendor-key>
 
 # Create memory with app context
 onasis memory create --title "Enhanced Memory" --content "Advanced features" --app-id "my-app"
@@ -261,7 +265,7 @@ onasis memory filter --app-id "my-app" --category "coding" --since "2024-10-01"
 onasis memory filter --state "paused" --before "2024-01-01"
 ```
 
-### Related Memory Discovery
+### Related Memory Discovery (Advanced)
 
 ```bash
 # Find related memories
@@ -619,11 +623,11 @@ npm run test:all
 
 ### Enhanced Documentation
 
-- **[Enhanced API Reference](./docs/api-enhanced.md)**: Complete API documentation with new endpoints
-- **[Vector Store Guide](./docs/vector-stores.md)**: Multi-vector store configuration and usage
-- **[Access Control Guide](./docs/access-control.md)**: Granular permissions and audit logging
-- **[Bulk Operations Guide](./docs/bulk-operations.md)**: Advanced memory management
-- **[Deployment Guide](./docs/deployment-enhanced.md)**: Production deployment with monitoring
+- **Enhanced API Reference** (coming soon): Complete API documentation with new endpoints
+- **Vector Store Guide** (coming soon): Multi-vector store configuration and usage
+- **Access Control Guide** (coming soon): Granular permissions and audit logging
+- **Bulk Operations Guide** (coming soon): Advanced memory management
+- **Deployment Guide** (coming soon): Production deployment with monitoring
 
 ### Interactive Documentation
 
@@ -690,6 +694,6 @@ npm run db:migrate:enhanced
 
 ---
 
-_Enhanced Memory as a Service - Built for enterprise scale with advanced state management_
+Enhanced Memory as a Service — built for enterprise scale with advanced state management.
 
 🚀 **Ready to experience the future of memory management?** Try the enhanced edition today!

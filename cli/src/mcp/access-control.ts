@@ -100,9 +100,18 @@ export class MemoryAccessControl {
       const sharedMemories = await this.getSharedMemories(userId, appId);
 
       // Combine and deduplicate
-      const allMemories = [...new Set([...ownMemories, ...sharedMemories])];
+      const combined = [...ownMemories, ...sharedMemories];
+      const deduped: string[] = [];
+      const seen = new Set<string>();
 
-      return allMemories;
+      combined.forEach(memoryId => {
+        if (!seen.has(memoryId)) {
+          seen.add(memoryId);
+          deduped.push(memoryId);
+        }
+      });
+
+      return deduped;
     } catch (error) {
       logger.error('Failed to get accessible memories', { error, userId, appId });
       return [];

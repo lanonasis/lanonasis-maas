@@ -18,15 +18,17 @@ onasis memory search "query" --use-mcp
 #### Authentication Security
 ```bash
 # ✅ GOOD: Use vendor keys (recommended for CLI)
-onasis login --vendor-key pk_xxxxx.sk_xxxxx
+onasis login --vendor-key <your-vendor-key>
 
 # ✅ GOOD: OAuth for interactive sessions
 onasis login --oauth
 
 # ✅ GOOD: Environment variable authentication
-export LANONASIS_VENDOR_KEY="pk_xxxxx.sk_xxxxx"
+export LANONASIS_VENDOR_KEY="<your-vendor-key>"
 onasis memory list
 ```
+
+> **Note:** Copy the vendor key exactly as it appears in the Lanonasis dashboard. Some keys may start with `pk_`/`sk_`, others may not—the CLI accepts any value issued by the platform.
 
 ### 🔐 Configuration Security
 
@@ -43,7 +45,7 @@ onasis config show --security
 #### Environment Variables
 ```bash
 # Recommended environment variables for CLI
-export LANONASIS_VENDOR_KEY="pk_xxxxx.sk_xxxxx"
+export LANONASIS_VENDOR_KEY="<your-vendor-key>"
 export LANONASIS_API_URL="https://api.lanonasis.com"
 export LANONASIS_ENVIRONMENT="production"
 export LANONASIS_LOG_LEVEL="info"  # Don't use "debug" in production
@@ -152,7 +154,7 @@ onasis config set audit.enabled true
 onasis login --config-file ~/.lanonasis/prod.json
 
 # ❌ BAD: Credentials in command history
-onasis login --vendor-key pk_xxxxx.sk_xxxxx  # Visible in shell history
+onasis login --vendor-key <your-vendor-key>  # Visible in shell history
 
 # ✅ GOOD: Clear command history after sensitive operations
 history -d $(history 1)

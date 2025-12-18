@@ -8,7 +8,7 @@ export default defineConfig(({ mode }) => ({
   base: '/', // Since we're deploying to dashboard.lanonasis.com root
   server: {
     host: "::",
-    port: 8080,
+    port: 3005, // Using quickauth's decommissioned port for testing
   },
   plugins: [
     react(),

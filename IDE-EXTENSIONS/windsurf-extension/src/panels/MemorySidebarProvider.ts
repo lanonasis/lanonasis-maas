@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { MemoryService } from '../services/MemoryService';
 import type { IMemoryService } from '../services/IMemoryService';
-import { MemoryEntry, MemoryType } from '../types/memory-aligned';
+import { MemoryEntry, MemoryType, createMemorySchema, updateMemorySchema } from '../types/memory-aligned';
 
 export class MemorySidebarProvider implements vscode.WebviewViewProvider {
     public static readonly viewType = 'lanonasis.sidebar';
@@ -36,7 +36,22 @@ export class MemorySidebarProvider implements vscode.WebviewViewProvider {
                     await this.handleSearch(data.query);
                     break;
                 case 'createMemory':
-                    await vscode.commands.executeCommand('lanonasis.createMemory');
+                    await this.handleCreateFromWebview(data.payload);
+                    break;
+                case 'updateMemory':
+                    await this.handleUpdateFromWebview(data.id, data.payload);
+                    break;
+                case 'deleteMemory':
+                    await this.handleDeleteFromWebview(data.id);
+                    break;
+                case 'bulkDelete':
+                    await this.handleBulkDeleteFromWebview(data.ids);
+                    break;
+                case 'bulkTag':
+                    await this.handleBulkTagFromWebview(data.ids, data.tags);
+                    break;
+                case 'restoreMemory':
+                    await this.handleCreateFromWebview(data.payload);
                     break;
                 case 'openMemory':
                     await vscode.commands.executeCommand('lanonasis.openMemory', data.memory);
@@ -135,6 +150,51 @@ export class MemorySidebarProvider implements vscode.WebviewViewProvider {
 
     private async isAuthenticated(): Promise<boolean> {
         return this.memoryService.isAuthenticated();
+    }
+
+    private async handleCreateFromWebview(payload: any) {
+        const parsed = createMemorySchema.safeParse(payload);
+        if (!parsed.success) {
+            const msg = parsed.error.issues.map(i => i.message).join('; ');
+            vscode.window.showErrorMessage(`Memory not created: ${msg}`);
+            return;
+        }
+        await this.memoryService.createMemory(parsed.data);
+        await this.refresh();
+    }
+
+    private async handleUpdateFromWebview(id: string, payload: any) {
+        const parsed = updateMemorySchema.safeParse(payload);
+        if (!parsed.success) {
+            const msg = parsed.error.issues.map(i => i.message).join('; ');
+            vscode.window.showErrorMessage(`Memory not updated: ${msg}`);
+            return;
+        }
+        await (this.memoryService as any).updateMemory(id, parsed.data);
+        await this.refresh();
+    }
+
+    private async handleDeleteFromWebview(id: string) {
+        await this.memoryService.deleteMemory(id);
+        await this.refresh();
+    }
+
+    private async handleBulkDeleteFromWebview(ids: string[]) {
+        if (!ids?.length) return;
+        await Promise.all(ids.map(id => this.memoryService.deleteMemory(id)));
+        await this.refresh();
+    }
+
+    private async handleBulkTagFromWebview(ids: string[], tags: string[]) {
+        if (!ids?.length || !tags?.length) return;
+        await Promise.all(
+            ids.map(async (id) => {
+                const mem = await this.memoryService.getMemory(id);
+                const nextTags = Array.from(new Set([...(mem.tags || []), ...tags]));
+                await (this.memoryService as any).updateMemory(id, { tags: nextTags });
+            })
+        );
+        await this.refresh();
     }
 
     private _getHtmlForWebview(webview: vscode.Webview) {

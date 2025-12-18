@@ -358,12 +358,37 @@ app.get('/', (req, res) => {
   }
 });
 
-// API key management endpoints (placeholder)
-app.get('/api/v1/api-keys', (req, res) => {
-  res.json({
-    message: 'API Keys endpoint - implementation in progress',
-    endpoint: '/api/v1/api-keys',
-    status: 'placeholder'
+// Proxy API key management and auth routes to MCP service
+app.use('/api/v1/auth/api-keys', async (req, res) => {
+  try {
+    const mcpUrl = `https://mcp.lanonasis.com/api/v1/auth/api-keys${req.path === '/' ? '' : req.path}`;
+    const response = await fetch(mcpUrl, {
+      method: req.method,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': req.headers.authorization || '',
+        'X-API-Key': req.headers['x-api-key'] || ''
+      },
+      body: ['POST', 'PUT', 'PATCH'].includes(req.method) ? JSON.stringify(req.body) : undefined
+    });
+
+    const data = await response.json();
+    res.status(response.status).json(data);
+  } catch (error) {
+    console.error('MCP proxy error:', error);
+    res.status(502).json({
+      error: 'Failed to reach MCP service',
+      code: 'MCP_SERVICE_UNAVAILABLE'
+    });
+  }
+});
+
+// Legacy API keys endpoint (redirect to /auth/api-keys)
+app.use('/api/v1/api-keys', (req, res) => {
+  res.status(301).json({
+    message: 'This endpoint has moved',
+    new_location: '/api/v1/auth/api-keys',
+    hint: 'Please update your client to use the new endpoint'
   });
 });
 

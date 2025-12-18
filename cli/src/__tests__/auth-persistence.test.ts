@@ -39,6 +39,9 @@ describe('Authentication Persistence Tests', () => {
     // Clear axios mocks
     mockAxios.get.mockClear();
     mockAxios.post.mockClear();
+
+    // Skip remote validation during persistence tests
+    process.env.SKIP_SERVER_VALIDATION = 'true';
   });
 
   afterEach(async () => {
@@ -48,6 +51,8 @@ describe('Authentication Persistence Tests', () => {
     } catch {
       // Ignore cleanup errors
     }
+
+    delete process.env.SKIP_SERVER_VALIDATION;
   });
 
   describe('Credential Storage and Retrieval', () => {

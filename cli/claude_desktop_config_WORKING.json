@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "lanonasis": {
+      "url": "https://api.lanonasis.com/api/v1",
+      "transport": {
+        "type": "http"
+      },
+      "authentication": {
+        "type": "bearer",
+        "token": "YOUR_API_KEY_HERE"
+      }
+    }
+  }
+}
+

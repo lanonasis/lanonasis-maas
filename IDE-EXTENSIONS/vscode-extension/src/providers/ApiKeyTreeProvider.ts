@@ -99,32 +99,82 @@ export class ApiKeyTreeProvider implements vscode.TreeDataProvider<vscode.TreeIt
         return element;
     }
 
-    async getChildren(element?: vscode.TreeItem): Promise<vscode.TreeItem[]> {
+    async getChildren(element?: vscode.TreeItem): Promise<vscode.TreeItem[]> {                              
         if (!this.authenticated) {
-            return [];
+            const authItem = new vscode.TreeItem('Not authenticated', vscode.TreeItemCollapsibleState.None);
+            authItem.description = 'Click to authenticate';
+            authItem.iconPath = new vscode.ThemeIcon('key');
+            authItem.contextValue = 'notAuthenticated';
+            authItem.command = {
+                command: 'lanonasis.authenticate',
+                title: 'Authenticate',
+                arguments: ['oauth']
+            };
+            return [authItem];
         }
 
         try {
             if (!element) {
-                // Root level - show projects
-                this.projects = await this.apiKeyService.getProjects();
-                return this.projects.map(project => 
-                    new ProjectTreeItem(project, vscode.TreeItemCollapsibleState.Collapsed)
-                );
-            } else if (element instanceof ProjectTreeItem) {
-                // Project level - show API keys for this project
-                const projectId = element.project.id;
-                if (!this.apiKeys[projectId]) {
-                    this.apiKeys[projectId] = await this.apiKeyService.getApiKeys(projectId);
+                // Root level - show projects                           
+                this.projects = await this.apiKeyService.getProjects(); 
+                
+                if (this.projects.length === 0) {
+                    // Return a message item when no projects exist
+                    const emptyItem = new vscode.TreeItem('No projects found', vscode.TreeItemCollapsibleState.None);
+                    emptyItem.description = 'Click + to create a project';
+                    emptyItem.iconPath = new vscode.ThemeIcon('info');
+                    emptyItem.contextValue = 'empty';
+                    return [emptyItem];
                 }
                 
-                return this.apiKeys[projectId].map(apiKey => 
-                    new ApiKeyTreeItem(apiKey, vscode.TreeItemCollapsibleState.None)
+                return this.projects.map(project =>                     
+                    new ProjectTreeItem(project, vscode.TreeItemCollapsibleState.Collapsed)                 
+                );
+            } else if (element instanceof ProjectTreeItem) {            
+                // Project level - show API keys for this project       
+                const projectId = element.project.id;                   
+                if (!this.apiKeys[projectId]) {                         
+                    this.apiKeys[projectId] = await this.apiKeyService.getApiKeys(projectId);               
+                }
+                
+                if (this.apiKeys[projectId].length === 0) {
+                    // Return a message item when no keys exist
+                    const emptyItem = new vscode.TreeItem('No API keys in this project', vscode.TreeItemCollapsibleState.None);
+                    emptyItem.description = 'Right-click project to create a key';
+                    emptyItem.iconPath = new vscode.ThemeIcon('info');
+                    emptyItem.contextValue = 'empty';
+                    return [emptyItem];
+                }
+                
+                return this.apiKeys[projectId].map(apiKey =>            
+                    new ApiKeyTreeItem(apiKey, vscode.TreeItemCollapsibleState.None)                        
                 );
             }
         } catch (error) {
             console.error('Error loading API keys:', error);
-            vscode.window.showErrorMessage(`Failed to load API keys: ${error instanceof Error ? error.message : 'Unknown error'}`);
+            const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+            
+            // Check if it's an authentication error
+            if (errorMsg.includes('401') || errorMsg.includes('No token') || errorMsg.includes('AUTH_TOKEN_MISSING')) {
+                const authItem = new vscode.TreeItem('Authentication required', vscode.TreeItemCollapsibleState.None);
+                authItem.description = 'Click to authenticate';
+                authItem.iconPath = new vscode.ThemeIcon('warning');
+                authItem.contextValue = 'authRequired';
+                authItem.command = {
+                    command: 'lanonasis.authenticate',
+                    title: 'Authenticate',
+                    arguments: ['oauth']
+                };
+                authItem.tooltip = `Authentication error: ${errorMsg}`;
+                return [authItem];
+            }
+            
+            const errorItem = new vscode.TreeItem('Error loading data', vscode.TreeItemCollapsibleState.None);
+            errorItem.description = errorMsg.length > 50 ? errorMsg.substring(0, 50) + '...' : errorMsg;
+            errorItem.iconPath = new vscode.ThemeIcon('error');
+            errorItem.contextValue = 'error';
+            errorItem.tooltip = errorMsg;
+            return [errorItem];
         }
         
         return [];

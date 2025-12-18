@@ -17,7 +17,7 @@ const createSupabaseMock = (handlers: SupabaseHandlers = {}) => {
     memorySelectSingle = jest.fn(),
     memoryUpdateSingle = jest.fn(),
     memoryDeleteEq = jest.fn(),
-    auditInsert = jest.fn().mockResolvedValue({ error: null }),
+    auditInsert = jest.fn().mockResolvedValue({ error: null } as any),
     rpc = jest.fn()
   } = handlers;
 
@@ -101,7 +101,7 @@ describe('MemoryService', () => {
     const memoryInsertSingle = jest.fn().mockResolvedValue({
       data: insertedMemory,
       error: null
-    });
+    } as any);
 
     const supabaseMock = createSupabaseMock({
       memoryInsertSingle
@@ -118,7 +118,7 @@ describe('MemoryService', () => {
         provider: 'openai',
         tokensUsed: 24,
         costUSD: 0.00048
-      })
+      } as any)
     };
 
     const { MemoryService } = await import('../../src/services/memory');
@@ -160,7 +160,7 @@ describe('MemoryService', () => {
     };
 
     const memorySelectSingle = jest.fn()
-      .mockResolvedValueOnce({ data: existingMemory, error: null });
+      .mockResolvedValueOnce({ data: existingMemory, error: null } as any);
 
     const updatedMemory = {
       ...existingMemory,
@@ -168,7 +168,7 @@ describe('MemoryService', () => {
     };
 
     const memoryUpdateSingle = jest.fn()
-      .mockResolvedValueOnce({ data: updatedMemory, error: null });
+      .mockResolvedValueOnce({ data: updatedMemory, error: null } as any);
 
     const supabaseMock = createSupabaseMock({
       memorySelectSingle,
@@ -186,7 +186,7 @@ describe('MemoryService', () => {
         provider: 'openai',
         tokensUsed: 18,
         costUSD: 0.00036
-      })
+      } as any)
     };
 
     const { MemoryService } = await import('../../src/services/memory');
@@ -215,7 +215,7 @@ describe('MemoryService', () => {
         { id: 'mem-1', relevance_score: 0.92 }
       ],
       error: null
-    });
+    } as any);
 
     const supabaseMock = createSupabaseMock({ rpc });
 
@@ -230,7 +230,7 @@ describe('MemoryService', () => {
         provider: 'openai',
         tokensUsed: 12,
         costUSD: 0.00024
-      })
+      } as any)
     };
 
     const { MemoryService } = await import('../../src/services/memory');

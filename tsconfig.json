@@ -22,7 +22,7 @@
     // NOTE: The '@/*' path alias requires corresponding configuration in bundlers/transpilers (e.g., webpack, vite, jest) to work correctly in all environments.
     "paths": {
       "@/*": [
-        "./src/*"
+        "src/*"
       ]
     },
     "strict": true,
@@ -40,7 +40,7 @@
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "composite": true,
-    "baseUrl": "./src"
+    "baseUrl": "."
   },
   "references": [
     {

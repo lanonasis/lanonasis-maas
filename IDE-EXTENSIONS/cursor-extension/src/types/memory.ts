@@ -1,9 +1,15 @@
 import { z } from 'zod';
+import {
+  MemoryType as CoreMemoryType,
+  CreateMemoryRequestSchema as CoreCreateMemoryRequestSchema,
+  UpdateMemoryRequestSchema as CoreUpdateMemoryRequestSchema,
+  SearchMemoryRequestSchema as CoreSearchMemoryRequestSchema
+} from '@lanonasis/ide-extension-core';
 
 /**
  * Memory types for Lanonasis Memory Service
  */
-export type MemoryType = 'context' | 'project' | 'knowledge' | 'reference' | 'personal' | 'workflow';
+export type MemoryType = z.infer<typeof CoreMemoryType>;
 
 export interface MemoryEntry {
   id: string;
@@ -62,29 +68,32 @@ export interface MemoryStats {
 }
 
 // Zod schemas for validation
+const coreCreate = CoreCreateMemoryRequestSchema.shape;
 export const createMemorySchema = z.object({
-  title: z.string().min(1).max(200),
-  content: z.string().min(1).max(50000),
-  memory_type: z.enum(['context', 'project', 'knowledge', 'reference', 'personal', 'workflow']).default('context'),
-  tags: z.array(z.string().min(1).max(50)).max(10).default([]),
+  title: coreCreate.title,
+  content: coreCreate.content,
+  memory_type: CoreMemoryType.default('context'),
+  tags: coreCreate.tags,
   topic_id: z.string().uuid().optional(),
-  metadata: z.record(z.unknown()).optional()
+  metadata: coreCreate.metadata
 });
 
+const coreUpdate = CoreUpdateMemoryRequestSchema.shape;
 export const updateMemorySchema = z.object({
-  title: z.string().min(1).max(200).optional(),
-  content: z.string().min(1).max(50000).optional(),
-  memory_type: z.enum(['context', 'project', 'knowledge', 'reference', 'personal', 'workflow']).optional(),
-  tags: z.array(z.string().min(1).max(50)).max(10).optional(),
+  title: coreUpdate.title,
+  content: coreUpdate.content,
+  memory_type: CoreMemoryType.optional(),
+  tags: coreUpdate.tags,
   topic_id: z.string().uuid().nullable().optional(),
-  metadata: z.record(z.unknown()).optional()
+  metadata: coreUpdate.metadata
 });
 
+const coreSearch = CoreSearchMemoryRequestSchema.shape;
 export const searchMemorySchema = z.object({
-  query: z.string().min(1).max(1000),
-  memory_types: z.array(z.enum(['context', 'project', 'knowledge', 'reference', 'personal', 'workflow'])).optional(),
-  tags: z.array(z.string()).optional(),
+  query: coreSearch.query,
+  memory_types: z.array(CoreMemoryType).optional(),
+  tags: coreSearch.tags,
   topic_id: z.string().uuid().optional(),
-  limit: z.number().int().min(1).max(100).default(20),
-  threshold: z.number().min(0).max(1).default(0.7)
+  limit: coreSearch.limit,
+  threshold: coreSearch.threshold
 });

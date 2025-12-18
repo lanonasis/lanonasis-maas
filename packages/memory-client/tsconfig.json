@@ -6,6 +6,7 @@
       "dom",
       "dom.iterable"
     ],
+    "jsx": "react",
     "module": "esnext",
     "moduleResolution": "bundler",
     "resolvePackageJsonExports": false,
@@ -18,13 +19,14 @@
     "declaration": true,
     "declarationMap": true,
     "sourceMap": true,
+    "inlineSources": true,
     "outDir": "./dist",
     "removeComments": false,
     "importHelpers": true,
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
     "skipLibCheck": true,
-    "composite": true
+    "composite": false
   },
   "include": [
     "src/**/*"

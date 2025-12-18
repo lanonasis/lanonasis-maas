@@ -92,7 +92,7 @@ Document transition from legacy methods to CLI v1.5.2 workflows.
 **Legacy**: Manual authentication scripts
 **Current**: 
 ```bash
-onasis login --vendor-key pk_xxx.sk_xxx    # Vendor key auth
+onasis login --vendor-key <your-vendor-key>    # Vendor key auth
 onasis login --oauth                        # Browser OAuth
 onasis login                                # Interactive credentials
 ```

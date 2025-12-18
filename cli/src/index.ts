@@ -314,10 +314,73 @@ program
       // Try to use the REPL package if available
       const { spawn } = await import('child_process');
       const { fileURLToPath } = await import('url');
-      const { dirname, join } = await import('path');
+      const { dirname, join, resolve } = await import('path');
+      const { existsSync } = await import('fs');
+      const moduleLib = (await import('module')).default;
       
-      // Try to find the REPL package
-      const replPath = join(process.cwd(), 'packages', 'repl-cli', 'dist', 'index.js');
+      const cliDir = dirname(fileURLToPath(import.meta.url));
+      const cliRoot = resolve(cliDir, '..');
+      const searchPaths = [process.cwd(), cliDir, cliRoot];
+      
+      const attempted: string[] = [];
+      let replPath: string | null = null;
+      const addCandidate = (candidate: string | null | undefined) => {
+        if (!candidate) return;
+        const normalized = resolve(candidate);
+        if (attempted.includes(normalized)) return;
+        attempted.push(normalized);
+        if (!replPath && existsSync(normalized)) {
+          replPath = normalized;
+        }
+      };
+      
+      const resolveRepl = () => {
+        try {
+          return require.resolve('@lanonasis/repl-cli/dist/index.js', { paths: searchPaths });
+        } catch {
+          // ignore resolution errors
+        }
+        try {
+          const pkgPath = require.resolve('@lanonasis/repl-cli/package.json', { paths: searchPaths });
+          return join(dirname(pkgPath), 'dist', 'index.js');
+        } catch {
+          return null;
+        }
+      };
+      
+      // Prefer Node resolution (local dependency or workspace)
+      addCandidate(resolveRepl());
+      
+      // Monorepo layouts (compiled or running from dist)
+      addCandidate(join(cliRoot, '..', 'packages', 'repl-cli', 'dist', 'index.js'));
+      addCandidate(join(cliRoot, '..', '..', 'packages', 'repl-cli', 'dist', 'index.js'));
+      addCandidate(join(process.cwd(), 'apps', 'lanonasis-maas', 'packages', 'repl-cli', 'dist', 'index.js'));
+      addCandidate(join(process.cwd(), 'packages', 'repl-cli', 'dist', 'index.js'));
+      addCandidate(join(process.cwd(), 'dist', 'index.js'));
+      addCandidate(join(process.cwd(), '..', 'dist', 'index.js'));
+      
+      // Project/local node_modules
+      for (const base of searchPaths) {
+        addCandidate(join(base, 'node_modules', '@lanonasis', 'repl-cli', 'dist', 'index.js'));
+      }
+      
+      // Global node_modules locations
+      const globalPaths: string[] = Array.isArray((moduleLib as any)?.globalPaths) ? (moduleLib as any).globalPaths : [];
+      for (const globalPath of globalPaths) {
+        addCandidate(join(globalPath, '@lanonasis', 'repl-cli', 'dist', 'index.js'));
+      }
+      
+      if (!replPath) {
+        console.error(colors.error('REPL package not found.'));
+        console.log(colors.muted('Searched locations:'));
+        attempted.forEach(c => console.log(colors.muted(`  - ${c}`)));
+        console.log(colors.info('\n💡 Options:'));
+        console.log(colors.info('  1. Run from monorepo root: cd /path/to/lan-onasis-monorepo && onasis repl'));
+        console.log(colors.info('  2. Use direct command: cd apps/lanonasis-maas/packages/repl-cli && node dist/index.js start'));
+        console.log(colors.info('  3. Install globally: npm install -g @lanonasis/repl-cli && onasis-repl start'));
+        process.exit(1);
+      }
+      
       const args = ['start'];
       
       if (options.mcp) args.push('--mcp');
@@ -326,12 +389,12 @@ program
       
       const repl = spawn('node', [replPath, ...args], {
         stdio: 'inherit',
-        cwd: process.cwd()
+        cwd: dirname(replPath)
       });
       
       repl.on('error', (err) => {
         console.error(colors.error('Failed to start REPL:'), err.message);
-        console.log(colors.muted('Make sure the REPL package is built: cd packages/repl-cli && bun run build'));
+        console.log(colors.muted(`Make sure the REPL package is built: cd ${dirname(replPath)} && bun run build`));
         process.exit(1);
       });
       
@@ -340,7 +403,7 @@ program
       });
     } catch (error) {
       console.error(colors.error('Failed to start REPL:'), error instanceof Error ? error.message : String(error));
-      console.log(colors.muted('Install the REPL package: cd packages/repl-cli && bun install && bun run build'));
+      console.log(colors.muted('Install the REPL package: cd apps/lanonasis-maas/packages/repl-cli && bun install && bun run build'));
       process.exit(1);
     }
   });

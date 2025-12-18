@@ -9,6 +9,7 @@
     "strict": false,
     "noImplicitAny": false,
     "strictNullChecks": false,
+    "isolatedModules": true,
     "outDir": "./dist",
     "rootDir": "./src",
     "declaration": true,

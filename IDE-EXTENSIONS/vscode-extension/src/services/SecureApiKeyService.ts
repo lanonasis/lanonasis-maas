@@ -2,18 +2,28 @@ import * as vscode from 'vscode';
 import * as http from 'http';
 import * as crypto from 'crypto';
 import { URL, URLSearchParams } from 'url';
+import { ensureApiKeyHash, isSha256Hash } from '../utils/hash-utils';
 
 /**
  * Secure API Key Service
  * Manages API keys using VS Code SecretStorage API
  * Supports both OAuth and direct API key authentication
  */
+export type CredentialType = 'oauth' | 'apiKey';
+
+export interface StoredCredential {
+    type: CredentialType;
+    token: string;
+}
+
 export class SecureApiKeyService {
     private static readonly API_KEY_KEY = 'lanonasis.apiKey';
+  private static readonly API_KEY_RAW_KEY = 'lanonasis.apiKey.raw';
     private static readonly AUTH_TOKEN_KEY = 'lanonasis.authToken';
     private static readonly REFRESH_TOKEN_KEY = 'lanonasis.refreshToken';
+    private static readonly CREDENTIAL_TYPE_KEY = 'lanonasis.credentialType';
     private static readonly CALLBACK_PORT = 8080;
-    
+
     private context: vscode.ExtensionContext;
     private outputChannel: vscode.OutputChannel;
     private migrationCompleted: boolean = false;
@@ -41,10 +51,9 @@ export class SecureApiKeyService {
         }
 
         // Check OAuth token
-        const authHeader = await this.getAuthenticationHeader();
-        if (authHeader) {
-            // Extract token from Bearer header
-            return authHeader.replace('Bearer ', '');
+        const credential = await this.getStoredCredentials();
+        if (credential?.type === 'oauth') {
+            return credential.token;
         }
 
         // Prompt user if not available
@@ -53,11 +62,53 @@ export class SecureApiKeyService {
 
     /**
      * Get API key from secure storage
+     * CRITICAL FIX: OAuth tokens must not be hashed - return them as-is
      */
     async getApiKey(): Promise<string | null> {
         try {
+      const rawKey = await this.context.secrets.get(SecureApiKeyService.API_KEY_RAW_KEY);
+      if (rawKey) {
+        return rawKey;
+      }
+
             const apiKey = await this.context.secrets.get(SecureApiKeyService.API_KEY_KEY);
-            return apiKey || null;
+            if (!apiKey) {
+                return null;
+            }
+
+            // Check if this is an OAuth token (stored unhashed with credential type)
+            const storedType = await this.context.secrets.get(SecureApiKeyService.CREDENTIAL_TYPE_KEY) as CredentialType | null;
+
+            // OAuth tokens should NEVER be hashed - they are signed JWTs
+            if (storedType === 'oauth' || this.looksLikeJwt(apiKey)) {
+                this.log('Retrieved OAuth token from secure storage (unhashed)');
+                return apiKey;
+            }
+
+      // If the stored value is a hash, prompt user to re-enter raw key to migrate
+      if (isSha256Hash(apiKey)) {
+        const selection = await vscode.window.showWarningMessage(
+          'Your API key needs to be re-entered to finish authentication.',
+          'Re-enter API Key',
+          'Cancel'
+        );
+
+        if (selection === 'Re-enter API Key') {
+          const newKey = await this.promptForApiKeyEntry();
+          if (newKey) {
+            // Ensure migration stores the raw key even if prompt was mocked
+            await this.storeApiKey(newKey, 'apiKey');
+            return newKey;
+          }
+        }
+
+        return null;
+      }
+
+      // Legacy plaintext API key stored in API_KEY_KEY - migrate to raw slot
+      await this.context.secrets.store(SecureApiKeyService.API_KEY_RAW_KEY, apiKey);
+      this.log('Migrated plaintext API key to raw storage');
+      return apiKey;
         } catch (error) {
             this.logError('Failed to retrieve API key from secure storage', error);
             return null;
@@ -159,7 +210,7 @@ export class SecureApiKeyService {
         });
 
         if (apiKey) {
-            await this.storeApiKey(apiKey);
+            await this.storeApiKey(apiKey, 'apiKey');
             await this.context.secrets.delete(SecureApiKeyService.AUTH_TOKEN_KEY);
             await this.context.secrets.delete(SecureApiKeyService.REFRESH_TOKEN_KEY);
             this.log('API key stored securely');
@@ -242,7 +293,7 @@ export class SecureApiKeyService {
                                 const token = await this.exchangeCodeForToken(code, codeVerifier, redirectUri, authUrl);
 
                                 // Store token securely
-                                await this.storeApiKey(token.access_token);
+                                await this.storeApiKey(token.access_token, 'oauth');
                                 if (token.refresh_token) {
                                     await this.context.secrets.store(SecureApiKeyService.REFRESH_TOKEN_KEY, token.refresh_token);
                                 }
@@ -253,7 +304,7 @@ export class SecureApiKeyService {
                                   <html>
                                     <head><title>Authentication Success</title></head>
                                     <body>
-                                      <h1 style="color: green;">? Authentication Successful!</h1>
+                                      <h1 style="color: green;">✓ Authentication Successful!</h1>
                                       <p>You can close this window and return to VS Code.</p>
                                       <script>setTimeout(() => window.close(), 2000);</script>
                                     </body>
@@ -280,8 +331,21 @@ export class SecureApiKeyService {
                     }
                 });
 
+                // Add error handling for server
+                server.on('error', (err: NodeJS.ErrnoException) => {
+                    if (timeoutId) clearTimeout(timeoutId);
+
+                    if (err.code === 'EADDRINUSE') {
+                        reject(new Error(`Port ${SecureApiKeyService.CALLBACK_PORT} is already in use. Please close any applications using this port and try again.`));
+                    } else {
+                        reject(new Error(`Failed to start OAuth callback server: ${err.message}`));
+                    }
+                });
+
                 server.listen(SecureApiKeyService.CALLBACK_PORT, 'localhost', () => {
-                    // Open browser
+                    this.outputChannel.appendLine(`OAuth callback server listening on port ${SecureApiKeyService.CALLBACK_PORT}`);
+
+                    // Open browser only after server is ready
                     vscode.env.openExternal(vscode.Uri.parse(authUrlObj.toString()));
                 });
 
@@ -302,26 +366,132 @@ export class SecureApiKeyService {
      * Get authentication header (OAuth token or API key)
      */
     async getAuthenticationHeader(): Promise<string | null> {
-        // Check for OAuth token first
+        const credential = await this.getStoredCredentials();
+        if (credential?.type === 'oauth') {
+            return `Bearer ${credential.token}`;
+        }
+        return null;
+    }
+
+    /**
+     * Get the active credentials (OAuth token vs API key) for downstream services
+     * Automatically refreshes expired OAuth tokens using stored refresh token
+     */
+    async getStoredCredentials(): Promise<StoredCredential | null> {
+        // Prefer OAuth tokens when available
         const authToken = await this.context.secrets.get(SecureApiKeyService.AUTH_TOKEN_KEY);
         if (authToken) {
             try {
                 const token = JSON.parse(authToken);
-                if (this.isTokenValid(token)) {
-                    return `Bearer ${token.access_token}`;
+                if (token?.access_token) {
+                    // Check if token is still valid
+                    if (this.isTokenValid(token)) {
+                        return { type: 'oauth', token: token.access_token };
+                    }
+
+                    // Token expired - try to refresh
+                    this.log('Access token expired, attempting refresh...');
+                    const refreshedToken = await this.refreshAccessToken();
+                    if (refreshedToken) {
+                        return { type: 'oauth', token: refreshedToken };
+                    }
+
+                    // Refresh failed - clear expired credentials
+                    this.log('Token refresh failed, clearing expired credentials');
+                    await this.deleteApiKey();
+                    return null;
                 }
-            } catch {
-                // Invalid token format, continue to API key
+            } catch (error) {
+                this.logError('Failed to parse stored OAuth token', error);
             }
         }
 
-        // Fallback to API key
         const apiKey = await this.getApiKey();
         if (apiKey) {
-            return `Bearer ${apiKey}`;
+            const storedType = await this.context.secrets.get(SecureApiKeyService.CREDENTIAL_TYPE_KEY) as CredentialType | null;
+            const inferredType: CredentialType = storedType === 'oauth' || storedType === 'apiKey'
+                ? storedType
+                : (this.looksLikeJwt(apiKey) ? 'oauth' : 'apiKey');
+            return { type: inferredType, token: apiKey };
         }
 
         return null;
+    }
+
+    /**
+     * Refresh access token using stored refresh token
+     * Returns new access token on success, null on failure
+     */
+    private async refreshAccessToken(): Promise<string | null> {
+        try {
+            const refreshToken = await this.context.secrets.get(SecureApiKeyService.REFRESH_TOKEN_KEY);
+            if (!refreshToken) {
+                this.log('No refresh token available');
+                return null;
+            }
+
+            // Get auth URL from configuration
+            const config = vscode.workspace.getConfiguration('lanonasis');
+            const authUrl = config.get<string>('authUrl') || 'https://auth.lanonasis.com';
+            const tokenUrl = new URL('/oauth/token', authUrl);
+
+            this.log(`Refreshing token via ${tokenUrl.toString()}`);
+
+            const body = new URLSearchParams({
+                grant_type: 'refresh_token',
+                client_id: 'vscode-extension',
+                refresh_token: refreshToken
+            });
+
+            const response = await fetch(tokenUrl.toString(), {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'Accept': 'application/json'
+                },
+                body: body.toString()
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                this.logError(`Token refresh failed: ${response.status}`, errorText);
+
+                // If refresh token is invalid/expired, clear it
+                if (response.status === 400 || response.status === 401) {
+                    await this.context.secrets.delete(SecureApiKeyService.REFRESH_TOKEN_KEY);
+                }
+                return null;
+            }
+
+            const tokenData = await response.json() as {
+                access_token: string;
+                refresh_token?: string;
+                expires_in?: number;
+            };
+
+            // Store new access token with expiration
+            const newToken = {
+                access_token: tokenData.access_token,
+                expires_at: Date.now() + (tokenData.expires_in ? tokenData.expires_in * 1000 : 3600000)
+            };
+            await this.context.secrets.store(SecureApiKeyService.AUTH_TOKEN_KEY, JSON.stringify(newToken));
+
+            // Also update the API_KEY_KEY for backward compatibility
+            await this.storeApiKey(tokenData.access_token, 'oauth');
+
+            // Update refresh token if a new one was issued (token rotation)
+            if (tokenData.refresh_token) {
+                await this.context.secrets.store(SecureApiKeyService.REFRESH_TOKEN_KEY, tokenData.refresh_token);
+                this.log('Refresh token rotated');
+            }
+
+            this.log('Access token refreshed successfully');
+            return tokenData.access_token;
+
+        } catch (error) {
+            this.logError('Token refresh error', error);
+            return null;
+        }
     }
 
     /**
@@ -329,16 +499,34 @@ export class SecureApiKeyService {
      */
     async deleteApiKey(): Promise<void> {
         await this.context.secrets.delete(SecureApiKeyService.API_KEY_KEY);
+    await this.context.secrets.delete(SecureApiKeyService.API_KEY_RAW_KEY);
         await this.context.secrets.delete(SecureApiKeyService.AUTH_TOKEN_KEY);
         await this.context.secrets.delete(SecureApiKeyService.REFRESH_TOKEN_KEY);
+        await this.context.secrets.delete(SecureApiKeyService.CREDENTIAL_TYPE_KEY);
         this.log('API key removed from secure storage');
     }
 
     /**
      * Store API key securely
+   *
+   * Transport vs storage contract:
+   * - Transport: always use RAW secret for outbound auth (X-API-Key or Bearer).
+   * - Storage/DB compare: keep a hash only for at-rest verification, never send the hash as a credential.
+     * NOTE: OAuth tokens should NOT be hashed - they are signed JWTs that must be sent as-is
+     * Only regular API keys (lns_...) should be hashed for security
      */
-    private async storeApiKey(apiKey: string): Promise<void> {
-        await this.context.secrets.store(SecureApiKeyService.API_KEY_KEY, apiKey);
+    private async storeApiKey(apiKey: string, type: CredentialType): Promise<void> {
+    // Store raw key for transport; store hash separately for legacy/backward-compat
+    if (type === 'oauth') {
+      await this.context.secrets.store(SecureApiKeyService.API_KEY_RAW_KEY, apiKey);
+      await this.context.secrets.store(SecureApiKeyService.API_KEY_KEY, apiKey);
+      await this.context.secrets.store(SecureApiKeyService.CREDENTIAL_TYPE_KEY, type);
+      return;
+    }
+
+    await this.context.secrets.store(SecureApiKeyService.API_KEY_RAW_KEY, apiKey);
+    await this.context.secrets.store(SecureApiKeyService.API_KEY_KEY, ensureApiKeyHash(apiKey));
+        await this.context.secrets.store(SecureApiKeyService.CREDENTIAL_TYPE_KEY, type);
     }
 
     /**
@@ -362,7 +550,7 @@ export class SecureApiKeyService {
 
         if (legacyKey) {
             // Migrate to secure storage
-            await this.storeApiKey(legacyKey);
+            await this.storeApiKey(legacyKey, 'apiKey');
             this.log('Migrated API key from configuration to secure storage');
 
             // Optionally clear from config (but keep it for now for backward compatibility)
@@ -436,6 +624,15 @@ export class SecureApiKeyService {
     private isTokenValid(token: { expires_at?: number }): boolean {
         if (!token.expires_at) return true;
         return Date.now() < token.expires_at - 60000; // 1 minute buffer
+    }
+
+    private looksLikeJwt(value: string): boolean {
+        const parts = value.split('.');
+        if (parts.length !== 3) {
+            return false;
+        }
+        const jwtSegment = /^[A-Za-z0-9-_]+$/;
+        return parts.every(segment => jwtSegment.test(segment));
     }
 
     /**

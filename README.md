@@ -27,9 +27,9 @@ onasis --help       # Golden Contract compliant interface
 onasis guide
 
 # Or quick manual setup
-onasis init                                    # Initialize configuration
-onasis login --vendor-key pk_xxx.sk_xxx      # Authenticate with vendor key
-onasis health                                 # Verify system health
+onasis init                                      # Initialize configuration
+onasis login --vendor-key <your-vendor-key>      # Authenticate with vendor key
+onasis health                                   # Verify system health
 
 # Essential operations
 onasis memory create --title "My Memory" --content "Content"
@@ -42,7 +42,7 @@ onasis memory search "query"
 #### 🔐 Multiple Authentication Methods
 ```bash
 # Vendor Key (Recommended for API integration)
-onasis login --vendor-key pk_xxxxx.sk_xxxxx
+onasis login --vendor-key <your-vendor-key>
 
 # OAuth Browser Flow
 onasis login --oauth
@@ -129,7 +129,7 @@ GET https://api.lanonasis.com/.well-known/onasis.json
 ```
 
 ### Authentication Standards
-- **Vendor Keys**: `pk_xxxxx.sk_xxxxx` format
+- **Vendor Keys**: Copy the value from your dashboard (format may vary)
 - **JWT Tokens**: Project-scoped authentication
 - **Request Correlation**: UUID-based request tracking
 - **Security Headers**: `X-Project-Scope`, `X-Auth-Method`, `X-Request-ID`
@@ -314,7 +314,7 @@ MIT License - see [LICENSE](LICENSE) for details.
 | `verify-services.sh` | `onasis health` |
 | `setup-essential-secrets.sh` | `onasis init && onasis login` |
 | `deploy.sh` | `onasis deploy status` |
-| Manual auth setup | `onasis login --vendor-key pk_xxx.sk_xxx` |
+| Manual auth setup | `onasis login --vendor-key <your-vendor-key>` |
 
 **📖 Migration Guide**: See [ARCHIVE_MIGRATION_LOG.md](ARCHIVE_MIGRATION_LOG.md) for complete transition details.
 

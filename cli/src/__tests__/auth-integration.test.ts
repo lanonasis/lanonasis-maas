@@ -154,10 +154,10 @@ describe('Authentication Integration Tests', () => {
             expect(config.get('authMethod')).toBe('vendor_key');
         });
 
-        it('should reject invalid vendor keys', async () => {
+        vendorKeyRequiredTest('should reject invalid vendor keys', async () => {
             const invalidKey = 'invalid-key';
 
-            await expect(config.setVendorKey(invalidKey)).rejects.toThrow(/Vendor key validation failed/i);
+            await expect(config.setVendorKey(invalidKey)).rejects.toThrow(/Vendor key is invalid/i);
         });
     });
 

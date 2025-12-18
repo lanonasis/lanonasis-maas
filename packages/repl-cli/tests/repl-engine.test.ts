@@ -33,5 +33,28 @@ describe('ReplEngine', () => {
     expect(commands).toContain('search');
     expect(commands).toContain('help');
     expect(commands).toContain('exit');
+    expect(commands).toContain('nl');
+    expect(commands).toContain('reset');
+  });
+
+  it('should initialize orchestrator with model configuration', () => {
+    const modelConfig = { ...config, openaiModel: 'gpt-4' };
+    const engine = new ReplEngine(modelConfig);
+    expect(engine['orchestrator']['model']).toBe('gpt-4');
+  });
+
+  it('should initialize orchestrator with user context', () => {
+    const userContextConfig = {
+      ...config,
+      userContext: {
+        name: 'Test User',
+        projects: ['project1', 'project2']
+      }
+    };
+    const engine = new ReplEngine(userContextConfig);
+    expect(engine['orchestrator']['userContext']).toEqual({
+      name: 'Test User',
+      projects: ['project1', 'project2']
+    });
   });
 });

@@ -46,7 +46,7 @@ class StdioTransport extends EventEmitter implements Transport {
 
   constructor(config: TransportConfig) {
     super();
-    
+
     if (!config.command) {
       throw new Error('Command required for stdio transport');
     }
@@ -92,7 +92,7 @@ class HttpTransport extends EventEmitter implements Transport {
 
   constructor(config: TransportConfig) {
     super();
-    
+
     if (!config.url) {
       throw new Error('URL required for HTTP transport');
     }
@@ -100,7 +100,7 @@ class HttpTransport extends EventEmitter implements Transport {
     this.url = config.url;
     this.headers = config.headers || {};
     this.auth = config.auth;
-    
+
     if (this.auth) {
       this.setupAuthentication();
     }
@@ -175,7 +175,7 @@ class WebSocketTransport extends EventEmitter implements Transport {
 
   constructor(config: TransportConfig) {
     super();
-    
+
     if (!config.url) {
       throw new Error('URL required for WebSocket transport');
     }
@@ -236,7 +236,7 @@ class WebSocketTransport extends EventEmitter implements Transport {
         this.ws.on('close', (code, reason) => {
           this.connected = false;
           this.emit('disconnected', { code, reason: reason.toString() });
-          
+
           if (this.shouldReconnect()) {
             this.scheduleReconnect();
           }
@@ -257,7 +257,7 @@ class WebSocketTransport extends EventEmitter implements Transport {
 
   private shouldReconnect(): boolean {
     if (!this.reconnectConfig?.enabled) return false;
-    
+
     const maxAttempts = this.reconnectConfig.maxAttempts || 5;
     return this.reconnectAttempts < maxAttempts;
   }
@@ -265,7 +265,7 @@ class WebSocketTransport extends EventEmitter implements Transport {
   private scheduleReconnect(): void {
     const delay = this.reconnectConfig?.delay || 5000;
     const backoff = Math.min(delay * Math.pow(2, this.reconnectAttempts), 30000);
-    
+
     this.reconnectAttempts++;
     console.log(chalk.yellow(
       `⏳ Reconnecting WebSocket in ${backoff}ms (attempt ${this.reconnectAttempts})...`
@@ -298,12 +298,12 @@ class WebSocketTransport extends EventEmitter implements Transport {
     if (this.reconnectTimer) {
       clearTimeout(this.reconnectTimer);
     }
-    
+
     if (this.ws) {
       this.ws.close();
       this.ws = null;
     }
-    
+
     this.connected = false;
     this.removeAllListeners();
   }
@@ -324,7 +324,7 @@ class SSETransport extends EventEmitter implements Transport {
 
   constructor(config: TransportConfig) {
     super();
-    
+
     if (!config.url) {
       throw new Error('URL required for SSE transport');
     }
@@ -336,7 +336,7 @@ class SSETransport extends EventEmitter implements Transport {
   async connect(): Promise<void> {
     // Dynamic import for EventSource
     const { EventSource } = await import('eventsource');
-    
+
     // EventSource doesn't support headers directly
     this.eventSource = new EventSource(this.url);
 
@@ -395,7 +395,7 @@ export class MCPTransportManager {
    * Create a transport based on configuration
    */
   async createTransport(
-    name: string, 
+    name: string,
     config: TransportConfig
   ): Promise<Transport> {
     // Store config for potential reconnection
@@ -427,7 +427,7 @@ export class MCPTransportManager {
     }
 
     this.transports.set(name, transport);
-    
+
     // Setup event forwarding
     this.setupEventForwarding(name, transport);
 
@@ -462,7 +462,7 @@ export class MCPTransportManager {
    * Create stdio transport helper
    */
   async createStdioTransport(
-    command: string, 
+    command: string,
     args: string[] = []
   ): Promise<StdioClientTransport> {
     const transport = new StdioTransport({
@@ -470,7 +470,7 @@ export class MCPTransportManager {
       command,
       args
     });
-    
+
     return transport.getInternalTransport();
   }
 
@@ -515,7 +515,7 @@ export class MCPTransportManager {
     const closePromises = Array.from(this.transports.values()).map(
       transport => transport.close()
     );
-    
+
     await Promise.all(closePromises);
     this.transports.clear();
     this.configs.clear();
@@ -538,11 +538,11 @@ export class MCPTransportManager {
    */
   getStatuses(): Record<string, boolean> {
     const statuses: Record<string, boolean> = {};
-    
-    for (const [name, transport] of this.transports) {
+
+    this.transports.forEach((transport, name) => {
       statuses[name] = transport.isConnected();
-    }
-    
+    });
+
     return statuses;
   }
 
@@ -557,7 +557,7 @@ export class MCPTransportManager {
 
     // Close existing if any
     await this.closeTransport(name);
-    
+
     // Create new transport
     return this.createTransport(name, config);
   }

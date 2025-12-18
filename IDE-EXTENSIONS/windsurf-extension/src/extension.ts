@@ -8,12 +8,31 @@ import { ApiKeyService } from './services/ApiKeyService';
 import { WindsurfAiAssistant } from './utils/WindsurfAiAssistant';
 import { AuthenticationService } from './auth/AuthenticationService';
 import { MemoryType } from './types/memory';
+import {
+    createWindsurfAdapter,
+    SecureApiKeyService
+} from '@lanonasis/ide-extension-core';
 
-export function activate(context: vscode.ExtensionContext) {
+export async function activate(context: vscode.ExtensionContext) {
     console.log('Lanonasis Memory Extension for Windsurf is now active');
 
-    // Initialize authentication service with Windsurf-optimized settings
-    const authService = new AuthenticationService(context);
+    const extensionVersion = '1.4.5';
+    const outputChannel = vscode.window.createOutputChannel('LanOnasis');
+    const adapter = createWindsurfAdapter(
+        { context, outputChannel, vscode },
+        {
+            ideName: 'Windsurf',
+            extensionName: 'lanonasis-memory-windsurf',
+            extensionDisplayName: 'LanOnasis Memory Assistant',
+            commandPrefix: 'lanonasis',
+            userAgent: `Windsurf/${vscode.version} LanOnasis/${extensionVersion}`
+        }
+    );
+
+    // Initialize authentication service with shared core (OAuth + API key + secure storage)
+    const secureAuthService = new SecureApiKeyService(adapter);
+    const authService = new AuthenticationService(adapter, secureAuthService);
+    await authService.initialize();
     
     // Initialize services
     const memoryService = new MemoryService(authService);
@@ -120,9 +139,13 @@ export function activate(context: vscode.ExtensionContext) {
     const refreshInterval = config.get<number>('autoRefreshInterval', 300000); // 5 minutes default
     
     const refreshTimer = setInterval(() => {
-        if (authService.isAuthenticated()) {
-            memoryTreeProvider.refresh();
-        }
+        authService.checkAuthenticationStatus()
+            .then(isAuthed => {
+                if (isAuthed) {
+                    memoryTreeProvider.refresh();
+                }
+            })
+            .catch(() => undefined);
     }, refreshInterval);
     
     context.subscriptions.push({ dispose: () => clearInterval(refreshTimer) });

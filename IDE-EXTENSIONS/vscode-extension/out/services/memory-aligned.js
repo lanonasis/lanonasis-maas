@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.createTopicSchema = exports.searchMemorySchema = exports.updateMemorySchema = exports.createMemorySchema = void 0;
 const zod_1 = require("zod");
+const ide_extension_core_1 = require("@lanonasis/ide-extension-core");
 /**
  * @swagger
  * components:
@@ -43,15 +44,17 @@ const zod_1 = require("zod");
  *         metadata:
  *           type: object
  */
+const coreCreate = ide_extension_core_1.CreateMemoryRequestSchema.shape;
+const ExtendedMemoryType = zod_1.z.union([ide_extension_core_1.MemoryType, zod_1.z.literal('conversation')]);
 exports.createMemorySchema = zod_1.z.object({
-    title: zod_1.z.string().min(1).max(500),
-    content: zod_1.z.string().min(1).max(50000),
+    title: coreCreate.title.max(500),
+    content: coreCreate.content.max(50000),
     summary: zod_1.z.string().max(1000).optional(),
-    memory_type: zod_1.z.enum(['conversation', 'knowledge', 'project', 'context', 'reference']).default('context'),
+    memory_type: ExtendedMemoryType.default('context'),
     topic_id: zod_1.z.string().uuid().optional(),
     project_ref: zod_1.z.string().max(100).optional(),
-    tags: zod_1.z.array(zod_1.z.string().min(1).max(50)).max(20).default([]),
-    metadata: zod_1.z.record(zod_1.z.unknown()).optional()
+    tags: coreCreate.tags.max(20),
+    metadata: coreCreate.metadata
 });
 /**
  * @swagger
@@ -95,16 +98,17 @@ exports.createMemorySchema = zod_1.z.object({
  *         metadata:
  *           type: object
  */
+const coreUpdate = ide_extension_core_1.UpdateMemoryRequestSchema.shape;
 exports.updateMemorySchema = zod_1.z.object({
-    title: zod_1.z.string().min(1).max(500).optional(),
-    content: zod_1.z.string().min(1).max(50000).optional(),
+    title: coreUpdate.title?.max(500),
+    content: coreUpdate.content?.max(50000),
     summary: zod_1.z.string().max(1000).optional(),
-    memory_type: zod_1.z.enum(['conversation', 'knowledge', 'project', 'context', 'reference']).optional(),
+    memory_type: ExtendedMemoryType.optional(),
     status: zod_1.z.enum(['active', 'archived', 'draft', 'deleted']).optional(),
     topic_id: zod_1.z.string().uuid().nullable().optional(),
     project_ref: zod_1.z.string().max(100).nullable().optional(),
-    tags: zod_1.z.array(zod_1.z.string().min(1).max(50)).max(20).optional(),
-    metadata: zod_1.z.record(zod_1.z.unknown()).optional()
+    tags: coreUpdate.tags?.max(20),
+    metadata: coreUpdate.metadata
 });
 /**
  * @swagger
@@ -148,15 +152,16 @@ exports.updateMemorySchema = zod_1.z.object({
  *           maximum: 1
  *           default: 0.7
  */
+const coreSearch = ide_extension_core_1.SearchMemoryRequestSchema.shape;
 exports.searchMemorySchema = zod_1.z.object({
-    query: zod_1.z.string().min(1).max(1000),
-    memory_types: zod_1.z.array(zod_1.z.enum(['conversation', 'knowledge', 'project', 'context', 'reference'])).optional(),
-    tags: zod_1.z.array(zod_1.z.string()).optional(),
+    query: coreSearch.query.max(1000),
+    memory_types: zod_1.z.array(ExtendedMemoryType).optional(),
+    tags: coreSearch.tags,
     topic_id: zod_1.z.string().uuid().optional(),
     project_ref: zod_1.z.string().optional(),
     status: zod_1.z.enum(['active', 'archived', 'draft', 'deleted']).default('active'),
-    limit: zod_1.z.number().int().min(1).max(100).default(20),
-    threshold: zod_1.z.number().min(0).max(1).default(0.7)
+    limit: coreSearch.limit,
+    threshold: coreSearch.threshold
 });
 /**
  * @swagger
