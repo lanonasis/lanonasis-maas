@@ -10,7 +10,7 @@ describe('AuthFlow Component', () => {
     vi.clearAllMocks();
   });
 
-  test('renders connect button when not authenticated', () => {
+  test('renders connect buttons when not authenticated', () => {
     render(
       <AuthFlow
         isAuthenticated={false}
@@ -21,7 +21,8 @@ describe('AuthFlow Component', () => {
       />
     );
 
-    expect(screen.getByText(/connect to lanonasis/i)).toBeInTheDocument();
+    expect(screen.getByTestId('btn-connect-browser')).toBeInTheDocument();
+    expect(screen.getByTestId('btn-enter-key')).toBeInTheDocument();
     expect(screen.queryByText(/disconnect/i)).not.toBeInTheDocument();
   });
 
@@ -51,7 +52,7 @@ describe('AuthFlow Component', () => {
       />
     );
 
-    const connectButton = screen.getByText(/connect to lanonasis/i);
+    const connectButton = screen.getByTestId('btn-connect-browser');
     fireEvent.click(connectButton);
 
     await waitFor(() => {
@@ -121,7 +122,7 @@ describe('AuthFlow Component', () => {
     );
 
     expect(screen.getAllByText(/oauth2/i).length).toBeGreaterThan(0);
-    expect(screen.getByText(/api key/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/api key/i).length).toBeGreaterThan(0);
   });
 
   test('shows API Key method info after switching tab', () => {
@@ -135,7 +136,7 @@ describe('AuthFlow Component', () => {
       />
     );
 
-    const apiKeyTab = screen.getByText(/api key/i);
+    const apiKeyTab = screen.getByRole('button', { name: /^api key$/i });
     fireEvent.click(apiKeyTab);
 
     expect(screen.getByText(/api key authentication/i)).toBeInTheDocument();
@@ -167,7 +168,7 @@ describe('AuthFlow Component', () => {
       />
     );
 
-    expect(screen.getByText(/connect to lanonasis/i)).toBeInTheDocument();
+    expect(screen.getByTestId('btn-connect-browser')).toBeInTheDocument();
   });
 
   test('disables connect button during loading', () => {
