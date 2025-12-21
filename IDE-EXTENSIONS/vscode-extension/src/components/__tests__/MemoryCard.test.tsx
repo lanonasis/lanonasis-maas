@@ -73,22 +73,16 @@ describe('MemoryCard Component', () => {
     expect(screen.getByTestId('tag-tag3')).toBeInTheDocument();
   });
 
-  test('displays copy button on hover', async () => {
+  test('shows copy button (hidden until hover via opacity)', () => {
     const memory = createMockMemory();
     render(<MemoryCard memory={memory} />);
 
+    const copyButton = screen.getByTestId('btn-copy-memory');
+    expect(copyButton).toBeInTheDocument();
+
     const card = screen.getByTestId(`memory-card-${memory.id}`);
-    
-    // Initially, copy button should not be visible
-    expect(screen.queryByTestId('btn-copy-memory')).not.toBeInTheDocument();
-
-    // Hover over the card
     fireEvent.mouseEnter(card);
-
-    // Copy button should appear
-    await waitFor(() => {
-      expect(screen.getByTestId('btn-copy-memory')).toBeInTheDocument();
-    });
+    expect(copyButton).toBeInTheDocument();
   });
 
   test('copies content to clipboard when copy button is clicked', async () => {
@@ -96,13 +90,6 @@ describe('MemoryCard Component', () => {
       content: 'Content to copy',
     });
     render(<MemoryCard memory={memory} />);
-
-    const card = screen.getByTestId(`memory-card-${memory.id}`);
-    fireEvent.mouseEnter(card);
-
-    await waitFor(() => {
-      expect(screen.getByTestId('btn-copy-memory')).toBeInTheDocument();
-    });
 
     const copyButton = screen.getByTestId('btn-copy-memory');
     fireEvent.click(copyButton);
@@ -114,21 +101,12 @@ describe('MemoryCard Component', () => {
     const memory = createMockMemory();
     render(<MemoryCard memory={memory} />);
 
-    const card = screen.getByTestId(`memory-card-${memory.id}`);
-    fireEvent.mouseEnter(card);
-
-    await waitFor(() => {
-      expect(screen.getByTestId('btn-copy-memory')).toBeInTheDocument();
-    });
-
     const copyButton = screen.getByTestId('btn-copy-memory');
     fireEvent.click(copyButton);
 
-    // Check icon should appear
-    await waitFor(() => {
-      const checkIcon = copyButton.querySelector('svg');
-      expect(checkIcon).toBeInTheDocument();
-    });
+    // Check icon should appear immediately after click
+    const checkIcon = copyButton.querySelector('svg');
+    expect(checkIcon).toBeInTheDocument();
   });
 
   test('displays correct icon component', () => {
@@ -196,13 +174,6 @@ describe('MemoryCard Component', () => {
       content: 'Special content to verify',
     });
     render(<MemoryCard memory={memory} />);
-
-    const card = screen.getByTestId(`memory-card-${memory.id}`);
-    fireEvent.mouseEnter(card);
-
-    await waitFor(() => {
-      expect(screen.getByTestId('btn-copy-memory')).toBeInTheDocument();
-    });
 
     const copyButton = screen.getByTestId('btn-copy-memory');
     fireEvent.click(copyButton);
