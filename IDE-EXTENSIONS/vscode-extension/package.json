@@ -472,7 +472,7 @@
         },
         "lanonasis.enableApiKeyManagement": {
           "type": "boolean",
-          "default": false,
+          "default": true,
           "description": "Enable API key management features (requires backend support)"
         },
         "lanonasis.defaultEnvironment": {
