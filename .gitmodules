@@ -1,4 +1,0 @@
-[submodule "mcp-server-unified"]
-	path = mcp-server-unified
-	url = https://github.com/lanonasis/onasis-mcp-server.git
-	branch = main
