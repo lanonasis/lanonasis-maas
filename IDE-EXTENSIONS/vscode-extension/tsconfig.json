@@ -25,7 +25,8 @@
     "types": [
       "vscode",
       "node",
-      "vitest/globals"
+      "vitest/globals",
+      "@testing-library/jest-dom"
     ],
     "moduleResolution": "node",
     "jsx": "react-jsx",
@@ -47,11 +48,12 @@
     }
   },
   "include": [
-    "src/**/*"
+    "src/**/*",
+    "vitest-shims.d.ts",
+    "vitest.config.ts"
   ],
   "exclude": [
     "node_modules",
-    "out",
-    "**/__tests__/**"
+    "out"
   ]
 }
