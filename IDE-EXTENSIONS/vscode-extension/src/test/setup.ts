@@ -1,5 +1,6 @@
-import '@testing-library/jest-dom';
-import { vi } from 'vitest';
+import '@testing-library/jest-dom/vitest';
+import { afterEach, vi } from 'vitest';
+import { cleanup } from '@testing-library/react';
 
 // Mock VS Code API
 const mockVSCode = {
@@ -34,6 +35,10 @@ Object.defineProperty(window, 'addEventListener', {
 Object.defineProperty(window, 'removeEventListener', {
   value: mockRemoveEventListener,
   writable: true,
+});
+
+afterEach(() => {
+  cleanup();
 });
 
 import type { Memory } from '../shared/types';
