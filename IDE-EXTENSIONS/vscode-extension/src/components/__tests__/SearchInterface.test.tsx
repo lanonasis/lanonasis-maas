@@ -1,3 +1,6 @@
+// @vitest-environment jsdom
+import React from 'react';
+import '@testing-library/jest-dom/vitest';
 import { describe, test, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import SearchInterface from '../SearchInterface';
@@ -168,7 +171,7 @@ describe('SearchInterface Component', () => {
     expect(screen.getByText(/use keywords/i)).toBeInTheDocument();
   });
 
-  test('clears input when onClear is called', async () => {
+  test('clears input when clear button is clicked', async () => {
     render(
       <SearchInterface
         onSearch={mockOnSearch}
@@ -187,7 +190,11 @@ describe('SearchInterface Component', () => {
 
     await waitFor(() => {
       expect(mockOnClear).toHaveBeenCalled();
+      expect(input).toHaveValue('');
     });
+
+    // Clear button should disappear once cleared
+    expect(screen.queryByTitle('Clear search')).not.toBeInTheDocument();
   });
 
   test('does not call onSearch with empty query', async () => {
@@ -206,9 +213,7 @@ describe('SearchInterface Component', () => {
     if (form) {
       fireEvent.submit(form);
 
-      await waitFor(() => {
-        expect(mockOnSearch).not.toHaveBeenCalled();
-      });
+      expect(mockOnSearch).not.toHaveBeenCalled();
     }
   });
 
@@ -241,11 +246,11 @@ describe('SearchInterface Component', () => {
       />
     );
 
-    const input = screen.getByRole('textbox');
-    fireEvent.change(input, { target: { value: 'test query' } });
-    
     // Clear button should be hidden when loading
     expect(screen.queryByTitle('Clear search')).not.toBeInTheDocument();
+
+    // Input should be disabled when loading
+    expect(screen.getByRole('textbox')).toBeDisabled();
   });
 
   test('disables input when loading', () => {
