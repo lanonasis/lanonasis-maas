@@ -570,10 +570,12 @@ export class MCPClient {
     // Use the proper SSE endpoint from config
     const sseUrl = this.config.getMCPSSEUrl() ?? `${serverUrl}/events`;
     const token = this.config.get<string>('token');
+    const vendorKey = this.config.get<string>('vendorKey');
+    const authKey = token || vendorKey || process.env.LANONASIS_API_KEY;
 
-    if (token) {
+    if (authKey) {
       // EventSource doesn't support headers directly, append token to URL
-      this.sseConnection = new EventSource(`${sseUrl}?token=${encodeURIComponent(token)}`);
+      this.sseConnection = new EventSource(`${sseUrl}?token=${encodeURIComponent(authKey)}`);
 
       this.sseConnection.onmessage = (event) => {
         try {
@@ -595,8 +597,10 @@ export class MCPClient {
    */
   private async initializeWebSocket(wsUrl: string): Promise<void> {
     const token = this.config.get<string>('token');
+    const vendorKey = this.config.get<string>('vendorKey');
+    const authKey = token || vendorKey || process.env.LANONASIS_API_KEY;
 
-    if (!token) {
+    if (!authKey) {
       throw new Error('API key required for WebSocket mode. Set LANONASIS_API_KEY or login first.');
     }
 
@@ -611,8 +615,8 @@ export class MCPClient {
         // Create new WebSocket connection with authentication
         this.wsConnection = new WebSocket(wsUrl, [], {
           headers: {
-            'Authorization': `Bearer ${token}`,
-            'X-API-Key': token
+            'Authorization': `Bearer ${authKey}`,
+            'X-API-Key': authKey
           }
         });
 
@@ -760,9 +764,11 @@ export class MCPClient {
    */
   private async checkRemoteHealth(): Promise<void> {
     const apiUrl = this.config.getMCPRestUrl() ?? 'https://mcp.lanonasis.com/api/v1';
-    const token = this.config.get('token');
+    const token = this.config.get<string>('token');
+    const vendorKey = this.config.get<string>('vendorKey');
+    const authKey = token || vendorKey || process.env.LANONASIS_API_KEY;
 
-    if (!token) {
+    if (!authKey) {
       throw new Error('No authentication token available');
     }
 
@@ -770,8 +776,8 @@ export class MCPClient {
       const axios = (await import('axios')).default;
       await axios.get(`${apiUrl}/health`, {
         headers: {
-          'Authorization': `Bearer ${token}`,
-          'x-api-key': String(token)
+          'Authorization': `Bearer ${authKey}`,
+          'X-API-Key': authKey
         },
         timeout: 5000
       });
@@ -898,9 +904,11 @@ export class MCPClient {
    */
   private async callRemoteTool(toolName: string, args: MCPToolArgs): Promise<MCPToolResponse> {
     const apiUrl = this.config.getMCPRestUrl() ?? 'https://mcp.lanonasis.com/api/v1';
-    const token = this.config.get('token');
+    const token = this.config.get<string>('token');
+    const vendorKey = this.config.get<string>('vendorKey');
+    const authKey = token || vendorKey || process.env.LANONASIS_API_KEY;
 
-    if (!token) {
+    if (!authKey) {
       throw new Error('Authentication required. Run "lanonasis auth login" first.');
     }
 
@@ -961,8 +969,8 @@ export class MCPClient {
         method: mapping.method,
         url: `${apiUrl}${endpoint}`,
         headers: {
-          'Authorization': `Bearer ${token}`,
-          'x-api-key': String(token),
+          'Authorization': `Bearer ${authKey}`,
+          'X-API-Key': authKey,
           'Content-Type': 'application/json'
         },
         data: mapping.transform ? mapping.transform(args) : undefined,

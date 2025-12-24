@@ -2,7 +2,6 @@ import axios from 'axios';
 import chalk from 'chalk';
 import { randomUUID } from 'crypto';
 import { CLIConfig } from './config.js';
-import { ensureApiKeyHash } from './hash-utils.js';
 export class APIClient {
     client;
     config;
@@ -31,7 +30,8 @@ export class APIClient {
             const vendorKey = this.config.getVendorKey();
             if (vendorKey) {
                 // Vendor key authentication (validated server-side)
-                config.headers['X-API-Key'] = ensureApiKeyHash(vendorKey);
+                // Send raw key - server handles hashing for comparison
+                config.headers['X-API-Key'] = vendorKey;
                 config.headers['X-Auth-Method'] = 'vendor_key';
             }
             else if (token) {
@@ -100,61 +100,62 @@ export class APIClient {
         return response.data;
     }
     // Memory operations - aligned with existing schema
+    // All memory endpoints use /api/v1/memory path
     async createMemory(data) {
-        const response = await this.client.post('/memory', data);
+        const response = await this.client.post('/api/v1/memory', data);
         return response.data;
     }
     async getMemories(params = {}) {
-        const response = await this.client.get('/memory', { params });
+        const response = await this.client.get('/api/v1/memory', { params });
         return response.data;
     }
     async getMemory(id) {
-        const response = await this.client.get(`/memory/${id}`);
+        const response = await this.client.get(`/api/v1/memory/${id}`);
         return response.data;
     }
     async updateMemory(id, data) {
-        const response = await this.client.put(`/memory/${id}`, data);
+        const response = await this.client.put(`/api/v1/memory/${id}`, data);
         return response.data;
     }
     async deleteMemory(id) {
-        await this.client.delete(`/memory/${id}`);
+        await this.client.delete(`/api/v1/memory/${id}`);
     }
     async searchMemories(query, options = {}) {
-        const response = await this.client.post('/memory/search', {
+        const response = await this.client.post('/api/v1/memory/search', {
             query,
             ...options
         });
         return response.data;
     }
     async getMemoryStats() {
-        const response = await this.client.get('/memory/stats');
+        const response = await this.client.get('/api/v1/memory/stats');
         return response.data;
     }
     async bulkDeleteMemories(memoryIds) {
-        const response = await this.client.post('/memory/bulk/delete', {
+        const response = await this.client.post('/api/v1/memory/bulk/delete', {
             memory_ids: memoryIds
         });
         return response.data;
     }
     // Topic operations - working with existing memory_topics table
     async createTopic(data) {
-        const response = await this.client.post('/topics', data);
+        const response = await this.client.post('/api/v1/topics', data);
         return response.data;
     }
     async getTopics() {
-        const response = await this.client.get('/topics');
+        const response = await this.client.get('/api/v1/topics');
         return response.data;
     }
     async getTopic(id) {
-        const response = await this.client.get(`/topics/${id}`);
+        const response = await this.client.get(`/api/v1/topics/${id}`);
         return response.data;
     }
     async updateTopic(id, data) {
-        const response = await this.client.put(`/topics/${id}`, data);
+        const response = await this.client.put(`/api/v1/topics/${id}`, data);
         return response.data;
     }
     async deleteTopic(id) {
-        await this.client.delete(`/topics/${id}`);
+        await this.client.delete(`/api/v1/topics/${id}`);
     }
     // Health check
     async getHealth() {
