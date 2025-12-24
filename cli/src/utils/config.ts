@@ -240,9 +240,11 @@ export class CLIConfig {
   }
 
   getApiUrl(): string {
-    return process.env.MEMORY_API_URL ||
+    const baseUrl = process.env.MEMORY_API_URL ||
       this.config.apiUrl ||
-      'https://api.lanonasis.com';
+      'https://mcp.lanonasis.com';
+    // Ensure we don't double-append /api/v1 - strip it if present since APIClient adds it
+    return baseUrl.replace(/\/api\/v1\/?$/, '');
   }
 
   // Get API URLs with fallbacks - try multiple endpoints
@@ -266,8 +268,8 @@ export class CLIConfig {
       if (!this.config.discoveredServices) {
         this.config.discoveredServices = {
           auth_base: 'https://auth.lanonasis.com',
-          memory_base: 'https://mcp.lanonasis.com/api/v1',
-          mcp_base: 'https://mcp.lanonasis.com/api/v1',
+          memory_base: 'https://mcp.lanonasis.com', // Base URL without /api/v1
+          mcp_base: 'https://mcp.lanonasis.com/api/v1', // Full MCP REST path
           mcp_ws_base: 'wss://mcp.lanonasis.com/ws',
           mcp_sse_base: 'https://mcp.lanonasis.com/api/v1/events',
           project_scope: 'lanonasis-maas'
@@ -330,14 +332,17 @@ export class CLIConfig {
         authBase = 'https://auth.lanonasis.com';
       }
 
-      const memoryBase = discovered.endpoints?.http || 'https://mcp.lanonasis.com/api/v1';
+      // Memory base should be the MCP base URL without /api/v1 suffix
+      // The API client will append the path as needed
+      const rawMemoryBase = discovered.endpoints?.http || 'https://mcp.lanonasis.com/api/v1';
+      const memoryBase = rawMemoryBase.replace(/\/api\/v1\/?$/, '') || 'https://mcp.lanonasis.com';
 
       this.config.discoveredServices = {
         auth_base: authBase || 'https://auth.lanonasis.com',
         memory_base: memoryBase,
-        mcp_base: memoryBase,
+        mcp_base: `${memoryBase}/api/v1`, // Full path for MCP REST calls
         mcp_ws_base: discovered.endpoints?.websocket || 'wss://mcp.lanonasis.com/ws',
-        mcp_sse_base: discovered.endpoints?.sse || 'https://mcp.lanonasis.com/api/v1/events',
+        mcp_sse_base: discovered.endpoints?.sse || `${memoryBase}/api/v1/events`,
         project_scope: 'lanonasis-maas'
       };
       this.config.apiUrl = memoryBase;
@@ -483,8 +488,8 @@ export class CLIConfig {
     const isDevEnvironment = nodeEnv === 'development' || nodeEnv === 'test';
 
     const defaultAuthBase = isDevEnvironment ? 'http://localhost:4000' : 'https://auth.lanonasis.com';
-    const defaultMemoryBase = isDevEnvironment ? 'http://localhost:4000/api/v1' : 'https://mcp.lanonasis.com/api/v1';
-    const defaultMcpBase = isDevEnvironment ? 'http://localhost:4100/api/v1' : 'https://mcp.lanonasis.com/api/v1';
+    const defaultMemoryBase = isDevEnvironment ? 'http://localhost:4000' : 'https://mcp.lanonasis.com'; // Base URL without /api/v1
+    const defaultMcpBase = isDevEnvironment ? 'http://localhost:4100/api/v1' : 'https://mcp.lanonasis.com/api/v1'; // Full MCP REST path
     const defaultMcpWsBase = isDevEnvironment ? 'ws://localhost:4100/ws' : 'wss://mcp.lanonasis.com/ws';
     const defaultMcpSseBase = isDevEnvironment ? 'http://localhost:4100/api/v1/events' : 'https://mcp.lanonasis.com/api/v1/events';
 
@@ -573,8 +578,8 @@ export class CLIConfig {
 
     const currentServices = this.config.discoveredServices ?? {
       auth_base: 'https://auth.lanonasis.com',
-      memory_base: 'https://mcp.lanonasis.com/api/v1',
-      mcp_base: 'https://mcp.lanonasis.com/api/v1',
+      memory_base: 'https://mcp.lanonasis.com', // Base URL without /api/v1
+      mcp_base: 'https://mcp.lanonasis.com/api/v1', // Full MCP REST path
       mcp_ws_base: 'wss://mcp.lanonasis.com/ws',
       mcp_sse_base: 'https://mcp.lanonasis.com/api/v1/events',
       project_scope: 'lanonasis-maas'
