@@ -87,7 +87,7 @@ export const ApiKeyManager = () => {
         () => Math.floor(Math.random() * 36).toString(36)
       ).join("");
       
-      const formattedKey = `lns_${randomKey}`; // Use lns_ prefix for consistency
+      const formattedKey = `lano_${randomKey}`; // Use lano_ prefix (aligned with auth-gateway)
       setGeneratedKey(formattedKey);
       
       if (user) {

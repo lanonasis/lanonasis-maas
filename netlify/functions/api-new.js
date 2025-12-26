@@ -170,11 +170,18 @@ app.use(async (req, res, next) => {
       
       // Validate vendor API key format (pk_*.sk_* or legacy sk_*)
       if (apiKey.includes('pk_') && apiKey.includes('.sk_')) {
-        // New vendor key format
+        // New vendor key format - should be looked up in database
+        // For now, use vendor-specific org from env or reject
+        const vendorOrgId = process.env.VENDOR_ORG_ID || process.env.DEFAULT_ORG_ID;
+        if (!vendorOrgId) {
+          console.warn(`[${req.id}] Vendor API key rejected - VENDOR_ORG_ID/DEFAULT_ORG_ID not configured`);
+          return res.status(401).json(createErrorEnvelope(req, 'Vendor API keys require org configuration', 'AuthError', 'VENDOR_ORG_NOT_CONFIGURED'));
+        }
+
         const [keyId, keySecret] = apiKey.split('.');
         req.user = {
           userId: 'vendor_' + keyId.replace('pk_', ''),
-          organizationId: 'vendor_org',
+          organizationId: vendorOrgId,
           plan: 'enterprise',
           role: 'vendor',
           auth_type: 'vendor_api_key',
@@ -182,15 +189,23 @@ app.use(async (req, res, next) => {
         };
         console.log(`[${req.id}] Vendor API key authentication successful`);
       } else if (apiKey.startsWith('sk_') || apiKey.includes('sk_live_') || apiKey.includes('pk_live_onasis_')) {
-        // Legacy API key format
+        // Legacy API key format - use env vars, reject if not configured
+        const legacyUserId = process.env.ADMIN_USER_ID;
+        const legacyOrgId = process.env.DEFAULT_ORG_ID;
+
+        if (!legacyUserId || !legacyOrgId) {
+          console.warn(`[${req.id}] Legacy API key rejected - ADMIN_USER_ID/DEFAULT_ORG_ID not configured`);
+          return res.status(401).json(createErrorEnvelope(req, 'Legacy API keys are deprecated. Please use a proper API key.', 'AuthError', 'LEGACY_KEY_DEPRECATED'));
+        }
+
         req.user = {
-          userId: 'ba2c1b22-3c4d-4a5b-aca3-881995d863d5',
-          organizationId: 'ba2c1b22-3c4d-4a5b-aca3-881995d863d5',
+          userId: legacyUserId,
+          organizationId: legacyOrgId,
           plan: 'enterprise',
           role: 'admin',
           auth_type: 'legacy_api_key'
         };
-        console.log(`[${req.id}] Legacy API key authentication successful`);
+        console.log(`[${req.id}] Legacy API key authentication successful (using env-configured IDs)`);
       } else {
         console.warn(`[${req.id}] Invalid API key format`);
         return res.status(401).json(createErrorEnvelope(req, 'Invalid API key format', 'AuthError', 'INVALID_API_KEY'));
@@ -203,19 +218,37 @@ app.use(async (req, res, next) => {
     if (authHeader && authHeader.startsWith('Bearer ')) {
       const token = authHeader.substring(7).trim();
       console.log(`[${req.id}] Authenticating with JWT Bearer token`);
-      
-      // For now, create user context based on token presence
-      // In production, this would validate against central auth or Supabase
-      req.user = {
-        userId: 'jwt_user_123',
-        organizationId: 'jwt_org_123', 
-        plan: 'pro',
-        role: 'user',
-        auth_type: 'jwt'
-      };
-      
-      console.log(`[${req.id}] JWT authentication successful`);
-      return next();
+
+      try {
+        // Decode JWT to extract user info (without verification for now - rely on upstream auth)
+        const parts = token.split('.');
+        if (parts.length !== 3) {
+          return res.status(401).json(createErrorEnvelope(req, 'Invalid JWT format', 'AuthError', 'INVALID_JWT'));
+        }
+
+        const payload = JSON.parse(Buffer.from(parts[1], 'base64').toString('utf-8'));
+        const userId = payload.sub || payload.user_id;
+        const organizationId = payload.organization_id || payload.org_id;
+
+        if (!userId || !organizationId) {
+          console.warn(`[${req.id}] JWT missing required claims (sub/user_id, organization_id)`);
+          return res.status(401).json(createErrorEnvelope(req, 'JWT missing required user or organization claims', 'AuthError', 'JWT_MISSING_CLAIMS'));
+        }
+
+        req.user = {
+          userId: userId,
+          organizationId: organizationId,
+          plan: payload.plan || 'pro',
+          role: payload.role || 'user',
+          auth_type: 'jwt'
+        };
+
+        console.log(`[${req.id}] JWT authentication successful for user ${userId}`);
+        return next();
+      } catch (jwtError) {
+        console.error(`[${req.id}] JWT decode error:`, jwtError);
+        return res.status(401).json(createErrorEnvelope(req, 'Invalid JWT token', 'AuthError', 'JWT_DECODE_ERROR'));
+      }
     }
 
     // No authentication provided for protected route
