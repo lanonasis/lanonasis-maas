@@ -44,10 +44,22 @@ const MemoryService_1 = require("./services/MemoryService");
 const EnhancedMemoryService_1 = require("./services/EnhancedMemoryService");
 const ApiKeyService_1 = require("./services/ApiKeyService");
 const AuthenticationService_1 = require("./auth/AuthenticationService");
+const ide_extension_core_1 = require("@lanonasis/ide-extension-core");
 async function activate(context) {
     console.log('Lanonasis Memory Extension for Cursor is now active');
-    // Initialize authentication service with auto-redirect capabilities
-    const authService = new AuthenticationService_1.AuthenticationService(context);
+    const extensionVersion = '1.4.5';
+    const outputChannel = vscode.window.createOutputChannel('LanOnasis');
+    const adapter = (0, ide_extension_core_1.createCursorAdapter)({ context, outputChannel, vscode }, {
+        ideName: 'Cursor',
+        extensionName: 'lanonasis-memory-cursor',
+        extensionDisplayName: 'LanOnasis Memory Assistant',
+        commandPrefix: 'lanonasis',
+        userAgent: `Cursor/${vscode.version} LanOnasis/${extensionVersion}`
+    });
+    // Initialize authentication service with shared core (OAuth + API key + secure storage)
+    const secureAuthService = new ide_extension_core_1.SecureApiKeyService(adapter);
+    const authService = new AuthenticationService_1.AuthenticationService(adapter, secureAuthService);
+    await authService.initialize();
     // Initialize services - use Enhanced version when available
     let memoryService;
     try {
@@ -60,7 +72,7 @@ async function activate(context) {
         console.warn('Enhanced Memory Service not available, using basic service:', error);
         memoryService = new MemoryService_1.MemoryService(authService);
     }
-    const apiKeyService = new ApiKeyService_1.ApiKeyService(context);
+    const apiKeyService = new ApiKeyService_1.ApiKeyService();
     // Set auth service for secure API key access
     apiKeyService.setAuthService(authService);
     // Initialize sidebar provider (modern UI)
@@ -141,9 +153,13 @@ async function activate(context) {
     const config = vscode.workspace.getConfiguration('lanonasis');
     const refreshInterval = config.get('autoRefreshInterval', 300000); // 5 minutes default
     const refreshTimer = setInterval(() => {
-        if (authService.isAuthenticated()) {
-            memoryTreeProvider.refresh();
-        }
+        authService.checkAuthenticationStatus()
+            .then(isAuthed => {
+            if (isAuthed) {
+                memoryTreeProvider.refresh();
+            }
+        })
+            .catch(() => undefined);
     }, refreshInterval);
     context.subscriptions.push({ dispose: () => clearInterval(refreshTimer) });
     // Show welcome message if first time

@@ -44,10 +44,22 @@ const MemoryService_1 = require("./services/MemoryService");
 const ApiKeyService_1 = require("./services/ApiKeyService");
 const WindsurfAiAssistant_1 = require("./utils/WindsurfAiAssistant");
 const AuthenticationService_1 = require("./auth/AuthenticationService");
-function activate(context) {
+const ide_extension_core_1 = require("@lanonasis/ide-extension-core");
+async function activate(context) {
     console.log('Lanonasis Memory Extension for Windsurf is now active');
-    // Initialize authentication service with Windsurf-optimized settings
-    const authService = new AuthenticationService_1.AuthenticationService(context);
+    const extensionVersion = '1.4.5';
+    const outputChannel = vscode.window.createOutputChannel('LanOnasis');
+    const adapter = (0, ide_extension_core_1.createWindsurfAdapter)({ context, outputChannel, vscode }, {
+        ideName: 'Windsurf',
+        extensionName: 'lanonasis-memory-windsurf',
+        extensionDisplayName: 'LanOnasis Memory Assistant',
+        commandPrefix: 'lanonasis',
+        userAgent: `Windsurf/${vscode.version} LanOnasis/${extensionVersion}`
+    });
+    // Initialize authentication service with shared core (OAuth + API key + secure storage)
+    const secureAuthService = new ide_extension_core_1.SecureApiKeyService(adapter);
+    const authService = new AuthenticationService_1.AuthenticationService(adapter, secureAuthService);
+    await authService.initialize();
     // Initialize services
     const memoryService = new MemoryService_1.MemoryService(authService);
     const apiKeyService = new ApiKeyService_1.ApiKeyService();
@@ -119,9 +131,13 @@ function activate(context) {
     const config = vscode.workspace.getConfiguration('lanonasis');
     const refreshInterval = config.get('autoRefreshInterval', 300000); // 5 minutes default
     const refreshTimer = setInterval(() => {
-        if (authService.isAuthenticated()) {
-            memoryTreeProvider.refresh();
-        }
+        authService.checkAuthenticationStatus()
+            .then(isAuthed => {
+            if (isAuthed) {
+                memoryTreeProvider.refresh();
+            }
+        })
+            .catch(() => undefined);
     }, refreshInterval);
     context.subscriptions.push({ dispose: () => clearInterval(refreshTimer) });
     // Windsurf-specific workspace context monitoring
