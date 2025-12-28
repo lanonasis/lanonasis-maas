@@ -2,29 +2,33 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.searchMemorySchema = exports.updateMemorySchema = exports.createMemorySchema = void 0;
 const zod_1 = require("zod");
+const ide_extension_core_1 = require("@lanonasis/ide-extension-core");
 // Zod schemas for validation
+const coreCreate = ide_extension_core_1.CreateMemoryRequestSchema.shape;
 exports.createMemorySchema = zod_1.z.object({
-    title: zod_1.z.string().min(1).max(200),
-    content: zod_1.z.string().min(1).max(50000),
-    memory_type: zod_1.z.enum(['context', 'project', 'knowledge', 'reference', 'personal', 'workflow']).default('context'),
-    tags: zod_1.z.array(zod_1.z.string().min(1).max(50)).max(10).default([]),
+    title: coreCreate.title,
+    content: coreCreate.content,
+    memory_type: ide_extension_core_1.MemoryType.default('context'),
+    tags: coreCreate.tags,
     topic_id: zod_1.z.string().uuid().optional(),
-    metadata: zod_1.z.record(zod_1.z.unknown()).optional()
+    metadata: coreCreate.metadata
 });
+const coreUpdate = ide_extension_core_1.UpdateMemoryRequestSchema.shape;
 exports.updateMemorySchema = zod_1.z.object({
-    title: zod_1.z.string().min(1).max(200).optional(),
-    content: zod_1.z.string().min(1).max(50000).optional(),
-    memory_type: zod_1.z.enum(['context', 'project', 'knowledge', 'reference', 'personal', 'workflow']).optional(),
-    tags: zod_1.z.array(zod_1.z.string().min(1).max(50)).max(10).optional(),
+    title: coreUpdate.title,
+    content: coreUpdate.content,
+    memory_type: ide_extension_core_1.MemoryType.optional(),
+    tags: coreUpdate.tags,
     topic_id: zod_1.z.string().uuid().nullable().optional(),
-    metadata: zod_1.z.record(zod_1.z.unknown()).optional()
+    metadata: coreUpdate.metadata
 });
+const coreSearch = ide_extension_core_1.SearchMemoryRequestSchema.shape;
 exports.searchMemorySchema = zod_1.z.object({
-    query: zod_1.z.string().min(1).max(1000),
-    memory_types: zod_1.z.array(zod_1.z.enum(['context', 'project', 'knowledge', 'reference', 'personal', 'workflow'])).optional(),
-    tags: zod_1.z.array(zod_1.z.string()).optional(),
+    query: coreSearch.query,
+    memory_types: zod_1.z.array(ide_extension_core_1.MemoryType).optional(),
+    tags: coreSearch.tags,
     topic_id: zod_1.z.string().uuid().optional(),
-    limit: zod_1.z.number().int().min(1).max(100).default(20),
-    threshold: zod_1.z.number().min(0).max(1).default(0.7)
+    limit: coreSearch.limit,
+    threshold: coreSearch.threshold
 });
 //# sourceMappingURL=memory.js.map
