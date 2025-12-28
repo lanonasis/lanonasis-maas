@@ -5,7 +5,7 @@ async function example() {
   // Create a client
   const client = createMemoryClient({
     apiUrl: 'https://api.lanonasis.com',
-    apiKey: 'your-api-key-here',
+    apiKey: process.env.LANONASIS_API_KEY || 'your-api-key-here',
     useGateway: true
   });
 

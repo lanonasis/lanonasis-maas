@@ -7,7 +7,7 @@ console.log('🧪 Testing Standalone SDK Bundle...');
 try {
   const memory = new MemoryClient({
     apiUrl: 'https://api.lanonasis.com',
-    apiKey: 'test-key'
+    apiKey: process.env.LANONASIS_API_KEY || 'test-key-for-development-only'
   });
   console.log('✅ Basic MemoryClient created successfully');
 } catch (error) {
@@ -18,7 +18,7 @@ try {
 try {
   const multiModal = new MultiModalMemoryClient({
     apiUrl: 'https://api.lanonasis.com',
-    apiKey: 'test-key'
+    apiKey: process.env.LANONASIS_API_KEY || 'test-key-for-development-only'
   });
   console.log('✅ MultiModalMemoryClient created successfully');
 } catch (error) {
@@ -28,7 +28,7 @@ try {
 // Test method availability
 const memory = new MemoryClient({
   apiUrl: 'https://api.lanonasis.com',
-  apiKey: 'test-key'
+  apiKey: process.env.LANONASIS_API_KEY || 'test-key-for-development-only'
 });
 
 const methods = [
