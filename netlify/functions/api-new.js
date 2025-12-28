@@ -41,6 +41,9 @@ try {
 
 const app = express();
 
+// Disable X-Powered-By header for security
+app.disable('x-powered-by');
+
 // ============================================
 // CORE ALIGNMENT: Request ID Middleware
 // ============================================

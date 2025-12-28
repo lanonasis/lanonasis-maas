@@ -1,6 +1,8 @@
 const express = require('express');
 const serverless = require('serverless-http');
 const cors = require('cors');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
 const fetch = require('node-fetch');
 
 const app = express();
@@ -8,12 +10,72 @@ const app = express();
 // Onasis-Core configuration
 const ONASIS_CORE_BASE_URL = process.env.ONASIS_CORE_BASE_URL || 'http://localhost:3001';
 
-// CORS configuration
+// Security headers via helmet
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      imgSrc: ["'self'", "data:", "https:"],
+      connectSrc: ["'self'", "https://api.lanonasis.com", "https://dashboard.lanonasis.com"],
+      fontSrc: ["'self'"],
+      objectSrc: ["'none'"],
+      frameAncestors: ["'self'"],
+      formAction: ["'self'"],
+    },
+  },
+  crossOriginEmbedderPolicy: false,
+  crossOriginResourcePolicy: { policy: "cross-origin" },
+}));
+
+// Rate limiting - Protect against abuse
+const generalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // 100 requests per 15 minutes
+  message: { error: 'Too many requests', code: 'RATE_LIMITED', retryAfter: '15 minutes' },
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: (req) => req.path === '/health' || req.path === '/api/v1/health'
+});
+
+// Stricter rate limiting for auth endpoints
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5, // 5 attempts per 15 minutes (brute-force protection)
+  message: { error: 'Too many login attempts', code: 'AUTH_RATE_LIMITED', retryAfter: '15 minutes' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+app.use(generalLimiter);
+
+// Apply auth limiter to authentication endpoints
+app.use('/api/v1/auth/login', authLimiter);
+app.use('/api/v1/auth/register', authLimiter);
+
+// CORS configuration - Restrict to known origins
+const allowedOrigins = [
+  'https://api.lanonasis.com',
+  'https://dashboard.lanonasis.com',
+  'https://docs.lanonasis.com',
+  'https://lanonasis.com',
+  'http://localhost:3000',
+  'http://localhost:3001'
+];
+
 app.use(cors({
-  origin: '*',
-  credentials: false,
+  origin: (origin, callback) => {
+    // Allow requests with no origin (like mobile apps or curl)
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    return callback(new Error('Not allowed by CORS'));
+  },
+  credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-API-Key']
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-API-Key', 'X-Project-Scope', 'X-Request-ID']
 }));
 
 app.use(express.json());

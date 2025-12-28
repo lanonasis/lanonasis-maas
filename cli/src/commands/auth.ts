@@ -127,7 +127,7 @@ async function handleAuthenticationFailure(error: any, config: CLIConfig, authMe
       break;
 
     default:
-      console.log(chalk.red(`Unexpected error: ${error.message || 'Unknown error'}`));
+      console.log(chalk.red(`Unexpected error: ${sanitizeErrorMessage(error.message || 'Unknown error')}`));
       console.log(chalk.gray('• Please try again'));
       console.log(chalk.gray('• If the problem persists, contact support'));
   }
@@ -232,11 +232,40 @@ function generatePKCE(): { verifier: string; challenge: string } {
 }
 
 /**
+ * Sanitize error messages to prevent command injection
+ */
+function sanitizeErrorMessage(message: string): string {
+  if (typeof message !== 'string') return 'Unknown error';
+  
+  // Remove potential command injection characters
+  return message
+    .replace(/[;&|`$()]/g, '') // Remove shell metacharacters
+    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '') // Remove script tags
+    .replace(/javascript:/gi, '') // Remove javascript: URLs
+    .trim();
+}
+
+/**
  * Start local HTTP server to catch OAuth2 callback
  */
 function createCallbackServer(port: number = 8888): Promise<{ code: string; state?: string }> {
   return new Promise((resolve, reject) => {
+    // Sanitize HTML to prevent XSS
+    function sanitizeHtml(str: string): string {
+      return str
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#x27;');
+    }
+    
     const server = http.createServer((req, res) => {
+      // Set security headers
+      res.setHeader('X-Content-Type-Options', 'nosniff');
+      res.setHeader('X-Frame-Options', 'DENY');
+      res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+      
       const parsedUrl = url.parse(req.url!, true);
       
       if (parsedUrl.pathname === '/callback') {
@@ -250,7 +279,7 @@ function createCallbackServer(port: number = 8888): Promise<{ code: string; stat
               <head><title>Authentication Failed</title></head>
               <body style="font-family: sans-serif; text-align: center; padding: 50px;">
                 <h1>❌ Authentication Failed</h1>
-                <p>${error_description || error}</p>
+                <p>${sanitizeHtml(String(error_description || error))}</p>
                 <p style="color: gray;">You can close this window.</p>
               </body>
             </html>
