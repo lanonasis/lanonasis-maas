@@ -1,5 +1,6 @@
 import express from 'express';
 import compression from 'compression';
+import helmet from 'helmet';
 import swaggerUi from 'swagger-ui-express';
 import swaggerJsdoc from 'swagger-jsdoc';
 import path from 'path';
@@ -160,18 +161,37 @@ const specs = swaggerJsdoc(swaggerOptions);
 // 1. FIRST: Attach request ID to every request
 app.use(attachRequestId);
 
-// 2. AI Client Detection (BEFORE any routing)
+// 2. Security headers via helmet (comprehensive protection)
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"], // Required for Swagger UI
+      styleSrc: ["'self'", "'unsafe-inline'"], // Required for Swagger UI
+      imgSrc: ["'self'", "data:", "https:"],
+      connectSrc: ["'self'", "https://api.lanonasis.com", "https://dashboard.lanonasis.com", "wss://api.lanonasis.com"],
+      fontSrc: ["'self'", "data:"],
+      objectSrc: ["'none'"],
+      frameAncestors: ["'self'"],
+      formAction: ["'self'"],
+    },
+  },
+  crossOriginEmbedderPolicy: false, // Required for Swagger UI assets
+  crossOriginResourcePolicy: { policy: "cross-origin" }, // Allow dashboard assets
+}));
+
+// 3. AI Client Detection (BEFORE any routing)
 app.use(aiClientMiddleware);
 
-// 3. Compression and parsing
+// 4. Compression and parsing
 app.use(compression());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// 4. CORE ALIGNMENT: CORS and security headers (replaces old CORS/Helmet)
+// 5. CORE ALIGNMENT: CORS handler (works with helmet for full security)
 app.use(corsGuard);
 
-// 5. Metrics collection
+// 6. Metrics collection
 app.use(metricsMiddleware);
 
 // Static file serving
