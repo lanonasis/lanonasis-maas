@@ -1,8 +1,6 @@
 // Minimal VS Code API mock for unit tests (Vitest)
 import { vi } from 'vitest';
 
-const noop = vi.fn();
-
 export const window = {
   showQuickPick: vi.fn(),
   showInputBox: vi.fn(),
@@ -34,13 +32,13 @@ export const commands = {
 
 export const extensions = {};
 
-export const SecretStorage = vi.fn();
+export const SecretStorageMock = vi.fn();
 
-export type SecretStorage = {
+export interface SecretStorage {
   get: (key: string) => Promise<string | undefined>;
   store: (key: string, value: string) => Promise<void>;
   delete: (key: string) => Promise<void>;
-};
+}
 
 export interface ExtensionContext {
   secrets: SecretStorage;
@@ -53,7 +51,7 @@ export default {
   Uri,
   commands,
   extensions,
-  SecretStorage,
+  SecretStorage: SecretStorageMock,
   ExtensionContext: {} as ExtensionContext
 };
 

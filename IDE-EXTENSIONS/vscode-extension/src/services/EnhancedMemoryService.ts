@@ -1,19 +1,37 @@
 import * as vscode from 'vscode';
 import type {
-  EnhancedMemoryClient as EnhancedMemoryClientType,
-  EnhancedMemoryClientConfig,
-  OperationResult,
-  CLICapabilities,
+  CoreMemoryClient as CoreMemoryClientType,
+  CoreMemoryClientConfig,
   PaginatedResponse,
   CreateMemoryRequest as SDKCreateMemoryRequest,
+  UpdateMemoryRequest as SDKUpdateMemoryRequest,
   SearchMemoryRequest as SDKSearchMemoryRequest,
   MemoryEntry as SDKMemoryEntry,
   MemorySearchResult as SDKMemorySearchResult,
-  UserMemoryStats as SDKUserMemoryStats
+  UserMemoryStats as SDKUserMemoryStats,
+  ApiResponse
 } from '@lanonasis/memory-client';
 import { SecureApiKeyService, StoredCredential } from './SecureApiKeyService';
 import { CreateMemoryRequest, SearchMemoryRequest, MemoryEntry, MemorySearchResult, MemoryType, UserMemoryStats } from '../types/memory-aligned';
 import { IEnhancedMemoryService, MemoryServiceCapabilities } from './IMemoryService';
+
+// Type aliases for backwards compatibility with legacy code
+type EnhancedMemoryClientType = CoreMemoryClientType;
+type EnhancedMemoryClientConfig = CoreMemoryClientConfig;
+
+// Stub for missing OperationResult - use ApiResponse pattern
+interface OperationResult<T> extends ApiResponse<T> {
+  source?: 'cli' | 'api';
+  mcpUsed?: boolean;
+}
+
+// Stub for missing CLICapabilities
+interface CLICapabilities {
+  cliAvailable: boolean;
+  mcpSupport: boolean;
+  authenticated: boolean;
+  goldenContract: boolean;
+}
 
 type MemoryClientModule = typeof import('@lanonasis/memory-client');
 type SDKMemoryType = SDKCreateMemoryRequest['memory_type'];
@@ -68,7 +86,7 @@ export class EnhancedMemoryService implements IEnhancedMemoryService {
   }
 
   private async initializeClient(): Promise<void> {
-    const { Environment, EnhancedMemoryClient } = this.sdk;
+    const { CoreMemoryClient } = this.sdk;
     const credential = await this.secureApiKeyService.getStoredCredentials();
 
     if (!credential) {
@@ -89,13 +107,12 @@ export class EnhancedMemoryService implements IEnhancedMemoryService {
         this.config.get<string>('gatewayUrl', 'https://mcp.lanonasis.com') :
         apiUrl;
 
-      // Enable CLI detection with shorter timeout for responsive UX
-      clientConfig.preferCLI = Environment.supportsCLI;
-      clientConfig.cliDetectionTimeout = 2000;
-      clientConfig.verbose = this.config.get<boolean>('verboseLogging', false);
+      // Note: CLI detection is no longer supported in CoreMemoryClient
+      // The client uses HTTP API directly
+      const verbose = this.config.get<boolean>('verboseLogging', false);
 
       // Performance warning: verbose logging in production
-      if (clientConfig.verbose && process.env.NODE_ENV === 'production') {
+      if (verbose && process.env.NODE_ENV === 'production') {
         vscode.window.showWarningMessage(
           'Verbose logging is enabled in production. This may impact performance and expose sensitive information in logs.'
         );
@@ -104,10 +121,9 @@ export class EnhancedMemoryService implements IEnhancedMemoryService {
         );
       }
 
-      this.client = new EnhancedMemoryClient(clientConfig);
+      this.client = new CoreMemoryClient(clientConfig);
 
-      // Initialize and detect CLI capabilities
-      await this.client.initialize();
+      // Detect capabilities (CoreMemoryClient is ready immediately, no initialize needed)
       this.cliCapabilities = await this.detectCapabilities();
 
       this.updateStatusBar(true, this.getConnectionStatus());
@@ -131,21 +147,16 @@ export class EnhancedMemoryService implements IEnhancedMemoryService {
     }
 
     try {
-      // Test if CLI integration is working
-      const testRequest = this.toSDKSearchRequest({
-        query: 'test connection',
-        limit: 1,
-        status: 'active',
-        threshold: 0.1
-      } satisfies SearchMemoryRequest);
+      // Test API connection with a health check
+      const healthResult = await this.client.healthCheck();
 
-      const testResult = await this.client.searchMemories(testRequest);
-
+      // CoreMemoryClient uses pure HTTP API (no CLI detection)
+      // CLI capabilities are now determined externally
       return {
-        cliAvailable: testResult.source === 'cli',
-        mcpSupport: testResult.mcpUsed || false,
-        authenticated: testResult.error === undefined,
-        goldenContract: testResult.source === 'cli' // CLI available implies Golden Contract v1.5.2+
+        cliAvailable: false, // CoreMemoryClient doesn't use CLI
+        mcpSupport: false,   // CoreMemoryClient uses HTTP, not MCP
+        authenticated: healthResult.error === undefined,
+        goldenContract: false // CLI feature not available in CoreMemoryClient
       };
     } catch {
       return {
@@ -201,13 +212,12 @@ export class EnhancedMemoryService implements IEnhancedMemoryService {
   }
 
   public async testConnection(apiKey?: string): Promise<void> {
-    const { EnhancedMemoryClient } = this.sdk;
+    const { CoreMemoryClient } = this.sdk;
     let testClient = this.client;
 
     if (apiKey) {
       const config = this.buildClientConfigFromCredential({ type: 'apiKey', token: apiKey });
-      testClient = new EnhancedMemoryClient(config);
-      await testClient.initialize();
+      testClient = new CoreMemoryClient(config);
     }
 
     if (!testClient) {
@@ -217,8 +227,7 @@ export class EnhancedMemoryService implements IEnhancedMemoryService {
       }
 
       const config = this.buildClientConfigFromCredential(credential);
-      testClient = new EnhancedMemoryClient(config);
-      await testClient.initialize();
+      testClient = new CoreMemoryClient(config);
     }
 
     // Test with enhanced client - this will try CLI first, then fallback to API
@@ -255,6 +264,22 @@ export class EnhancedMemoryService implements IEnhancedMemoryService {
     }
 
     this.showOperationFeedback('create', result);
+    return this.convertSDKMemoryEntry(result.data);
+  }
+
+  public async updateMemory(id: string, memory: Partial<CreateMemoryRequest>): Promise<MemoryEntry> {
+    if (!this.client) {
+      throw new Error('Not authenticated. Please configure your API key.');
+    }
+
+    const sdkMemory = this.toSDKUpdateRequest(memory);
+    const result = await this.client.updateMemory(id, sdkMemory);
+
+    if (result.error || !result.data) {
+      throw new Error(result.error || 'Failed to update memory');
+    }
+
+    this.showOperationFeedback('update', result);
     return this.convertSDKMemoryEntry(result.data);
   }
 
@@ -411,6 +436,15 @@ export class EnhancedMemoryService implements IEnhancedMemoryService {
     };
   }
 
+  private toSDKUpdateRequest(memory: Partial<CreateMemoryRequest>): SDKUpdateMemoryRequest {
+    const { memory_type, ...rest } = memory;
+    const result: SDKUpdateMemoryRequest = { ...rest };
+    if (memory_type !== undefined) {
+      result.memory_type = this.mapMemoryType(memory_type);
+    }
+    return result;
+  }
+
   private toSDKSearchRequest(request: SearchMemoryRequest): SDKSearchMemoryRequest {
     const { memory_types, ...rest } = request;
     const sdkTypes = memory_types?.map(type => this.mapMemoryType(type));
@@ -456,11 +490,25 @@ export class EnhancedMemoryService implements IEnhancedMemoryService {
     };
   }
 
-  private buildClientConfigFromCredential(credential: StoredCredential): EnhancedMemoryClientConfig {
-    const { ConfigPresets } = this.sdk;
-    const config = ConfigPresets.ideExtension(
-      credential.type === 'apiKey' ? credential.token : undefined
-    ) as EnhancedMemoryClientConfig & { userId?: string; organizationId?: string };
+  private buildClientConfigFromCredential(credential: StoredCredential): EnhancedMemoryClientConfig & { userId?: string; organizationId?: string } {
+    // Build config manually (ConfigPresets no longer available in CoreMemoryClient)
+    const vscodeConfig = vscode.workspace.getConfiguration('lanonasis');
+    const apiUrl = vscodeConfig.get<string>('apiUrl', 'https://mcp.lanonasis.com');
+
+    const config: EnhancedMemoryClientConfig & { userId?: string; organizationId?: string } = {
+      apiUrl,
+      apiKey: credential.type === 'apiKey' ? credential.token : undefined,
+      timeout: 30000,
+      retry: {
+        maxRetries: 3,
+        retryDelay: 1000,
+        backoff: 'exponential'
+      },
+      headers: {
+        'X-Client-Type': 'vscode-extension',
+        'X-Client-Version': '2.0.5'
+      }
+    };
 
     if (credential.type === 'oauth') {
       config.apiKey = undefined;
@@ -482,7 +530,6 @@ export class EnhancedMemoryService implements IEnhancedMemoryService {
     }
 
     // Include organization ID from VS Code configuration via custom headers (optional for teams)
-    const vscodeConfig = vscode.workspace.getConfiguration('lanonasis');
     const organizationId = vscodeConfig.get<string>('organizationId');
     if (organizationId) {
       config.headers = {

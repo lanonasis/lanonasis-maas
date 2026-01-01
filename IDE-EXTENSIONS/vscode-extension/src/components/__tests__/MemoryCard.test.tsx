@@ -105,8 +105,8 @@ describe('MemoryCard Component', () => {
     fireEvent.click(copyButton);
 
     // Check icon should appear immediately after click
-    const checkIcon = copyButton.querySelector('svg');
-    expect(checkIcon).toBeInTheDocument();
+      const checkIcon = copyButton.querySelector('svg');
+      expect(checkIcon).toBeInTheDocument();
   });
 
   test('displays correct icon component', () => {

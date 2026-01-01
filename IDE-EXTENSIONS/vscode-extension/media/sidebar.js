@@ -241,7 +241,7 @@
         <div class="undo-toast">
             <span>${message}</span>
             <button class="btn btn-secondary" id="undo-btn">Undo</button>
-        </div>
+            </div>
         `;
     }
 
@@ -311,10 +311,10 @@
                                 </div>
                             </div>
                         ` : `
-                            <div class="memory-title">${escapeHtml(memory.title)}</div>
-                            <div class="memory-meta">
-                                <span>📅 ${date}</span>
-                                ${memory.tags && memory.tags.length > 0 ? `<span>🏷️ ${memory.tags.length}</span>` : ''}
+                <div class="memory-title">${escapeHtml(memory.title)}</div>
+                <div class="memory-meta">
+                    <span>📅 ${date}</span>
+                    ${memory.tags && memory.tags.length > 0 ? `<span>🏷️ ${memory.tags.length}</span>` : ''}
                             </div>
                             <div class="memory-preview">${escapeHtml(preview)}${preview.length === 80 ? '…' : ''}</div>
                         `}

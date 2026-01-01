@@ -182,8 +182,8 @@ export const createMemorySchema = z.object({
   memory_type: z.enum(['conversation', 'knowledge', 'project', 'context', 'reference', 'personal', 'workflow']).default('context'),
   topic_id: z.string().uuid().optional(),
   project_ref: z.string().max(100).optional(),
-  tags: z.array(z.string().min(1).max(50)).max(20).default([]),
-  metadata: z.record(z.unknown()).optional()
+  tags: z.array(z.string().min(1, 'Tag cannot be empty').max(50, 'Tag must be less than 50 characters')).max(20, 'Maximum 20 tags allowed').default([]),
+  metadata: z.record(z.string(), z.unknown()).optional()
 });
 
 /**
@@ -236,8 +236,8 @@ export const updateMemorySchema = z.object({
   status: z.enum(['active', 'archived', 'draft', 'deleted']).optional(),
   topic_id: z.string().uuid().nullable().optional(),
   project_ref: z.string().max(100).nullable().optional(),
-  tags: z.array(z.string().min(1).max(50)).max(20).optional(),
-  metadata: z.record(z.unknown()).optional()
+  tags: z.array(z.string().min(1, 'Tag cannot be empty').max(50, 'Tag must be less than 50 characters')).max(20, 'Maximum 20 tags allowed').optional(),
+  metadata: z.record(z.string(), z.unknown()).optional()
 });
 
 /**

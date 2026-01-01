@@ -1,19 +1,12 @@
 import * as vscode from 'vscode';
 import { EnhancedMemoryService } from '../services/EnhancedMemoryService';
 import type { IMemoryService } from '../services/IMemoryService';
-import { createMemorySchema, updateMemorySchema } from '../types/memory-aligned';
-
-interface CachedMemory {
-    id: string;
-    content: string;
-    metadata?: Record<string, unknown>;
-    createdAt?: string;
-}
+import { createMemorySchema, updateMemorySchema, type MemoryEntry } from '../types/memory-aligned';
 
 export class MemorySidebarProvider implements vscode.WebviewViewProvider {
     public static readonly viewType = 'lanonasis.sidebar';
     private _view?: vscode.WebviewView;
-    private _cachedMemories: CachedMemory[] = [];
+    private _cachedMemories: MemoryEntry[] = [];
     private _cacheTimestamp: number = 0;
     private readonly CACHE_DURATION = 30000; // 30 seconds
 
@@ -300,6 +293,176 @@ export class MemorySidebarProvider implements vscode.WebviewViewProvider {
             this._view.webview.postMessage({
                 type: 'updateState',
                 state: { loading: false }
+            });
+        }
+    }
+
+    private async handleCreateFromWebview(payload: unknown): Promise<void> {
+        if (!this._view) return;
+
+        if (!this.memoryService.isAuthenticated()) {
+            this._view.webview.postMessage({
+                type: 'error',
+                message: 'Not authenticated. Please sign in first.'
+            });
+            return;
+        }
+
+        try {
+            // Validate payload
+            const validated = createMemorySchema.parse(payload);
+
+            await this.memoryService.createMemory(validated);
+
+            this._view.webview.postMessage({
+                type: 'memoryCreated',
+                message: 'Memory created successfully'
+            });
+
+            // Refresh the list
+            await this.refresh(true);
+        } catch (error) {
+            this._view.webview.postMessage({
+                type: 'error',
+                message: error instanceof Error ? error.message : 'Failed to create memory'
+            });
+        }
+    }
+
+    private async handleUpdateFromWebview(id: string, payload: unknown): Promise<void> {
+        if (!this._view) return;
+
+        if (!this.memoryService.isAuthenticated()) {
+            this._view.webview.postMessage({
+                type: 'error',
+                message: 'Not authenticated. Please sign in first.'
+            });
+            return;
+        }
+
+        try {
+            // Validate payload
+            const validated = updateMemorySchema.parse(payload);
+
+            // Convert null values to undefined for the service API
+            const sanitized: Parameters<typeof this.memoryService.updateMemory>[1] = {
+                ...validated,
+                topic_id: validated.topic_id === null ? undefined : validated.topic_id,
+                project_ref: validated.project_ref === null ? undefined : validated.project_ref
+            };
+
+            await this.memoryService.updateMemory(id, sanitized);
+
+            this._view.webview.postMessage({
+                type: 'memoryUpdated',
+                message: 'Memory updated successfully'
+            });
+
+            // Refresh the list
+            await this.refresh(true);
+        } catch (error) {
+            this._view.webview.postMessage({
+                type: 'error',
+                message: error instanceof Error ? error.message : 'Failed to update memory'
+            });
+        }
+    }
+
+    private async handleDeleteFromWebview(id: string): Promise<void> {
+        if (!this._view) return;
+
+        if (!this.memoryService.isAuthenticated()) {
+            this._view.webview.postMessage({
+                type: 'error',
+                message: 'Not authenticated. Please sign in first.'
+            });
+            return;
+        }
+
+        try {
+            await this.memoryService.deleteMemory(id);
+
+            this._view.webview.postMessage({
+                type: 'memoryDeleted',
+                message: 'Memory deleted successfully'
+            });
+
+            // Refresh the list
+            await this.refresh(true);
+        } catch (error) {
+            this._view.webview.postMessage({
+                type: 'error',
+                message: error instanceof Error ? error.message : 'Failed to delete memory'
+            });
+        }
+    }
+
+    private async handleBulkDeleteFromWebview(ids: string[]): Promise<void> {
+        if (!this._view) return;
+
+        if (!this.memoryService.isAuthenticated()) {
+            this._view.webview.postMessage({
+                type: 'error',
+                message: 'Not authenticated. Please sign in first.'
+            });
+            return;
+        }
+
+        try {
+            // Delete memories one by one (bulk delete not directly supported)
+            const results = await Promise.allSettled(
+                ids.map(id => this.memoryService.deleteMemory(id))
+            );
+
+            const failed = results.filter(r => r.status === 'rejected').length;
+            const succeeded = results.length - failed;
+
+            this._view.webview.postMessage({
+                type: 'bulkDeleteComplete',
+                message: `Deleted ${succeeded} memories${failed > 0 ? `, ${failed} failed` : ''}`
+            });
+
+            // Refresh the list
+            await this.refresh(true);
+        } catch (error) {
+            this._view.webview.postMessage({
+                type: 'error',
+                message: error instanceof Error ? error.message : 'Failed to delete memories'
+            });
+        }
+    }
+
+    private async handleBulkTagFromWebview(ids: string[], tags: string[]): Promise<void> {
+        if (!this._view) return;
+
+        if (!this.memoryService.isAuthenticated()) {
+            this._view.webview.postMessage({
+                type: 'error',
+                message: 'Not authenticated. Please sign in first.'
+            });
+            return;
+        }
+
+        try {
+            // Update tags for each memory
+            const results = await Promise.allSettled(
+                ids.map(id => this.memoryService.updateMemory(id, { tags }))
+            );
+
+            const failed = results.filter(r => r.status === 'rejected').length;
+            const succeeded = results.length - failed;
+
+            this._view.webview.postMessage({
+                type: 'bulkTagComplete',
+                message: `Updated tags for ${succeeded} memories${failed > 0 ? `, ${failed} failed` : ''}`
+            });
+
+            // Refresh the list
+            await this.refresh(true);
+        } catch (error) {
+            this._view.webview.postMessage({
+                type: 'error',
+                message: error instanceof Error ? error.message : 'Failed to update tags'
             });
         }
     }
