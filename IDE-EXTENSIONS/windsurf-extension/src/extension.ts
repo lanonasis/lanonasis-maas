@@ -142,8 +142,8 @@ export async function activate(context: vscode.ExtensionContext) {
         authService.checkAuthenticationStatus()
             .then(isAuthed => {
                 if (isAuthed) {
-                    memoryTreeProvider.refresh();
-                }
+            memoryTreeProvider.refresh();
+        }
             })
             .catch(() => undefined);
     }, refreshInterval);
