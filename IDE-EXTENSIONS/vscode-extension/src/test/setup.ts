@@ -2,40 +2,30 @@ import '@testing-library/jest-dom/vitest';
 import { afterEach, vi } from 'vitest';
 import { cleanup } from '@testing-library/react';
 
-// Mock VS Code API
-const mockVSCode = {
+// Mock VS Code API - exported so tests can access and reset it
+export const mockVSCode = {
   postMessage: vi.fn(),
   setState: vi.fn(),
 };
 
-// Mock window.vscode
+// Mock window.vscode - configurable allows tests to redefine if needed
 Object.defineProperty(window, 'vscode', {
   value: mockVSCode,
   writable: true,
+  configurable: true,
 });
 
-// Mock VS Code MessageEvent
-global.MessageEvent = class MessageEvent extends Event {
+// Enhance MessageEvent if needed (jsdom provides a basic one, but we ensure it has data)
+global.MessageEvent = class EnhancedMessageEvent extends Event {
   data: any;
-  constructor(type: string, eventInitDict?: { data?: any }) {
-    super(type);
+  constructor(type: string, eventInitDict?: MessageEventInit) {
+    super(type, eventInitDict);
     this.data = eventInitDict?.data;
   }
 } as any;
 
-// Mock addEventListener/removeEventListener
-const mockAddEventListener = vi.fn();
-const mockRemoveEventListener = vi.fn();
-
-Object.defineProperty(window, 'addEventListener', {
-  value: mockAddEventListener,
-  writable: true,
-});
-
-Object.defineProperty(window, 'removeEventListener', {
-  value: mockRemoveEventListener,
-  writable: true,
-});
+// Note: We do NOT mock addEventListener/removeEventListener
+// jsdom provides real implementations that work with dispatchEvent
 
 afterEach(() => {
   cleanup();

@@ -146,6 +146,21 @@ export class MemoryService implements IMemoryService {
         return response.data;
     }
 
+    public async updateMemory(id: string, memory: Partial<CreateMemoryRequest>): Promise<MemoryEntry> {
+        await this.ensureClient();
+        const client = this.client;
+        if (!client) {
+            throw new Error('Not authenticated. Please configure your API key.');
+        }
+
+        const response = await client.updateMemory(id, memory);
+        if (response.error || !response.data) {
+            throw new Error(response.error || 'Failed to update memory');
+        }
+
+        return response.data;
+    }
+
     public async searchMemories(query: string, options: Partial<SearchMemoryRequest> = {}): Promise<MemorySearchResult[]> {
         await this.ensureClient();
         const client = this.client;

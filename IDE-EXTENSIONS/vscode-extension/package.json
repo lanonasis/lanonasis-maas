@@ -584,6 +584,7 @@
     "build:react": "npm run build:css && webpack --config webpack.react.config.js"
   },
   "dependencies": {
+    "@lanonasis/ide-extension-core": "file:../../packages/ide-extension-core",
     "@lanonasis/memory-client": "^2.0.0",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",

@@ -1,10 +1,4 @@
 import { z } from 'zod';
-import {
-  CreateMemoryRequestSchema as CoreCreateMemoryRequestSchema,
-  UpdateMemoryRequestSchema as CoreUpdateMemoryRequestSchema,
-  SearchMemoryRequestSchema as CoreSearchMemoryRequestSchema,
-  MemoryType as CoreMemoryType
-} from '@lanonasis/ide-extension-core';
 
 /**
  * Aligned types for sd-ghost-protocol memory system
@@ -181,18 +175,26 @@ export interface MemoryTopic {
  *         metadata:
  *           type: object
  */
-const coreCreate = CoreCreateMemoryRequestSchema.shape;
-const ExtendedMemoryType = z.union([CoreMemoryType, z.literal('conversation')]);
+// Extended memory type includes 'conversation' for backwards compatibility
+const ExtendedMemoryType = z.enum([
+  'context',
+  'project',
+  'knowledge',
+  'reference',
+  'personal',
+  'workflow',
+  'conversation'
+]);
 
 export const createMemorySchema = z.object({
-  title: coreCreate.title.max(500),
-  content: coreCreate.content.max(50000),
+  title: z.string().min(1).max(500),
+  content: z.string().min(1).max(50000),
   summary: z.string().max(1000).optional(),
   memory_type: ExtendedMemoryType.default('context'),
   topic_id: z.string().uuid().optional(),
   project_ref: z.string().max(100).optional(),
-  tags: coreCreate.tags.max(20),
-  metadata: coreCreate.metadata
+  tags: z.array(z.string().max(50, 'Tag must be less than 50 characters')).max(20, 'Maximum 20 tags allowed').default([]),
+  metadata: z.record(z.string(), z.unknown()).optional()
 });
 
 /**
@@ -237,17 +239,16 @@ export const createMemorySchema = z.object({
  *         metadata:
  *           type: object
  */
-const coreUpdate = CoreUpdateMemoryRequestSchema.shape;
 export const updateMemorySchema = z.object({
-  title: coreUpdate.title?.max(500),
-  content: coreUpdate.content?.max(50000),
+  title: z.string().min(1).max(500).optional(),
+  content: z.string().min(1).max(50000).optional(),
   summary: z.string().max(1000).optional(),
   memory_type: ExtendedMemoryType.optional(),
   status: z.enum(['active', 'archived', 'draft', 'deleted']).optional(),
   topic_id: z.string().uuid().nullable().optional(),
   project_ref: z.string().max(100).nullable().optional(),
-  tags: coreUpdate.tags?.max(20),
-  metadata: coreUpdate.metadata
+  tags: z.array(z.string().max(50, 'Tag must be less than 50 characters')).max(20, 'Maximum 20 tags allowed').optional(),
+  metadata: z.record(z.string(), z.unknown()).optional()
 });
 
 /**
@@ -292,16 +293,15 @@ export const updateMemorySchema = z.object({
  *           maximum: 1
  *           default: 0.7
  */
-const coreSearch = CoreSearchMemoryRequestSchema.shape;
 export const searchMemorySchema = z.object({
-  query: coreSearch.query.max(1000),
+  query: z.string().min(1, 'Query is required').max(1000, 'Query must be less than 1000 characters'),
   memory_types: z.array(ExtendedMemoryType).optional(),
-  tags: coreSearch.tags,
+  tags: z.array(z.string()).optional(),
   topic_id: z.string().uuid().optional(),
   project_ref: z.string().optional(),
   status: z.enum(['active', 'archived', 'draft', 'deleted']).default('active'),
-  limit: coreSearch.limit,
-  threshold: coreSearch.threshold
+  limit: z.number().int().min(1).max(100).default(20),
+  threshold: z.number().min(0).max(1).default(0.7)
 });
 
 /**
