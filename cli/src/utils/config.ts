@@ -827,7 +827,8 @@ export class CLIConfig {
   async isAuthenticated(): Promise<boolean> {
     // Check if using vendor key authentication
     if (this.config.authMethod === 'vendor_key') {
-      const vendorKey = this.getVendorKey();
+      // Use async method to read from encrypted ApiKeyStorage
+      const vendorKey = await this.getVendorKeyAsync();
       if (!vendorKey) return false;
 
       // Check cache first

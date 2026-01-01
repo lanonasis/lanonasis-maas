@@ -91,7 +91,7 @@ async function handleAuthenticationFailure(error, config, authMethod = 'jwt') {
             await config.clearInvalidCredentials();
             break;
         default:
-            console.log(chalk.red(`Unexpected error: ${error.message || 'Unknown error'}`));
+            console.log(chalk.red(`Unexpected error: ${sanitizeErrorMessage(error.message || 'Unknown error')}`));
             console.log(chalk.gray('• Please try again'));
             console.log(chalk.gray('• If the problem persists, contact support'));
     }
@@ -184,11 +184,37 @@ function generatePKCE() {
     return { verifier, challenge };
 }
 /**
+ * Sanitize error messages to prevent command injection
+ */
+function sanitizeErrorMessage(message) {
+    if (typeof message !== 'string')
+        return 'Unknown error';
+    // Remove potential command injection characters
+    return message
+        .replace(/[;&|`$()]/g, '') // Remove shell metacharacters
+        .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '') // Remove script tags
+        .replace(/javascript:/gi, '') // Remove javascript: URLs
+        .trim();
+}
+/**
  * Start local HTTP server to catch OAuth2 callback
  */
 function createCallbackServer(port = 8888) {
     return new Promise((resolve, reject) => {
+        // Sanitize HTML to prevent XSS
+        function sanitizeHtml(str) {
+            return str
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#x27;');
+        }
         const server = http.createServer((req, res) => {
+            // Set security headers
+            res.setHeader('X-Content-Type-Options', 'nosniff');
+            res.setHeader('X-Frame-Options', 'DENY');
+            res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
             const parsedUrl = url.parse(req.url, true);
             if (parsedUrl.pathname === '/callback') {
                 const { code, state, error, error_description } = parsedUrl.query;
@@ -200,7 +226,7 @@ function createCallbackServer(port = 8888) {
               <head><title>Authentication Failed</title></head>
               <body style="font-family: sans-serif; text-align: center; padding: 50px;">
                 <h1>❌ Authentication Failed</h1>
-                <p>${error_description || error}</p>
+                <p>${sanitizeHtml(String(error_description || error))}</p>
                 <p style="color: gray;">You can close this window.</p>
               </body>
             </html>
@@ -280,7 +306,9 @@ async function exchangeCodeForTokens(code, verifier, authBase, redirectUri) {
 }
 /**
  * Refresh OAuth2 access token using refresh token
+ * @internal Used for token refresh flows
  */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 async function refreshOAuth2Token(config) {
     const refreshToken = config.get('refresh_token');
     if (!refreshToken) {
@@ -300,43 +328,9 @@ async function refreshOAuth2Token(config) {
         await config.set('token_expires_at', Date.now() + (response.expires_in * 1000));
         return true;
     }
-    catch (error) {
+    catch {
         console.error(chalk.yellow('⚠️  Token refresh failed, please re-authenticate'));
         return false;
-    }
-}
-/**
- * Exchange Supabase JWT token for auth-gateway API key
- * This enables CLI to work with MCP WebSocket and all services seamlessly
- */
-async function exchangeSupabaseTokenForApiKey(supabaseToken, config) {
-    try {
-        const discoveredServices = config.get('discoveredServices');
-        const authBase = discoveredServices?.auth_base || 'https://auth.lanonasis.com';
-        if (process.env.CLI_VERBOSE === 'true') {
-            console.log(chalk.dim(`   Exchanging token at: ${authBase}/v1/auth/token/exchange`));
-        }
-        const response = await axios.post(`${authBase}/v1/auth/token/exchange`, {
-            project_scope: 'lanonasis-maas',
-            platform: 'cli'
-        }, {
-            headers: {
-                'Authorization': `Bearer ${supabaseToken}`,
-                'Content-Type': 'application/json',
-                'X-Project-Scope': 'lanonasis-maas'
-            }
-        });
-        return {
-            access_token: response.data.access_token,
-            user: response.data.user
-        };
-    }
-    catch (error) {
-        console.error(chalk.yellow('⚠️  Token exchange failed:', error.message));
-        if (process.env.CLI_VERBOSE === 'true' && error.response) {
-            console.error(chalk.dim('   Response:', JSON.stringify(error.response.data, null, 2)));
-        }
-        return null;
     }
 }
 export async function diagnoseCommand() {
@@ -708,33 +702,23 @@ async function handleOAuthFlow(config) {
         }
         const tokens = await exchangeCodeForTokens(code, pkce.verifier, authBase, redirectUri);
         spinner.succeed('Access tokens received');
-        // Store OAuth tokens
+        // Store OAuth tokens - these are already valid auth-gateway tokens from /oauth/token
+        // No need for additional exchange since /oauth/token returns auth-gateway's own tokens
         await config.setToken(tokens.access_token);
         await config.set('refresh_token', tokens.refresh_token);
         await config.set('token_expires_at', Date.now() + (tokens.expires_in * 1000));
-        // Exchange for unified API key
+        await config.set('authMethod', 'oauth2');
+        // The OAuth access token from auth-gateway works as the API token for all services
+        // Store it as the vendor key equivalent for MCP and API access
         spinner.text = 'Configuring unified access...';
         spinner.start();
-        const exchangeResult = await exchangeSupabaseTokenForApiKey(tokens.access_token, config);
-        if (exchangeResult) {
-            // Store the auth-gateway API key for MCP and other services
-            await config.setVendorKey(exchangeResult.access_token);
-            await config.set('authMethod', 'oauth2');
-            spinner.succeed('Unified authentication configured');
-            console.log();
-            console.log(chalk.green('✓ OAuth2 authentication successful'));
-            console.log(colors.info('You can now use all Lanonasis services'));
-            console.log(chalk.gray('✓ MCP, API, and CLI access configured'));
-        }
-        else {
-            // Fallback
-            await config.set('authMethod', 'oauth2');
-            spinner.warn('Token exchange failed, OAuth token stored');
-            console.log();
-            console.log(chalk.green('✓ OAuth2 authentication successful'));
-            console.log(colors.info('You can now use Lanonasis services'));
-            console.log(chalk.yellow('⚠️  Some services may require re-authentication'));
-        }
+        // Use the OAuth access token directly - it's already an auth-gateway token
+        await config.setVendorKey(tokens.access_token);
+        spinner.succeed('Unified authentication configured');
+        console.log();
+        console.log(chalk.green('✓ OAuth2 authentication successful'));
+        console.log(colors.info('You can now use all Lanonasis services'));
+        console.log(chalk.gray('✓ MCP, API, and CLI access configured'));
         process.exit(0);
     }
     catch (error) {
