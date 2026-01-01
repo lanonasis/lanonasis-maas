@@ -377,7 +377,7 @@ async function handleSemanticQuery(
     if (refined) {
         stream.markdown(`\n### ✨ Refined Prompt Suggestion\n\`\`\`\n${refined}\n\`\`\`\n`);
     }
-
+    
     return {
         metadata: {
             query: prompt,
