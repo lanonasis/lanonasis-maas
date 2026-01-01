@@ -1,6 +1,6 @@
 {
   "name": "@lanonasis/cli",
-  "version": "3.7.5",
+  "version": "3.7.8",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -22,7 +22,7 @@
     "LICENSE"
   ],
   "dependencies": {
-    "@lanonasis/oauth-client": "^1.2.1",
+    "@lanonasis/oauth-client": "1.2.5",
     "@lanonasis/security-sdk": "^1.0.1",
     "@modelcontextprotocol/sdk": "^1.1.1",
     "axios": "^1.7.7",
