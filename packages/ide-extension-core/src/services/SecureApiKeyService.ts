@@ -39,6 +39,7 @@ export class SecureApiKeyService implements ISecureAuthService {
   private static readonly CREDENTIAL_TYPE_KEY = 'lanonasis.credentialType';
   private static readonly CALLBACK_PORT = 8080;
   private static readonly OAUTH_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
+  private static readonly API_KEY_DASHBOARD_URL = 'https://dashboard.lanonasis.com';
 
   private adapter: IIDEAdapter;
   private migrationCompleted: boolean = false;
@@ -197,161 +198,171 @@ export class SecureApiKeyService implements ISecureAuthService {
    * Authenticate using OAuth flow
    */
   async authenticateWithOAuth(): Promise<boolean> {
-    return new Promise((resolve, reject) => {
-      let timeoutId: NodeJS.Timeout | undefined;
+    return this.adapter.notification.showProgress(
+      `Authenticating ${this.adapter.branding.extensionDisplayName}`,
+      async (progress) => {
+        progress.report({ message: 'Preparing OAuth flow...' });
+        return new Promise((resolve, reject) => {
+          let timeoutId: NodeJS.Timeout | undefined;
 
-      try {
-        const config = this.adapter.getConfig();
-        const authUrl = config.authUrl;
-        const clientId = `${this.adapter.branding.ideName.toLowerCase()}-extension`;
-        const redirectUri = `http://localhost:${SecureApiKeyService.CALLBACK_PORT}/callback`;
-
-        // Generate PKCE parameters
-        const codeVerifier = generateCodeVerifier();
-        const codeChallenge = generateCodeChallenge(codeVerifier);
-        const state = generateState();
-
-        // Store PKCE data temporarily
-        this.adapter.secureStorage.store('oauth_code_verifier', codeVerifier);
-        this.adapter.secureStorage.store('oauth_state', state);
-
-        // Build authorization URL
-        const authUrlObj = new URL('/oauth/authorize', authUrl);
-        authUrlObj.searchParams.set('client_id', clientId);
-        authUrlObj.searchParams.set('response_type', 'code');
-        authUrlObj.searchParams.set('redirect_uri', redirectUri);
-        authUrlObj.searchParams.set('scope', 'memories:read memories:write memories:delete');
-        authUrlObj.searchParams.set('code_challenge', codeChallenge);
-        authUrlObj.searchParams.set('code_challenge_method', 'S256');
-        authUrlObj.searchParams.set('state', state);
-
-        // Start callback server
-        const server = http.createServer(async (req, res) => {
           try {
-            if (!req.url) {
-              res.writeHead(400, { 'Content-Type': 'text/plain' });
-              res.end('Missing URL');
-              return;
-            }
+            const config = this.adapter.getConfig();
+            const authUrl = config.authUrl;
+            const clientId = `${this.adapter.branding.ideName.toLowerCase()}-extension`;
+            const redirectUri = `http://localhost:${SecureApiKeyService.CALLBACK_PORT}/callback`;
 
-            const url = new URL(req.url, `http://localhost:${SecureApiKeyService.CALLBACK_PORT}`);
+            // Generate PKCE parameters
+            const codeVerifier = generateCodeVerifier();
+            const codeChallenge = generateCodeChallenge(codeVerifier);
+            const state = generateState();
 
-            if (url.pathname === '/callback') {
-              const code = url.searchParams.get('code');
-              const returnedState = url.searchParams.get('state');
-              const error = url.searchParams.get('error');
+            // Store PKCE data temporarily
+            this.adapter.secureStorage.store('oauth_code_verifier', codeVerifier);
+            this.adapter.secureStorage.store('oauth_state', state);
 
-              // Validate state
-              const storedState = await this.adapter.secureStorage.get('oauth_state');
-              if (returnedState !== storedState) {
-                res.writeHead(400, { 'Content-Type': 'text/html' });
-                res.end('<h1>Invalid state parameter</h1>');
-                server.close();
-                if (timeoutId) clearTimeout(timeoutId);
-                reject(new Error('Invalid state parameter'));
-                return;
-              }
+            // Build authorization URL
+            const authUrlObj = new URL('/oauth/authorize', authUrl);
+            authUrlObj.searchParams.set('client_id', clientId);
+            authUrlObj.searchParams.set('response_type', 'code');
+            authUrlObj.searchParams.set('redirect_uri', redirectUri);
+            authUrlObj.searchParams.set('scope', 'memories:read memories:write memories:delete');
+            authUrlObj.searchParams.set('code_challenge', codeChallenge);
+            authUrlObj.searchParams.set('code_challenge_method', 'S256');
+            authUrlObj.searchParams.set('state', state);
 
-              if (error) {
-                res.writeHead(400, { 'Content-Type': 'text/html' });
-                res.end(`<h1>OAuth Error: ${error}</h1>`);
-                server.close();
-                if (timeoutId) clearTimeout(timeoutId);
-                reject(new Error(`OAuth error: ${error}`));
-                return;
-              }
-
-              if (code) {
-                // Exchange code for token
-                const token = await this.exchangeCodeForToken(
-                  code,
-                  codeVerifier,
-                  redirectUri,
-                  authUrl
-                );
-
-                // Store token securely
-                await this.storeApiKey(token.access_token, 'oauth');
-                if (token.refresh_token) {
-                  await this.adapter.secureStorage.store(
-                    SecureApiKeyService.REFRESH_TOKEN_KEY,
-                    token.refresh_token
-                  );
+            // Start callback server
+            const server = http.createServer(async (req, res) => {
+              try {
+                if (!req.url) {
+                  res.writeHead(400, { 'Content-Type': 'text/plain' });
+                  res.end('Missing URL');
+                  return;
                 }
 
-                // Send success response
-                res.writeHead(200, { 'Content-Type': 'text/html' });
-                res.end(`
-                  <html>
-                    <head><title>Authentication Success</title></head>
-                    <body>
-                      <h1 style="color: green;">✓ Authentication Successful!</h1>
-                      <p>You can close this window and return to ${this.adapter.branding.ideName}.</p>
-                      <script>setTimeout(() => window.close(), 2000);</script>
-                    </body>
-                  </html>
-                `);
+                const url = new URL(req.url, `http://localhost:${SecureApiKeyService.CALLBACK_PORT}`);
 
-                // Cleanup
-                await this.adapter.secureStorage.delete('oauth_code_verifier');
-                await this.adapter.secureStorage.delete('oauth_state');
+                if (url.pathname === '/callback') {
+                  const code = url.searchParams.get('code');
+                  const returnedState = url.searchParams.get('state');
+                  const error = url.searchParams.get('error');
+
+                  // Validate state
+                  const storedState = await this.adapter.secureStorage.get('oauth_state');
+                  if (returnedState !== storedState) {
+                    res.writeHead(400, { 'Content-Type': 'text/html' });
+                    res.end('<h1>Invalid state parameter</h1>');
+                    server.close();
+                    if (timeoutId) clearTimeout(timeoutId);
+                    reject(new Error('Invalid state parameter'));
+                    return;
+                  }
+
+                  if (error) {
+                    res.writeHead(400, { 'Content-Type': 'text/html' });
+                    res.end(`<h1>OAuth Error: ${error}</h1>`);
+                    server.close();
+                    if (timeoutId) clearTimeout(timeoutId);
+                    reject(new Error(`OAuth error: ${error}`));
+                    return;
+                  }
+
+                  if (code) {
+                    progress.report({ message: 'Exchanging authorization code...' });
+
+                    // Exchange code for token
+                    const token = await this.exchangeCodeForToken(
+                      code,
+                      codeVerifier,
+                      redirectUri,
+                      authUrl
+                    );
+
+                    // Store token securely
+                    await this.storeApiKey(token.access_token, 'oauth');
+                    if (token.refresh_token) {
+                      await this.adapter.secureStorage.store(
+                        SecureApiKeyService.REFRESH_TOKEN_KEY,
+                        token.refresh_token
+                      );
+                    }
+
+                    // Send success response
+                    res.writeHead(200, { 'Content-Type': 'text/html' });
+                    res.end(`
+                      <html>
+                        <head><title>Authentication Success</title></head>
+                        <body>
+                          <h1 style="color: green;">✓ Authentication Successful!</h1>
+                          <p>You can close this window and return to ${this.adapter.branding.ideName}.</p>
+                          <script>setTimeout(() => window.close(), 2000);</script>
+                        </body>
+                      </html>
+                    `);
+
+                    // Cleanup
+                    await this.adapter.secureStorage.delete('oauth_code_verifier');
+                    await this.adapter.secureStorage.delete('oauth_state');
+                    server.close();
+                    if (timeoutId) clearTimeout(timeoutId);
+
+                    // Show success notification
+                    await this.adapter.notification.showInformation(
+                      'Authentication successful! You can now use LanOnasis Memory Assistant.'
+                    );
+
+                    resolve(true);
+                  }
+                } else {
+                  res.writeHead(404, { 'Content-Type': 'text/plain' });
+                  res.end('Not found');
+                }
+              } catch (err) {
+                res.writeHead(500, { 'Content-Type': 'text/html' });
+                res.end(`<h1>Error: ${err instanceof Error ? err.message : 'Unknown error'}</h1>`);
                 server.close();
                 if (timeoutId) clearTimeout(timeoutId);
-                
-                // Show success notification
-                await this.adapter.notification.showInformation(
-                  'Authentication successful! You can now use LanOnasis Memory Assistant.'
-                );
-                
-                resolve(true);
+                reject(err);
               }
-            } else {
-              res.writeHead(404, { 'Content-Type': 'text/plain' });
-              res.end('Not found');
-            }
-          } catch (err) {
-            res.writeHead(500, { 'Content-Type': 'text/html' });
-            res.end(`<h1>Error: ${err instanceof Error ? err.message : 'Unknown error'}</h1>`);
-            server.close();
+            });
+
+            // Add error handling for server
+            server.on('error', (err: NodeJS.ErrnoException) => {
+              if (timeoutId) clearTimeout(timeoutId);
+
+              if (err.code === 'EADDRINUSE') {
+                reject(
+                  new Error(
+                    `Port ${SecureApiKeyService.CALLBACK_PORT} is already in use. ` +
+                    `Please close any applications using this port and try again.`
+                  )
+                );
+              } else {
+                reject(new Error(`Failed to start OAuth callback server: ${err.message}`));
+              }
+            });
+
+            server.listen(SecureApiKeyService.CALLBACK_PORT, 'localhost', () => {
+              this.log(`OAuth callback server listening on port ${SecureApiKeyService.CALLBACK_PORT}`);
+              progress.report({ message: 'Opening browser for authentication...' });
+
+              // Open browser only after server is ready
+              this.adapter.browser.openExternal(authUrlObj.toString());
+              progress.report({ message: 'Waiting for OAuth callback...' });
+            });
+
+            // Timeout after configured time
+            timeoutId = setTimeout(() => {
+              server.close();
+              reject(new Error('OAuth authentication timeout'));
+            }, SecureApiKeyService.OAUTH_TIMEOUT_MS);
+
+          } catch (error) {
             if (timeoutId) clearTimeout(timeoutId);
-            reject(err);
+            reject(error);
           }
         });
-
-        // Add error handling for server
-        server.on('error', (err: NodeJS.ErrnoException) => {
-          if (timeoutId) clearTimeout(timeoutId);
-
-          if (err.code === 'EADDRINUSE') {
-            reject(
-              new Error(
-                `Port ${SecureApiKeyService.CALLBACK_PORT} is already in use. ` +
-                `Please close any applications using this port and try again.`
-              )
-            );
-          } else {
-            reject(new Error(`Failed to start OAuth callback server: ${err.message}`));
-          }
-        });
-
-        server.listen(SecureApiKeyService.CALLBACK_PORT, 'localhost', () => {
-          this.log(`OAuth callback server listening on port ${SecureApiKeyService.CALLBACK_PORT}`);
-
-          // Open browser only after server is ready
-          this.adapter.browser.openExternal(authUrlObj.toString());
-        });
-
-        // Timeout after configured time
-        timeoutId = setTimeout(() => {
-          server.close();
-          reject(new Error('OAuth authentication timeout'));
-        }, SecureApiKeyService.OAUTH_TIMEOUT_MS);
-
-      } catch (error) {
-        if (timeoutId) clearTimeout(timeoutId);
-        reject(error);
       }
-    });
+    );
   }
 
   /**
@@ -486,6 +497,10 @@ export class SecureApiKeyService implements ISecureAuthService {
           description: 'Enter API key directly'
         },
         {
+          label: '$(link-external) Get API Key (Dashboard)',
+          description: 'Open the dashboard to create an API key'
+        },
+        {
           label: '$(circle-slash) Cancel',
           description: 'Cancel authentication'
         }
@@ -515,6 +530,11 @@ export class SecureApiKeyService implements ISecureAuthService {
       return null;
     }
 
+    if (choiceLabel.includes('Get API Key')) {
+      await this.adapter.browser.openExternal(SecureApiKeyService.API_KEY_DASHBOARD_URL);
+      return await this.promptForAuthentication();
+    }
+
     if (choiceLabel.includes('OAuth')) {
       const success = await this.authenticateWithOAuth();
       if (success) {
@@ -534,7 +554,7 @@ export class SecureApiKeyService implements ISecureAuthService {
   private async promptForApiKeyEntry(): Promise<string | null> {
     const apiKey = await this.adapter.input.showInputBox({
       prompt: 'Enter your Lanonasis API Key',
-      placeHolder: 'Get your API key from api.lanonasis.com',
+      placeHolder: 'Get your API key from dashboard.lanonasis.com',
       password: true,
       validateInput: (value) => {
         if (!value || value.trim().length === 0) {
