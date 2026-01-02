@@ -300,6 +300,9 @@
     "@lanonasis/memory-client": "file:../../packages/memory-client",
     "@lanonasis/ide-extension-core": "file:../../packages/ide-extension-core"
   },
+  "optionalDependencies": {
+    "keytar": "^7.9.0"
+  },
   "author": "Lanonasis Team",
   "license": "MIT"
 }
