@@ -204,7 +204,7 @@ export function mcpCommands(program: Command) {
         const healthUrl = `${rootBase}/health`;
 
         const token = config.getToken();
-        const vendorKey = config.getVendorKey();
+        const vendorKey = await config.getVendorKeyAsync();
 
         const headers: Record<string, string> = {};
         if (vendorKey) {
@@ -535,7 +535,7 @@ export function mcpCommands(program: Command) {
       // Step 1: Check authentication status
       console.log(chalk.cyan('1. Authentication Status'));
       const token = config.getToken();
-      const vendorKey = config.getVendorKey();
+      const vendorKey = await config.getVendorKeyAsync();
 
       if (!token && !vendorKey) {
         console.log(chalk.red('   ✖ No authentication credentials found'));

@@ -198,7 +198,7 @@ export class APIClient {
 
       // Enhanced Authentication Support
       const token = this.config.getToken();
-      const vendorKey = this.config.getVendorKey();
+      const vendorKey = await this.config.getVendorKeyAsync();
       
       if (vendorKey) {
         // Vendor key authentication (validated server-side)

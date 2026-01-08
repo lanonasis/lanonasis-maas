@@ -24,7 +24,7 @@
   "dependencies": {
     "@lanonasis/oauth-client": "1.2.5",
     "@lanonasis/security-sdk": "^1.0.1",
-    "@modelcontextprotocol/sdk": "^1.1.1",
+    "@modelcontextprotocol/sdk": "^1.25.2",
     "axios": "^1.7.7",
     "chalk": "^5.3.0",
     "cli-progress": "^3.12.0",

@@ -72,6 +72,7 @@ export class CLIConfig {
   private authCheckCache: { isValid: boolean; timestamp: number } | null = null;
   private readonly AUTH_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
   private apiKeyStorage: ApiKeyStorage;
+  private vendorKeyCache?: string;
 
   constructor() {
     this.configDir = path.join(os.homedir(), '.maas');
@@ -88,6 +89,7 @@ export class CLIConfig {
     this.configDir = configDir;
     this.configPath = path.join(configDir, 'config.json');
     this.lockFile = path.join(configDir, 'config.lock');
+    this.vendorKeyCache = undefined;
   }
 
   /**
@@ -107,6 +109,9 @@ export class CLIConfig {
   }
 
   async load(): Promise<void> {
+    // Reset in-memory cache; disk state may have changed
+    this.vendorKeyCache = undefined;
+
     try {
       const data = await fs.readFile(this.configPath, 'utf-8');
       this.config = JSON.parse(data);
@@ -640,6 +645,9 @@ export class CLIConfig {
       createdAt: new Date().toISOString()
     });
 
+    // Cache the vendor key for this process so synchronous callers can reuse it
+    this.vendorKeyCache = trimmedKey;
+
     if (process.env.CLI_VERBOSE === 'true') {
       console.log('🔐 Vendor key stored securely via @lanonasis/oauth-client');
     }
@@ -720,10 +728,17 @@ export class CLIConfig {
   }
 
   getVendorKey(): string | undefined {
+    if (this.vendorKeyCache) {
+      return this.vendorKeyCache;
+    }
+
     try {
       // Retrieve from secure storage using ApiKeyStorage (synchronous wrapper)
       const stored = this.getVendorKeySync();
-      return stored;
+      if (stored) {
+        this.vendorKeyCache = stored;
+      }
+      return this.vendorKeyCache;
     } catch (error) {
       if (process.env.CLI_VERBOSE === 'true') {
         console.error('⚠️  Failed to load vendor key from secure storage:', error);
@@ -755,7 +770,8 @@ export class CLIConfig {
       await this.apiKeyStorage.initialize();
       const stored = await this.apiKeyStorage.retrieve();
       if (stored) {
-        return stored.apiKey;
+        this.vendorKeyCache = stored.apiKey;
+        return this.vendorKeyCache;
       }
     } catch (error) {
       if (process.env.CLI_VERBOSE === 'true') {
@@ -768,7 +784,8 @@ export class CLIConfig {
       if (process.env.CLI_VERBOSE === 'true') {
         console.log('ℹ️  Found legacy plaintext vendor key, will migrate on next auth');
       }
-      return this.config.vendorKey;
+      this.vendorKeyCache = this.config.vendorKey;
+      return this.vendorKeyCache;
     }
 
     return undefined;
@@ -776,7 +793,7 @@ export class CLIConfig {
 
   hasVendorKey(): boolean {
     // Check for marker or legacy storage
-    return !!this.config.vendorKey;
+    return !!(this.vendorKeyCache || this.config.vendorKey);
   }
 
   async setApiUrl(url: string): Promise<void> {
@@ -1023,11 +1040,25 @@ export class CLIConfig {
   async logout(): Promise<void> {
     this.config.token = undefined;
     this.config.user = undefined;
+    this.vendorKeyCache = undefined;
+    this.config.vendorKey = undefined;
+    this.config.authMethod = undefined;
+    try {
+      await this.apiKeyStorage.initialize();
+      // ApiKeyStorage may implement clear() to remove encrypted secrets
+      const storage: any = this.apiKeyStorage;
+      if (typeof storage.clear === 'function') {
+        await storage.clear();
+      }
+    } catch {
+      // Ignore storage cleanup errors during logout
+    }
     await this.save();
   }
 
   async clear(): Promise<void> {
     this.config = {};
+    this.vendorKeyCache = undefined;
     await this.save();
   }
 
@@ -1043,7 +1074,7 @@ export class CLIConfig {
   // Enhanced credential validation methods
   async validateStoredCredentials(): Promise<boolean> {
     try {
-      const vendorKey = this.getVendorKey();
+      const vendorKey = await this.getVendorKeyAsync();
       const token = this.getToken();
 
       if (!vendorKey && !token) {
