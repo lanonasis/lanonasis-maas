@@ -440,7 +440,7 @@ export async function diagnoseCommand(): Promise<void> {
   // Step 2: Check stored credentials
   console.log(chalk.cyan('\n2. Stored Credentials'));
   const token = config.getToken();
-  const vendorKey = config.getVendorKey();
+  const vendorKey = await config.getVendorKeyAsync();
   const authMethod = config.get<string>('authMethod');
 
   if (vendorKey) {

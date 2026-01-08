@@ -108,12 +108,14 @@ export class CLIMCPServer {
     const resolvedPort =
       typeof port === 'number' && !Number.isNaN(port) ? port : 3001;
 
+    const vendorKey = await this.config.getVendorKeyAsync();
+
     // Set environment variables from CLI config
     const env = {
       ...process.env,
       PORT: resolvedPort.toString(),
       MEMORY_API_URL: this.config.getApiUrl(),
-      LANONASIS_VENDOR_KEY: this.config.getVendorKey(),
+      LANONASIS_VENDOR_KEY: vendorKey,
       LANONASIS_TOKEN: this.config.getToken(),
       MCP_VERBOSE: verbose ? 'true' : 'false',
       CLI_ALIGNED: 'true'
