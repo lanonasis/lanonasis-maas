@@ -56,6 +56,20 @@ describe('Authentication Persistence Tests', () => {
   });
 
   describe('Credential Storage and Retrieval', () => {
+    it('clears vendor key cache when configuration reloads from disk', async () => {
+      process.env.SKIP_SERVER_VALIDATION = 'true';
+      const testVendorKey = 'pk_test_cache123.sk_test_cache456';
+
+      await config.setVendorKey(testVendorKey);
+      expect(config.getVendorKey()).toBe(testVendorKey);
+
+      // Simulate an external config change that removes vendorKey
+      await fs.writeFile((config as any).configPath, JSON.stringify({ version: '1.0.0' }, null, 2));
+      await config.load();
+
+      expect(config.getVendorKey()).toBeUndefined();
+    });
+
     it('should store and retrieve vendor key credentials across CLI sessions', async () => {
       const testVendorKey = 'pk_test123456789.sk_test123456789012345';
 
@@ -63,7 +77,7 @@ describe('Authentication Persistence Tests', () => {
       await config.setVendorKey(testVendorKey);
 
       // Verify storage
-      expect(config.getVendorKey()).toBe(testVendorKey);
+      expect(await config.getVendorKeyAsync()).toBe(testVendorKey);
       expect(config.get('authMethod')).toBe('vendor_key');
       expect(config.get('lastValidated')).toBeDefined();
 
@@ -76,7 +90,7 @@ describe('Authentication Persistence Tests', () => {
       await newConfig.init();
 
       // Verify credentials persist across sessions
-      expect(newConfig.getVendorKey()).toBe(testVendorKey);
+      expect(await newConfig.getVendorKeyAsync()).toBe(testVendorKey);
       expect(newConfig.get('authMethod')).toBe('vendor_key');
     });
 
