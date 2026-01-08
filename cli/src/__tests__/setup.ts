@@ -32,6 +32,28 @@ if (!process.env.MCP_SSE_BASE) {
   process.env.MCP_SSE_BASE = 'https://mcp.lanonasis.com/api/v1/events';
 }
 
+// Provide a stable in-memory ApiKeyStorage for tests so vendor key flows
+// don't depend on system keychains or missing package builds.
+jest.mock('@lanonasis/oauth-client', () => {
+  class ApiKeyStorage {
+    private stored?: { apiKey: string };
+    async initialize(): Promise<void> {
+      return;
+    }
+    async store(data: { apiKey: string }): Promise<void> {
+      this.stored = { apiKey: data.apiKey };
+    }
+    async retrieve(): Promise<{ apiKey: string } | null> {
+      return this.stored ?? null;
+    }
+    async clear(): Promise<void> {
+      this.stored = undefined;
+    }
+  }
+
+  return { ApiKeyStorage };
+});
+
 // Mock console methods to reduce noise in tests
 const originalConsole = { ...console };
 

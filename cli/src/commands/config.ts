@@ -462,7 +462,7 @@ export function configCommands(program: Command): void {
       // Step 2: Validate authentication configuration
       console.log(chalk.cyan('\n2. Authentication Configuration'));
       const token = config.getToken();
-      const vendorKey = config.getVendorKey();
+      const vendorKey = await config.getVendorKeyAsync();
       const authMethod = config.get<string>('authMethod');
 
       if (!token && !vendorKey) {

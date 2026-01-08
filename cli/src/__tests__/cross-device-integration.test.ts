@@ -116,9 +116,9 @@ describe('Cross-Device Integration Tests', () => {
         await device3Config.setVendorKey(sharedVendorKey);
 
         // Verify all devices have the same vendor key
-        expect(device1Config.getVendorKey()).toBe(sharedVendorKey);
-        expect(device2Config.getVendorKey()).toBe(sharedVendorKey);
-        expect(device3Config.getVendorKey()).toBe(sharedVendorKey);
+        expect(await device1Config.getVendorKeyAsync()).toBe(sharedVendorKey);
+        expect(await device2Config.getVendorKeyAsync()).toBe(sharedVendorKey);
+        expect(await device3Config.getVendorKeyAsync()).toBe(sharedVendorKey);
 
         // Verify all devices have same auth method
         expect(device1Config.get('authMethod')).toBe('vendor_key');
@@ -159,9 +159,9 @@ describe('Cross-Device Integration Tests', () => {
       expect(deviceId2).not.toBe(deviceId3);
 
       // But credentials should be the same
-      expect(device1Config.getVendorKey()).toBe(sharedVendorKey);
-      expect(device2Config.getVendorKey()).toBe(sharedVendorKey);
-      expect(device3Config.getVendorKey()).toBe(sharedVendorKey);
+      expect(await device1Config.getVendorKeyAsync()).toBe(sharedVendorKey);
+      expect(await device2Config.getVendorKeyAsync()).toBe(sharedVendorKey);
+      expect(await device3Config.getVendorKeyAsync()).toBe(sharedVendorKey);
     });
   });
 
@@ -362,9 +362,9 @@ describe('Cross-Device Integration Tests', () => {
       await expect(device2Config.setVendorKey(sharedVendorKey)).resolves.not.toThrow();
       await expect(device3Config.setVendorKey(sharedVendorKey)).resolves.not.toThrow();
 
-      expect(device1Config.getVendorKey()).toBe(sharedVendorKey);
-      expect(device2Config.getVendorKey()).toBe(sharedVendorKey);
-      expect(device3Config.getVendorKey()).toBe(sharedVendorKey);
+      expect(await device1Config.getVendorKeyAsync()).toBe(sharedVendorKey);
+      expect(await device2Config.getVendorKeyAsync()).toBe(sharedVendorKey);
+      expect(await device3Config.getVendorKeyAsync()).toBe(sharedVendorKey);
     });
 
     it('should provide consistent validation error messages', async () => {

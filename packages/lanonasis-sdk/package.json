@@ -55,7 +55,7 @@
     "zod": "^3.24.4",
     "jsonwebtoken": "^9.0.3",
     "crypto-js": "^4.2.0",
-    "@modelcontextprotocol/sdk": "^1.17.0"
+    "@modelcontextprotocol/sdk": "^1.25.2"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",

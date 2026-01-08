@@ -150,7 +150,7 @@ describe('Authentication Integration Tests', () => {
             // This will hit the real server
             await config.setVendorKey(testVendorKey);
 
-            expect(config.getVendorKey()).toBe(testVendorKey);
+            expect(await config.getVendorKeyAsync()).toBe(testVendorKey);
             expect(config.get('authMethod')).toBe('vendor_key');
         });
 
