@@ -156,10 +156,11 @@ async function exchangeCodeForTokens(
   codeVerifier: string,
   redirectUri: string
 ): Promise<TokenResponse> {
+  // Supabase OAuth requires application/x-www-form-urlencoded for token exchange
   const response = await fetch(`${config.authBaseUrl}/oauth/token`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
       grant_type: 'authorization_code',
       code,
       client_id: config.clientId,
@@ -247,10 +248,11 @@ export async function refreshAccessToken(
 ): Promise<TokenResponse> {
   const config = { ...DEFAULT_CONFIG, ...userConfig };
 
+  // Supabase OAuth requires application/x-www-form-urlencoded for token refresh
   const response = await fetch(`${config.authBaseUrl}/oauth/token`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
       grant_type: 'refresh_token',
       refresh_token: refreshToken,
       client_id: config.clientId,
