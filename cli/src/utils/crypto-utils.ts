@@ -9,7 +9,7 @@
 
 import crypto from 'crypto';
 import { homedir, platform, hostname } from 'os';
-import { hashApiKey, isSha256Hash } from './hash-utils.js';
+import { hashApiKey, isSha256Hash } from '@lanonasis/security-sdk/hash-utils';
 
 // Encryption algorithm configuration
 const ALGORITHM = 'aes-256-gcm';
