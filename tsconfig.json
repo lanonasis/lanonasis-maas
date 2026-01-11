@@ -1,5 +1,4 @@
 {
-  "ignoreDeprecations": "5.0",
   "compilerOptions": {
     "target": "ES2022",
     "lib": [
@@ -22,7 +21,7 @@
     // NOTE: The '@/*' path alias requires corresponding configuration in bundlers/transpilers (e.g., webpack, vite, jest) to work correctly in all environments.
     "paths": {
       "@/*": [
-        "src/*"
+        "./src/*"
       ]
     },
     "strict": true,
@@ -39,8 +38,7 @@
     "declarationMap": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
-    "composite": true,
-    "baseUrl": "."
+    "composite": true
   },
   "references": [
     {
