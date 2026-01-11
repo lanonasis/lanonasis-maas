@@ -283,7 +283,7 @@ if (process.env.EMERGENCY_BOOTSTRAP_TOKEN) {
 app.use(`${config.API_PREFIX}/${config.API_VERSION}/memory`, validateProjectScope, alignedAuthMiddleware, planBasedRateLimit(), memoryRoutes);
 app.use(`${config.API_PREFIX}/${config.API_VERSION}/memories`, validateProjectScope, alignedAuthMiddleware, planBasedRateLimit(), memoryRoutes);
 
-// API key management routes (require auth)  
+// API key management routes (require auth)
 app.use(`${config.API_PREFIX}/${config.API_VERSION}/keys`, validateProjectScope, alignedAuthMiddleware, apiKeyRoutes);
 app.use(`${config.API_PREFIX}/${config.API_VERSION}/api-keys`, validateProjectScope, alignedAuthMiddleware, apiKeyRoutes);
 
