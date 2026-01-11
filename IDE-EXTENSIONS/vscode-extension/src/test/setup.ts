@@ -1,6 +1,10 @@
-import '@testing-library/jest-dom/vitest';
-import { afterEach, vi } from 'vitest';
+import * as matchers from '@testing-library/jest-dom/matchers';
+import { afterEach, vi, expect as vitestExpect } from 'vitest';
 import { cleanup } from '@testing-library/react';
+
+const globalExpect = globalThis.expect ?? vitestExpect;
+globalExpect.extend(matchers);
+globalThis.expect = globalExpect;
 
 // Mock VS Code API - exported so tests can access and reset it
 export const mockVSCode = {
