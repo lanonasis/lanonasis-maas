@@ -16,8 +16,7 @@
     "rootDir": "./src",
     "types": [
       "node"
-    ],
-    "baseUrl": "./src"
+    ]
   },
   "include": [
     "src/**/*"
