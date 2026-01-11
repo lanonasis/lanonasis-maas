@@ -962,10 +962,8 @@ async function handleCredentialsFlow(options: LoginOptions, config: CLIConfig): 
     if (response.user.role) {
       console.log(`Role: ${response.user.role}`);
     }
-    console.log(chalk.gray('✓ API access configured'));
-    console.log();
-    console.log(chalk.dim('Note: MCP WebSocket commands require a vendor key.'));
-    console.log(chalk.dim('Run'), chalk.white('onasis auth vendor-key <key>'), chalk.dim('to configure MCP access.'));
+    console.log(chalk.gray('✓ API and MCP access configured'));
+    console.log(chalk.dim('Your JWT token works with all services: API, MCP, CLI.'));
 
 
   } catch (error: unknown) {

@@ -4,6 +4,7 @@ import { Command } from 'commander';
 import { ReplEngine } from './core/repl-engine.js';
 import { loadConfig } from './config/loader.js';
 import chalk from 'chalk';
+import { MagicLinkFlow } from '@lanonasis/oauth-client';
 import {
   performOAuthLogin,
   refreshAccessToken,
@@ -60,7 +61,7 @@ program
     try {
       // Determine auth method and configuration
       if (options.otp) {
-        // OTP/Magic Link flow
+        // OTP/Magic Link flow using oauth-client SDK
         console.log(chalk.cyan('\n🔐 Passwordless Login (OTP)\n'));
 
         const readline = await import('readline');
@@ -75,51 +76,41 @@ program
           });
         });
 
-        if (!email || !email.includes('@')) {
+        if (!MagicLinkFlow.isValidEmail(email)) {
           console.error(chalk.red('Invalid email address'));
           rl.close();
           process.exit(1);
         }
 
-        console.log(chalk.cyan(`\nSending OTP to ${email}...`));
-
-        // Request OTP (email code, not magic link - user will enter code manually)
-        const otpResponse = await fetch('https://auth.lanonasis.com/v1/auth/otp/send', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, platform: 'cli' }),
+        // Initialize MagicLinkFlow from oauth-client SDK
+        const magicLinkFlow = new MagicLinkFlow({
+          clientId: 'lanonasis-repl-cli',
+          authBaseUrl: options.authUrl,
+          platform: 'cli',
         });
 
-        if (!otpResponse.ok) {
-          const error = await otpResponse.json().catch(() => ({}));
-          throw new Error(error.message || 'Failed to send OTP');
-        }
+        console.log(chalk.cyan(`\nSending OTP to ${email}...`));
+
+        // Request OTP using SDK
+        await magicLinkFlow.requestOTP(email);
 
         console.log(chalk.green('✓ OTP sent! Check your email.'));
 
         const otp = await new Promise<string>((resolve) => {
-          rl.question(chalk.yellow('\nEnter the OTP code: '), (answer) => {
+          rl.question(chalk.yellow('\nEnter the 6-digit OTP code: '), (answer) => {
             resolve(answer.trim());
           });
         });
 
         rl.close();
 
-        // Verify OTP and get tokens
-        console.log(chalk.cyan('Verifying OTP...'));
-
-        const verifyResponse = await fetch('https://auth.lanonasis.com/v1/auth/otp/verify', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, token: otp, type: 'email' }),
-        });
-
-        if (!verifyResponse.ok) {
-          const error = await verifyResponse.json().catch(() => ({}));
-          throw new Error(error.message || 'Invalid OTP');
+        if (!MagicLinkFlow.isValidOTPCode(otp)) {
+          throw new Error('Invalid OTP format. Must be 6 digits.');
         }
 
-        const tokens = await verifyResponse.json();
+        // Verify OTP and get tokens using SDK
+        console.log(chalk.cyan('Verifying OTP...'));
+        const tokens = await magicLinkFlow.verifyOTP(email, otp);
 
         // Save credentials
         saveCredentials({
@@ -133,6 +124,9 @@ program
         });
 
         console.log(chalk.green('\n✓ Logged in successfully with OTP!'));
+        if (tokens.user?.email) {
+          console.log(chalk.gray(`Authenticated as: ${tokens.user.email}`));
+        }
         console.log(chalk.cyan('\nRun `onasis-repl start` to begin your session.\n'));
         return;
       }
