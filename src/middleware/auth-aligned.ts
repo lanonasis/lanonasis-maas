@@ -479,7 +479,7 @@ export const planBasedRateLimit = () => {
 export async function ensureMaasUser(userId: string, email?: string): Promise<void> {
   try {
     const { data: existing } = await supabase
-      .from('maas.users')
+      .from('profiles')
       .select('id')
       .eq('user_id', userId)
       .single();
@@ -487,7 +487,7 @@ export async function ensureMaasUser(userId: string, email?: string): Promise<vo
     if (!existing) {
       // First, create or get a default organization for this user
       const { data: org } = await supabase
-        .from('maas.organizations')
+        .from('organizations')
         .insert({
           name: `User ${userId.slice(0, 8)} Organization`,
           slug: `user-${userId.slice(0, 8)}-${Date.now()}`,
@@ -498,7 +498,7 @@ export async function ensureMaasUser(userId: string, email?: string): Promise<vo
 
       if (org) {
         await supabase
-          .from('maas.users')
+          .from('profiles')
           .insert({
             user_id: userId,
             organization_id: org.id,
