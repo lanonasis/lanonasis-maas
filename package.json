@@ -83,6 +83,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.38.0",
+    "@jest/globals": "^30.2.0",
     "@types/bcrypt": "^6.0.0",
     "@types/bcryptjs": "^2.4.6",
     "@types/compression": "^1.7.5",
