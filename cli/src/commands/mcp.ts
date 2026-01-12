@@ -496,6 +496,43 @@ export function mcpCommands(program: Command) {
       }
     });
 
+  // Start MCP server for external clients
+  mcp.command('start')
+    .description('Start MCP server for external clients (Claude Desktop, Cursor, etc.)')
+    .option('--transport <type>', 'Transport: stdio (default), ws, http, sse', 'stdio')
+    .option('--port <number>', 'Port for ws/http/sse', '3009')
+    .option('--host <address>', 'Host address', '127.0.0.1')
+    .action(async (options) => {
+      const apiKey = process.env.LANONASIS_API_KEY;
+      if (!apiKey) {
+        console.error('Error: LANONASIS_API_KEY environment variable required');
+        process.exit(1);
+      }
+
+      try {
+        const { LanonasisMCPServer } = await import('../mcp/server/lanonasis-server.js');
+
+        const server = new LanonasisMCPServer({
+          apiKey,
+          transport: options.transport,
+          port: parseInt(options.port, 10),
+          host: options.host
+        });
+
+        if (options.transport === 'stdio') {
+          // Log to stderr since stdout is for MCP protocol
+          console.error(`Starting MCP server in stdio mode...`);
+          await server.startStdio();
+        } else {
+          console.error(`Starting MCP server on ${options.host}:${options.port} (${options.transport})...`);
+          await server.start();
+        }
+      } catch (error) {
+        console.error(`Failed to start MCP server: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        process.exit(1);
+      }
+    });
+
   // Diagnose MCP connection issues
   mcp.command('diagnose')
     .description('Diagnose MCP connection issues')

@@ -370,7 +370,7 @@ export async function diagnoseCommand() {
     // Step 2: Check stored credentials
     console.log(chalk.cyan('\n2. Stored Credentials'));
     const token = config.getToken();
-    const vendorKey = config.getVendorKey();
+    const vendorKey = await config.getVendorKeyAsync();
     const authMethod = config.get('authMethod');
     if (vendorKey) {
         diagnostics.hasCredentials = true;
@@ -825,10 +825,8 @@ async function handleCredentialsFlow(options, config) {
         if (response.user.role) {
             console.log(`Role: ${response.user.role}`);
         }
-        console.log(chalk.gray('✓ API access configured'));
-        console.log();
-        console.log(chalk.dim('Note: MCP WebSocket commands require a vendor key.'));
-        console.log(chalk.dim('Run'), chalk.white('onasis auth vendor-key <key>'), chalk.dim('to configure MCP access.'));
+        console.log(chalk.gray('✓ API and MCP access configured'));
+        console.log(chalk.dim('Your JWT token works with all services: API, MCP, CLI.'));
     }
     catch (error) {
         spinner.fail('Login failed');
