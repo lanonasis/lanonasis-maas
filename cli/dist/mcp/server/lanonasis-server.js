@@ -1474,6 +1474,35 @@ Please choose an option (1-4):`
         }
     }
     /**
+     * Start the server in stdio mode for external MCP clients (Claude Desktop, Cursor, etc.)
+     * This is the primary entry point for `lanonasis mcp start`
+     */
+    async startStdio() {
+        await this.initialize();
+        try {
+            // Use API key from options if provided (from LANONASIS_API_KEY env var)
+            if (this.options.apiKey) {
+                // Set the API key for authentication
+                await this.config.setVendorKey(this.options.apiKey);
+            }
+            // Create stdio transport
+            this.transport = new StdioServerTransport();
+            await this.server.connect(this.transport);
+            // Log to stderr since stdout is for MCP protocol
+            console.error(chalk.cyan('🚀 Lanonasis MCP Server started (stdio mode)'));
+            console.error(chalk.gray(`Backend: ${this.config.getApiUrl()}`));
+            console.error(chalk.gray(`Tools: 18+ available`));
+            console.error(chalk.gray('Ready for MCP client connections...'));
+            // Keep the process alive
+            process.stdin.resume();
+        }
+        catch (error) {
+            console.error(chalk.red('❌ Failed to start MCP Server:'));
+            console.error(chalk.red(error instanceof Error ? error.message : 'Unknown error'));
+            throw error;
+        }
+    }
+    /**
      * Stop the server
      */
     async stop() {

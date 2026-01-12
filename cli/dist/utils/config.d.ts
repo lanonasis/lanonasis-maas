@@ -43,6 +43,7 @@ export declare class CLIConfig {
     private authCheckCache;
     private readonly AUTH_CACHE_TTL;
     private apiKeyStorage;
+    private vendorKeyCache?;
     constructor();
     /**
      * Overrides the configuration storage directory. Primarily used for tests.
