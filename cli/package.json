@@ -6,7 +6,8 @@
   "types": "dist/index.d.ts",
   "bin": {
     "onasis": "dist/index.js",
-    "lanonasis": "dist/index.js"
+    "lanonasis": "dist/index.js",
+    "lanonasis-mcp": "dist/mcp-server-entry.js"
   },
   "exports": {
     ".": {

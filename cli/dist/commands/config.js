@@ -382,7 +382,7 @@ export function configCommands(program) {
         // Step 2: Validate authentication configuration
         console.log(chalk.cyan('\n2. Authentication Configuration'));
         const token = config.getToken();
-        const vendorKey = config.getVendorKey();
+        const vendorKey = await config.getVendorKeyAsync();
         const authMethod = config.get('authMethod');
         if (!token && !vendorKey) {
             console.log(chalk.yellow('   ⚠ No authentication credentials configured'));

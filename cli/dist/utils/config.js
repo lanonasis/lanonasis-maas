@@ -14,6 +14,7 @@ export class CLIConfig {
     authCheckCache = null;
     AUTH_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
     apiKeyStorage;
+    vendorKeyCache;
     constructor() {
         this.configDir = path.join(os.homedir(), '.maas');
         this.configPath = path.join(this.configDir, 'config.json');
@@ -28,6 +29,7 @@ export class CLIConfig {
         this.configDir = configDir;
         this.configPath = path.join(configDir, 'config.json');
         this.lockFile = path.join(configDir, 'config.lock');
+        this.vendorKeyCache = undefined;
     }
     /**
      * Exposes the current config path for tests and diagnostics.
@@ -45,6 +47,8 @@ export class CLIConfig {
         }
     }
     async load() {
+        // Reset in-memory cache; disk state may have changed
+        this.vendorKeyCache = undefined;
         try {
             const data = await fs.readFile(this.configPath, 'utf-8');
             this.config = JSON.parse(data);
@@ -170,7 +174,7 @@ export class CLIConfig {
     getApiUrl() {
         const baseUrl = process.env.MEMORY_API_URL ||
             this.config.apiUrl ||
-            'https://mcp.lanonasis.com';
+            'https://api.lanonasis.com'; // Primary REST API endpoint
         // Ensure we don't double-append /api/v1 - strip it if present since APIClient adds it
         return baseUrl.replace(/\/api\/v1\/?$/, '');
     }
@@ -192,8 +196,8 @@ export class CLIConfig {
             if (!this.config.discoveredServices) {
                 this.config.discoveredServices = {
                     auth_base: 'https://auth.lanonasis.com',
-                    memory_base: 'https://mcp.lanonasis.com', // Base URL without /api/v1
-                    mcp_base: 'https://mcp.lanonasis.com/api/v1', // Full MCP REST path
+                    memory_base: 'https://api.lanonasis.com', // Primary REST API (Supabase Edge Functions)
+                    mcp_base: 'https://mcp.lanonasis.com/api/v1', // MCP protocol REST path
                     mcp_ws_base: 'wss://mcp.lanonasis.com/ws',
                     mcp_sse_base: 'https://mcp.lanonasis.com/api/v1/events',
                     project_scope: 'lanonasis-maas'
@@ -245,10 +249,10 @@ export class CLIConfig {
             if (authBase.includes('localhost') || authBase.includes('127.0.0.1')) {
                 authBase = 'https://auth.lanonasis.com';
             }
-            // Memory base should be the MCP base URL without /api/v1 suffix
+            // Memory base should be the REST API URL without /api/v1 suffix
             // The API client will append the path as needed
-            const rawMemoryBase = discovered.endpoints?.http || 'https://mcp.lanonasis.com/api/v1';
-            const memoryBase = rawMemoryBase.replace(/\/api\/v1\/?$/, '') || 'https://mcp.lanonasis.com';
+            const rawMemoryBase = discovered.endpoints?.http || 'https://api.lanonasis.com/api/v1';
+            const memoryBase = rawMemoryBase.replace(/\/api\/v1\/?$/, '') || 'https://api.lanonasis.com';
             this.config.discoveredServices = {
                 auth_base: authBase || 'https://auth.lanonasis.com',
                 memory_base: memoryBase,
@@ -371,8 +375,8 @@ export class CLIConfig {
         const nodeEnv = (process.env.NODE_ENV ?? '').toLowerCase();
         const isDevEnvironment = nodeEnv === 'development' || nodeEnv === 'test';
         const defaultAuthBase = isDevEnvironment ? 'http://localhost:4000' : 'https://auth.lanonasis.com';
-        const defaultMemoryBase = isDevEnvironment ? 'http://localhost:4000' : 'https://mcp.lanonasis.com'; // Base URL without /api/v1
-        const defaultMcpBase = isDevEnvironment ? 'http://localhost:4100/api/v1' : 'https://mcp.lanonasis.com/api/v1'; // Full MCP REST path
+        const defaultMemoryBase = isDevEnvironment ? 'http://localhost:4000' : 'https://api.lanonasis.com'; // Primary REST API (Supabase Edge Functions)
+        const defaultMcpBase = isDevEnvironment ? 'http://localhost:4100/api/v1' : 'https://mcp.lanonasis.com/api/v1'; // MCP protocol REST path
         const defaultMcpWsBase = isDevEnvironment ? 'ws://localhost:4100/ws' : 'wss://mcp.lanonasis.com/ws';
         const defaultMcpSseBase = isDevEnvironment ? 'http://localhost:4100/api/v1/events' : 'https://mcp.lanonasis.com/api/v1/events';
         const endpoints = {
@@ -438,8 +442,8 @@ export class CLIConfig {
         }
         const currentServices = this.config.discoveredServices ?? {
             auth_base: 'https://auth.lanonasis.com',
-            memory_base: 'https://mcp.lanonasis.com', // Base URL without /api/v1
-            mcp_base: 'https://mcp.lanonasis.com/api/v1', // Full MCP REST path
+            memory_base: 'https://api.lanonasis.com', // Primary REST API (Supabase Edge Functions)
+            mcp_base: 'https://mcp.lanonasis.com/api/v1', // MCP protocol REST path
             mcp_ws_base: 'wss://mcp.lanonasis.com/ws',
             mcp_sse_base: 'https://mcp.lanonasis.com/api/v1/events',
             project_scope: 'lanonasis-maas'
@@ -488,6 +492,8 @@ export class CLIConfig {
             environment: process.env.NODE_ENV || 'production',
             createdAt: new Date().toISOString()
         });
+        // Cache the vendor key for this process so synchronous callers can reuse it
+        this.vendorKeyCache = trimmedKey;
         if (process.env.CLI_VERBOSE === 'true') {
             console.log('🔐 Vendor key stored securely via @lanonasis/oauth-client');
         }
@@ -566,10 +572,16 @@ export class CLIConfig {
         }
     }
     getVendorKey() {
+        if (this.vendorKeyCache) {
+            return this.vendorKeyCache;
+        }
         try {
             // Retrieve from secure storage using ApiKeyStorage (synchronous wrapper)
             const stored = this.getVendorKeySync();
-            return stored;
+            if (stored) {
+                this.vendorKeyCache = stored;
+            }
+            return this.vendorKeyCache;
         }
         catch (error) {
             if (process.env.CLI_VERBOSE === 'true') {
@@ -600,7 +612,8 @@ export class CLIConfig {
             await this.apiKeyStorage.initialize();
             const stored = await this.apiKeyStorage.retrieve();
             if (stored) {
-                return stored.apiKey;
+                this.vendorKeyCache = stored.apiKey;
+                return this.vendorKeyCache;
             }
         }
         catch (error) {
@@ -613,13 +626,14 @@ export class CLIConfig {
             if (process.env.CLI_VERBOSE === 'true') {
                 console.log('ℹ️  Found legacy plaintext vendor key, will migrate on next auth');
             }
-            return this.config.vendorKey;
+            this.vendorKeyCache = this.config.vendorKey;
+            return this.vendorKeyCache;
         }
         return undefined;
     }
     hasVendorKey() {
         // Check for marker or legacy storage
-        return !!this.config.vendorKey;
+        return !!(this.vendorKeyCache || this.config.vendorKey);
     }
     async setApiUrl(url) {
         this.config.apiUrl = url;
@@ -848,10 +862,25 @@ export class CLIConfig {
     async logout() {
         this.config.token = undefined;
         this.config.user = undefined;
+        this.vendorKeyCache = undefined;
+        this.config.vendorKey = undefined;
+        this.config.authMethod = undefined;
+        try {
+            await this.apiKeyStorage.initialize();
+            // ApiKeyStorage may implement clear() to remove encrypted secrets
+            const storage = this.apiKeyStorage;
+            if (typeof storage.clear === 'function') {
+                await storage.clear();
+            }
+        }
+        catch {
+            // Ignore storage cleanup errors during logout
+        }
         await this.save();
     }
     async clear() {
         this.config = {};
+        this.vendorKeyCache = undefined;
         await this.save();
     }
     async exists() {
@@ -866,7 +895,7 @@ export class CLIConfig {
     // Enhanced credential validation methods
     async validateStoredCredentials() {
         try {
-            const vendorKey = this.getVendorKey();
+            const vendorKey = await this.getVendorKeyAsync();
             const token = this.getToken();
             if (!vendorKey && !token) {
                 return false;

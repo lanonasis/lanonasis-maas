@@ -247,7 +247,7 @@ export class CLIConfig {
   getApiUrl(): string {
     const baseUrl = process.env.MEMORY_API_URL ||
       this.config.apiUrl ||
-      'https://mcp.lanonasis.com';
+      'https://api.lanonasis.com';  // Primary REST API endpoint
     // Ensure we don't double-append /api/v1 - strip it if present since APIClient adds it
     return baseUrl.replace(/\/api\/v1\/?$/, '');
   }
@@ -273,8 +273,8 @@ export class CLIConfig {
       if (!this.config.discoveredServices) {
         this.config.discoveredServices = {
           auth_base: 'https://auth.lanonasis.com',
-          memory_base: 'https://mcp.lanonasis.com', // Base URL without /api/v1
-          mcp_base: 'https://mcp.lanonasis.com/api/v1', // Full MCP REST path
+          memory_base: 'https://api.lanonasis.com', // Primary REST API (Supabase Edge Functions)
+          mcp_base: 'https://mcp.lanonasis.com/api/v1', // MCP protocol REST path
           mcp_ws_base: 'wss://mcp.lanonasis.com/ws',
           mcp_sse_base: 'https://mcp.lanonasis.com/api/v1/events',
           project_scope: 'lanonasis-maas'
@@ -337,10 +337,10 @@ export class CLIConfig {
         authBase = 'https://auth.lanonasis.com';
       }
 
-      // Memory base should be the MCP base URL without /api/v1 suffix
+      // Memory base should be the REST API URL without /api/v1 suffix
       // The API client will append the path as needed
-      const rawMemoryBase = discovered.endpoints?.http || 'https://mcp.lanonasis.com/api/v1';
-      const memoryBase = rawMemoryBase.replace(/\/api\/v1\/?$/, '') || 'https://mcp.lanonasis.com';
+      const rawMemoryBase = discovered.endpoints?.http || 'https://api.lanonasis.com/api/v1';
+      const memoryBase = rawMemoryBase.replace(/\/api\/v1\/?$/, '') || 'https://api.lanonasis.com';
 
       this.config.discoveredServices = {
         auth_base: authBase || 'https://auth.lanonasis.com',
@@ -493,8 +493,8 @@ export class CLIConfig {
     const isDevEnvironment = nodeEnv === 'development' || nodeEnv === 'test';
 
     const defaultAuthBase = isDevEnvironment ? 'http://localhost:4000' : 'https://auth.lanonasis.com';
-    const defaultMemoryBase = isDevEnvironment ? 'http://localhost:4000' : 'https://mcp.lanonasis.com'; // Base URL without /api/v1
-    const defaultMcpBase = isDevEnvironment ? 'http://localhost:4100/api/v1' : 'https://mcp.lanonasis.com/api/v1'; // Full MCP REST path
+    const defaultMemoryBase = isDevEnvironment ? 'http://localhost:4000' : 'https://api.lanonasis.com'; // Primary REST API (Supabase Edge Functions)
+    const defaultMcpBase = isDevEnvironment ? 'http://localhost:4100/api/v1' : 'https://mcp.lanonasis.com/api/v1'; // MCP protocol REST path
     const defaultMcpWsBase = isDevEnvironment ? 'ws://localhost:4100/ws' : 'wss://mcp.lanonasis.com/ws';
     const defaultMcpSseBase = isDevEnvironment ? 'http://localhost:4100/api/v1/events' : 'https://mcp.lanonasis.com/api/v1/events';
 
@@ -583,8 +583,8 @@ export class CLIConfig {
 
     const currentServices = this.config.discoveredServices ?? {
       auth_base: 'https://auth.lanonasis.com',
-      memory_base: 'https://mcp.lanonasis.com', // Base URL without /api/v1
-      mcp_base: 'https://mcp.lanonasis.com/api/v1', // Full MCP REST path
+      memory_base: 'https://api.lanonasis.com', // Primary REST API (Supabase Edge Functions)
+      mcp_base: 'https://mcp.lanonasis.com/api/v1', // MCP protocol REST path
       mcp_ws_base: 'wss://mcp.lanonasis.com/ws',
       mcp_sse_base: 'https://mcp.lanonasis.com/api/v1/events',
       project_scope: 'lanonasis-maas'

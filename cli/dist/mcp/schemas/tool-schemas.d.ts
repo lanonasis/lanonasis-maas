@@ -15,15 +15,15 @@ export declare const MemoryCreateSchema: z.ZodObject<{
     content?: string;
     tags?: string[];
     topic_id?: string;
-    memory_type?: "context" | "reference" | "note";
     metadata?: Record<string, any>;
+    memory_type?: "context" | "reference" | "note";
 }, {
     title?: string;
     content?: string;
     tags?: string[];
     topic_id?: string;
-    memory_type?: "context" | "reference" | "note";
     metadata?: Record<string, any>;
+    memory_type?: "context" | "reference" | "note";
 }>;
 export declare const MemorySearchSchema: z.ZodObject<{
     query: z.ZodString;
@@ -59,15 +59,15 @@ export declare const MemoryUpdateSchema: z.ZodObject<{
     content?: string;
     tags?: string[];
     memory_id?: string;
-    memory_type?: "context" | "reference" | "note";
     metadata?: Record<string, any>;
+    memory_type?: "context" | "reference" | "note";
 }, {
     title?: string;
     content?: string;
     tags?: string[];
     memory_id?: string;
-    memory_type?: "context" | "reference" | "note";
     metadata?: Record<string, any>;
+    memory_type?: "context" | "reference" | "note";
 }>;
 export declare const MemoryDeleteSchema: z.ZodObject<{
     memory_id: z.ZodString;
@@ -217,13 +217,13 @@ export declare const BulkOperationSchema: z.ZodObject<{
     transaction: z.ZodDefault<z.ZodBoolean>;
 }, "strip", z.ZodTypeAny, {
     operation?: "create" | "delete" | "update";
-    entity_type?: "topic" | "memory" | "apikey";
     items?: Record<string, any>[];
+    entity_type?: "topic" | "memory" | "apikey";
     transaction?: boolean;
 }, {
     operation?: "create" | "delete" | "update";
-    entity_type?: "topic" | "memory" | "apikey";
     items?: Record<string, any>[];
+    entity_type?: "topic" | "memory" | "apikey";
     transaction?: boolean;
 }>;
 export declare const ImportExportSchema: z.ZodObject<{
@@ -387,15 +387,15 @@ export declare const MCPSchemas: {
             content?: string;
             tags?: string[];
             topic_id?: string;
-            memory_type?: "context" | "reference" | "note";
             metadata?: Record<string, any>;
+            memory_type?: "context" | "reference" | "note";
         }, {
             title?: string;
             content?: string;
             tags?: string[];
             topic_id?: string;
-            memory_type?: "context" | "reference" | "note";
             metadata?: Record<string, any>;
+            memory_type?: "context" | "reference" | "note";
         }>;
         search: z.ZodObject<{
             query: z.ZodString;
@@ -431,15 +431,15 @@ export declare const MCPSchemas: {
             content?: string;
             tags?: string[];
             memory_id?: string;
-            memory_type?: "context" | "reference" | "note";
             metadata?: Record<string, any>;
+            memory_type?: "context" | "reference" | "note";
         }, {
             title?: string;
             content?: string;
             tags?: string[];
             memory_id?: string;
-            memory_type?: "context" | "reference" | "note";
             metadata?: Record<string, any>;
+            memory_type?: "context" | "reference" | "note";
         }>;
         delete: z.ZodObject<{
             memory_id: z.ZodString;
@@ -597,13 +597,13 @@ export declare const MCPSchemas: {
             transaction: z.ZodDefault<z.ZodBoolean>;
         }, "strip", z.ZodTypeAny, {
             operation?: "create" | "delete" | "update";
-            entity_type?: "topic" | "memory" | "apikey";
             items?: Record<string, any>[];
+            entity_type?: "topic" | "memory" | "apikey";
             transaction?: boolean;
         }, {
             operation?: "create" | "delete" | "update";
-            entity_type?: "topic" | "memory" | "apikey";
             items?: Record<string, any>[];
+            entity_type?: "topic" | "memory" | "apikey";
             transaction?: boolean;
         }>;
         importExport: z.ZodObject<{

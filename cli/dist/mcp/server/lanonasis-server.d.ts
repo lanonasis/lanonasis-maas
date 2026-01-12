@@ -9,6 +9,10 @@ export interface LanonasisServerOptions {
     verbose?: boolean;
     apiUrl?: string;
     token?: string;
+    apiKey?: string;
+    transport?: 'stdio' | 'ws' | 'http' | 'sse';
+    port?: number;
+    host?: string;
     preferredTransport?: 'stdio' | 'websocket' | 'http';
     enableTransportFallback?: boolean;
 }
@@ -209,6 +213,11 @@ export declare class LanonasisMCPServer {
      * Start the server
      */
     start(): Promise<void>;
+    /**
+     * Start the server in stdio mode for external MCP clients (Claude Desktop, Cursor, etc.)
+     * This is the primary entry point for `lanonasis mcp start`
+     */
+    startStdio(): Promise<void>;
     /**
      * Stop the server
      */
