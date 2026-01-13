@@ -38,7 +38,7 @@ import emergencyRoutes from '@/routes/emergency-admin';
 // AI Client middleware for JSON responses
 import { aiClientMiddleware, AIClientRequest } from '@/middleware/ai-client-json';
 
-const app = express();
+const app: express.Express = express();
 
 // Enhanced Swagger configuration
 const swaggerOptions = {

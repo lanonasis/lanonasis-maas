@@ -10,7 +10,7 @@ import { URL } from 'url';
 import { config } from '@/config/environment';
 import { logger } from '@/utils/logger';
 
-const router = Router();
+const router: Router = Router();
 
 // Centralized auth configuration
 const AUTH_CONFIG = {

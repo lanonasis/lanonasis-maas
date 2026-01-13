@@ -5,7 +5,7 @@ import { logger } from '@/utils/logger';
 import { asyncHandler } from '@/middleware/errorHandler';
 import { ensureApiKeyHash } from '@lanonasis/security-sdk/hash-utils';
 
-const router = Router();
+const router: Router = Router();
 const supabase = createClient(config.SUPABASE_URL, config.SUPABASE_SERVICE_KEY);
 
 // Store active MCP SSE connections

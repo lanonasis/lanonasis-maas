@@ -5,7 +5,7 @@ import { apiKeyService } from '@/services/apiKeyService';
 import type { ApiKey } from '@/services/apiKeyService';
 import { logger } from '@/utils/logger';
 
-const router = express.Router();
+const router: express.Router = express.Router();
 
 // Validation middleware
 const validateRequest = (req: express.Request, res: express.Response, next: express.NextFunction): void => {
