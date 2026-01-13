@@ -34,7 +34,7 @@ import mcpApiKeyRoutes from '@/routes/mcp-api-keys';
 import mcpSseRoutes from '@/routes/mcp-sse';
 import emergencyRoutes from '@/routes/emergency-admin';
 
-const app = express();
+const app: express.Express = express();
 
 // ============================================
 // PHASE 0: CRITICAL MIDDLEWARE CHAIN

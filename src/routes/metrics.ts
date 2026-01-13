@@ -4,7 +4,7 @@ import { asyncHandler } from '@/middleware/errorHandler';
 import { requireRole } from '@/middleware/auth-aligned';
 import { config } from '@/config/environment';
 
-const router = Router();
+const router: Router = Router();
 
 /**
  * @swagger

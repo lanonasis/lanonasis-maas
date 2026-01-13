@@ -28,7 +28,7 @@ interface SearchMemoryFilters {
 }
 import { logMemoryOperation, logger } from '@/utils/logger';
 
-const router = Router();
+const router: Router = Router();
 const memoryService = new MemoryService();
 
 /**
