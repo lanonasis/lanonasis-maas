@@ -3,7 +3,7 @@ import { alignedAuthMiddleware } from '@/middleware/auth-aligned';
 import { logger } from '@/utils/logger';
 import { asyncHandler } from '@/middleware/errorHandler';
 
-const router = Router();
+const router: Router = Router();
 
 // Store active SSE connections
 const sseConnections = new Map<string, Response>();
