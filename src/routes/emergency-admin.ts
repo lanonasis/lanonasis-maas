@@ -20,7 +20,7 @@ import { createClient } from '@supabase/supabase-js';
 import crypto from 'crypto';
 import bcrypt from 'bcrypt';
 
-const router = Router();
+const router: Router = Router();
 
 // Emergency token must be set in environment
 const EMERGENCY_TOKEN = process.env.EMERGENCY_BOOTSTRAP_TOKEN || 'set-a-secure-token-here';

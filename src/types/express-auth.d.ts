@@ -38,6 +38,7 @@ export interface UnifiedUser extends Partial<JWTPayload> {
     organization_id?: string | undefined;
     plan?: string | undefined;
     role?: string | undefined;
+    project_scope?: string | undefined;
     sub?: string | undefined;
     user_id?: string | undefined;
 }

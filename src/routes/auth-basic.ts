@@ -10,7 +10,7 @@ import { logger } from '@/utils/logger';
 import jwt, { SignOptions } from 'jsonwebtoken';
 import { z } from 'zod';
 
-const router = Router();
+const router: Router = Router();
 
 // Validation schemas
 const loginSchema = z.object({

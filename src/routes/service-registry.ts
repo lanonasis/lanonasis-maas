@@ -12,7 +12,7 @@ import { authenticateApiKey } from '@/middleware/auth-aligned';
 import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
 import { setTimeout, clearTimeout } from 'timers';
 
-const router = Router();
+const router: Router = Router();
 
 // Centralized rate limiting
 const serviceRateLimit = rateLimit({
