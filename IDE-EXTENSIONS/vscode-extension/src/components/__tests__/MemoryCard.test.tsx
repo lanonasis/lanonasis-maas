@@ -15,16 +15,36 @@ vi.mock('framer-motion', () => ({
 }));
 
 // Mock date-fns format
-vi.mock('date-fns', () => ({
-  format: (date: Date, formatStr: string) => {
-    const d = new Date(date);
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    if (formatStr === 'MMM d') {
-      return `${months[d.getMonth()]} ${d.getDate()}`;
-    }
-    return d.toISOString();
-  },
-}));
+vi.mock('date-fns', () => {
+  const months = [
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
+  ];
+  return {
+    format: (date: Date, formatStr: string) => {
+      const d = new Date(date);
+      if (!isNaN(d.getTime())) {
+        if (formatStr === 'MMM d') {
+          return `${months[d.getMonth()]} ${d.getDate()}`;
+        }
+      }
+      return d.toISOString();
+    },
+    isValid: (date: Date) => {
+      return date instanceof Date && !isNaN(date.getTime());
+    },
+  };
+});
 
 // Mock clipboard API
 Object.assign(navigator, {
@@ -105,8 +125,8 @@ describe('MemoryCard Component', () => {
     fireEvent.click(copyButton);
 
     // Check icon should appear immediately after click
-      const checkIcon = copyButton.querySelector('svg');
-      expect(checkIcon).toBeInTheDocument();
+    const checkIcon = copyButton.querySelector('svg');
+    expect(checkIcon).toBeInTheDocument();
   });
 
   test('displays correct icon component', () => {
@@ -149,11 +169,9 @@ describe('MemoryCard Component', () => {
 
   test('renders different icon types correctly', () => {
     const icons = [Lightbulb, Terminal, Hash];
-    
+
     icons.forEach((Icon) => {
-      const { unmount } = render(
-        <MemoryCard memory={createMockMemory({ icon: Icon })} />
-      );
+      const { unmount } = render(<MemoryCard memory={createMockMemory({ icon: Icon })} />);
 
       const card = screen.getByTestId(`memory-card-test-memory-1`);
       expect(card).toBeInTheDocument();
