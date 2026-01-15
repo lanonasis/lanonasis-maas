@@ -52,8 +52,8 @@ export async function runDiagnostics(
     // Check 5: Network Connectivity
     results.push(await checkNetworkConnectivity(memoryService, outputChannel));
 
-    // Check 6: CLI Integration
-    results.push(await checkCLIIntegration(memoryService, outputChannel));
+    // Check 6: Connection Mode (HTTP API)
+    results.push(await checkConnectionMode(memoryService, outputChannel));
 
     // Check 7: Storage
     results.push(await checkStorage(context, outputChannel));
@@ -306,11 +306,11 @@ async function checkNetworkConnectivity(
     }
 }
 
-async function checkCLIIntegration(
+async function checkConnectionMode(
     memoryService: IMemoryService,
     outputChannel: vscode.OutputChannel
 ): Promise<DiagnosticResult> {
-    outputChannel.appendLine('\n[6/7] Checking CLI Integration...');
+    outputChannel.appendLine('\n[6/7] Checking Connection Mode...');
 
     try {
         if (memoryService instanceof EnhancedMemoryService) {
@@ -318,41 +318,38 @@ async function checkCLIIntegration(
 
             if (capabilities) {
                 outputChannel.appendLine(`  ✓ Enhanced Memory Service detected`);
-                outputChannel.appendLine(`  ✓ CLI Available: ${capabilities.cliAvailable}`);
-                outputChannel.appendLine(`  ✓ Golden Contract: ${capabilities.goldenContract}`);
-                outputChannel.appendLine(`  ✓ CLI Version: ${capabilities.version || 'Unknown'}`);
+                outputChannel.appendLine(`  ✓ Connection Mode: HTTP API`);
+                outputChannel.appendLine(`  ✓ Authenticated: ${capabilities.authenticated}`);
 
-                if (capabilities.cliAvailable && capabilities.goldenContract) {
+                if (capabilities.authenticated) {
                     return {
-                        category: 'CLI Integration',
+                        category: 'Connection Mode',
                         status: 'success',
-                        message: `CLI v${capabilities.version} integrated and operational`
+                        message: 'Connected via HTTP API'
                     };
-                } else if (capabilities.cliAvailable) {
+                } else {
                     return {
-                        category: 'CLI Integration',
+                        category: 'Connection Mode',
                         status: 'warning',
-                        message: 'CLI detected but not fully compatible',
-                        details: 'Golden contract not met',
-                        action: 'Update CLI to v3.0.6+'
+                        message: 'HTTP API available but not authenticated',
+                        action: 'Configure API key'
                     };
                 }
             }
         }
 
-        outputChannel.appendLine('  ℹ Using basic memory service (CLI not available)');
+        outputChannel.appendLine('  ℹ Using basic memory service');
         return {
-            category: 'CLI Integration',
+            category: 'Connection Mode',
             status: 'info',
-            message: 'CLI not available - using direct API',
-            details: 'Install @lanonasis/cli for enhanced performance'
+            message: 'Using basic memory service with HTTP API'
         };
     } catch (error) {
         outputChannel.appendLine(`  ✗ Error: ${error instanceof Error ? error.message : String(error)}`);
         return {
-            category: 'CLI Integration',
+            category: 'Connection Mode',
             status: 'warning',
-            message: 'Unable to check CLI status',
+            message: 'Unable to check connection mode',
             details: error instanceof Error ? error.message : String(error)
         };
     }
