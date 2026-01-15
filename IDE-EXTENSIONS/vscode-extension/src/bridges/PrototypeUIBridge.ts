@@ -1,5 +1,6 @@
 import type { IMemoryService } from '../services/IMemoryService';
 import type { MemoryEntry, MemorySearchResult, CreateMemoryRequest } from '../types/memory-aligned';
+import type { MemoryCacheBridge } from './MemoryCacheBridge';
 
 // Prototype-compatible memory interface
 export interface PrototypeMemory {
@@ -13,7 +14,10 @@ export interface PrototypeMemory {
 }
 
 export class PrototypeUIBridge {
-  constructor(private memoryService: IMemoryService) {}
+  constructor(
+    private memoryService: IMemoryService,
+    private cacheBridge?: MemoryCacheBridge,
+  ) { }
 
   // Map memory types to icon types
   private getIconType(type: string): 'terminal' | 'filecode' | 'hash' | 'calendar' | 'lightbulb' | 'briefcase' | 'user' | 'settings' {
@@ -54,7 +58,9 @@ export class PrototypeUIBridge {
   // Search memories with prototype interface
   async searchMemories(query: string): Promise<PrototypeMemory[]> {
     try {
-      const results = await this.memoryService.searchMemories(query);
+      const results = this.cacheBridge
+        ? await this.cacheBridge.searchMemories(query)
+        : await this.memoryService.searchMemories(query);
       return this.transformSearchResults(results);
     } catch (error) {
       console.error('[PrototypeUIBridge] Search failed:', error);
@@ -66,6 +72,9 @@ export class PrototypeUIBridge {
   async createMemory(memoryData: CreateMemoryRequest): Promise<PrototypeMemory> {
     try {
       const result = await this.memoryService.createMemory(memoryData);
+      if (this.cacheBridge) {
+        await this.cacheBridge.upsert(result);
+      }
       return this.transformToPrototypeFormat(result);
     } catch (error) {
       console.error('[PrototypeUIBridge] Create memory failed:', error);
@@ -76,7 +85,9 @@ export class PrototypeUIBridge {
   // Get all memories
   async getAllMemories(): Promise<PrototypeMemory[]> {
     try {
-      const memories = await this.memoryService.listMemories(50);
+      const memories = this.cacheBridge
+        ? await this.cacheBridge.getMemories({ limit: 50 })
+        : await this.memoryService.listMemories(50);
       return memories.map((memory: MemoryEntry) => this.transformToPrototypeFormat(memory));
     } catch (error) {
       console.error('[PrototypeUIBridge] Get memories failed:', error);
@@ -87,7 +98,17 @@ export class PrototypeUIBridge {
   // Get memory by ID
   async getMemoryById(id: string): Promise<PrototypeMemory | null> {
     try {
+      if (this.cacheBridge) {
+        const cached = (await this.cacheBridge.getMemories()).find((item) => item.id === id);
+        if (cached) {
+          return this.transformToPrototypeFormat(cached);
+        }
+      }
+
       const memory = await this.memoryService.getMemory(id);
+      if (memory && this.cacheBridge) {
+        await this.cacheBridge.upsert(memory);
+      }
       return memory ? this.transformToPrototypeFormat(memory) : null;
     } catch (error) {
       console.error('[PrototypeUIBridge] Get memory by ID failed:', error);

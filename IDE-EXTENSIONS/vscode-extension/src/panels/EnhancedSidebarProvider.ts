@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import type { IMemoryService } from '../services/IMemoryService';
 import type { ApiKeyService } from '../services/ApiKeyService';
 import { PrototypeUIBridge } from '../bridges/PrototypeUIBridge';
+import type { MemoryCacheBridge } from '../bridges/MemoryCacheBridge';
 
 export class EnhancedSidebarProvider implements vscode.WebviewViewProvider {
     public static readonly viewType = 'lanonasis.sidebar';
@@ -12,9 +13,10 @@ export class EnhancedSidebarProvider implements vscode.WebviewViewProvider {
     constructor(
         private readonly _extensionUri: vscode.Uri,
         private readonly memoryService: IMemoryService,
-        apiKeyService?: ApiKeyService
+        apiKeyService?: ApiKeyService,
+        cacheBridge?: MemoryCacheBridge,
     ) {
-        this._bridge = new PrototypeUIBridge(memoryService);
+        this._bridge = new PrototypeUIBridge(memoryService, cacheBridge);
         this._apiKeyService = apiKeyService;
     }
 
@@ -150,10 +152,10 @@ export class EnhancedSidebarProvider implements vscode.WebviewViewProvider {
         try {
             // Add timeout to prevent hanging
             const authPromise = this._bridge.isAuthenticated();
-            const timeoutPromise = new Promise<boolean>((_, reject) => 
+            const timeoutPromise = new Promise<boolean>((_, reject) =>
                 setTimeout(() => reject(new Error('Auth check timeout')), 5000)
             );
-            
+
             const isAuthenticated = await Promise.race([authPromise, timeoutPromise]);
             this._view?.webview.postMessage({
                 type: 'authState',
@@ -200,11 +202,11 @@ export class EnhancedSidebarProvider implements vscode.WebviewViewProvider {
 
     private async handleChatQuery(queryData: string | { query: string; attachedMemories?: Array<{ id: string; title: string; content: string }> }): Promise<void> {
         if (!this._view) return;
-        
+
         // Support both string and object format
         const query = typeof queryData === 'string' ? queryData : queryData.query;
         const attachedMemories = typeof queryData === 'object' && queryData.attachedMemories ? queryData.attachedMemories : [];
-        
+
         try {
             // Send loading state
             this._view.webview.postMessage({
@@ -215,23 +217,23 @@ export class EnhancedSidebarProvider implements vscode.WebviewViewProvider {
             // Build attached context from provided memories (content included from frontend)
             let attachedContext = '';
             if (attachedMemories.length > 0) {
-                attachedContext = '\n\n## Attached Context:\n' + 
-                    attachedMemories.map((m, i) => 
+                attachedContext = '\n\n## Attached Context:\n' +
+                    attachedMemories.map((m, i) =>
                         `**${i + 1}. ${m.title}**\n${m.content.substring(0, 500)}${m.content.length > 500 ? '...' : ''}`
                     ).join('\n\n');
             }
 
             // Use semantic search to find additional relevant memories
             const searchResults = await this._bridge.searchMemories(query);
-            
+
             // Combine attached and searched memories (dedupe by id)
             const attachedMemoryIds = attachedMemories.map(m => m.id);
             const allMemoryIds = new Set(attachedMemoryIds);
             const additionalMemories = searchResults.filter(m => !allMemoryIds.has(m.id));
-            
+
             // Format results as a chat response
             const response = this.formatChatResponse(query, searchResults, attachedContext);
-            
+
             this._view.webview.postMessage({
                 type: 'chatResponse',
                 data: {
@@ -255,7 +257,7 @@ export class EnhancedSidebarProvider implements vscode.WebviewViewProvider {
     }
 
     private formatChatResponse(
-        query: string, 
+        query: string,
         memories: Array<{ title: string; content: string }>,
         attachedContext?: string
     ): string {
@@ -280,7 +282,7 @@ export class EnhancedSidebarProvider implements vscode.WebviewViewProvider {
         response += `Found **${memories.length}** relevant ${memories.length > 1 ? 'memories' : 'memory'} for "${query}":\n\n`;
         response += `**Most relevant:** ${topMemory.title}\n`;
         response += `${topMemory.content.substring(0, 300)}${topMemory.content.length > 300 ? '...' : ''}\n\n`;
-        
+
         if (memories.length > 1) {
             response += `**Other related memories:**\n`;
             memories.slice(1, 4).forEach((mem, idx) => {
@@ -294,7 +296,7 @@ export class EnhancedSidebarProvider implements vscode.WebviewViewProvider {
     private async handleGetApiKeys(): Promise<void> {
         try {
             let apiKeys: any[] = [];
-            
+
             // Try to get API keys from ApiKeyService if available
             if (this._apiKeyService) {
                 try {
@@ -303,16 +305,16 @@ export class EnhancedSidebarProvider implements vscode.WebviewViewProvider {
                     console.warn('[EnhancedSidebarProvider] Failed to fetch API keys from service:', error);
                 }
             }
-            
+
             // Transform API keys to match the expected format
             const transformedKeys = apiKeys.map(key => ({
                 id: key.id || key.keyId || String(Math.random()),
                 name: key.name || 'Unnamed Key',
                 scope: key.scope || key.accessLevel || key.keyType || 'read,write',
-                lastUsed: key.lastUsed || key.lastUsedAt || key.createdAt ? 
+                lastUsed: key.lastUsed || key.lastUsedAt || key.createdAt ?
                     this.formatLastUsed(key.lastUsed || key.lastUsedAt || key.createdAt) : 'Never'
             }));
-            
+
             this._view?.webview.postMessage({
                 type: 'apiKeys',
                 data: transformedKeys
@@ -409,7 +411,7 @@ export class EnhancedSidebarProvider implements vscode.WebviewViewProvider {
         try {
             // Get content from clipboard
             const clipboardContent = await vscode.env.clipboard.readText();
-            
+
             if (!clipboardContent.trim()) {
                 this._view?.webview.postMessage({
                     type: 'clipboardError',
@@ -439,7 +441,7 @@ export class EnhancedSidebarProvider implements vscode.WebviewViewProvider {
                 });
 
                 vscode.window.showInformationMessage('📝 Memory captured from clipboard!');
-                
+
                 // Refresh memories list
                 await this.sendMemories();
             }
@@ -473,13 +475,13 @@ export class EnhancedSidebarProvider implements vscode.WebviewViewProvider {
                 vscode.window.showWarningMessage('Clipboard is empty');
                 return;
             }
-            
+
             // Send clipboard content to webview
             this._view?.webview.postMessage({
                 type: 'clipboardContent',
                 data: clipboardContent
             });
-            
+
             // Also show info message
             vscode.window.showInformationMessage(
                 `Clipboard content ready (${clipboardContent.length} chars)`,
@@ -503,14 +505,14 @@ export class EnhancedSidebarProvider implements vscode.WebviewViewProvider {
                 vscode.window.showWarningMessage('Nothing to copy');
                 return;
             }
-            
+
             await vscode.env.clipboard.writeText(text);
-            
+
             this._view?.webview.postMessage({
                 type: 'copySuccess',
                 data: true
             });
-            
+
             // Show brief confirmation
             vscode.window.setStatusBarMessage('📋 Copied to clipboard', 2000);
         } catch (error) {
@@ -525,7 +527,7 @@ export class EnhancedSidebarProvider implements vscode.WebviewViewProvider {
         try {
             // Generate title from content if not provided
             const defaultTitle = data.content.substring(0, 50).replace(/\n/g, ' ').trim();
-            
+
             // Show quick input for title
             const title = await vscode.window.showInputBox({
                 prompt: 'Title for this memory',
@@ -538,7 +540,7 @@ export class EnhancedSidebarProvider implements vscode.WebviewViewProvider {
             // Show quick pick for memory type
             const memoryType = await vscode.window.showQuickPick(
                 ['context', 'knowledge', 'reference', 'project', 'personal', 'workflow'],
-                { 
+                {
                     placeHolder: 'Select memory type',
                     title: 'Memory Type'
                 }
@@ -560,7 +562,7 @@ export class EnhancedSidebarProvider implements vscode.WebviewViewProvider {
             });
 
             vscode.window.showInformationMessage(`💾 Saved as memory: "${title}"`);
-            
+
             // Refresh memories list
             await this.sendMemories();
         } catch (error) {
@@ -620,16 +622,16 @@ export class EnhancedSidebarProvider implements vscode.WebviewViewProvider {
             type: 'loading',
             data: true
         });
-        
+
         try {
             // Add timeout to prevent infinite loading
             const memoriesPromise = this._bridge.getAllMemories();
-            const timeoutPromise = new Promise<never>((_, reject) => 
+            const timeoutPromise = new Promise<never>((_, reject) =>
                 setTimeout(() => reject(new Error('Memory fetch timeout')), 10000)
             );
-            
+
             const memories = await Promise.race([memoriesPromise, timeoutPromise]);
-            
+
             this._view?.webview.postMessage({
                 type: 'memories',
                 data: memories
@@ -661,16 +663,16 @@ export class EnhancedSidebarProvider implements vscode.WebviewViewProvider {
             type: 'loading',
             data: true
         });
-        
+
         try {
             // Add timeout for search
             const searchPromise = this._bridge.searchMemories(query);
-            const timeoutPromise = new Promise<never>((_, reject) => 
+            const timeoutPromise = new Promise<never>((_, reject) =>
                 setTimeout(() => reject(new Error('Search timeout')), 10000)
             );
-            
+
             const results = await Promise.race([searchPromise, timeoutPromise]);
-            
+
             this._view?.webview.postMessage({
                 type: 'memories',
                 data: results
@@ -696,15 +698,15 @@ export class EnhancedSidebarProvider implements vscode.WebviewViewProvider {
 
     private async sendInitialData() {
         console.log('[EnhancedSidebarProvider] Sending initial data...');
-        
+
         try {
             // First check auth state - this determines if we should fetch memories
             await this.sendAuthState();
-            
+
             // Only fetch memories if we might be authenticated
             // The bridge will handle unauthenticated state gracefully
             await this.sendMemories();
-            
+
             console.log('[EnhancedSidebarProvider] Initial data sent successfully');
         } catch (error) {
             console.error('[EnhancedSidebarProvider] Failed to send initial data:', error);

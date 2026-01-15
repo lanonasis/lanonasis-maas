@@ -7,6 +7,7 @@ import { EnhancedSidebarProvider } from './panels/EnhancedSidebarProvider';
 import { MemoryService } from './services/MemoryService';
 import { EnhancedMemoryService } from './services/EnhancedMemoryService';
 import type { IMemoryService } from './services/IMemoryService';
+import { MemoryCache } from './services/MemoryCache';
 import { ApiKeyService } from './services/ApiKeyService';
 import type { ApiKey, Project, CreateApiKeyRequest } from './services/ApiKeyService';
 import { SecureApiKeyService } from './services/SecureApiKeyService';
@@ -16,6 +17,7 @@ import { MemoryType, MemoryEntry, MemorySearchResult } from './types/memory-alig
 import { runDiagnostics, formatDiagnosticResults } from './utils/diagnostics';
 import { registerMemoryChatParticipant } from './chat/MemoryChatParticipant';
 import { MCPDiscoveryService, createMCPDiscoveryService } from './services/MCPDiscoveryService';
+import { MemoryCacheBridge } from './bridges/MemoryCacheBridge';
 
 export async function activate(context: vscode.ExtensionContext) {
     console.log('Lanonasis Memory Extension is now active');
@@ -53,15 +55,17 @@ export async function activate(context: vscode.ExtensionContext) {
         memoryService = new MemoryService(secureApiKeyService);
     }
     const apiKeyService = new ApiKeyService(secureApiKeyService);
+    const memoryCache = new MemoryCache(context, outputChannel);
+    const memoryCacheBridge = new MemoryCacheBridge(memoryCache, memoryService, outputChannel);
 
     const configuration = vscode.workspace.getConfiguration('lanonasis');
     const useEnhancedUI = configuration.get<boolean>('useEnhancedUI', false);
-    
+
     let sidebarProvider: MemorySidebarProvider | EnhancedSidebarProvider;
-    
+
     // Register sidebar provider based on feature flag
     if (useEnhancedUI) {
-        sidebarProvider = new EnhancedSidebarProvider(context.extensionUri, memoryService, apiKeyService);
+        sidebarProvider = new EnhancedSidebarProvider(context.extensionUri, memoryService, apiKeyService, memoryCacheBridge);
         context.subscriptions.push(
             vscode.window.registerWebviewViewProvider(
                 EnhancedSidebarProvider.viewType,
@@ -168,6 +172,7 @@ export async function activate(context: vscode.ExtensionContext) {
         } catch (error) {
             outputChannel.appendLine(`[ClearAuth] Failed to refresh memory service: ${error instanceof Error ? error.message : String(error)}`);
         }
+        await memoryCache.clear();
         await applyAuthenticationState(false);
     };
 
@@ -262,7 +267,7 @@ export async function activate(context: vscode.ExtensionContext) {
             await viewProjects(apiKeyService);
         }),
 
-        vscode.commands.registerCommand('lanonasis.refreshApiKeys', async () => {                                               
+        vscode.commands.registerCommand('lanonasis.refreshApiKeys', async () => {
             apiKeyTreeProvider.refresh(true);
         }),
 
@@ -494,15 +499,6 @@ export async function activate(context: vscode.ExtensionContext) {
                 await handleAuthenticationCleared();
                 vscode.window.showInformationMessage('Signed out of Lanonasis Memory.');
             }
-        }),
-
-        // Universal capture commands
-        vscode.commands.registerCommand('lanonasis.captureContext', async () => {
-            await captureContextToMemory(memoryService);
-        }),
-
-        vscode.commands.registerCommand('lanonasis.captureClipboard', async () => {
-            await captureClipboardToMemory(memoryService);
         }),
 
         vscode.commands.registerCommand('lanonasis.quickCapture', async () => {
@@ -1370,7 +1366,7 @@ async function createApiKeyForProject(project: Project, apiKeyService: ApiKeySer
         }, async () => {
             const apiKey = await apiKeyService.createApiKey(request);
             vscode.window.showInformationMessage(`API key "${apiKey.name}" created successfully!`);
-            
+
             if (apiKeyTreeProvider) {
                 await apiKeyTreeProvider.addApiKey(project.id, apiKey);
             }
@@ -1397,7 +1393,7 @@ async function rotateApiKey(apiKey: ApiKey, apiKeyService: ApiKeyService, apiKey
         }, async () => {
             const rotated = await apiKeyService.rotateApiKey(apiKey.id);
             vscode.window.showInformationMessage(`API key "${rotated.name}" rotated successfully!`);
-            
+
             if (apiKeyTreeProvider) {
                 await apiKeyTreeProvider.updateApiKey(apiKey.projectId, rotated);
             }
@@ -1424,7 +1420,7 @@ async function deleteApiKey(apiKey: ApiKey, apiKeyService: ApiKeyService, apiKey
         }, async () => {
             await apiKeyService.deleteApiKey(apiKey.id);
             vscode.window.showInformationMessage(`API key "${apiKey.name}" deleted successfully.`);
-            
+
             if (apiKeyTreeProvider) {
                 await apiKeyTreeProvider.removeApiKey(apiKey.projectId, apiKey.id);
             }
@@ -1451,7 +1447,7 @@ async function deleteProject(project: Project, apiKeyService: ApiKeyService, api
         }, async () => {
             await apiKeyService.deleteProject(project.id);
             vscode.window.showInformationMessage(`Project "${project.name}" deleted successfully.`);
-            
+
             if (apiKeyTreeProvider) {
                 await apiKeyTreeProvider.removeProject(project.id);
             }
@@ -1499,7 +1495,7 @@ async function captureContextToMemory(memoryService: IMemoryService) {
         // Show quick pick for memory type
         const memoryType = await vscode.window.showQuickPick(
             ['context', 'knowledge', 'reference', 'project', 'personal', 'workflow'],
-            { 
+            {
                 placeHolder: 'Select memory type',
                 title: 'Memory Type'
             }
