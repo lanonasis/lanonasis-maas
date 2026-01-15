@@ -9,6 +9,8 @@ export class MemorySidebarProvider implements vscode.WebviewViewProvider {
     private _cachedMemories: MemoryEntry[] = [];
     private _cacheTimestamp: number = 0;
     private readonly CACHE_DURATION = 30000; // 30 seconds
+    private _pendingStateUpdate: NodeJS.Timeout | null = null;
+    private _lastState: Record<string, unknown> = {};
 
     constructor(
         private readonly _extensionUri: vscode.Uri,
@@ -97,19 +99,41 @@ export class MemorySidebarProvider implements vscode.WebviewViewProvider {
             });
 
             // Initial load with error handling and delay for auth settlement
+            // Wait for authentication to complete before loading
             setTimeout(async () => {
                 try {
-                    // Give auth time to settle
-                    await new Promise(resolve => setTimeout(resolve, 1000));
+                    // Check if authenticated before trying to load
+                    const isAuthenticated = this.memoryService.isAuthenticated();
+
+                    if (!isAuthenticated) {
+                        // Show auth screen immediately, don't try to load memories
+                        this._view?.webview.postMessage({
+                            type: 'updateState',
+                            state: {
+                                authenticated: false,
+                                memories: [],
+                                loading: false,
+                                enhancedMode: false,
+                                cliVersion: null
+                            }
+                        });
+                        return;
+                    }
+
                     await this.refresh();
                 } catch (error) {
                     console.error('[Lanonasis] Failed to load sidebar:', error);
+                    // Show auth screen on error instead of crashing
                     this._view?.webview.postMessage({
-                        type: 'error',
-                        message: 'Failed to load Lanonasis Memory. Please try refreshing or check authentication.'
+                        type: 'updateState',
+                        state: {
+                            authenticated: false,
+                            memories: [],
+                            loading: false
+                        }
                     });
                 }
-            }, 500);
+            }, 300);
         } catch (error) {
             console.error('[Lanonasis] Fatal error in resolveWebviewView:', error);
             vscode.window.showErrorMessage(`Lanonasis extension failed to load: ${error instanceof Error ? error.message : String(error)}`);
@@ -123,8 +147,8 @@ export class MemorySidebarProvider implements vscode.WebviewViewProvider {
 
                 // Show loading only if not using cache
                 const now = Date.now();
-                const useCache = !forceRefresh && 
-                                this._cachedMemories.length > 0 && 
+                const useCache = !forceRefresh &&
+                                this._cachedMemories.length > 0 &&
                                 (now - this._cacheTimestamp) < this.CACHE_DURATION;
 
                 if (useCache) {
@@ -133,38 +157,32 @@ export class MemorySidebarProvider implements vscode.WebviewViewProvider {
                         ? this.memoryService.getCapabilities()
                         : null;
 
-                    this._view.webview.postMessage({
-                        type: 'updateState',
-                        state: {
-                            authenticated: authenticated,
-                            memories: this._cachedMemories,
-                            loading: false,
-                            enhancedMode: enhancedInfo?.cliAvailable || false,
-                            cliVersion: enhancedInfo?.version || null,
-                            cached: true
-                        }
-                    });
+                    this.sendStateUpdate({
+                        authenticated: authenticated,
+                        memories: this._cachedMemories,
+                        loading: false,
+                        enhancedMode: enhancedInfo?.cliAvailable || false,
+                        cliVersion: enhancedInfo?.version || null,
+                        cached: true
+                    }, true);
                     return;
                 }
 
-                this._view.webview.postMessage({
-                    type: 'updateState',
-                    state: { loading: true }
-                });
+                // Only show loading if we're actually going to fetch
+                if (authenticated) {
+                    this.sendStateUpdate({ loading: true });
+                }
 
                 if (!authenticated) {
                     this._cachedMemories = [];
                     this._cacheTimestamp = 0;
-                    this._view.webview.postMessage({
-                        type: 'updateState',
-                        state: {
-                            authenticated: false,
-                            memories: [],
-                            loading: false,
-                            enhancedMode: false,
-                            cliVersion: null
-                        }
-                    });
+                    this.sendStateUpdate({
+                        authenticated: false,
+                        memories: [],
+                        loading: false,
+                        enhancedMode: false,
+                        cliVersion: null
+                    }, true);
                     return;
                 }
 
@@ -177,32 +195,26 @@ export class MemorySidebarProvider implements vscode.WebviewViewProvider {
                 this._cachedMemories = memories;
                 this._cacheTimestamp = Date.now();
 
-                this._view.webview.postMessage({
-                    type: 'updateState',
-                    state: {
-                        authenticated: authenticated,
-                        memories,
-                        loading: false,
-                        enhancedMode: enhancedInfo?.cliAvailable || false,
-                        cliVersion: enhancedInfo?.version || null,
-                        cached: false
-                    }
-                });
+                this.sendStateUpdate({
+                    authenticated: authenticated,
+                    memories,
+                    loading: false,
+                    enhancedMode: enhancedInfo?.cliAvailable || false,
+                    cliVersion: enhancedInfo?.version || null,
+                    cached: false
+                }, true);
             } catch (error) {
                 const errorMsg = error instanceof Error ? error.message : String(error);
-                
+
                 // Check for specific error types
-                if (errorMsg.includes('Not authenticated') || errorMsg.includes('401')) {
+                if (errorMsg.includes('Not authenticated') || errorMsg.includes('401') || errorMsg.includes('Authentication required')) {
                     this._cachedMemories = [];
                     this._cacheTimestamp = 0;
-                    this._view.webview.postMessage({
-                        type: 'updateState',
-                        state: {
-                            authenticated: false,
-                            memories: [],
-                            loading: false
-                        }
-                    });
+                    this.sendStateUpdate({
+                        authenticated: false,
+                        memories: [],
+                        loading: false
+                    }, true);
                     return;
                 }
 
@@ -212,40 +224,31 @@ export class MemorySidebarProvider implements vscode.WebviewViewProvider {
                         type: 'error',
                         message: `Failed to refresh: ${errorMsg}. Showing cached data.`
                     });
-                    
+
                     const enhancedInfo = this.memoryService instanceof EnhancedMemoryService
                         ? this.memoryService.getCapabilities()
                         : null;
 
-                    this._view.webview.postMessage({
-                        type: 'updateState',
-                        state: {
-                            authenticated: true,
-                            memories: this._cachedMemories,
-                            loading: false,
-                            enhancedMode: enhancedInfo?.cliAvailable || false,
-                            cliVersion: enhancedInfo?.version || null,
-                            cached: true
-                        }
-                    });
+                    this.sendStateUpdate({
+                        authenticated: true,
+                        memories: this._cachedMemories,
+                        loading: false,
+                        enhancedMode: enhancedInfo?.cliAvailable || false,
+                        cliVersion: enhancedInfo?.version || null,
+                        cached: true
+                    }, true);
                 } else {
-                    // Network/timeout errors
-                    if (errorMsg.includes('fetch') || errorMsg.includes('timeout') || errorMsg.includes('Network')) {
-                        this._view.webview.postMessage({
-                            type: 'error',
-                            message: `Connection failed: ${errorMsg}. Check your network and API endpoint configuration.`
-                        });
-                    } else {
-                        this._view.webview.postMessage({
-                            type: 'error',
-                            message: `Failed to load memories: ${errorMsg}`
-                        });
-                    }
-                    
+                    // Network/timeout errors - show auth screen instead of blank
                     this._view.webview.postMessage({
-                        type: 'updateState',
-                        state: { loading: false }
-                        });
+                        type: 'error',
+                        message: `Connection failed: ${errorMsg}`
+                    });
+
+                    this.sendStateUpdate({
+                        authenticated: false,
+                        memories: [],
+                        loading: false
+                    }, true);
                 }
             }
         }
@@ -254,6 +257,41 @@ export class MemorySidebarProvider implements vscode.WebviewViewProvider {
     public clearCache(): void {
         this._cachedMemories = [];
         this._cacheTimestamp = 0;
+    }
+
+    /**
+     * Debounced state update to prevent rapid re-renders that cause blank screen
+     * Only sends update if state actually changed
+     */
+    private sendStateUpdate(state: Record<string, unknown>, immediate: boolean = false): void {
+        // Cancel any pending update
+        if (this._pendingStateUpdate) {
+            clearTimeout(this._pendingStateUpdate);
+            this._pendingStateUpdate = null;
+        }
+
+        // Check if state actually changed (compare JSON for simplicity)
+        const stateStr = JSON.stringify(state);
+        const lastStateStr = JSON.stringify(this._lastState);
+
+        if (stateStr === lastStateStr && !immediate) {
+            return; // No change, skip update
+        }
+
+        const doUpdate = () => {
+            this._lastState = state;
+            this._view?.webview.postMessage({
+                type: 'updateState',
+                state
+            });
+        };
+
+        if (immediate) {
+            doUpdate();
+        } else {
+            // Debounce by 50ms to batch rapid updates
+            this._pendingStateUpdate = setTimeout(doUpdate, 50);
+        }
     }
 
     private async handleSearch(query: string) {

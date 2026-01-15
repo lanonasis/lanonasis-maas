@@ -3,17 +3,16 @@
  * Aligned with sd-ghost-protocol schema
  */
 
-import { 
-  MemoryEntry, 
-  MemoryTopic, 
-  CreateMemoryRequest, 
-  UpdateMemoryRequest, 
+import {
+  MemoryEntry,
+  MemoryTopic,
+  CreateMemoryRequest,
+  UpdateMemoryRequest,
   SearchMemoryRequest,
   CreateTopicRequest,
   MemorySearchResult,
-  UserMemoryStats 
+  UserMemoryStats
 } from '../types/memory-aligned';
-import { ensureApiKeyHashBrowser } from '../utils/hash-utils';
 
 export interface MaaSClientConfig {
   apiUrl: string;
@@ -84,9 +83,10 @@ export class MaaSClient {
       
       const headers: Record<string, string> = { ...this.baseHeaders, ...(options.headers as Record<string, string> | undefined) };
 
-      // Normalize API key to SHA-256 before sending so raw values never leave the client
+      // Send raw API key - server handles hashing and comparison
+      // Standard API auth: client sends raw key, server hashes and compares
       if (this.config.apiKey && !this.config.authToken) {
-        headers['X-API-Key'] = await ensureApiKeyHashBrowser(this.config.apiKey);
+        headers['X-API-Key'] = this.config.apiKey;
       }
 
       const response = await fetch(url, {

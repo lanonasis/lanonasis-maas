@@ -15,11 +15,30 @@ import { MemoryType, MemoryEntry, MemorySearchResult } from './types/memory-alig
 // import { withRetry, showErrorWithRecovery, withProgressAndRetry } from './utils/errorRecovery';
 import { runDiagnostics, formatDiagnosticResults } from './utils/diagnostics';
 import { registerMemoryChatParticipant } from './chat/MemoryChatParticipant';
+import { MCPDiscoveryService, createMCPDiscoveryService } from './services/MCPDiscoveryService';
 
 export async function activate(context: vscode.ExtensionContext) {
     console.log('Lanonasis Memory Extension is now active');
 
     const outputChannel = vscode.window.createOutputChannel('Lanonasis');
+
+    // Initialize MCP auto-discovery service
+    let mcpDiscoveryService: MCPDiscoveryService | null = null;
+    const config = vscode.workspace.getConfiguration('lanonasis');
+    const enableMCP = config.get<boolean>('enableMCP', true);
+    const mcpAutoDiscover = config.get<boolean>('mcpAutoDiscover', true);
+
+    if (enableMCP && mcpAutoDiscover) {
+        try {
+            mcpDiscoveryService = await createMCPDiscoveryService(outputChannel);
+            const mcpServer = mcpDiscoveryService.getDiscoveredServer();
+            if (mcpServer) {
+                outputChannel.appendLine(`[MCP] Server discovered: ${mcpServer.url} (v${mcpServer.version})`);
+            }
+        } catch (error) {
+            outputChannel.appendLine(`[MCP] Auto-discovery failed: ${error instanceof Error ? error.message : String(error)}`);
+        }
+    }
 
     const secureApiKeyService = new SecureApiKeyService(context, outputChannel);
     await secureApiKeyService.initialize();
@@ -294,6 +313,29 @@ export async function activate(context: vscode.ExtensionContext) {
             }
         }),
 
+        vscode.commands.registerCommand('lanonasis.showMCPStatus', async () => {
+            if (mcpDiscoveryService) {
+                await mcpDiscoveryService.showServerDetails();
+            } else {
+                const action = await vscode.window.showInformationMessage(
+                    'MCP auto-discovery is disabled or no server found.',
+                    'Run Discovery',
+                    'Configure'
+                );
+                if (action === 'Run Discovery') {
+                    const newService = await createMCPDiscoveryService(outputChannel);
+                    if (newService.isAvailable()) {
+                        mcpDiscoveryService = newService;
+                        await newService.showServerDetails();
+                    } else {
+                        vscode.window.showWarningMessage('No MCP server found. Start the CLI MCP server or configure a custom URL.');
+                    }
+                } else if (action === 'Configure') {
+                    vscode.commands.executeCommand('workbench.action.openSettings', 'lanonasis.mcp');
+                }
+            }
+        }),
+
         vscode.commands.registerCommand('lanonasis.configureApiKey', async (mode?: 'oauth' | 'apikey') => {
             await vscode.commands.executeCommand('lanonasis.authenticate', mode);
         }),
@@ -478,6 +520,11 @@ export async function activate(context: vscode.ExtensionContext) {
 
     if (memoryService instanceof EnhancedMemoryService) {
         context.subscriptions.push(memoryService);
+    }
+
+    // Register MCP discovery service for disposal
+    if (mcpDiscoveryService) {
+        context.subscriptions.push(mcpDiscoveryService);
     }
 
     const hasStoredKey = await secureApiKeyService.hasApiKey();

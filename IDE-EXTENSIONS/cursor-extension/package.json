@@ -91,6 +91,12 @@
         "title": "Show Connection Status",
         "category": "Lanonasis",
         "icon": "$(info)"
+      },
+      {
+        "command": "lanonasis.showMCPStatus",
+        "title": "Show MCP Server Status",
+        "category": "Lanonasis",
+        "icon": "$(plug)"
       }
     ],
     "keybindings": [
@@ -178,8 +184,8 @@
         },
         "lanonasis.useGateway": {
           "type": "boolean",
-          "default": true,
-          "description": "Use Onasis Gateway for API requests (recommended)"
+          "default": false,
+          "description": "Use Onasis Gateway for centralized API management. Default is direct REST API connection."
         },
         "lanonasis.useAutoAuth": {
           "type": "boolean",
@@ -225,6 +231,16 @@
           "type": "boolean",
           "default": true,
           "description": "Enable Model Context Protocol channels when available"
+        },
+        "lanonasis.mcpAutoDiscover": {
+          "type": "boolean",
+          "default": true,
+          "description": "Auto-discover embedded CLI MCP server at startup"
+        },
+        "lanonasis.mcpServerUrl": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "Custom MCP server URL. Leave empty for auto-discovery (default: `http://localhost:3001`)"
         },
         "lanonasis.cliDetectionTimeout": {
           "type": "number",
