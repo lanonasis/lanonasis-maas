@@ -432,12 +432,12 @@
       "properties": {
         "lanonasis.apiUrl": {
           "type": "string",
-          "default": "https://mcp.lanonasis.com",
+          "default": "https://api.lanonasis.com",
           "markdownDescription": "Lanonasis Memory Service API URL. Change only if using a custom deployment."
         },
         "lanonasis.gatewayUrl": {
           "type": "string",
-          "default": "https://mcp.lanonasis.com",
+          "default": "https://api.lanonasis.com",
           "markdownDescription": "Onasis Gateway URL for centralized API management. Recommended for most users."
         },
         "lanonasis.useGateway": {
