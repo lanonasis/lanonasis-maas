@@ -153,7 +153,7 @@ export class ApiKeyTreeProvider implements vscode.TreeDataProvider<vscode.TreeIt
         } catch (error) {
             console.error('Error loading API keys:', error);
             const errorMsg = error instanceof Error ? error.message : 'Unknown error';
-            
+
             // Check if it's an authentication error
             if (errorMsg.includes('401') || errorMsg.includes('No token') || errorMsg.includes('AUTH_TOKEN_MISSING')) {
                 const authItem = new vscode.TreeItem('Authentication required', vscode.TreeItemCollapsibleState.None);
@@ -168,7 +168,17 @@ export class ApiKeyTreeProvider implements vscode.TreeDataProvider<vscode.TreeIt
                 authItem.tooltip = `Authentication error: ${errorMsg}`;
                 return [authItem];
             }
-            
+
+            // Check if it's a 405 Method Not Allowed or endpoint not found
+            if (errorMsg.includes('405') || errorMsg.includes('404') || errorMsg.includes('Not Found')) {
+                const notAvailableItem = new vscode.TreeItem('API Key Management', vscode.TreeItemCollapsibleState.None);
+                notAvailableItem.description = 'Not available on this server';
+                notAvailableItem.iconPath = new vscode.ThemeIcon('info');
+                notAvailableItem.contextValue = 'notAvailable';
+                notAvailableItem.tooltip = 'The API key management endpoints are not available on the current server. This feature requires the v-secure module.';
+                return [notAvailableItem];
+            }
+
             const errorItem = new vscode.TreeItem('Error loading data', vscode.TreeItemCollapsibleState.None);
             errorItem.description = errorMsg.length > 50 ? errorMsg.substring(0, 50) + '...' : errorMsg;
             errorItem.iconPath = new vscode.ThemeIcon('error');

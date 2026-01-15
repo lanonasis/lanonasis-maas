@@ -100,6 +100,18 @@
         "title": "AI Memory Assistant",
         "category": "LanOnasis",
         "icon": "$(sparkle)"
+      },
+      {
+        "command": "lanonasis.showConnectionInfo",
+        "title": "Show Connection Status",
+        "category": "LanOnasis",
+        "icon": "$(info)"
+      },
+      {
+        "command": "lanonasis.showMCPStatus",
+        "title": "Show MCP Server Status",
+        "category": "LanOnasis",
+        "icon": "$(plug)"
       }
     ],
     "keybindings": [
@@ -204,8 +216,8 @@
         },
         "lanonasis.useGateway": {
           "type": "boolean",
-          "default": true,
-          "description": "Use Onasis Gateway for API requests (recommended)"
+          "default": false,
+          "description": "Use Onasis Gateway for centralized API management. Default is direct REST API connection."
         },
         "lanonasis.useAutoAuth": {
           "type": "boolean",
@@ -251,6 +263,48 @@
           "type": "boolean",
           "default": true,
           "description": "Enable Windsurf-specific context awareness features"
+        },
+        "lanonasis.preferCLI": {
+          "type": "boolean",
+          "default": true,
+          "description": "Prefer CLI integration when @lanonasis/cli v3.0.6+ is available"
+        },
+        "lanonasis.enableMCP": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable Model Context Protocol channels when available"
+        },
+        "lanonasis.mcpAutoDiscover": {
+          "type": "boolean",
+          "default": true,
+          "description": "Auto-discover embedded CLI MCP server at startup"
+        },
+        "lanonasis.mcpServerUrl": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "Custom MCP server URL. Leave empty for auto-discovery (default: `http://localhost:3001`)"
+        },
+        "lanonasis.cliDetectionTimeout": {
+          "type": "number",
+          "default": 2000,
+          "minimum": 500,
+          "maximum": 10000,
+          "description": "CLI detection timeout in milliseconds"
+        },
+        "lanonasis.verboseLogging": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable verbose logging for CLI integration debugging"
+        },
+        "lanonasis.showPerformanceFeedback": {
+          "type": "boolean",
+          "default": false,
+          "description": "Show brief performance feedback (CLI vs API usage)"
+        },
+        "lanonasis.showTreeView": {
+          "type": "boolean",
+          "default": false,
+          "description": "Show traditional tree view alongside modern sidebar (for advanced users)"
         },
         "lanonasis.enableBulkActions": {
           "type": "boolean",
