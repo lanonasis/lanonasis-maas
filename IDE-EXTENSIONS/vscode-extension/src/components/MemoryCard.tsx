@@ -1,6 +1,6 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { format } from 'date-fns';
+import { format, isValid } from 'date-fns';
 import { Copy, Check, Hash, Paperclip, MoreHorizontal, ExternalLink, Trash2 } from 'lucide-react';
 import Button from '@/components/ui/Button';
 import {
@@ -68,6 +68,20 @@ export const MemoryCard = ({
 
   // Determine the icon to display
   const IconComponent = memory.icon;
+
+  // Safely format the date - handles invalid dates gracefully
+  const formattedDate = useMemo(() => {
+    try {
+      const date = memory.date instanceof Date ? memory.date : new Date(memory.date);
+      if (!isValid(date)) {
+        return 'Unknown';
+      }
+      return format(date, 'MMM d');
+    } catch (e) {
+      console.warn('[MemoryCard] Date formatting failed:', e);
+      return 'Unknown';
+    }
+  }, [memory.date]);
 
   return (
     <motion.div
@@ -200,7 +214,7 @@ export const MemoryCard = ({
       <div className="flex items-center gap-3 text-[11px] text-[var(--vscode-descriptionForeground)] pl-5.5">
         <div className="flex items-center gap-1 opacity-60">
           <span data-testid="text-memory-date">
-            {format(memory.date, 'MMM d')}
+            {formattedDate}
           </span>
         </div>
         {memory.tags.slice(0, 3).map(tag => (

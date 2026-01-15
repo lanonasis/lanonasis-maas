@@ -38,6 +38,7 @@ type SDKMemoryType = SDKCreateMemoryRequest['memory_type'];
 
 let cachedMemoryClientModule: MemoryClientModule | undefined;
 let attemptedMemoryClientLoad = false;
+let verboseLoggingWarningShown = false;
 
 function getMemoryClientModule(): MemoryClientModule | undefined {
   if (!attemptedMemoryClientLoad) {
@@ -111,13 +112,12 @@ export class EnhancedMemoryService implements IEnhancedMemoryService {
       // The client uses HTTP API directly
       const verbose = this.config.get<boolean>('verboseLogging', false);
 
-      // Performance warning: verbose logging in production
-      if (verbose && process.env.NODE_ENV === 'production') {
-        vscode.window.showWarningMessage(
-          'Verbose logging is enabled in production. This may impact performance and expose sensitive information in logs.'
-        );
-        console.warn(
-          '[EnhancedMemoryService] Warning: Verbose logging is enabled in production. This may impact performance and expose sensitive information in logs.'
+      // Performance warning: verbose logging in production (show only once per session)
+      if (verbose && process.env.NODE_ENV === 'production' && !verboseLoggingWarningShown) {
+        verboseLoggingWarningShown = true;
+        // Log to output channel instead of popup to avoid interrupting workflow
+        console.info(
+          '[EnhancedMemoryService] Note: Verbose logging is enabled. Disable via Settings > Lanonasis > Verbose Logging for production use.'
         );
       }
 

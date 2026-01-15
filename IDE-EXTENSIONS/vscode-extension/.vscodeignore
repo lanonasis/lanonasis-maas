@@ -1,22 +1,93 @@
+# VSCode test and development
 .vscode/**
 .vscode-test/**
+
+# Source files (we bundle with esbuild)
 src/**
+!src/  # Keep empty pattern to avoid issues
+
+# Don't exclude media - we need it
 !media/**
+
+# Git and config
 .gitignore
 .yarnrc
-vsc-extension-quickstart.md
+.git/**
+
+# TypeScript config and maps
 **/tsconfig.json
+tsconfig.json.backup
 **/.eslintrc.json
 **/*.map
+
+# All TypeScript files (compiled to JS)
 **/*.ts
+**/*.tsx
+
+# Node modules
 node_modules/**
 ../../packages/**
 ../../**/node_modules/**
+
+# Logs and system files
 *.log
 .DS_Store
 .env
+.env.*
+
+# Built packages (don't include old ones)
 *.vsix
+
+# Documentation files (not needed at runtime)
+*.md
+!README.md
+!CHANGELOG.md
+!LICENSE
+IMPLEMENTATION_GUIDES/**
+docs/**
+
+# Development scripts and tools
+*.sh
 check-icons.sh
-ICON_UPDATE_README.md
-ICON_STATUS.md
-tsconfig.json.backup
+esbuild.config.mjs
+webpack.react.config.js
+postcss.config.js
+tailwind.config.js
+vite.config.*
+vitest.config.*
+vitest-shims.d.ts
+playwright.config.*
+
+# Development JS files (reports, tests, etc.)
+*-summary.js
+*-report.js
+*-complete.js
+*-ready.js
+*-status.js
+test-*.js
+final-*.js
+lint-*.js
+production-*.js
+
+# Lock files (not needed)
+bun.lock
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Test files
+**/__tests__/**
+**/*.test.ts
+**/*.test.tsx
+**/*.spec.ts
+**/*.spec.tsx
+tests/**
+test/**
+
+# Coverage and reports
+coverage/**
+.nyc_output/**
+test-results/**
+
+# Turbo cache
+.turbo/**
