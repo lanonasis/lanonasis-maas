@@ -101,11 +101,11 @@ export class EnhancedMemoryService implements IEnhancedMemoryService {
       const clientConfig = this.buildClientConfigFromCredential(credential);
 
       // Override with VSCode-specific settings
-      const apiUrl = this.config.get<string>('apiUrl', 'https://mcp.lanonasis.com');
+      const apiUrl = this.config.get<string>('apiUrl', 'https://api.lanonasis.com');
       const useGateway = this.config.get<boolean>('useGateway', true);
 
       clientConfig.apiUrl = useGateway ?
-        this.config.get<string>('gatewayUrl', 'https://mcp.lanonasis.com') :
+        this.config.get<string>('gatewayUrl', 'https://api.lanonasis.com') :
         apiUrl;
 
       // Note: CLI detection is no longer supported in CoreMemoryClient
@@ -493,7 +493,7 @@ export class EnhancedMemoryService implements IEnhancedMemoryService {
   private buildClientConfigFromCredential(credential: StoredCredential): EnhancedMemoryClientConfig & { userId?: string; organizationId?: string } {
     // Build config manually (ConfigPresets no longer available in CoreMemoryClient)
     const vscodeConfig = vscode.workspace.getConfiguration('lanonasis');
-    const apiUrl = vscodeConfig.get<string>('apiUrl', 'https://mcp.lanonasis.com');
+    const apiUrl = vscodeConfig.get<string>('apiUrl', 'https://api.lanonasis.com');
 
     const config: EnhancedMemoryClientConfig & { userId?: string; organizationId?: string } = {
       apiUrl,
@@ -506,7 +506,8 @@ export class EnhancedMemoryService implements IEnhancedMemoryService {
       },
       headers: {
         'X-Client-Type': 'vscode-extension',
-        'X-Client-Version': '2.0.5'
+        'X-Client-Version': '2.0.5',
+        'X-Project-Scope': 'lanonasis-maas'  // Required by backend auth middleware
       }
     };
 
