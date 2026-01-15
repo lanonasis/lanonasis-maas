@@ -38,8 +38,8 @@ export class MemoryService implements IMemoryService {
     }
 
     private async loadClient(): Promise<void> {
-        const apiUrl = this.config.get<string>('apiUrl', 'https://mcp.lanonasis.com');
-        const gatewayUrl = this.config.get<string>('gatewayUrl', 'https://mcp.lanonasis.com');
+        const apiUrl = this.config.get<string>('apiUrl', 'https://api.lanonasis.com');
+        const gatewayUrl = this.config.get<string>('gatewayUrl', 'https://api.lanonasis.com');
         // Default to direct REST API (false) - matches package.json default
         const useGateway = this.config.get<boolean>('useGateway', false);
         const effectiveUrl = useGateway ? gatewayUrl : apiUrl;
@@ -66,6 +66,12 @@ export class MemoryService implements IMemoryService {
         }
 
         if (authToken || apiKey) {
+            console.log('[MemoryService] Creating client with:', {
+                hasAuthToken: !!authToken,
+                hasApiKey: !!apiKey,
+                apiKeyPrefix: apiKey ? apiKey.substring(0, 8) + '...' : null,
+                apiUrl: effectiveUrl
+            });
             this.client = createMaaSClient({
                 apiUrl: effectiveUrl,
                 authToken: authToken || undefined,
@@ -74,6 +80,7 @@ export class MemoryService implements IMemoryService {
             });
             this.authenticated = true;
         } else {
+            console.log('[MemoryService] No credentials found - client not created');
             this.client = null;
             this.authenticated = false;
         }
@@ -104,8 +111,8 @@ export class MemoryService implements IMemoryService {
     }
 
     public async testConnection(apiKey?: string): Promise<void> {
-        const apiUrl = this.config.get<string>('apiUrl', 'https://mcp.lanonasis.com');
-        const gatewayUrl = this.config.get<string>('gatewayUrl', 'https://mcp.lanonasis.com');
+        const apiUrl = this.config.get<string>('apiUrl', 'https://api.lanonasis.com');
+        const gatewayUrl = this.config.get<string>('gatewayUrl', 'https://api.lanonasis.com');
         const useGateway = this.config.get<boolean>('useGateway', false);
         const effectiveUrl = useGateway ? gatewayUrl : apiUrl;
 

@@ -111,6 +111,7 @@ export class CoreMemoryClient {
     this.baseHeaders = {
       'Content-Type': 'application/json',
       'User-Agent': '@lanonasis/memory-client/2.0.0',
+      'X-Project-Scope': 'lanonasis-maas',  // Required by backend auth middleware
       ...config.headers
     };
 

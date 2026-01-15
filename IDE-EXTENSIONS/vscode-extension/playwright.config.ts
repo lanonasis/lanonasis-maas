@@ -9,7 +9,7 @@ export default defineConfig({
   reporter: 'html',
   use: {
     trace: 'on-first-retry',
-    baseURL: 'https://mcp.lanonasis.com',
+    baseURL: 'https://api.lanonasis.com',
   },
   projects: [
     {
