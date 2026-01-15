@@ -7,7 +7,7 @@
       "DOM"
     ],
     "outDir": "out",
-    "rootDir": ".",
+    "rootDir": "src",
     "sourceMap": true,
     "strict": true,
     "noImplicitReturns": true,
@@ -24,9 +24,7 @@
     "resolveJsonModule": true,
     "types": [
       "vscode",
-      "node",
-      "vitest/globals",
-      "@testing-library/jest-dom"
+      "node"
     ],
     "moduleResolution": "node",
     "jsx": "react-jsx",
@@ -47,12 +45,14 @@
     }
   },
   "include": [
-    "src/**/*",
-    "vitest-shims.d.ts",
-    "vitest.config.ts"
+    "src/**/*"
   ],
   "exclude": [
     "node_modules",
-    "out"
+    "out",
+    "src/**/__tests__/**",
+    "src/test/**",
+    "**/*.test.ts",
+    "**/*.test.tsx"
   ]
 }

@@ -221,9 +221,179 @@ export class SecureApiKeyService {
     }
 
     /**
-     * Authenticate with OAuth flow using PKCE
+     * Authenticate using Device Code flow (RFC 8628)
+     * This is the preferred method - works in SSH, containers, and remote environments
+     * No localhost redirect server needed!
      */
     async authenticateOAuth(): Promise<boolean> {
+        try {
+            const config = vscode.workspace.getConfiguration('lanonasis');
+            const authUrl = config.get<string>('authUrl') || 'https://auth.lanonasis.com';
+            const clientId = 'vscode-extension';
+
+            this.log('Starting Device Code authentication flow...');
+
+            // Step 1: Request device code
+            const deviceResponse = await fetch(`${authUrl}/oauth/device`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify({
+                    client_id: clientId,
+                    scope: 'memories:read memories:write memories:delete'
+                })
+            });
+
+            if (!deviceResponse.ok) {
+                const errorText = await deviceResponse.text();
+                throw new Error(`Failed to request device code: ${deviceResponse.status} ${errorText}`);
+            }
+
+            const deviceData = await deviceResponse.json() as {
+                device_code: string;
+                user_code: string;
+                verification_uri: string;
+                verification_uri_complete: string;
+                expires_in: number;
+                interval: number;
+            };
+
+            this.log(`Device code received. User code: ${deviceData.user_code}`);
+
+            // Step 2: Show user the code and open browser
+            const openBrowser = await vscode.window.showInformationMessage(
+                `Enter this code in your browser: ${deviceData.user_code}`,
+                { modal: true },
+                'Open Browser',
+                'Copy Code'
+            );
+
+            if (openBrowser === 'Open Browser') {
+                await vscode.env.openExternal(vscode.Uri.parse(deviceData.verification_uri_complete));
+            } else if (openBrowser === 'Copy Code') {
+                await vscode.env.clipboard.writeText(deviceData.user_code);
+                await vscode.env.openExternal(vscode.Uri.parse(deviceData.verification_uri));
+                vscode.window.showInformationMessage('Code copied! Paste it in the browser window.');
+            } else {
+                this.log('User cancelled device code flow');
+                return false;
+            }
+
+            // Step 3: Poll for authorization
+            const pollInterval = (deviceData.interval || 5) * 1000;
+            const expiresAt = Date.now() + (deviceData.expires_in * 1000);
+            const grantType = 'urn:ietf:params:oauth:grant-type:device_code';
+
+            return await vscode.window.withProgress({
+                location: vscode.ProgressLocation.Notification,
+                title: 'Waiting for authorization...',
+                cancellable: true
+            }, async (progress, cancellationToken) => {
+                while (Date.now() < expiresAt) {
+                    if (cancellationToken.isCancellationRequested) {
+                        this.log('User cancelled device code polling');
+                        return false;
+                    }
+
+                    // Wait before polling
+                    await new Promise(resolve => setTimeout(resolve, pollInterval));
+
+                    try {
+                        const tokenResponse = await fetch(`${authUrl}/oauth/token`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/x-www-form-urlencoded',
+                                'Accept': 'application/json'
+                            },
+                            body: new URLSearchParams({
+                                grant_type: grantType,
+                                device_code: deviceData.device_code,
+                                client_id: clientId
+                            }).toString()
+                        });
+
+                        const tokenData = await tokenResponse.json() as {
+                            access_token?: string;
+                            refresh_token?: string;
+                            expires_in?: number;
+                            error?: string;
+                            error_description?: string;
+                        };
+
+                        if (tokenData.error === 'authorization_pending') {
+                            // Still waiting for user to authorize
+                            progress.report({ message: 'Waiting for you to authorize in browser...' });
+                            continue;
+                        }
+
+                        if (tokenData.error === 'slow_down') {
+                            // Server wants us to slow down
+                            await new Promise(resolve => setTimeout(resolve, pollInterval));
+                            continue;
+                        }
+
+                        if (tokenData.error === 'access_denied') {
+                            this.log('User denied authorization');
+                            vscode.window.showWarningMessage('Authorization was denied.');
+                            return false;
+                        }
+
+                        if (tokenData.error === 'expired_token') {
+                            this.log('Device code expired');
+                            vscode.window.showWarningMessage('Authorization timed out. Please try again.');
+                            return false;
+                        }
+
+                        if (tokenData.error) {
+                            throw new Error(tokenData.error_description || tokenData.error);
+                        }
+
+                        if (tokenData.access_token) {
+                            // Success! Store the token
+                            await this.storeApiKey(tokenData.access_token, 'oauth');
+                            if (tokenData.refresh_token) {
+                                await this.context.secrets.store(SecureApiKeyService.REFRESH_TOKEN_KEY, tokenData.refresh_token);
+                            }
+
+                            // Store token with expiration info
+                            const tokenInfo = {
+                                access_token: tokenData.access_token,
+                                expires_at: Date.now() + (tokenData.expires_in ? tokenData.expires_in * 1000 : 3600000)
+                            };
+                            await this.context.secrets.store(SecureApiKeyService.AUTH_TOKEN_KEY, JSON.stringify(tokenInfo));
+
+                            this.log('Device code authentication successful!');
+                            vscode.window.showInformationMessage('✓ Authentication successful!');
+                            return true;
+                        }
+                    } catch (pollError) {
+                        this.logError('Token polling error', pollError);
+                        // Continue polling unless it's a fatal error
+                    }
+                }
+
+                // Timeout
+                this.log('Device code expired');
+                vscode.window.showWarningMessage('Authorization timed out. Please try again.');
+                return false;
+            });
+
+        } catch (error) {
+            this.logError('Device code authentication failed', error);
+
+            // Fallback to PKCE flow if device code fails
+            this.log('Falling back to PKCE redirect flow...');
+            return await this.authenticateOAuthPKCE();
+        }
+    }
+
+    /**
+     * Fallback: Authenticate with OAuth PKCE redirect flow
+     * Used if Device Code flow fails (e.g., Redis not available on server)
+     */
+    private async authenticateOAuthPKCE(): Promise<boolean> {
         return new Promise((resolve, reject) => {
             // Store timeout reference to clear it on success/error
             let timeoutId: NodeJS.Timeout | undefined;

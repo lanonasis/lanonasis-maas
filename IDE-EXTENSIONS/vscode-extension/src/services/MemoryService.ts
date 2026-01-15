@@ -40,7 +40,8 @@ export class MemoryService implements IMemoryService {
     private async loadClient(): Promise<void> {
         const apiUrl = this.config.get<string>('apiUrl', 'https://mcp.lanonasis.com');
         const gatewayUrl = this.config.get<string>('gatewayUrl', 'https://mcp.lanonasis.com');
-        const useGateway = this.config.get<boolean>('useGateway', true);
+        // Default to direct REST API (false) - matches package.json default
+        const useGateway = this.config.get<boolean>('useGateway', false);
         const effectiveUrl = useGateway ? gatewayUrl : apiUrl;
 
         // Try OAuth token first, then API key
@@ -105,7 +106,7 @@ export class MemoryService implements IMemoryService {
     public async testConnection(apiKey?: string): Promise<void> {
         const apiUrl = this.config.get<string>('apiUrl', 'https://mcp.lanonasis.com');
         const gatewayUrl = this.config.get<string>('gatewayUrl', 'https://mcp.lanonasis.com');
-        const useGateway = this.config.get<boolean>('useGateway', true);
+        const useGateway = this.config.get<boolean>('useGateway', false);
         const effectiveUrl = useGateway ? gatewayUrl : apiUrl;
 
         let testClient: MaaSClient | null = null;
