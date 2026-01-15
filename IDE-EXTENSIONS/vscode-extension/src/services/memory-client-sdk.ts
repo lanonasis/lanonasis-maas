@@ -49,6 +49,7 @@ export class MaaSClient {
 
     this.baseHeaders = {
       'Content-Type': 'application/json',
+      'X-Project-Scope': 'lanonasis-maas',  // Required by backend auth middleware
     };
 
     if (config.authToken) {
@@ -87,6 +88,11 @@ export class MaaSClient {
       // Standard API auth: client sends raw key, server hashes and compares
       if (this.config.apiKey && !this.config.authToken) {
         headers['X-API-Key'] = this.config.apiKey;
+        console.log('[MaaSClient] Using X-API-Key auth, key prefix:', this.config.apiKey.substring(0, 8) + '...');
+      } else if (this.config.authToken) {
+        console.log('[MaaSClient] Using Bearer auth');
+      } else {
+        console.log('[MaaSClient] WARNING: No authentication configured!');
       }
 
       const response = await fetch(url, {
@@ -279,11 +285,11 @@ export const defaultConfigs = {
     timeout: 30000
   },
   production: {
-    apiUrl: 'https://mcp.lanonasis.com',
+    apiUrl: 'https://api.lanonasis.com',
     timeout: 10000
   },
   gateway: {
-    apiUrl: 'https://mcp.lanonasis.com',
+    apiUrl: 'https://api.lanonasis.com',
     timeout: 15000
   }
 };
