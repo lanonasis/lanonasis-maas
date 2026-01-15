@@ -25,12 +25,11 @@ interface OperationResult<T> extends ApiResponse<T> {
   mcpUsed?: boolean;
 }
 
-// Stub for missing CLICapabilities
-interface CLICapabilities {
-  cliAvailable: boolean;
-  mcpSupport: boolean;
+// Connection capabilities for HTTP-based CoreMemoryClient
+// Note: CLI/MCP features are NOT supported by CoreMemoryClient (HTTP-only)
+interface ConnectionCapabilities {
   authenticated: boolean;
-  goldenContract: boolean;
+  connectionMode: 'http';  // CoreMemoryClient only supports HTTP
 }
 
 type MemoryClientModule = typeof import('@lanonasis/memory-client');
@@ -59,7 +58,7 @@ export class EnhancedMemoryService implements IEnhancedMemoryService {
   private client: EnhancedMemoryClientType | null = null;
   private config: vscode.WorkspaceConfiguration;
   private statusBarItem: vscode.StatusBarItem;
-  private cliCapabilities: CLICapabilities | null = null;
+  private connectionCapabilities: ConnectionCapabilities | null = null;
   private showPerformanceFeedback: boolean;
   private secureApiKeyService: SecureApiKeyService;
   private readonly sdk: MemoryClientModule;
@@ -124,7 +123,7 @@ export class EnhancedMemoryService implements IEnhancedMemoryService {
       this.client = new CoreMemoryClient(clientConfig);
 
       // Detect capabilities (CoreMemoryClient is ready immediately, no initialize needed)
-      this.cliCapabilities = await this.detectCapabilities();
+      this.connectionCapabilities = await this.detectCapabilities();
 
       this.updateStatusBar(true, this.getConnectionStatus());
 
@@ -136,13 +135,11 @@ export class EnhancedMemoryService implements IEnhancedMemoryService {
     }
   }
 
-  private async detectCapabilities(): Promise<CLICapabilities> {
+  private async detectCapabilities(): Promise<ConnectionCapabilities> {
     if (!this.client) {
       return {
-        cliAvailable: false,
-        mcpSupport: false,
         authenticated: false,
-        goldenContract: false
+        connectionMode: 'http'
       };
     }
 
@@ -150,35 +147,24 @@ export class EnhancedMemoryService implements IEnhancedMemoryService {
       // Test API connection with a health check
       const healthResult = await this.client.healthCheck();
 
-      // CoreMemoryClient uses pure HTTP API (no CLI detection)
-      // CLI capabilities are now determined externally
+      // CoreMemoryClient uses pure HTTP API only
       return {
-        cliAvailable: false, // CoreMemoryClient doesn't use CLI
-        mcpSupport: false,   // CoreMemoryClient uses HTTP, not MCP
         authenticated: healthResult.error === undefined,
-        goldenContract: false // CLI feature not available in CoreMemoryClient
+        connectionMode: 'http'
       };
     } catch {
       return {
-        cliAvailable: false,
-        mcpSupport: false,
         authenticated: false,
-        goldenContract: false
+        connectionMode: 'http'
       };
     }
   }
 
   private getConnectionStatus(): string {
-    if (!this.cliCapabilities) return 'Unknown';
+    if (!this.connectionCapabilities) return 'Unknown';
 
-    if (this.cliCapabilities.cliAvailable) {
-      const parts = ['CLI'];
-      if (this.cliCapabilities.mcpSupport) parts.push('MCP');
-      if (this.cliCapabilities.goldenContract) parts.push('Golden');
-      return parts.join('+');
-    }
-
-    return 'API';
+    // CoreMemoryClient is HTTP-only, display accurate status
+    return this.connectionCapabilities.authenticated ? 'HTTP API' : 'Disconnected';
   }
 
   private updateStatusBar(connected: boolean, status: string): void {
@@ -208,7 +194,16 @@ export class EnhancedMemoryService implements IEnhancedMemoryService {
   }
 
   public getCapabilities(): MemoryServiceCapabilities | null {
-    return this.cliCapabilities;
+    if (!this.connectionCapabilities) return null;
+
+    // Return capabilities in expected interface format
+    // Note: CLI features are not available with CoreMemoryClient (HTTP-only)
+    return {
+      cliAvailable: false,
+      mcpSupport: false,
+      authenticated: this.connectionCapabilities.authenticated,
+      goldenContract: false
+    };
   }
 
   public async testConnection(apiKey?: string): Promise<void> {
@@ -246,7 +241,7 @@ export class EnhancedMemoryService implements IEnhancedMemoryService {
 
     // Update capabilities after successful test
     if (!apiKey) {
-      this.cliCapabilities = await this.detectCapabilities();
+      this.connectionCapabilities = await this.detectCapabilities();
       this.updateStatusBar(true, this.getConnectionStatus());
     }
   }
@@ -400,31 +395,27 @@ export class EnhancedMemoryService implements IEnhancedMemoryService {
   }
 
   public async showConnectionInfo(): Promise<void> {
-    const caps = this.cliCapabilities;
+    const caps = this.connectionCapabilities;
     if (!caps) {
       vscode.window.showInformationMessage('Connection status: Unknown');
       return;
     }
 
     const details = [
-      `CLI Available: ${caps.cliAvailable ? '✅' : '❌'}`,
-      `MCP Support: ${caps.mcpSupport ? '✅' : '❌'}`,
-      `Authenticated: ${caps.authenticated ? '✅' : '❌'}`,
-      `Golden Contract: ${caps.goldenContract ? '✅' : '❌'}`
+      `Connection Mode: ${caps.connectionMode.toUpperCase()}`,
+      `Authenticated: ${caps.authenticated ? '✅' : '❌'}`
     ];
 
     const message = `Lanonasis Memory Connection Status:\n\n${details.join('\n')}`;
 
-    if (caps.cliAvailable && caps.goldenContract) {
+    if (caps.authenticated) {
       vscode.window.showInformationMessage(
-        `${message}\n\nEnhanced performance with CLI v1.5.2+ integration!`
-      );
-    } else if (caps.authenticated) {
-      vscode.window.showInformationMessage(
-        `${message}\n\nInstall @lanonasis/cli v1.5.2+ for enhanced performance.`
+        `${message}\n\nConnected via HTTP API.`
       );
     } else {
-      vscode.window.showWarningMessage(message);
+      vscode.window.showWarningMessage(
+        `${message}\n\nPlease authenticate to access memory features.`
+      );
     }
   }
 
@@ -583,11 +574,11 @@ export class EnhancedMemoryService implements IEnhancedMemoryService {
 
     // Show migration message
     vscode.window.showInformationMessage(
-      '🚀 Upgraded to Enhanced Memory Service with CLI integration!',
+      'Upgraded to Enhanced Memory Service!',
       'Learn More'
     ).then(selection => {
       if (selection === 'Learn More') {
-        vscode.env.openExternal(vscode.Uri.parse('https://docs.lanonasis.com/cli/integration'));
+        vscode.env.openExternal(vscode.Uri.parse('https://docs.lanonasis.com/sdk'));
       }
     });
 
