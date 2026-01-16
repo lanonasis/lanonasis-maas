@@ -12,7 +12,6 @@ import {
   MemoryEntry, 
   MemorySearchResult, 
   CreateMemoryRequest, 
-  UpdateMemoryRequest,
   MemoryStats,
   MemoryType 
 } from '@/types/memory';
@@ -39,7 +38,7 @@ export interface MemoryStateTransition {
   from_state: MemoryState;
   to_state: MemoryState;
   reason?: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
   changed_by: string;
   created_at: string;
 }
@@ -73,10 +72,16 @@ export interface MemoryAccessLog {
   organization_id: string;
   access_type: string;
   success: boolean;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
   ip_address?: string;
   user_agent?: string;
   created_at: string;
+}
+
+function isBulkOperationResult(value: unknown): value is BulkOperationResult {
+  if (typeof value !== 'object' || value === null) return false;
+  const v = value as Record<string, unknown>;
+  return typeof v.success === 'boolean';
 }
 
 export interface EnhancedSearchFilters {
@@ -260,7 +265,7 @@ export class EnhancedMemoryService {
     newState: MemoryState,
     changedBy: string,
     reason?: string,
-    metadata?: Record<string, any>
+    metadata?: Record<string, unknown>
   ): Promise<MemoryStateTransition> {
     const startTime = Date.now();
 
@@ -331,10 +336,13 @@ export class EnhancedMemoryService {
         throw new InternalServerError('Failed to bulk update memory state');
       }
 
+      const typedResults = Array.isArray(results) ? results.filter(isBulkOperationResult) : [];
+      const successfulCount = typedResults.filter((r) => r.success).length;
+
       logPerformance('bulk_memory_state_update', Date.now() - startTime, {
         memory_count: memoryIds.length,
         new_state: newState,
-        successful: results?.filter((r: any) => r.success).length || 0
+        successful: successfulCount
       });
 
       return results || [];
@@ -673,7 +681,7 @@ export class EnhancedMemoryService {
   }
 
   // Inherit all methods from the base MemoryService
-  async getMemoryStats(organizationId: string): Promise<MemoryStats> {
+  async getMemoryStats(_organizationId: string): Promise<MemoryStats> {
     // Implementation would call the original method or reimplement
     // For now, return a basic implementation
     return {
