@@ -157,15 +157,25 @@ export class EnhancedSidebarProvider implements vscode.WebviewViewProvider {
             );
 
             const isAuthenticated = await Promise.race([authPromise, timeoutPromise]);
+            let user: { id?: string; name?: string; email?: string } | null = null;
+
+            if (isAuthenticated && this._apiKeyService) {
+                try {
+                    user = await this._apiKeyService.getUserInfo();
+                } catch (error) {
+                    console.warn('[EnhancedSidebarProvider] Failed to fetch user profile:', error);
+                }
+            }
+
             this._view?.webview.postMessage({
                 type: 'authState',
-                data: { authenticated: isAuthenticated }
+                data: { authenticated: isAuthenticated, user }
             });
         } catch (error) {
             console.warn('[EnhancedSidebarProvider] Auth check failed:', error);
             this._view?.webview.postMessage({
                 type: 'authState',
-                data: { authenticated: false, error: 'Failed to check authentication state' }
+                data: { authenticated: false, user: null, error: 'Failed to check authentication state' }
             });
         }
     }

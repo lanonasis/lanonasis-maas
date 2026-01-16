@@ -13,7 +13,6 @@ import {
   Lightbulb,
   X,
   Paperclip,
-  Copy,
   Clipboard,
   Trash2,
 } from 'lucide-react';
@@ -27,10 +26,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import {
-  Collapsible,
-  CollapsibleContent,
-} from '@/components/ui/collapsible';
+import { Collapsible, CollapsibleContent } from '@/components/ui/collapsible';
 import { cn } from '../utils/cn';
 import { useAuth } from '../hooks/useAuth';
 import { useMemories } from '../hooks/useMemories';
@@ -70,17 +66,24 @@ function useChatHistory() {
     }
   }, [messages]);
 
-  const addMessage = useCallback((role: 'user' | 'assistant', content: string, attachedMemories?: Array<{ id: string; title: string }>) => {
-    const newMessage: ChatMessage = {
-      id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      role,
-      content,
-      timestamp: Date.now(),
-      attachedMemories,
-    };
-    setMessages(prev => [...prev, newMessage]);
-    return newMessage;
-  }, []);
+  const addMessage = useCallback(
+    (
+      role: 'user' | 'assistant',
+      content: string,
+      attachedMemories?: Array<{ id: string; title: string }>,
+    ) => {
+      const newMessage: ChatMessage = {
+        id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        role,
+        content,
+        timestamp: Date.now(),
+        attachedMemories,
+      };
+      setMessages((prev) => [...prev, newMessage]);
+      return newMessage;
+    },
+    [],
+  );
 
   const clearHistory = useCallback(() => {
     setMessages([]);
@@ -95,14 +98,14 @@ function useMemoryContext() {
   const [attachedMemories, setAttachedMemories] = useState<Memory[]>([]);
 
   const attachMemory = useCallback((memory: Memory) => {
-    setAttachedMemories(prev => {
-      if (prev.some(m => m.id === memory.id)) return prev;
+    setAttachedMemories((prev) => {
+      if (prev.some((m) => m.id === memory.id)) return prev;
       return [...prev, memory];
     });
   }, []);
 
   const removeMemory = useCallback((memoryId: string) => {
-    setAttachedMemories(prev => prev.filter(m => m.id !== memoryId));
+    setAttachedMemories((prev) => prev.filter((m) => m.id !== memoryId));
   }, []);
 
   const clearContext = useCallback(() => {
@@ -112,19 +115,46 @@ function useMemoryContext() {
   return { attachedMemories, attachMemory, removeMemory, clearContext };
 }
 
+const getInitials = (value?: string | null) => {
+  if (!value) return 'U';
+  const trimmed = value.trim();
+  if (!trimmed) return 'U';
+  const parts = trimmed.split(/\s+/).filter(Boolean);
+  if (parts.length === 1) {
+    const token = parts[0];
+    const handle = token.includes('@') ? token.split('@')[0] : token;
+    return handle.slice(0, 2).toUpperCase();
+  }
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+};
+
 export const IDEPanel = () => {
-  const { isAuthenticated, isLoading: authLoading, login, logout } = useAuth();
-  const { searchQuery, setSearchQuery, filteredMemories, isLoading: memoriesLoading, error, refresh } = useMemories();
-  const { messages: chatHistory, addMessage: addChatMessage, clearHistory: clearChatHistory } = useChatHistory();
+  const { isAuthenticated, isLoading: authLoading, user, login, logout } = useAuth();
+  const {
+    searchQuery,
+    setSearchQuery,
+    filteredMemories,
+    isLoading: memoriesLoading,
+    error,
+    refresh,
+  } = useMemories();
+  const {
+    messages: chatHistory,
+    addMessage: addChatMessage,
+    clearHistory: clearChatHistory,
+  } = useChatHistory();
   const { attachedMemories, attachMemory, removeMemory, clearContext } = useMemoryContext();
-  
+
   const [chatInput, setChatInput] = useState('');
   const [isChatLoading, setIsChatLoading] = useState(false);
   const [showApiKeys, setShowApiKeys] = useState(false);
   const [isAssistantOpen, setIsAssistantOpen] = useState(true);
   const [isMemoriesOpen, setIsMemoriesOpen] = useState(true);
   const [clipboardContent, setClipboardContent] = useState<string | null>(null);
-  
+
+  const userDisplayName = user?.name || user?.email || null;
+  const userSubLabel = user?.name && user?.email ? user.email : null;
+
   const chatScrollRef = useRef<HTMLDivElement>(null);
 
   // Auto-scroll chat to bottom
@@ -142,28 +172,31 @@ export const IDEPanel = () => {
   }, []);
 
   // Handle chat queries with attached context
-  const handleChatSend = useCallback((query: string) => {
-    if (!query.trim() || !isAuthenticated) return;
-    
-    // Add user message to history with attached memories
-    const attachedRefs = attachedMemories.map(m => ({ id: m.id, title: m.title }));
-    addChatMessage('user', query, attachedRefs.length > 0 ? attachedRefs : undefined);
-    
-    setIsChatLoading(true);
-    
-    // Send to extension with attached memory content as context
-    postMessage('chatQuery', {
-      query,
-      attachedMemories: attachedMemories.map(m => ({
-        id: m.id,
-        title: m.title,
-        content: m.content,
-      })),
-    });
-    
-    setChatInput('');
-    clearContext(); // Clear attached memories after sending
-  }, [isAuthenticated, attachedMemories, addChatMessage, postMessage, clearContext]);
+  const handleChatSend = useCallback(
+    (query: string) => {
+      if (!query.trim() || !isAuthenticated) return;
+
+      // Add user message to history with attached memories
+      const attachedRefs = attachedMemories.map((m) => ({ id: m.id, title: m.title }));
+      addChatMessage('user', query, attachedRefs.length > 0 ? attachedRefs : undefined);
+
+      setIsChatLoading(true);
+
+      // Send to extension with attached memory content as context
+      postMessage('chatQuery', {
+        query,
+        attachedMemories: attachedMemories.map((m) => ({
+          id: m.id,
+          title: m.title,
+          content: m.content,
+        })),
+      });
+
+      setChatInput('');
+      clearContext(); // Clear attached memories after sending
+    },
+    [isAuthenticated, attachedMemories, addChatMessage, postMessage, clearContext],
+  );
 
   // Handle pasting from clipboard to create memory
   const handlePasteToMemory = useCallback(() => {
@@ -175,11 +208,25 @@ export const IDEPanel = () => {
     postMessage('executeCommand', 'lanonasis.quickCapture');
   }, [postMessage]);
 
+  const attachClipboardContent = useCallback(() => {
+    if (!clipboardContent) return;
+    attachMemory({
+      id: `clipboard-${Date.now()}`,
+      title: 'Clipboard Content',
+      content: clipboardContent,
+      date: new Date(),
+      tags: ['clipboard'],
+      icon: Clipboard,
+      type: 'context',
+    });
+    setClipboardContent(null);
+  }, [clipboardContent, attachMemory]);
+
   // Listen for messages from extension
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
       const message = event.data;
-      
+
       if (message.type === 'chatResponse') {
         const response = message.data?.response || 'No response received.';
         addChatMessage('assistant', response);
@@ -191,10 +238,6 @@ export const IDEPanel = () => {
         setIsChatLoading(message.data === true);
       } else if (message.type === 'clipboardContent') {
         setClipboardContent(message.data);
-        // Create memory from clipboard
-        if (message.data) {
-          postMessage('executeCommand', 'lanonasis.captureClipboard');
-        }
       }
     };
 
@@ -203,14 +246,20 @@ export const IDEPanel = () => {
   }, [addChatMessage, postMessage]);
 
   // Handle attaching memory to chat context
-  const handleAttachMemory = useCallback((memory: Memory) => {
-    attachMemory(memory);
-  }, [attachMemory]);
+  const handleAttachMemory = useCallback(
+    (memory: Memory) => {
+      attachMemory(memory);
+    },
+    [attachMemory],
+  );
 
   // Copy memory content to clipboard
-  const handleCopyMemory = useCallback((memory: Memory) => {
-    postMessage('copyToClipboard', memory.content);
-  }, [postMessage]);
+  const handleCopyMemory = useCallback(
+    (memory: Memory) => {
+      postMessage('copyToClipboard', memory.content);
+    },
+    [postMessage],
+  );
 
   return (
     <div className="flex h-screen w-full bg-[var(--vscode-sideBar-background)] text-[var(--vscode-sideBar-foreground)] font-sans overflow-hidden justify-center select-none">
@@ -218,9 +267,27 @@ export const IDEPanel = () => {
       <div className="w-full max-w-[400px] h-full flex flex-col bg-[var(--vscode-sideBar-background)] relative">
         {/* Top Header */}
         <div className="flex items-center justify-between px-4 py-2.5 bg-[var(--vscode-sideBar-background)]">
-          <span className="text-[11px] font-bold uppercase tracking-wide text-[var(--vscode-sideBarTitle-foreground)]">
-            LanOnasis Memory
-          </span>
+          {userDisplayName ? (
+            <div className="flex items-center gap-2">
+              <div className="h-6 w-6 rounded-full bg-[var(--vscode-badge-background)]/30 text-[10px] font-semibold text-[var(--vscode-editor-foreground)] flex items-center justify-center">
+                {getInitials(userDisplayName)}
+              </div>
+              <div className="flex flex-col leading-tight">
+                <span className="text-[11px] font-semibold text-[var(--vscode-sideBarTitle-foreground)] max-w-[150px] truncate">
+                  {userDisplayName}
+                </span>
+                {userSubLabel && (
+                  <span className="text-[10px] text-[var(--vscode-descriptionForeground)] max-w-[150px] truncate">
+                    {userSubLabel}
+                  </span>
+                )}
+              </div>
+            </div>
+          ) : (
+            <span className="text-[11px] font-bold uppercase tracking-wide text-[var(--vscode-sideBarTitle-foreground)]">
+              LanOnasis Memory
+            </span>
+          )}
           <div className="flex items-center gap-1">
             {isAuthenticated ? (
               <DropdownMenu>
@@ -286,10 +353,7 @@ export const IDEPanel = () => {
         <ScrollArea className="flex-1">
           <div className="flex flex-col min-h-full">
             {/* Memory Assistant Section - Now with chat history */}
-            <Collapsible
-              open={isAssistantOpen}
-              onOpenChange={setIsAssistantOpen}
-            >
+            <Collapsible open={isAssistantOpen} onOpenChange={setIsAssistantOpen}>
               <div
                 className="vscode-section-header group"
                 onClick={() => setIsAssistantOpen(!isAssistantOpen)}
@@ -298,7 +362,7 @@ export const IDEPanel = () => {
                 <ChevronRight
                   className={cn(
                     'h-4 w-4 text-[var(--vscode-icon-foreground)] transition-transform mr-0.5 opacity-80',
-                    isAssistantOpen && 'rotate-90'
+                    isAssistantOpen && 'rotate-90',
                   )}
                 />
                 <span className="text-[11px] font-bold text-[var(--vscode-sideBarSectionHeader-foreground)] uppercase">
@@ -322,10 +386,7 @@ export const IDEPanel = () => {
               <CollapsibleContent>
                 <div className="flex flex-col" style={{ maxHeight: '300px' }}>
                   {/* Chat History */}
-                  <div 
-                    ref={chatScrollRef}
-                    className="flex-1 overflow-y-auto p-3 space-y-3"
-                  >
+                  <div ref={chatScrollRef} className="flex-1 overflow-y-auto p-3 space-y-3">
                     {!isAuthenticated ? (
                       <div className="text-[13px] text-[var(--vscode-descriptionForeground)] flex items-center justify-center text-center italic opacity-80 py-4">
                         Please connect to enable AI assistance.
@@ -342,7 +403,7 @@ export const IDEPanel = () => {
                             key={msg.id}
                             className={cn(
                               'flex gap-2',
-                              msg.role === 'user' ? 'justify-end' : 'justify-start'
+                              msg.role === 'user' ? 'justify-end' : 'justify-start',
                             )}
                           >
                             <div
@@ -350,12 +411,12 @@ export const IDEPanel = () => {
                                 'max-w-[85%] rounded-lg px-3 py-2 text-[13px]',
                                 msg.role === 'user'
                                   ? 'bg-[var(--vscode-button-background)] text-[var(--vscode-button-foreground)]'
-                                  : 'bg-[var(--vscode-textCodeBlock-background)] text-[var(--vscode-editor-foreground)]'
+                                  : 'bg-[var(--vscode-textCodeBlock-background)] text-[var(--vscode-editor-foreground)]',
                               )}
                             >
                               {msg.attachedMemories && msg.attachedMemories.length > 0 && (
                                 <div className="flex flex-wrap gap-1 mb-1">
-                                  {msg.attachedMemories.map(m => (
+                                  {msg.attachedMemories.map((m) => (
                                     <span
                                       key={m.id}
                                       className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] bg-[var(--vscode-badge-background)] text-[var(--vscode-badge-foreground)]"
@@ -373,7 +434,7 @@ export const IDEPanel = () => {
                             </div>
                           </div>
                         ))}
-                        
+
                         {/* Loading indicator */}
                         {isChatLoading && (
                           <div className="flex gap-2 justify-start">
@@ -407,7 +468,7 @@ export const IDEPanel = () => {
                   <ChevronRight
                     className={cn(
                       'h-4 w-4 text-[var(--vscode-icon-foreground)] transition-transform mr-0.5 opacity-80',
-                      isMemoriesOpen && 'rotate-90'
+                      isMemoriesOpen && 'rotate-90',
                     )}
                   />
                   <span className="text-[11px] font-bold text-[var(--vscode-sideBarSectionHeader-foreground)] uppercase">
@@ -421,7 +482,9 @@ export const IDEPanel = () => {
                     className="h-5 w-5 hover:bg-[var(--vscode-list-hoverBackground)] rounded-sm"
                     onClick={(e) => {
                       e.stopPropagation();
-                      const searchInput = document.querySelector('[data-testid="input-search"]') as HTMLInputElement;
+                      const searchInput = document.querySelector(
+                        '[data-testid="input-search"]',
+                      ) as HTMLInputElement;
                       if (searchInput) {
                         searchInput.focus();
                       }
@@ -465,23 +528,24 @@ export const IDEPanel = () => {
                   // Auth loading state
                   <div className="p-4 flex flex-col items-center justify-center gap-2">
                     <div className="h-6 w-6 border-2 border-[var(--vscode-button-background)] border-t-transparent rounded-full animate-spin" />
-                    <span className="text-[13px] text-[var(--vscode-descriptionForeground)]">Connecting...</span>
+                    <span className="text-[13px] text-[var(--vscode-descriptionForeground)]">
+                      Connecting...
+                    </span>
                   </div>
                 ) : isAuthenticated ? (
                   <div className="p-2 space-y-2">
-                    <SearchBar
-                      value={searchQuery}
-                      onChange={setSearchQuery}
-                    />
+                    <SearchBar value={searchQuery} onChange={setSearchQuery} />
                     <div className="flex gap-2 mb-4">
                       <Button
                         className="flex-1 vscode-button h-7 gap-1.5"
-                        onClick={() => postMessage('createMemory', {
-                          title: 'New Memory',
-                          content: 'Created from enhanced UI',
-                          memory_type: 'context',
-                          tags: []
-                        })}
+                        onClick={() =>
+                          postMessage('createMemory', {
+                            title: 'New Memory',
+                            content: 'Created from enhanced UI',
+                            memory_type: 'context',
+                            tags: [],
+                          })
+                        }
                         data-testid="btn-create"
                       >
                         <Plus className="h-3.5 w-3.5" />
@@ -493,19 +557,23 @@ export const IDEPanel = () => {
                         disabled={memoriesLoading}
                         data-testid="btn-sync"
                       >
-                        <RefreshCw className={cn("h-3.5 w-3.5", memoriesLoading && "animate-spin")} />
+                        <RefreshCw
+                          className={cn('h-3.5 w-3.5', memoriesLoading && 'animate-spin')}
+                        />
                         Sync
                       </Button>
                     </div>
-                    
+
                     {/* Loading state */}
                     {memoriesLoading && (
                       <div className="p-4 flex flex-col items-center justify-center gap-2">
                         <div className="h-5 w-5 border-2 border-[var(--vscode-button-background)] border-t-transparent rounded-full animate-spin" />
-                        <span className="text-[12px] text-[var(--vscode-descriptionForeground)]">Loading memories...</span>
+                        <span className="text-[12px] text-[var(--vscode-descriptionForeground)]">
+                          Loading memories...
+                        </span>
                       </div>
                     )}
-                    
+
                     {/* Error state */}
                     {!memoriesLoading && error && (
                       <div className="p-3 bg-[var(--vscode-inputValidation-errorBackground)] border border-[var(--vscode-inputValidation-errorBorder)] rounded text-[13px] flex items-start gap-2">
@@ -523,18 +591,20 @@ export const IDEPanel = () => {
                         </div>
                       </div>
                     )}
-                    
+
                     {/* Memory list */}
                     {!memoriesLoading && !error && (
                       <div className="space-y-0.5">
                         {filteredMemories.length === 0 ? (
                           <div className="p-4 text-center text-[13px] text-[var(--vscode-descriptionForeground)]">
-                            {searchQuery ? 'No memories found matching your search.' : 'No memories yet. Create your first memory!'}
+                            {searchQuery
+                              ? 'No memories found matching your search.'
+                              : 'No memories yet. Create your first memory!'}
                           </div>
                         ) : (
-                          filteredMemories.map(memory => (
-                            <MemoryCard 
-                              key={memory.id} 
+                          filteredMemories.map((memory) => (
+                            <MemoryCard
+                              key={memory.id}
                               memory={memory}
                               onAttach={handleAttachMemory}
                               onCopy={handleCopyMemory}
@@ -551,6 +621,41 @@ export const IDEPanel = () => {
             </Collapsible>
           </div>
         </ScrollArea>
+
+        {clipboardContent && (
+          <div className="px-3 py-2 bg-[var(--vscode-textCodeBlock-background)] border-t border-[var(--vscode-panel-border)]">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-[10px] font-medium text-[var(--vscode-descriptionForeground)] uppercase">
+                Clipboard Content
+              </span>
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-5 px-1"
+                  onClick={attachClipboardContent}
+                  title="Attach to chat"
+                >
+                  <Paperclip className="h-3 w-3" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-5 px-1"
+                  onClick={() => setClipboardContent(null)}
+                  title="Dismiss"
+                >
+                  <X className="h-3 w-3" />
+                </Button>
+              </div>
+            </div>
+            <div className="text-[11px] text-[var(--vscode-descriptionForeground)] bg-[var(--vscode-editor-background)] border border-[var(--vscode-panel-border)] rounded p-2 max-h-24 overflow-y-auto">
+              {clipboardContent.length > 200
+                ? `${clipboardContent.slice(0, 200)}...`
+                : clipboardContent}
+            </div>
+          </div>
+        )}
 
         {/* Attached Memory Context Bar */}
         {attachedMemories.length > 0 && (
@@ -569,7 +674,7 @@ export const IDEPanel = () => {
               </Button>
             </div>
             <div className="flex flex-wrap gap-1">
-              {attachedMemories.map(memory => (
+              {attachedMemories.map((memory) => (
                 <div
                   key={memory.id}
                   className="inline-flex items-center gap-1 px-2 py-1 rounded text-[11px] bg-[var(--vscode-badge-background)] text-[var(--vscode-badge-foreground)]"
@@ -600,12 +705,8 @@ export const IDEPanel = () => {
         />
 
         {/* API Key Manager Modal */}
-        <ApiKeyManager
-          isOpen={showApiKeys}
-          onClose={() => setShowApiKeys(false)}
-        />
+        <ApiKeyManager isOpen={showApiKeys} onClose={() => setShowApiKeys(false)} />
       </div>
     </div>
   );
 };
-

@@ -229,7 +229,23 @@ export class MemoryService implements IMemoryService {
         });
 
         if (response.error || !response.data) {
-            throw new Error(response.error || 'Failed to fetch memories');
+            const message = response.error || 'Failed to fetch memories';
+            if (this.isAuthError(message)) {
+                await this.refreshClient();
+                if (!this.client) {
+                    throw new Error(message);
+                }
+                const retry = await this.client.listMemories({
+                    limit: validatedLimit,
+                    sort: 'updated_at',
+                    order: 'desc'
+                });
+                if (retry.error || !retry.data) {
+                    throw new Error(retry.error || message);
+                }
+                return retry.data.data;
+            }
+            throw new Error(message);
         }
 
         return response.data.data;
@@ -268,5 +284,14 @@ export class MemoryService implements IMemoryService {
         this.client = null;
         this.authenticated = false;
         await this.ensureClient();
+    }
+
+    private isAuthError(message: string): boolean {
+        const normalized = message.toLowerCase();
+        return normalized.includes('authentication required')
+            || normalized.includes('unauthorized')
+            || normalized.includes('401')
+            || normalized.includes('auth token')
+            || normalized.includes('bearer');
     }
 }
