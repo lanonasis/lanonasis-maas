@@ -11,6 +11,17 @@ const supabase = createClient(config.SUPABASE_URL, config.SUPABASE_SERVICE_KEY);
 // Store active MCP SSE connections
 const mcpConnections = new Map<string, Response>();
 
+interface MCPApiKeyRecord {
+  id: string;
+  name: string;
+  user_id: string;
+  expires_at?: string | null;
+  last_used_at?: string | null;
+  usage_count?: number | null;
+}
+
+type MCPRequest = Request & { apiKey?: MCPApiKeyRecord };
+
 /**
  * Middleware to authenticate API key for MCP connections
  */
@@ -70,7 +81,7 @@ const authenticateApiKey = async (req: Request, res: Response, next: NextFunctio
       .eq('id', keyData.id);
 
     // Attach key info to request
-    (req as any).apiKey = keyData;
+    (req as MCPRequest).apiKey = keyData as MCPApiKeyRecord;
     next();
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -121,7 +132,14 @@ const authenticateApiKey = async (req: Request, res: Response, next: NextFunctio
  *         description: Rate limit exceeded
  */
 router.get('/', authenticateApiKey, asyncHandler(async (req: Request, res: Response): Promise<void> => {
-  const apiKeyData = (req as any).apiKey;
+  const apiKeyData = (req as MCPRequest).apiKey;
+  if (!apiKeyData) {
+    res.status(500).json({
+      error: 'Authentication error',
+      message: 'API key context missing'
+    });
+    return;
+  }
   const clientId = req.query.client_id as string || `client_${Date.now()}`;
   const connectionId = `${apiKeyData.user_id}_${clientId}`;
   
@@ -225,7 +243,7 @@ router.get('/', authenticateApiKey, asyncHandler(async (req: Request, res: Respo
 /**
  * Broadcast MCP message to all connected clients
  */
-export function broadcastMCP(message: any, targetUserId?: string) {
+export function broadcastMCP(message: Record<string, unknown>, targetUserId?: string) {
   const mcpMessage = {
     jsonrpc: '2.0',
     method: 'notifications/message',
@@ -255,7 +273,7 @@ export function broadcastMCP(message: any, targetUserId?: string) {
 /**
  * Send memory operation updates via MCP SSE
  */
-export function notifyMCPMemoryUpdate(userId: string, operation: string, memoryId: string, data?: any) {
+export function notifyMCPMemoryUpdate(userId: string, operation: string, memoryId: string, data?: unknown) {
   broadcastMCP({
     type: 'memory_update',
     operation,
@@ -267,7 +285,7 @@ export function notifyMCPMemoryUpdate(userId: string, operation: string, memoryI
 /**
  * Send tool execution results via MCP SSE
  */
-export function notifyMCPToolResult(userId: string, toolName: string, result: any, requestId?: string) {
+export function notifyMCPToolResult(userId: string, toolName: string, result: unknown, requestId?: string) {
   broadcastMCP({
     type: 'tool_result',
     toolName,

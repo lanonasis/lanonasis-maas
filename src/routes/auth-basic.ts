@@ -58,6 +58,15 @@ router.post('/login', async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
+    if (!data.user.email) {
+      logger.error('Authenticated user missing email', { userId: data.user.id });
+      res.status(500).json({
+        error: 'server_error',
+        message: 'Authenticated user missing email'
+      });
+      return;
+    }
+
     // Get user details from database
     const { data: userData, error: userError } = await supabase
       .from('users')
@@ -100,7 +109,7 @@ router.post('/login', async (req: Request, res: Response): Promise<void> => {
     res.json({
       user: {
         id: data.user.id,
-        email: data.user.email!,
+        email: data.user.email,
         organization_id: userData?.organization_id || null,
         role: userData?.role || 'user',
         plan: userData?.plan || 'free',
@@ -178,6 +187,15 @@ router.post('/register', async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
+    if (!data.user.email) {
+      logger.error('Registered user missing email', { userId: data.user.id });
+      res.status(500).json({
+        error: 'server_error',
+        message: 'Registered user missing email'
+      });
+      return;
+    }
+
     // Create organization if name provided
     if (organization_name) {
       const { data: orgData, error: orgError } = await supabase
@@ -241,7 +259,7 @@ router.post('/register', async (req: Request, res: Response): Promise<void> => {
     res.status(201).json({
       user: {
         id: data.user.id,
-        email: data.user.email!,
+        email: data.user.email,
         organization_id: null,
         role: 'user',
         plan: 'free',
@@ -292,16 +310,17 @@ router.post('/refresh', async (req: Request, res: Response): Promise<void> => {
     const token = authHeader.substring(7);
 
     try {
-      const decoded = jwt.verify(token, config.JWT_SECRET as string) as any;
+      const decoded = jwt.verify(token, config.JWT_SECRET as string) as unknown;
+      const decodedObj = typeof decoded === 'object' && decoded !== null ? (decoded as Record<string, unknown>) : {};
       
       // Generate new token with same claims
       const newToken = jwt.sign(
         {
-          userId: decoded.userId,
-          email: decoded.email,
-          organizationId: decoded.organizationId,
-          role: decoded.role,
-          plan: decoded.plan
+          userId: decodedObj.userId,
+          email: decodedObj.email,
+          organizationId: decodedObj.organizationId,
+          role: decodedObj.role,
+          plan: decodedObj.plan
         },
         config.JWT_SECRET as string,
         { expiresIn: config.JWT_EXPIRES_IN as string } as SignOptions
