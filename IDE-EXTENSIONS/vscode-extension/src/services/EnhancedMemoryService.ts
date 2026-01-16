@@ -10,12 +10,12 @@ import type {
   MemorySearchResult as SDKMemorySearchResult,
   UserMemoryStats as SDKUserMemoryStats,
   ApiResponse,
-  ApiErrorResponse
 } from '@lanonasis/memory-client';
 
+type ApiErrorResponse = { message?: string };
+
 /**
- * Extract error message from SDK's ApiErrorResponse or string
- * SDK v2.0 changed error from string to ApiErrorResponse object
+ * Extract error message from SDK's error shape or string
  */
 function getErrorMessage(error: ApiErrorResponse | string | undefined, fallback: string): string {
   if (!error) return fallback;
@@ -355,7 +355,24 @@ export class EnhancedMemoryService implements IEnhancedMemoryService {
     });
 
     if (result.error || !result.data) {
-      throw new Error(getErrorMessage(result.error, 'Failed to fetch memories'));
+      const message = getErrorMessage(result.error, 'Failed to fetch memories');
+      if (this.isAuthError(message)) {
+        await this.refreshClient();
+        if (!this.client) {
+          throw new Error(message);
+        }
+        const retry: OperationResult<PaginatedResponse<SDKMemoryEntry>> = await this.client.listMemories({
+          limit: validatedLimit,
+          sort: 'updated_at',
+          order: 'desc'
+        });
+        if (retry.error || !retry.data) {
+          throw new Error(getErrorMessage(retry.error, message));
+        }
+        return retry.data.data.map(entry => this.convertSDKMemoryEntry(entry));
+      }
+
+      throw new Error(message);
     }
 
     return result.data.data.map(entry => this.convertSDKMemoryEntry(entry));
@@ -516,7 +533,7 @@ export class EnhancedMemoryService implements IEnhancedMemoryService {
     if (credential.type === 'oauth') {
       config.apiKey = undefined;
       config.authToken = credential.token;
-      
+
       // Try to extract user_id from JWT for fallback organization context
       try {
         const parts = credential.token.split('.');
@@ -550,6 +567,15 @@ export class EnhancedMemoryService implements IEnhancedMemoryService {
       ...result,
       memory_type: this.mapMemoryTypeFromSDK(result.memory_type)
     }));
+  }
+
+  private isAuthError(message: string): boolean {
+    const normalized = message.toLowerCase();
+    return normalized.includes('authentication required')
+      || normalized.includes('unauthorized')
+      || normalized.includes('401')
+      || normalized.includes('auth token')
+      || normalized.includes('bearer');
   }
 
   private convertSDKUserMemoryStats(stats: SDKUserMemoryStats): UserMemoryStats {

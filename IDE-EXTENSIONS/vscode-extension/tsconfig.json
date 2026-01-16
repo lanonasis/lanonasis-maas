@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
-    "ignoreDeprecations": "5.0",
-    "module": "CommonJS",
+    "ignoreDeprecations": "6.0",
+    "module": "Node16",
     "target": "ES2020",
     "lib": [
       "ES2020",
@@ -29,7 +29,7 @@
       "vitest/globals",
       "@testing-library/jest-dom"
     ],
-    "moduleResolution": "node10",
+    "moduleResolution": "node16",
     "jsx": "react-jsx",
     "allowJs": true,
     "paths": {
