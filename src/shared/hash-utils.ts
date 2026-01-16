@@ -25,7 +25,7 @@ export async function hashApiKeyBrowser(apiKey: string): Promise<string> {
         throw new Error('API key must be a non-empty string');
     }
 
-    const subtle = (globalThis as any)?.crypto?.subtle || (crypto as any).webcrypto?.subtle;
+    const subtle = globalThis.crypto?.subtle ?? crypto.webcrypto?.subtle;
     if (!subtle) {
         return hashApiKey(apiKey);
     }
