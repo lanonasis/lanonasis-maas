@@ -53,7 +53,7 @@ async function ensureVendorOrganization(): Promise<string> {
     }
 
     // Create vendor organization
-    const { data: created, error: insertError } = await supabase
+    const { error: insertError } = await supabase
       .from('organizations')
       .upsert({
         id: VENDOR_ORG_ID,
@@ -110,7 +110,7 @@ async function ensureUserOrganization(userId: string): Promise<string> {
 
     // Create default organization for user
     const orgId = uuidv4();
-    const { data: newOrg, error: orgError } = await supabase
+    const { error: orgError } = await supabase
       .from('organizations')
       .insert({
         id: orgId,
