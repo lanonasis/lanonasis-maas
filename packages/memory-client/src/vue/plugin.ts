@@ -10,7 +10,8 @@ import { createMemoryClient, type CoreMemoryClient, type CoreMemoryClientConfig 
 export const MEMORY_CLIENT_KEY: InjectionKey<CoreMemoryClient> = Symbol('MemoryClient');
 
 export interface MemoryPluginOptions extends CoreMemoryClientConfig {
-  // Plugin-specific options can be added here
+  /** Automatically authenticate on plugin installation */
+  autoAuth?: boolean;
 }
 
 /**

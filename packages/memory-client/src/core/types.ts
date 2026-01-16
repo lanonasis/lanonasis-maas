@@ -122,3 +122,324 @@ export type CreateMemoryRequest = z.infer<typeof createMemorySchema>;
 export type UpdateMemoryRequest = z.infer<typeof updateMemorySchema>;
 export type SearchMemoryRequest = z.infer<typeof searchMemorySchema>;
 export type CreateTopicRequest = z.infer<typeof createTopicSchema>;
+
+// ========================================
+// Intelligence Feature Types (v2.0)
+// ========================================
+
+/**
+ * Chunking strategies for content preprocessing
+ */
+export const CHUNKING_STRATEGIES = ['semantic', 'fixed-size', 'paragraph', 'sentence', 'code-block'] as const;
+export type ChunkingStrategy = typeof CHUNKING_STRATEGIES[number];
+
+/**
+ * Content types detected or specified
+ */
+export const CONTENT_TYPES = ['text', 'code', 'markdown', 'json', 'yaml'] as const;
+export type ContentType = typeof CONTENT_TYPES[number];
+
+/**
+ * A chunk of content from a memory entry
+ */
+export interface ContentChunk {
+  index: number;
+  content: string;
+  startChar: number;
+  endChar: number;
+  tokens: number;
+  metadata?: {
+    type: 'paragraph' | 'sentence' | 'code' | 'section';
+    isComplete: boolean;
+  };
+}
+
+/**
+ * Extracted intelligence from memory content
+ */
+export interface MemoryIntelligence {
+  entities: string[];
+  keywords: string[];
+  language: string;
+  topics?: string[];
+  sentiment?: 'positive' | 'neutral' | 'negative';
+  complexity?: 'low' | 'medium' | 'high';
+}
+
+/**
+ * Extended metadata with intelligence features
+ */
+export interface IntelligentMetadata extends Record<string, unknown> {
+  // Chunking information
+  chunks?: ContentChunk[];
+  total_chunks?: number;
+  chunking_strategy?: ChunkingStrategy;
+  last_rechunked_at?: string;
+
+  // Content intelligence
+  intelligence?: MemoryIntelligence;
+
+  // Content metadata
+  content_type?: ContentType;
+  language?: string;
+  tokens?: number;
+
+  // Custom metadata
+  source?: string;
+  priority?: 'high' | 'medium' | 'low';
+}
+
+/**
+ * Preprocessing options for memory creation/update
+ */
+export interface PreprocessingOptions {
+  chunking?: {
+    strategy?: ChunkingStrategy;
+    maxChunkSize?: number;
+    overlap?: number;
+  };
+  cleanContent?: boolean;
+  extractMetadata?: boolean;
+}
+
+/**
+ * Extended create memory request with preprocessing
+ */
+export interface CreateMemoryWithPreprocessingRequest extends CreateMemoryRequest {
+  preprocessing?: PreprocessingOptions;
+  metadata?: IntelligentMetadata;
+}
+
+/**
+ * Extended update memory request with re-chunking
+ */
+export interface UpdateMemoryWithPreprocessingRequest extends UpdateMemoryRequest {
+  rechunk?: boolean;
+  regenerate_embedding?: boolean;
+}
+
+// ========================================
+// Enhanced Search Types
+// ========================================
+
+/**
+ * Search modes for memory queries
+ */
+export const SEARCH_MODES = ['vector', 'text', 'hybrid'] as const;
+export type SearchMode = typeof SEARCH_MODES[number];
+
+/**
+ * A matching chunk from search results
+ */
+export interface MatchingChunk {
+  index: number;
+  content: string;
+  similarity: number;
+}
+
+/**
+ * Enhanced search filters
+ */
+export interface SearchFilters {
+  tags?: string[];
+  project_id?: string;
+  topic_id?: string;
+  date_range?: {
+    from?: string;
+    to?: string;
+  };
+}
+
+/**
+ * Enhanced search request with hybrid mode
+ */
+export interface EnhancedSearchRequest {
+  query: string;
+  type?: MemoryType;
+  threshold?: number;
+  limit?: number;
+  search_mode?: SearchMode;
+  filters?: SearchFilters;
+  include_chunks?: boolean;
+}
+
+/**
+ * Enhanced search result with chunk matching
+ */
+export interface EnhancedMemorySearchResult extends MemorySearchResult {
+  text_rank?: number;
+  combined_score?: number;
+  matching_chunks?: MatchingChunk[];
+}
+
+/**
+ * Enhanced search response
+ */
+export interface EnhancedSearchResponse {
+  results: EnhancedMemorySearchResult[];
+  total: number;
+  query: string;
+  search_mode: SearchMode;
+  threshold: number;
+  execution_time_ms: number;
+}
+
+// ========================================
+// Analytics Types
+// ========================================
+
+/**
+ * Search analytics data point
+ */
+export interface SearchAnalyticsDataPoint {
+  date: string;
+  searches: number;
+  avg_results: number;
+  avg_time_ms: number;
+}
+
+/**
+ * Popular query entry
+ */
+export interface PopularQuery {
+  query: string;
+  count: number;
+  avg_results: number;
+}
+
+/**
+ * Search analytics response
+ */
+export interface SearchAnalytics {
+  total_searches: number;
+  avg_results_count: number;
+  avg_execution_time_ms: number;
+  search_types: {
+    vector: number;
+    text: number;
+    hybrid: number;
+  };
+  by_date: SearchAnalyticsDataPoint[];
+  popular_queries: PopularQuery[];
+}
+
+/**
+ * Most accessed memory entry
+ */
+export interface MostAccessedMemory {
+  memory_id: string;
+  title: string;
+  access_count: number;
+  last_accessed: string;
+}
+
+/**
+ * Hourly access data
+ */
+export interface HourlyAccess {
+  hour: number;
+  count: number;
+}
+
+/**
+ * Access patterns response
+ */
+export interface AccessPatterns {
+  total_accesses: number;
+  by_type: {
+    read: number;
+    update: number;
+    delete: number;
+  };
+  by_method: {
+    api: number;
+    search: number;
+    direct: number;
+  };
+  most_accessed: MostAccessedMemory[];
+  access_by_hour: HourlyAccess[];
+}
+
+/**
+ * Project memory count
+ */
+export interface ProjectMemoryCount {
+  project_id: string;
+  project_name: string;
+  count: number;
+}
+
+/**
+ * Tag count entry
+ */
+export interface TagCount {
+  tag: string;
+  count: number;
+}
+
+/**
+ * Extended memory statistics
+ */
+export interface ExtendedMemoryStats {
+  total_memories: number;
+  by_type: Record<MemoryType, number>;
+  by_project: ProjectMemoryCount[];
+  storage: {
+    total_size_mb: number;
+    avg_memory_size_kb: number;
+    total_chunks: number;
+  };
+  activity: {
+    created_today: number;
+    updated_today: number;
+    searched_today: number;
+  };
+  top_tags: TagCount[];
+}
+
+/**
+ * Analytics date range filter
+ */
+export interface AnalyticsDateRange {
+  from?: string;
+  to?: string;
+  group_by?: 'day' | 'week' | 'month';
+}
+
+// ========================================
+// Validation Schemas for Intelligence
+// ========================================
+
+export const preprocessingOptionsSchema = z.object({
+  chunking: z.object({
+    strategy: z.enum(CHUNKING_STRATEGIES).optional(),
+    maxChunkSize: z.number().int().min(100).max(10000).optional(),
+    overlap: z.number().int().min(0).max(500).optional()
+  }).optional(),
+  cleanContent: z.boolean().optional(),
+  extractMetadata: z.boolean().optional()
+}).optional();
+
+export const enhancedSearchSchema = z.object({
+  query: z.string().min(1).max(1000),
+  type: z.enum(MEMORY_TYPES).optional(),
+  threshold: z.number().min(0).max(1).default(0.7),
+  limit: z.number().int().min(1).max(100).default(20),
+  search_mode: z.enum(SEARCH_MODES).default('hybrid'),
+  filters: z.object({
+    tags: z.array(z.string()).optional(),
+    project_id: z.string().uuid().optional(),
+    topic_id: z.string().uuid().optional(),
+    date_range: z.object({
+      from: z.string().optional(),
+      to: z.string().optional()
+    }).optional()
+  }).optional(),
+  include_chunks: z.boolean().default(false)
+});
+
+export const analyticsDateRangeSchema = z.object({
+  from: z.string().optional(),
+  to: z.string().optional(),
+  group_by: z.enum(['day', 'week', 'month']).default('day')
+});

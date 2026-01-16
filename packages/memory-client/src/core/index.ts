@@ -11,13 +11,14 @@
 // Client
 export {
   CoreMemoryClient,
-  createMemoryClient
+  createMemoryClient,
+  hasError,
+  hasData
 } from './client';
 
 export type {
   CoreMemoryClientConfig,
   ApiResponse,
-  ApiError,
   PaginatedResponse
 } from './client';
 
@@ -32,7 +33,34 @@ export type {
   MemorySearchResult,
   UserMemoryStats,
   MemoryType,
-  MemoryStatus
+  MemoryStatus,
+  // Intelligence types (v2.0)
+  ChunkingStrategy,
+  ContentType,
+  ContentChunk,
+  MemoryIntelligence,
+  IntelligentMetadata,
+  PreprocessingOptions,
+  CreateMemoryWithPreprocessingRequest,
+  UpdateMemoryWithPreprocessingRequest,
+  // Enhanced search types
+  SearchMode,
+  MatchingChunk,
+  SearchFilters,
+  EnhancedSearchRequest,
+  EnhancedMemorySearchResult,
+  EnhancedSearchResponse,
+  // Analytics types
+  SearchAnalyticsDataPoint,
+  PopularQuery,
+  SearchAnalytics,
+  MostAccessedMemory,
+  HourlyAccess,
+  AccessPatterns,
+  ProjectMemoryCount,
+  TagCount,
+  ExtendedMemoryStats,
+  AnalyticsDateRange
 } from './types';
 
 export {
@@ -41,19 +69,42 @@ export {
   createMemorySchema,
   updateMemorySchema,
   searchMemorySchema,
-  createTopicSchema
+  createTopicSchema,
+  // Intelligence constants & schemas (v2.0)
+  CHUNKING_STRATEGIES,
+  CONTENT_TYPES,
+  SEARCH_MODES,
+  preprocessingOptionsSchema,
+  enhancedSearchSchema,
+  analyticsDateRangeSchema
 } from './types';
 
 // Errors
 export {
   MemoryClientError,
-  ApiError as ApiErrorClass,
+  ApiError,
   AuthenticationError,
   ValidationError,
   TimeoutError,
   RateLimitError,
-  NotFoundError
+  NotFoundError,
+  NetworkError,
+  ServerError,
+  createErrorFromStatus,
+  isApiErrorResponse,
+  ERROR_CODES
 } from './errors';
+export type { ApiErrorResponse, ErrorCode } from './errors';
+
+// Utilities
+export {
+  safeJsonParse,
+  createErrorResponse,
+  httpStatusToErrorCode,
+  calculateRetryDelay,
+  isRetryableError
+} from './utils';
+export type { SafeJsonResult } from './utils';
 
 // Constants
 export const VERSION = '2.0.0';

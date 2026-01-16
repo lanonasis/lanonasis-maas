@@ -9,6 +9,8 @@
 
 import { CoreMemoryClient, type CoreMemoryClientConfig, type ApiResponse, type PaginatedResponse } from '../core/client';
 import { CLIIntegration, type CLIAuthStatus, type CLIMCPStatus } from './cli-integration';
+import type { ApiErrorResponse } from '../core/errors';
+import { createErrorResponse } from '../core/utils';
 import type {
   MemoryEntry,
   MemoryTopic,
@@ -37,7 +39,7 @@ export interface EnhancedMemoryClientConfig extends CoreMemoryClientConfig {
 
 export interface OperationResult<T> {
   data?: T;
-  error?: string;
+  error?: ApiErrorResponse;
   source: 'cli' | 'api';
   mcpUsed?: boolean;
 }
@@ -193,7 +195,10 @@ export class EnhancedMemoryClient {
         }
 
         return {
-          error: error instanceof Error ? error.message : `CLI ${operation} failed`,
+          error: createErrorResponse(
+            error instanceof Error ? error.message : `CLI ${operation} failed`,
+            'API_ERROR'
+          ),
           source: 'cli',
           mcpUsed: false
         };
@@ -381,7 +386,10 @@ export class EnhancedMemoryClient {
       return { ...result, source: 'cli', mcpUsed: false };
     } catch (error) {
       return {
-        error: error instanceof Error ? error.message : 'Auth status check failed',
+        error: createErrorResponse(
+          error instanceof Error ? error.message : 'Auth status check failed',
+          'API_ERROR'
+        ),
         source: 'cli',
         mcpUsed: false
       };
@@ -396,7 +404,7 @@ export class EnhancedMemoryClient {
 
     if (!capabilities.mcpSupport) {
       return {
-        error: 'MCP not available',
+        error: createErrorResponse('MCP not available', 'API_ERROR'),
         source: 'cli',
         mcpUsed: false
       };
@@ -407,7 +415,10 @@ export class EnhancedMemoryClient {
       return { ...result, source: 'cli', mcpUsed: true };
     } catch (error) {
       return {
-        error: error instanceof Error ? error.message : 'MCP status check failed',
+        error: createErrorResponse(
+          error instanceof Error ? error.message : 'MCP status check failed',
+          'API_ERROR'
+        ),
         source: 'cli',
         mcpUsed: false
       };
