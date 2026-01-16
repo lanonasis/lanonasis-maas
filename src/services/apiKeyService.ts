@@ -3,11 +3,45 @@ import crypto from 'crypto';
 import { z } from 'zod';
 
 // Environment configuration
-const supabaseUrl = process.env.SUPABASE_URL!;
-const supabaseKey = process.env.SUPABASE_SERVICE_KEY!;
-const encryptionKey = process.env.API_KEY_ENCRYPTION_KEY || process.env.JWT_SECRET!;
+const supabaseUrlRaw = process.env.SUPABASE_URL;
+if (!supabaseUrlRaw) {
+  throw new Error('SUPABASE_URL is required');
+}
+const supabaseUrl: string = supabaseUrlRaw;
+
+const supabaseKeyRaw = process.env.SUPABASE_SERVICE_KEY;
+if (!supabaseKeyRaw) {
+  throw new Error('SUPABASE_SERVICE_KEY is required');
+}
+const supabaseKey: string = supabaseKeyRaw;
+
+const encryptionKeyRaw = process.env.API_KEY_ENCRYPTION_KEY ?? process.env.JWT_SECRET;
+if (!encryptionKeyRaw) {
+  throw new Error('API_KEY_ENCRYPTION_KEY or JWT_SECRET is required');
+}
+const encryptionKey: string = encryptionKeyRaw;
 
 const supabase = createClient(supabaseUrl, supabaseKey);
+
+function toStringArray(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter((v): v is string => typeof v === 'string');
+}
+
+function toRecord(value: unknown): Record<string, unknown> {
+  if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+    return value as Record<string, unknown>;
+  }
+  return {};
+}
+
+function toString(value: unknown): string {
+  return typeof value === 'string' ? value : '';
+}
+
+function toNumber(value: unknown): number {
+  return typeof value === 'number' && Number.isFinite(value) ? value : 0;
+}
 
 // Utility function for safe error message extraction
 function getErrorMessage(error: unknown): string {
@@ -84,7 +118,7 @@ export interface ApiKey {
   lastRotated: string;
   rotationFrequency: number;
   expiresAt?: string;
-  metadata: Record<string, any>;
+  metadata: Record<string, unknown>;
   createdBy: string;
   createdAt: string;
   updatedAt: string;
@@ -97,7 +131,7 @@ export interface ApiKeyProject {
   organizationId: string;
   ownerId: string;
   teamMembers: string[];
-  settings: Record<string, any>;
+  settings: Record<string, unknown>;
   createdAt: string;
   updatedAt: string;
 }
@@ -159,10 +193,16 @@ class EncryptionUtils {
     if (parts.length !== 3) {
       throw new Error('Invalid encrypted text format');
     }
+
+    const ivHex = parts[0];
+    const authTagHex = parts[1];
+    const encrypted = parts[2];
+    if (!ivHex || !authTagHex || !encrypted) {
+      throw new Error('Invalid encrypted text format');
+    }
     
-    const iv = Buffer.from(parts[0]!, 'hex');
-    const authTag = Buffer.from(parts[1]!, 'hex');
-    const encrypted = parts[2]!;
+    const iv = Buffer.from(ivHex, 'hex');
+    const authTag = Buffer.from(authTagHex, 'hex');
     
     const decipher = crypto.createDecipheriv(this.algorithm, derivedKey, iv) as crypto.DecipherGCM;
     decipher.setAuthTag(authTag);
@@ -287,7 +327,7 @@ export class ApiKeyService {
 
   async updateApiKey(keyId: string, data: z.infer<typeof UpdateApiKeySchema>, userId: string): Promise<ApiKey> {
     const validated = UpdateApiKeySchema.parse(data);
-    const updateData: any = { ...validated };
+    const updateData: Record<string, unknown> = { ...validated };
 
     // Encrypt new value if provided
     if (validated.value) {
@@ -506,7 +546,7 @@ export class ApiKeyService {
   }
 
   // Analytics and monitoring
-  async getUsageAnalytics(organizationId: string, keyId?: string, days: number = 30): Promise<any[]> {
+  async getUsageAnalytics(organizationId: string, keyId?: string, days: number = 30): Promise<Record<string, unknown>[]> {
     const fromDate = new Date(Date.now() - (days * 24 * 60 * 60 * 1000)).toISOString();
     
     let query = supabase
@@ -523,10 +563,10 @@ export class ApiKeyService {
 
     if (error) throw new Error(`Failed to get usage analytics: ${error.message}`);
     
-    return data;
+    return data as unknown as Record<string, unknown>[];
   }
 
-  async getSecurityEvents(organizationId: string, severity?: string): Promise<any[]> {
+  async getSecurityEvents(organizationId: string, severity?: string): Promise<Record<string, unknown>[]> {
     let query = supabase
       .from('key_security_events')
       .select('*')
@@ -540,7 +580,7 @@ export class ApiKeyService {
 
     if (error) throw new Error(`Failed to get security events: ${error.message}`);
     
-    return data;
+    return data as unknown as Record<string, unknown>[];
   }
 
   // Helper methods
@@ -556,7 +596,7 @@ export class ApiKeyService {
     return this.mapProjectFromDb(project);
   }
 
-  private async logUsageAnalytics(keyId: string, organizationId: string, userId: string, operation: string, success: boolean, metadata: any = {}): Promise<void> {
+  private async logUsageAnalytics(keyId: string, organizationId: string, userId: string, operation: string, success: boolean, metadata: Record<string, unknown> = {}): Promise<void> {
     await supabase
       .from('key_usage_analytics')
       .insert({
@@ -569,7 +609,7 @@ export class ApiKeyService {
       });
   }
 
-  private async logSecurityEvent(keyId: string | undefined, eventType: string, severity: string, description: string, metadata: any = {}): Promise<void> {
+  private async logSecurityEvent(keyId: string | undefined, eventType: string, severity: string, description: string, metadata: Record<string, unknown> = {}): Promise<void> {
     await supabase
       .from('key_security_events')
       .insert({
@@ -581,7 +621,7 @@ export class ApiKeyService {
       });
   }
 
-  private async logAuditEvent(eventType: string, toolId: string | undefined, organizationId: string, userId: string | undefined, sessionId: string | undefined, metadata: any = {}): Promise<void> {
+  private async logAuditEvent(eventType: string, toolId: string | undefined, organizationId: string, userId: string | undefined, sessionId: string | undefined, metadata: Record<string, unknown> = {}): Promise<void> {
     await supabase
       .from('mcp_key_audit_log')
       .insert({
@@ -595,70 +635,78 @@ export class ApiKeyService {
   }
 
   // Mapping functions
-  private mapProjectFromDb(project: any): ApiKeyProject {
+  private mapProjectFromDb(project: Record<string, unknown>): ApiKeyProject {
+    const description = typeof project.description === 'string' ? project.description : undefined;
+
     return {
-      id: project.id,
-      name: project.name,
-      description: project.description,
-      organizationId: project.organization_id,
-      ownerId: project.owner_id,
-      teamMembers: project.team_members || [],
-      settings: project.settings || {},
-      createdAt: project.created_at,
-      updatedAt: project.updated_at
+      id: toString(project.id),
+      name: toString(project.name),
+      ...(description !== undefined ? { description } : {}),
+      organizationId: toString(project.organization_id),
+      ownerId: toString(project.owner_id),
+      teamMembers: toStringArray(project.team_members),
+      settings: toRecord(project.settings),
+      createdAt: toString(project.created_at),
+      updatedAt: toString(project.updated_at)
     };
   }
 
-  private mapApiKeyFromDb(key: any): ApiKey {
+  private mapApiKeyFromDb(key: Record<string, unknown>): ApiKey {
+    const expiresAt = typeof key.expires_at === 'string' ? key.expires_at : undefined;
+
     return {
-      id: key.id,
-      name: key.name,
-      keyType: key.key_type,
-      environment: key.environment,
-      projectId: key.project_id,
-      organizationId: key.organization_id,
-      accessLevel: key.access_level,
-      status: key.status,
-      tags: key.tags || [],
-      usageCount: key.usage_count || 0,
-      lastRotated: key.last_rotated,
-      rotationFrequency: key.rotation_frequency,
-      expiresAt: key.expires_at,
-      metadata: key.metadata || {},
-      createdBy: key.created_by,
-      createdAt: key.created_at,
-      updatedAt: key.updated_at
+      id: toString(key.id),
+      name: toString(key.name),
+      keyType: toString(key.key_type),
+      environment: toString(key.environment),
+      projectId: toString(key.project_id),
+      organizationId: toString(key.organization_id),
+      accessLevel: toString(key.access_level),
+      status: toString(key.status),
+      tags: toStringArray(key.tags),
+      usageCount: toNumber(key.usage_count),
+      lastRotated: toString(key.last_rotated),
+      rotationFrequency: toNumber(key.rotation_frequency),
+      ...(expiresAt !== undefined ? { expiresAt } : {}),
+      metadata: toRecord(key.metadata),
+      createdBy: toString(key.created_by),
+      createdAt: toString(key.created_at),
+      updatedAt: toString(key.updated_at)
     };
   }
 
-  private mapMCPToolFromDb(tool: any): MCPTool {
+  private mapMCPToolFromDb(tool: Record<string, unknown>): MCPTool {
+    const webhookUrl = typeof tool.webhook_url === 'string' ? tool.webhook_url : undefined;
+
     return {
-      id: tool.id,
-      toolId: tool.tool_id,
-      toolName: tool.tool_name,
-      organizationId: tool.organization_id,
-      permissions: tool.permissions,
-      webhookUrl: tool.webhook_url,
-      autoApprove: tool.auto_approve,
-      riskLevel: tool.risk_level,
-      createdBy: tool.created_by,
-      status: tool.status,
-      createdAt: tool.created_at,
-      updatedAt: tool.updated_at
+      id: toString(tool.id),
+      toolId: toString(tool.tool_id),
+      toolName: toString(tool.tool_name),
+      organizationId: toString(tool.organization_id),
+      permissions: tool.permissions as MCPTool['permissions'],
+      ...(webhookUrl !== undefined ? { webhookUrl } : {}),
+      autoApprove: typeof tool.auto_approve === 'boolean' ? tool.auto_approve : false,
+      riskLevel: toString(tool.risk_level),
+      createdBy: toString(tool.created_by),
+      status: toString(tool.status),
+      createdAt: toString(tool.created_at),
+      updatedAt: toString(tool.updated_at)
     };
   }
 
-  private mapMCPSessionFromDb(session: any): MCPSession {
+  private mapMCPSessionFromDb(session: Record<string, unknown>): MCPSession {
+    const endedAt = typeof session.ended_at === 'string' ? session.ended_at : undefined;
+
     return {
-      sessionId: session.session_id,
-      requestId: session.request_id,
-      toolId: session.tool_id,
-      organizationId: session.organization_id,
-      keyNames: session.key_names,
-      environment: session.environment,
-      expiresAt: session.expires_at,
-      endedAt: session.ended_at,
-      createdAt: session.created_at
+      sessionId: toString(session.session_id),
+      requestId: toString(session.request_id),
+      toolId: toString(session.tool_id),
+      organizationId: toString(session.organization_id),
+      keyNames: toStringArray(session.key_names),
+      environment: toString(session.environment),
+      expiresAt: toString(session.expires_at),
+      ...(endedAt !== undefined ? { endedAt } : {}),
+      createdAt: toString(session.created_at)
     };
   }
 }
