@@ -1,6 +1,12 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { supabase } from '@/integrations/supabase/client';
+import {
+  getSSOUserFromRequest,
+  getSessionTokenFromRequest,
+  hasSSOfromRequest,
+  COOKIE_NAMES,
+} from '@lanonasis/shared-auth/server';
 
 // Use centralized type definitions
 import '@/types/express-auth';
@@ -111,7 +117,31 @@ const validateJWT = async (token: string): Promise<Record<string, unknown>> => {
 };
 
 /**
- * Central authentication middleware supporting both JWT and API keys
+ * Validate SSO session token (JWT from auth-gateway)
+ */
+const validateSSOToken = async (token: string): Promise<Record<string, unknown> | null> => {
+  try {
+    const jwtSecret = process.env.JWT_SECRET;
+    if (!jwtSecret) {
+      console.warn('JWT_SECRET not configured for SSO validation');
+      return null;
+    }
+
+    const decoded = jwt.verify(token, jwtSecret) as Record<string, unknown>;
+    return decoded;
+  } catch (error) {
+    console.warn('SSO token validation failed:', error);
+    return null;
+  }
+};
+
+/**
+ * Central authentication middleware supporting SSO cookies, JWT, and API keys
+ *
+ * Priority:
+ * 1. Check auth-gateway SSO cookies (lanonasis_session, lanonasis_user)
+ * 2. Check API key (X-API-Key header)
+ * 3. Check JWT (Authorization: Bearer token)
  */
 export const centralAuth = async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -119,11 +149,50 @@ export const centralAuth = async (req: Request, res: Response, next: NextFunctio
     const authHeader = req.headers['authorization'] as string;
     const projectScope = req.headers['x-project-scope'] as string;
 
-    if (projectScope !== 'lanonasis-maas') {
+    // Only enforce project scope for non-SSO requests
+    // SSO cookies are set by auth-gateway and don't include project scope header
+    const hasSSOCookies = hasSSOfromRequest(req);
+
+    if (!hasSSOCookies && projectScope !== 'lanonasis-maas') {
       console.warn(`[${req.id}] Invalid project scope: ${projectScope}`);
       throw createAuthError('Invalid project scope', 'INVALID_PROJECT_SCOPE', 403);
     }
 
+    // Priority 1: Check for auth-gateway SSO cookies
+    if (hasSSOCookies) {
+      console.log(`[${req.id}] Authenticating via SSO cookies`);
+
+      const ssoUser = getSSOUserFromRequest(req);
+      const sessionToken = getSessionTokenFromRequest(req);
+
+      if (ssoUser && sessionToken) {
+        // Validate the session token
+        const tokenData = await validateSSOToken(sessionToken);
+
+        if (tokenData) {
+          // SSO authentication successful
+          req.user = {
+            id: ssoUser.id,
+            userId: ssoUser.id,
+            email: ssoUser.email,
+            role: ssoUser.role,
+            plan: (tokenData.plan as string) || 'free',
+            organization_id: (tokenData.organization_id || tokenData.org_id) as string | undefined,
+            organizationId: (tokenData.organization_id || tokenData.org_id) as string | undefined,
+            auth_type: 'sso',
+          };
+
+          console.log(`[${req.id}] SSO authentication successful for user ${req.user.id}`);
+          return next();
+        } else {
+          console.warn(`[${req.id}] SSO token validation failed, trying other auth methods`);
+        }
+      } else {
+        console.warn(`[${req.id}] SSO cookies present but incomplete`);
+      }
+    }
+
+    // Priority 2: Check API key
     if (apiKey) {
       console.log(`[${req.id}] Authenticating with API key`);
       const keyData = await validateApiKey(apiKey);
