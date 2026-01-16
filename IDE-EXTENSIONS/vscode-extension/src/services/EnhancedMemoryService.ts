@@ -9,8 +9,19 @@ import type {
   MemoryEntry as SDKMemoryEntry,
   MemorySearchResult as SDKMemorySearchResult,
   UserMemoryStats as SDKUserMemoryStats,
-  ApiResponse
+  ApiResponse,
+  ApiErrorResponse
 } from '@lanonasis/memory-client';
+
+/**
+ * Extract error message from SDK's ApiErrorResponse or string
+ * SDK v2.0 changed error from string to ApiErrorResponse object
+ */
+function getErrorMessage(error: ApiErrorResponse | string | undefined, fallback: string): string {
+  if (!error) return fallback;
+  if (typeof error === 'string') return error;
+  return error.message || fallback;
+}
 import { SecureApiKeyService, StoredCredential } from './SecureApiKeyService';
 import { CreateMemoryRequest, SearchMemoryRequest, MemoryEntry, MemorySearchResult, MemoryType, UserMemoryStats } from '../types/memory-aligned';
 import { IEnhancedMemoryService, MemoryServiceCapabilities } from './IMemoryService';
@@ -236,7 +247,7 @@ export class EnhancedMemoryService implements IEnhancedMemoryService {
     const result = await testClient.searchMemories(testRequest);
 
     if (result.error) {
-      throw new Error(result.error);
+      throw new Error(getErrorMessage(result.error, 'Connection test failed'));
     }
 
     // Update capabilities after successful test
@@ -255,7 +266,7 @@ export class EnhancedMemoryService implements IEnhancedMemoryService {
     const result = await this.client.createMemory(sdkMemory);
 
     if (result.error || !result.data) {
-      throw new Error(result.error || 'Failed to create memory');
+      throw new Error(getErrorMessage(result.error, 'Failed to create memory'));
     }
 
     this.showOperationFeedback('create', result);
@@ -271,7 +282,7 @@ export class EnhancedMemoryService implements IEnhancedMemoryService {
     const result = await this.client.updateMemory(id, sdkMemory);
 
     if (result.error || !result.data) {
-      throw new Error(result.error || 'Failed to update memory');
+      throw new Error(getErrorMessage(result.error, 'Failed to update memory'));
     }
 
     this.showOperationFeedback('update', result);
@@ -299,7 +310,7 @@ export class EnhancedMemoryService implements IEnhancedMemoryService {
     const result = await this.client.searchMemories(sdkSearchRequest);
 
     if (result.error || !result.data) {
-      throw new Error(result.error || 'Search failed');
+      throw new Error(getErrorMessage(result.error, 'Search failed'));
     }
 
     // Show search performance info in verbose mode
@@ -318,7 +329,7 @@ export class EnhancedMemoryService implements IEnhancedMemoryService {
     const result = await this.client.getMemory(id);
 
     if (result.error || !result.data) {
-      throw new Error(result.error || 'Memory not found');
+      throw new Error(getErrorMessage(result.error, 'Memory not found'));
     }
 
     return this.convertSDKMemoryEntry(result.data);
@@ -344,7 +355,7 @@ export class EnhancedMemoryService implements IEnhancedMemoryService {
     });
 
     if (result.error || !result.data) {
-      throw new Error(result.error || 'Failed to fetch memories');
+      throw new Error(getErrorMessage(result.error, 'Failed to fetch memories'));
     }
 
     return result.data.data.map(entry => this.convertSDKMemoryEntry(entry));
@@ -358,7 +369,7 @@ export class EnhancedMemoryService implements IEnhancedMemoryService {
     const result = await this.client.deleteMemory(id);
 
     if (result.error) {
-      throw new Error(result.error);
+      throw new Error(getErrorMessage(result.error, 'Failed to delete memory'));
     }
 
     this.showOperationFeedback('delete', result);
@@ -372,7 +383,7 @@ export class EnhancedMemoryService implements IEnhancedMemoryService {
     const result = await this.client.getMemoryStats();
 
     if (result.error || !result.data) {
-      throw new Error(result.error || 'Failed to fetch stats');
+      throw new Error(getErrorMessage(result.error, 'Failed to fetch stats'));
     }
 
     return this.convertSDKUserMemoryStats(result.data);
