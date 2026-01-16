@@ -54,6 +54,7 @@ export type {
 
 export type {
   ApiResponse,
-  ApiError,
   PaginatedResponse
 } from '../core/client';
+
+export type { ApiErrorResponse, ErrorCode } from '../core/errors';

@@ -31,15 +31,35 @@
  */
 
 // ========================================
+// Internal Imports (for use in this file)
+// ========================================
+import {
+  CoreMemoryClient as _CoreMemoryClient,
+  createMemoryClient as _createMemoryClient,
+  type CoreMemoryClientConfig as _CoreMemoryClientConfig
+} from './core/client';
+
+// ========================================
 // Core Exports (Browser-Safe)
 // ========================================
-export { CoreMemoryClient, createMemoryClient } from './core/client';
+export { CoreMemoryClient, createMemoryClient, hasError, hasData } from './core/client';
 export type {
   CoreMemoryClientConfig,
   ApiResponse,
-  ApiError,
   PaginatedResponse
 } from './core/client';
+
+// ========================================
+// Utilities
+// ========================================
+export {
+  safeJsonParse,
+  createErrorResponse,
+  httpStatusToErrorCode,
+  calculateRetryDelay,
+  isRetryableError
+} from './core/utils';
+export type { SafeJsonResult } from './core/utils';
 
 // ========================================
 // Types (Shared)
@@ -54,7 +74,34 @@ export type {
   MemorySearchResult,
   UserMemoryStats,
   MemoryType,
-  MemoryStatus
+  MemoryStatus,
+  // Intelligence types (v2.0)
+  ChunkingStrategy,
+  ContentType,
+  ContentChunk,
+  MemoryIntelligence,
+  IntelligentMetadata,
+  PreprocessingOptions,
+  CreateMemoryWithPreprocessingRequest,
+  UpdateMemoryWithPreprocessingRequest,
+  // Enhanced search types
+  SearchMode,
+  MatchingChunk,
+  SearchFilters,
+  EnhancedSearchRequest,
+  EnhancedMemorySearchResult,
+  EnhancedSearchResponse,
+  // Analytics types
+  SearchAnalyticsDataPoint,
+  PopularQuery,
+  SearchAnalytics,
+  MostAccessedMemory,
+  HourlyAccess,
+  AccessPatterns,
+  ProjectMemoryCount,
+  TagCount,
+  ExtendedMemoryStats,
+  AnalyticsDateRange
 } from './core/types';
 
 export {
@@ -63,7 +110,14 @@ export {
   createMemorySchema,
   updateMemorySchema,
   searchMemorySchema,
-  createTopicSchema
+  createTopicSchema,
+  // Intelligence constants & schemas (v2.0)
+  CHUNKING_STRATEGIES,
+  CONTENT_TYPES,
+  SEARCH_MODES,
+  preprocessingOptionsSchema,
+  enhancedSearchSchema,
+  analyticsDateRangeSchema
 } from './core/types';
 
 // ========================================
@@ -71,13 +125,19 @@ export {
 // ========================================
 export {
   MemoryClientError,
-  ApiError as ApiErrorClass,
+  ApiError,
   AuthenticationError,
   ValidationError,
   TimeoutError,
   RateLimitError,
-  NotFoundError
+  NotFoundError,
+  NetworkError,
+  ServerError,
+  createErrorFromStatus,
+  isApiErrorResponse,
+  ERROR_CODES
 } from './core/errors';
+export type { ApiErrorResponse, ErrorCode } from './core/errors';
 
 // ========================================
 // Constants
@@ -90,6 +150,105 @@ export const CLIENT_NAME = '@lanonasis/memory-client';
 // ========================================
 export const isBrowser = typeof window !== 'undefined';
 export const isNode = typeof globalThis !== 'undefined' && 'process' in globalThis && globalThis.process?.versions?.node;
+export const isEdge = !isBrowser && !isNode;
+
+/**
+ * Detected runtime environment
+ */
+export type RuntimeEnvironment = 'browser' | 'node' | 'edge';
+
+/**
+ * Get the current runtime environment
+ */
+export function getEnvironment(): RuntimeEnvironment {
+  if (isBrowser) return 'browser';
+  if (isNode) return 'node';
+  return 'edge';
+}
+
+// ========================================
+// Auto-Detecting Client Factory
+// ========================================
+
+/**
+ * Configuration for the auto-detecting client factory
+ */
+export interface AutoClientConfig {
+  /** API endpoint URL (required) */
+  apiUrl: string;
+  /** API key for authentication */
+  apiKey?: string;
+  /** Bearer token for authentication */
+  authToken?: string;
+  /** Organization ID */
+  organizationId?: string;
+  /** Request timeout in milliseconds */
+  timeout?: number;
+  /** Custom headers */
+  headers?: Record<string, string>;
+  /** Retry configuration */
+  retry?: {
+    maxRetries?: number;
+    retryDelay?: number;
+    backoff?: 'linear' | 'exponential';
+  };
+  /** Node.js specific: prefer CLI when available */
+  preferCLI?: boolean;
+  /** Node.js specific: enable MCP channels */
+  enableMCP?: boolean;
+}
+
+/**
+ * Auto-detecting client factory - "Drop In and Sleep" architecture
+ *
+ * Automatically detects the runtime environment and returns the appropriate client:
+ * - Browser/Edge: Returns CoreMemoryClient (lightweight, browser-safe)
+ * - Node.js: Returns EnhancedMemoryClient (with CLI/MCP support)
+ *
+ * @example
+ * ```typescript
+ * import { createClient } from '@lanonasis/memory-client';
+ *
+ * // Works in any environment!
+ * const client = await createClient({
+ *   apiUrl: 'https://api.lanonasis.com',
+ *   apiKey: 'your-key'
+ * });
+ *
+ * const memories = await client.listMemories();
+ * ```
+ */
+export async function createClient(config: AutoClientConfig): Promise<_CoreMemoryClient> {
+  const environment = getEnvironment();
+
+  if (environment === 'node') {
+    try {
+      // Dynamic import for Node.js client to avoid bundling in browser
+      const { createNodeMemoryClient } = await import('./node/index');
+      return await createNodeMemoryClient({
+        ...config,
+        preferCLI: config.preferCLI ?? true,
+        enableMCP: config.enableMCP ?? true
+      }) as unknown as _CoreMemoryClient;
+    } catch {
+      // Fallback to core client if Node module fails to load
+      console.warn('Failed to load Node.js client, falling back to core client');
+    }
+  }
+
+  // Browser, Edge, or fallback
+  const clientConfig: _CoreMemoryClientConfig = {
+    apiUrl: config.apiUrl,
+    apiKey: config.apiKey,
+    authToken: config.authToken,
+    organizationId: config.organizationId,
+    timeout: config.timeout ?? (environment === 'edge' ? 5000 : 30000),
+    headers: config.headers,
+    retry: config.retry
+  };
+
+  return _createMemoryClient(clientConfig);
+}
 
 // ========================================
 // Default Configurations
