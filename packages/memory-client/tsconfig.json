@@ -25,8 +25,7 @@
     "importHelpers": true,
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
-    "skipLibCheck": true,
-    "composite": true
+    "skipLibCheck": true
   },
   "include": [
     "src/**/*"

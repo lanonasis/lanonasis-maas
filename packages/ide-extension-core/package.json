@@ -38,6 +38,6 @@
     "typescript": "^5.0.0"
   },
   "peerDependencies": {
-    "@lanonasis/memory-client": "^1.0.0"
+    "@lanonasis/memory-client": "^1.0.0 || ^2.0.0"
   }
 }

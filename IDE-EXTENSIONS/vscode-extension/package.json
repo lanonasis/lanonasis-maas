@@ -522,7 +522,11 @@
         },
         "lanonasis.transportPreference": {
           "type": "string",
-          "enum": ["auto", "websocket", "http"],
+          "enum": [
+            "auto",
+            "websocket",
+            "http"
+          ],
           "default": "auto",
           "markdownDescription": "Preferred transport mode. `auto` tries WebSocket first, then falls back to HTTP."
         },
@@ -626,7 +630,7 @@
   },
   "dependencies": {
     "@lanonasis/ide-extension-core": "file:../../packages/ide-extension-core",
-    "@lanonasis/memory-client": "^2.0.0",
+    "@lanonasis/memory-client": "^2.2.0",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
     "framer-motion": "^12.26.1",

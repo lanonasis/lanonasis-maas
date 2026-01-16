@@ -2,10 +2,12 @@ import { describe, it, expect } from 'vitest';
 import {
   safeJsonParse,
   createErrorResponse,
+  createErrorFromResponse,
   httpStatusToErrorCode,
   calculateRetryDelay,
   isRetryableError,
-  sleep
+  sleep,
+  deepMerge
 } from './utils';
 
 describe('safeJsonParse', () => {
@@ -203,5 +205,89 @@ describe('sleep', () => {
     await sleep(0);
     const elapsed = Date.now() - start;
     expect(elapsed).toBeLessThan(50);
+  });
+});
+
+describe('createErrorFromResponse', () => {
+  it('creates error from HTTP status and text', () => {
+    const error = createErrorFromResponse(404, 'Not Found');
+    expect(error.code).toBe('NOT_FOUND');
+    expect(error.message).toBe('HTTP 404: Not Found');
+    expect(error.statusCode).toBe(404);
+  });
+
+  it('extracts error message from body.error', () => {
+    const body = { error: 'Resource not found' };
+    const error = createErrorFromResponse(404, 'Not Found', body);
+    expect(error.message).toBe('Resource not found');
+  });
+
+  it('extracts error message from body.message', () => {
+    const body = { message: 'Invalid request payload' };
+    const error = createErrorFromResponse(400, 'Bad Request', body);
+    expect(error.message).toBe('Invalid request payload');
+  });
+
+  it('extracts details from body', () => {
+    const body = { message: 'Validation error', details: { field: 'email' } };
+    const error = createErrorFromResponse(400, 'Bad Request', body);
+    expect(error.details).toEqual({ field: 'email' });
+  });
+
+  it('handles null body', () => {
+    const error = createErrorFromResponse(500, 'Internal Server Error', null);
+    expect(error.message).toBe('HTTP 500: Internal Server Error');
+  });
+
+  it('handles non-object body', () => {
+    const error = createErrorFromResponse(500, 'Error', 'string body');
+    expect(error.message).toBe('HTTP 500: Error');
+  });
+});
+
+describe('deepMerge', () => {
+  it('merges flat objects', () => {
+    const target = { a: 1, b: 2 };
+    const source = { b: 3, c: 4 };
+    const result = deepMerge(target, source);
+    expect(result).toEqual({ a: 1, b: 3, c: 4 });
+  });
+
+  it('deeply merges nested objects', () => {
+    const target = { user: { name: 'John', settings: { theme: 'light' } } };
+    const source = { user: { settings: { theme: 'dark', lang: 'en' } } };
+    const result = deepMerge(target, source);
+    expect(result).toEqual({
+      user: { name: 'John', settings: { theme: 'dark', lang: 'en' } }
+    });
+  });
+
+  it('does not modify original objects', () => {
+    const target = { a: 1 };
+    const source = { b: 2 };
+    deepMerge(target, source);
+    expect(target).toEqual({ a: 1 });
+    expect(source).toEqual({ b: 2 });
+  });
+
+  it('handles arrays by replacing them', () => {
+    const target = { items: [1, 2, 3] };
+    const source = { items: [4, 5] };
+    const result = deepMerge(target, source);
+    expect(result.items).toEqual([4, 5]);
+  });
+
+  it('ignores undefined values in source', () => {
+    const target = { a: 1, b: 2 };
+    const source = { a: undefined, c: 3 };
+    const result = deepMerge(target, source);
+    expect(result).toEqual({ a: 1, b: 2, c: 3 });
+  });
+
+  it('handles null values in source', () => {
+    const target = { a: { nested: true } };
+    const source = { a: null };
+    const result = deepMerge(target, source as Partial<typeof target>);
+    expect(result.a).toBeNull();
   });
 });
