@@ -124,6 +124,6 @@ export const DEFAULT_TRANSPORT_CONFIG = {
  */
 export const TRANSPORT_ENDPOINTS = {
   websocket: 'wss://mcp.lanonasis.com/ws',
-  http: 'https://mcp.lanonasis.com/api/v1',
+  http: 'https://api.lanonasis.com/api/v1',
   sse: 'https://mcp.lanonasis.com/api/v1/events'
 } as const;
