@@ -182,7 +182,7 @@ export class MaaSClient {
     });
 
     return this.request<PaginatedResponse<MemoryEntry>>(
-      `/memory?${params.toString()}`
+      `/memory/list?${params.toString()}`
     );
   }
 
