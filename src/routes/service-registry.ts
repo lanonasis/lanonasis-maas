@@ -14,13 +14,15 @@ import { setTimeout, clearTimeout } from 'timers';
 
 const router: Router = Router();
 
+type ApiKeyRequest = Request & { apiKey?: Record<string, unknown> };
+
 // Centralized rate limiting
 const serviceRateLimit = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 100, // 100 requests per window
-  keyGenerator: (req): string => {
+  keyGenerator: (req: Request): string => {
     const apiKey = req.headers['x-api-key'] || req.headers['authorization']?.replace('Bearer ', '');
-    const ip = ipKeyGenerator(req as any);
+    const ip = ipKeyGenerator(req as unknown as Parameters<typeof ipKeyGenerator>[0]);
     return apiKey ? `${ip}:${String(apiKey).slice(0, 8)}` : ip;
   },
   message: {
@@ -170,7 +172,14 @@ async function checkServiceHealth(serviceName: string, endpoint: string): Promis
  */
 router.get('/auth/test', authenticateApiKey, async (req: Request, res: Response): Promise<void> => {
   try {
-    const apiKeyData = (req as any).apiKey;
+    const apiKeyData = (req as ApiKeyRequest).apiKey;
+    if (!apiKeyData) {
+      res.status(401).json({
+        status: 'failed',
+        error: 'API key context missing'
+      });
+      return;
+    }
     
     // TODO: Test MCP client connection when package is built
     // const mcpClient = new MCPClient({
@@ -209,7 +218,14 @@ router.get('/auth/test', authenticateApiKey, async (req: Request, res: Response)
  */
 router.get('/mcp/test', authenticateApiKey, async (req: Request, res: Response): Promise<void> => {
   try {
-    const apiKeyData = (req as any).apiKey;
+    const apiKeyData = (req as ApiKeyRequest).apiKey;
+    if (!apiKeyData) {
+      res.status(401).json({
+        status: 'mcp_failed',
+        error: 'API key context missing'
+      });
+      return;
+    }
     
     // TODO: Create MCP client and test connection when package is built
     // const mcpClient = new MCPClient({
@@ -245,10 +261,10 @@ router.get('/mcp/test', authenticateApiKey, async (req: Request, res: Response):
  */
 router.post('/sync', authenticateApiKey, async (req: Request, res: Response): Promise<void> => {
   try {
-    const apiKeyData = (req as any).apiKey;
+    const apiKeyData = (req as ApiKeyRequest).apiKey;
     
     // Only allow admin users to sync
-    if (apiKeyData.access_level !== 'admin' && apiKeyData.access_level !== 'enterprise') {
+    if (!apiKeyData || (apiKeyData.access_level !== 'admin' && apiKeyData.access_level !== 'enterprise')) {
       res.status(403).json({
         error: 'insufficient_permissions',
         message: 'Admin access required for service synchronization'
