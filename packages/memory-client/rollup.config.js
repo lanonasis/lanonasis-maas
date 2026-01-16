@@ -226,11 +226,13 @@ export default [
         file: packageJson.main,
         format: 'cjs',
         sourcemap: true,
+        inlineDynamicImports: true, // Inline dynamic import('./node/index')
       },
       {
         file: packageJson.module,
         format: 'esm',
         sourcemap: true,
+        inlineDynamicImports: true, // Inline dynamic import('./node/index')
       },
     ],
     plugins: [
