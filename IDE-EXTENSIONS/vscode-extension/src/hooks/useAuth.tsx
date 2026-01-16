@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 interface UseAuthReturn {
   isAuthenticated: boolean;
   isLoading: boolean;
+  user: { id?: string; name?: string; email?: string } | null;
   login: (mode?: 'oauth' | 'apikey') => void;
   logout: () => void;
 }
@@ -10,6 +11,7 @@ interface UseAuthReturn {
 export function useAuth(): UseAuthReturn {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [user, setUser] = useState<{ id?: string; name?: string; email?: string } | null>(null);
   const initialCheckDone = useRef(false);
 
   // Send messages to VS Code extension
@@ -26,7 +28,9 @@ export function useAuth(): UseAuthReturn {
       
       if (message.type === 'authState') {
         if (message.data && typeof message.data === 'object' && 'authenticated' in message.data) {
-          setIsAuthenticated((message.data as { authenticated: boolean }).authenticated);
+          const payload = message.data as { authenticated: boolean; user?: { id?: string; name?: string; email?: string } | null };
+          setIsAuthenticated(payload.authenticated);
+          setUser(payload.user ?? null);
           setIsLoading(false);
           initialCheckDone.current = true;
         }
@@ -67,6 +71,6 @@ export function useAuth(): UseAuthReturn {
     postMessage('logout');
   }, [postMessage]);
 
-  return { isAuthenticated, isLoading, login, logout };
+  return { isAuthenticated, isLoading, user, login, logout };
 }
 
