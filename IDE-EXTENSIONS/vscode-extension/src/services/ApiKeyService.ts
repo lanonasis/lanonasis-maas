@@ -140,6 +140,28 @@ export class ApiKeyService {
         return parts.every(segment => jwtSegment.test(segment));
     }
 
+    private isFallbackableError(error: unknown): boolean {
+        const message = error instanceof Error ? error.message : String(error);
+        return message.includes('404') || message.includes('405') || message.includes('Not Found') || message.includes('Method Not Allowed');
+    }
+
+    private isPostRequiredError(error: unknown): boolean {
+        const message = error instanceof Error ? error.message : String(error);
+        return message.includes('Use POST') || message.includes('Method not allowed') || message.includes('Method Not Allowed');
+    }
+
+    private normalizeApiKeysResponse(response: ApiKey[] | { success: boolean; data: ApiKey[] }): ApiKey[] {
+        if (response && typeof response === 'object' && 'data' in response && Array.isArray(response.data)) {
+            return response.data;
+        }
+
+        if (Array.isArray(response)) {
+            return response;
+        }
+
+        return [];
+    }
+
     // ============================================================================
     // PROJECT MANAGEMENT
     // ============================================================================
@@ -177,52 +199,111 @@ export class ApiKeyService {
     // ============================================================================
 
     async getApiKeys(projectId?: string): Promise<ApiKey[]> {
-        const endpoint = projectId ? `/api/v1/projects/${projectId}/api-keys` : '/api/v1/auth/api-keys';                                                        
-        const response = await this.makeRequest<ApiKey[] | { success: boolean; data: ApiKey[] }>(endpoint);
-        
-        // Handle wrapped response format from /api/v1/auth/api-keys
-        // which returns { success: true, data: [...] }
-        if (response && typeof response === 'object' && 'data' in response && Array.isArray(response.data)) {
-            return response.data;
+        const primaryEndpoint = projectId
+            ? `/api/v1/api-keys?projectId=${encodeURIComponent(projectId)}`
+            : '/api/v1/api-keys';
+        const legacyEndpoint = projectId
+            ? `/api/v1/projects/${projectId}/api-keys`
+            : '/api/v1/auth/api-keys';
+
+        try {
+            const response = await this.makeRequest<ApiKey[] | { success: boolean; data: ApiKey[] }>(primaryEndpoint);
+            return this.normalizeApiKeysResponse(response);
+        } catch (error) {
+            if (!this.isFallbackableError(error)) {
+                throw error;
+            }
+
+            try {
+                const response = await this.makeRequest<ApiKey[] | { success: boolean; data: ApiKey[] }>(legacyEndpoint);
+                return this.normalizeApiKeysResponse(response);
+            } catch (legacyError) {
+                if (!this.isPostRequiredError(legacyError) || !legacyEndpoint.includes('/auth/api-keys')) {
+                    throw legacyError;
+                }
+
+                const response = await this.makeRequest<ApiKey[] | { success: boolean; data: ApiKey[] }>(legacyEndpoint, {
+                    method: 'POST',
+                    body: JSON.stringify(projectId ? { projectId } : {})
+                });
+                return this.normalizeApiKeysResponse(response);
+            }
         }
-        
-        // Handle direct array response from /api/v1/projects/:projectId/api-keys
-        if (Array.isArray(response)) {
-            return response;
-        }
-        
-        // Fallback: return empty array if response format is unexpected
-        return [];
     }
 
     async getApiKey(keyId: string): Promise<ApiKey> {
-        return this.makeRequest<ApiKey>(`/api/v1/auth/api-keys/${keyId}`);
+        try {
+            return await this.makeRequest<ApiKey>(`/api/v1/api-keys/${keyId}`);
+        } catch (error) {
+            if (!this.isFallbackableError(error)) {
+                throw error;
+            }
+            return this.makeRequest<ApiKey>(`/api/v1/auth/api-keys/${keyId}`);
+        }
     }
 
     async createApiKey(request: CreateApiKeyRequest): Promise<ApiKey> {
-        return this.makeRequest<ApiKey>('/api/v1/auth/api-keys', {
-            method: 'POST',
-            body: JSON.stringify(request)
-        });
+        try {
+            return await this.makeRequest<ApiKey>('/api/v1/api-keys', {
+                method: 'POST',
+                body: JSON.stringify(request)
+            });
+        } catch (error) {
+            if (!this.isFallbackableError(error)) {
+                throw error;
+            }
+            return this.makeRequest<ApiKey>('/api/v1/auth/api-keys', {
+                method: 'POST',
+                body: JSON.stringify(request)
+            });
+        }
     }
 
     async updateApiKey(keyId: string, updates: Partial<CreateApiKeyRequest>): Promise<ApiKey> {
-        return this.makeRequest<ApiKey>(`/api/v1/auth/api-keys/${keyId}`, {
-            method: 'PUT',
-            body: JSON.stringify(updates)
-        });
+        try {
+            return await this.makeRequest<ApiKey>(`/api/v1/api-keys/${keyId}`, {
+                method: 'PUT',
+                body: JSON.stringify(updates)
+            });
+        } catch (error) {
+            if (!this.isFallbackableError(error)) {
+                throw error;
+            }
+            return this.makeRequest<ApiKey>(`/api/v1/auth/api-keys/${keyId}`, {
+                method: 'PUT',
+                body: JSON.stringify(updates)
+            });
+        }
     }
 
     async deleteApiKey(keyId: string): Promise<void> {
-        await this.makeRequest<void>(`/api/v1/auth/api-keys/${keyId}`, {
-            method: 'DELETE'
-        });
+        try {
+            await this.makeRequest<void>(`/api/v1/api-keys/${keyId}`, {
+                method: 'DELETE'
+            });
+        } catch (error) {
+            if (!this.isFallbackableError(error)) {
+                throw error;
+            }
+            await this.makeRequest<void>(`/api/v1/auth/api-keys/${keyId}`, {
+                method: 'DELETE'
+            });
+        }
     }
 
     async rotateApiKey(keyId: string): Promise<ApiKey> {
-        return this.makeRequest<ApiKey>(`/api/v1/auth/api-keys/${keyId}/rotate`, {
-            method: 'POST'
-        });
+        try {
+            return await this.makeRequest<ApiKey>(`/api/v1/api-keys/${keyId}/rotate`, {
+                method: 'POST'
+            });
+        } catch (error) {
+            if (!this.isFallbackableError(error)) {
+                throw error;
+            }
+            return this.makeRequest<ApiKey>(`/api/v1/auth/api-keys/${keyId}/rotate`, {
+                method: 'POST'
+            });
+        }
     }
 
     // ============================================================================
