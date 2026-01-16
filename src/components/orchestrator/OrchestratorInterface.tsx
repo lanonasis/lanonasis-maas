@@ -30,6 +30,10 @@ interface OrchestratorInterfaceProps {
   disabled?: boolean;
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
 export const OrchestratorInterface: React.FC<OrchestratorInterfaceProps> = ({
   className = '',
   onCommandExecuted,
@@ -132,13 +136,14 @@ Type your command below and press Enter!`,
         });
 
         // Handle UI actions
-        if (result.command.tool === 'ui' && result.data?.action === 'open_url') {
+        if (result.command.tool === 'ui' && isRecord(result.data) && result.data.action === 'open_url') {
           if (onUIAction) {
             onUIAction(result.command.action, result.data);
           } else {
             // Fallback: open in new window
-            if (result.data && 'url' in result.data && typeof result.data.url === 'string') {
-              window.open(result.data.url, '_blank');
+            const url = result.data.url;
+            if (typeof url === 'string') {
+              window.open(url, '_blank');
             }
           }
         }
@@ -176,13 +181,13 @@ Type your command below and press Enter!`,
     // Format based on command type
     switch (command.tool) {
       case 'memory':
-        content += data ? formatMemoryResult(command.action, data) : '';
+        content += isRecord(data) ? formatMemoryResult(command.action, data) : data ? `\n\n${JSON.stringify(data, null, 2)}` : '';
         break;
       case 'ui':
-        content += data ? formatUIResult(command.action, data) : '';
+        content += isRecord(data) ? formatUIResult(command.action, data) : data ? `\n\n${JSON.stringify(data, null, 2)}` : '';
         break;
       case 'stripe':
-        content += data ? formatStripeResult(command.action, data) : '';
+        content += isRecord(data) ? formatStripeResult(command.action, data) : data ? `\n\n${JSON.stringify(data, null, 2)}` : '';
         break;
       default:
         if (data) {

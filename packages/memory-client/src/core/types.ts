@@ -70,6 +70,158 @@ export interface UserMemoryStats {
 }
 
 /**
+ * Intelligence API types
+ */
+export interface IntelligenceUsage {
+  tokens_used: number;
+  cost_usd: number;
+  cached: boolean;
+}
+
+export interface IntelligenceTierInfo {
+  tier: string;
+  usage_remaining: number;
+}
+
+export interface IntelligenceApiResponse<T> {
+  data?: T;
+  error?: string;
+  message?: string;
+  usage?: IntelligenceUsage;
+  tierInfo?: IntelligenceTierInfo;
+  errorCode?: string;
+  statusCode?: number;
+  details?: unknown;
+}
+
+export interface IntelligenceEnvelope<T> {
+  success: boolean;
+  data?: T;
+  error?: string;
+  message?: string;
+  usage?: IntelligenceUsage;
+  tier_info?: IntelligenceTierInfo;
+}
+
+export interface TagSuggestionResult {
+  suggestions: string[];
+  existing_tags: string[];
+  from_user_vocabulary: number;
+  memory_id?: string;
+}
+
+export interface PatternAnalysisResult {
+  total_memories?: number;
+  time_range_days?: number;
+  average_content_length?: number;
+  memories_by_type?: Record<string, number>;
+  memories_by_day_of_week?: Record<string, number>;
+  peak_creation_hours?: number[];
+  top_tags?: Array<{ tag: string; count: number }>;
+  most_accessed?: Array<{ id: string; title: string; access_count: number }>;
+  insights?: string[];
+  generated_at?: string;
+  message?: string;
+  patterns?: null;
+}
+
+export interface HealthIssue {
+  severity: 'high' | 'medium' | 'low';
+  category: string;
+  description: string;
+  affected_count: number;
+  recommendation: string;
+}
+
+export interface HealthCheckResult {
+  health_score?: {
+    overall: number;
+    breakdown?: {
+      organization: number;
+      tagging: number;
+      recency: number;
+      completeness: number;
+      diversity: number;
+    } | null;
+  };
+  status?: 'excellent' | 'good' | 'needs_attention' | 'poor';
+  statistics?: {
+    total_memories: number;
+    active_memories: number;
+    archived_memories: number;
+    memories_with_tags: number;
+    unique_tags: number;
+    memory_types: number;
+    recent_memories_30d: number;
+    stale_memories_90d: number;
+  };
+  issues?: HealthIssue[];
+  recommendations?: string[];
+  generated_at?: string;
+  message?: string;
+}
+
+export interface RelatedMemory {
+  id: string;
+  title: string;
+  type: string;
+  tags: string[];
+  similarity: number;
+  snippet: string;
+}
+
+export interface FindRelatedResult {
+  query: string;
+  source_memory_id?: string;
+  related_memories: RelatedMemory[];
+  total_found: number;
+  search_method: 'semantic' | 'keyword';
+  threshold_used: number;
+}
+
+export interface DuplicateGroup {
+  primary_id: string;
+  primary_title: string;
+  duplicates: Array<{
+    id: string;
+    title: string;
+    similarity: number;
+    created_at: string;
+  }>;
+  similarity_score: number;
+}
+
+export interface DetectDuplicatesResult {
+  duplicate_groups: DuplicateGroup[];
+  total_groups: number;
+  total_duplicates: number;
+  detection_method: 'semantic' | 'text';
+  threshold_used: number;
+  memories_analyzed: number;
+  potential_storage_savings: string;
+  message?: string;
+}
+
+export type InsightType = 'themes' | 'connections' | 'gaps' | 'actions' | 'summary';
+
+export interface Insight {
+  type: InsightType;
+  content: string;
+  confidence: number;
+  related_memory_ids?: string[];
+}
+
+export interface ExtractInsightsResult {
+  insights: Insight[];
+  overall_summary?: string;
+  memories_analyzed?: number;
+  insight_types?: InsightType[];
+  topic_filter?: string | null;
+  generated_at?: string;
+  message?: string;
+}
+
+/**
  * Validation schemas using Zod
  */
 
@@ -115,6 +267,55 @@ export const createTopicSchema = z.object({
   parent_topic_id: z.string().uuid().optional()
 });
 
+export const suggestTagsSchema = z
+  .object({
+    memory_id: z.string().uuid().optional(),
+    content: z.string().min(1).optional(),
+    title: z.string().optional(),
+    existing_tags: z.array(z.string()).optional(),
+    max_suggestions: z.number().int().min(1).max(10).optional()
+  })
+  .refine((data) => data.memory_id || data.content, {
+    message: 'Either memory_id or content is required'
+  });
+
+export const analyzePatternsSchema = z.object({
+  time_range_days: z.number().int().min(1).max(365).optional(),
+  include_insights: z.boolean().optional(),
+  response_format: z.enum(['json', 'markdown']).optional()
+});
+
+export const intelligenceHealthCheckSchema = z.object({
+  include_recommendations: z.boolean().optional(),
+  detailed_breakdown: z.boolean().optional()
+});
+
+export const findRelatedSchema = z
+  .object({
+    memory_id: z.string().uuid().optional(),
+    query: z.string().min(1).optional(),
+    limit: z.number().int().min(1).max(20).optional(),
+    similarity_threshold: z.number().min(0).max(1).optional(),
+    exclude_ids: z.array(z.string().uuid()).optional()
+  })
+  .refine((data) => data.memory_id || data.query, {
+    message: 'Either memory_id or query is required'
+  });
+
+export const detectDuplicatesSchema = z.object({
+  similarity_threshold: z.number().min(0).max(1).optional(),
+  include_archived: z.boolean().optional(),
+  limit: z.number().int().min(1).max(50).optional()
+});
+
+export const extractInsightsSchema = z.object({
+  memory_ids: z.array(z.string().uuid()).optional(),
+  topic: z.string().min(1).optional(),
+  time_range_days: z.number().int().min(1).max(365).optional(),
+  insight_types: z.array(z.enum(['themes', 'connections', 'gaps', 'actions', 'summary'])).optional(),
+  detail_level: z.enum(['brief', 'detailed', 'comprehensive']).optional()
+});
+
 /**
  * Inferred types from schemas
  */
@@ -122,6 +323,12 @@ export type CreateMemoryRequest = z.infer<typeof createMemorySchema>;
 export type UpdateMemoryRequest = z.infer<typeof updateMemorySchema>;
 export type SearchMemoryRequest = z.infer<typeof searchMemorySchema>;
 export type CreateTopicRequest = z.infer<typeof createTopicSchema>;
+export type SuggestTagsRequest = z.infer<typeof suggestTagsSchema>;
+export type AnalyzePatternsRequest = z.infer<typeof analyzePatternsSchema>;
+export type IntelligenceHealthCheckRequest = z.infer<typeof intelligenceHealthCheckSchema>;
+export type FindRelatedRequest = z.infer<typeof findRelatedSchema>;
+export type DetectDuplicatesRequest = z.infer<typeof detectDuplicatesSchema>;
+export type ExtractInsightsRequest = z.infer<typeof extractInsightsSchema>;
 
 // ========================================
 // Intelligence Feature Types (v2.0)

@@ -3,11 +3,15 @@ import { toolRegistry } from '../connectors';
 
 export interface OrchestratorResult {
   success: boolean;
-  data?: Record<string, unknown>;
+  data?: unknown;
   error?: string;
   command: ParsedCommand;
   executionTime: number;
   metadata?: Record<string, unknown>;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
 }
 
 export async function orchestrate(input: string): Promise<OrchestratorResult> {
@@ -18,12 +22,13 @@ export async function orchestrate(input: string): Promise<OrchestratorResult> {
     const command = await resolveCommand(input);
     
     // Validate tool exists
-    if (!toolRegistry[command.tool]) {
+    const tool = toolRegistry[command.tool];
+    if (!tool) {
       throw new Error(`Tool "${command.tool}" not found. Available tools: ${Object.keys(toolRegistry).join(', ')}`);
     }
 
     // Execute the command
-    const data = await toolRegistry[command.tool](command.action, command.args);
+    const data = await tool(command.action, command.args);
     
     const executionTime = Date.now() - startTime;
     
@@ -89,14 +94,19 @@ export class ContextualOrchestrator {
     const result = await orchestrate(input);
     
     // Store relevant context from successful operations
-    if (result.success && result.data) {
+    if (result.success && result.data && isRecord(result.data)) {
       // Store memory IDs for future reference
       if (result.command.tool === 'memory') {
         if (result.data.id) {
           this.setContext('lastMemoryId', result.data.id);
         }
         if (Array.isArray(result.data.memories) && result.data.memories.length > 0) {
-          this.setContext('lastSearchResults', result.data.memories.map((m: { id: unknown }) => m.id));
+          this.setContext(
+            'lastSearchResults',
+            result.data.memories
+              .filter(isRecord)
+              .map((m) => m.id)
+          );
         }
       }
       
