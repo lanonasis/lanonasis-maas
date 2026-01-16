@@ -1,11 +1,19 @@
 import { CreateMemoryRequest, SearchMemoryRequest, MemoryEntry, MemorySearchResult, UserMemoryStats } from '../types/memory-aligned';
+import type { TransportType } from './transports/ITransport';
 
 export interface MemoryServiceCapabilities {
+  // Legacy capabilities (for backward compatibility)
   cliAvailable: boolean;
   mcpSupport: boolean;
   authenticated: boolean;
   goldenContract: boolean;
   version?: string;
+
+  // Transport capabilities
+  activeTransport?: TransportType | 'http-only';
+  availableTransports?: TransportType[];
+  realTimeCapable?: boolean;
+  connectionHealth?: 'healthy' | 'degraded' | 'disconnected';
 }
 
 /**
