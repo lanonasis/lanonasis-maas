@@ -520,6 +520,22 @@
           "default": "",
           "markdownDescription": "Custom MCP server URL. Leave empty for auto-discovery (default: `http://localhost:3001`)"
         },
+        "lanonasis.transportPreference": {
+          "type": "string",
+          "enum": ["auto", "websocket", "http"],
+          "default": "auto",
+          "markdownDescription": "Preferred transport mode. `auto` tries WebSocket first, then falls back to HTTP."
+        },
+        "lanonasis.websocketUrl": {
+          "type": "string",
+          "default": "wss://mcp.lanonasis.com/ws",
+          "markdownDescription": "WebSocket MCP server URL for real-time communication."
+        },
+        "lanonasis.enableRealtime": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "Enable real-time updates via WebSocket when available."
+        },
         "lanonasis.cliDetectionTimeout": {
           "type": "number",
           "default": 2000,
