@@ -51,6 +51,7 @@ const validateApiKey = async (apiKey: string): Promise<ApiKeyValidationResult> =
     }
 
     const { valid: _valid, ...result } = data as ApiKeyValidationResult & { valid?: boolean };
+    void _valid;
     return result;
   } catch (error) {
     if (error instanceof Error && 'status' in error) {
