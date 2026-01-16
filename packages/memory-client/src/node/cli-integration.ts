@@ -10,6 +10,7 @@
 import { exec, execSync } from 'child_process';
 import { promisify } from 'util';
 import type { ApiResponse, PaginatedResponse } from '../core/client';
+import { safeJsonParse, createErrorResponse } from '../core/utils';
 import type {
   MemoryEntry,
   MemorySearchResult
@@ -158,8 +159,10 @@ export class CLIIntegration {
           timeout: 3000
         });
 
-        const authStatus = JSON.parse(authOutput);
-        authenticated = authStatus.authenticated === true;
+        const parseResult = safeJsonParse<{ authenticated?: boolean }>(authOutput);
+        if (parseResult.success) {
+          authenticated = parseResult.data.authenticated === true;
+        }
       } catch {
         // Authentication check failed
       }
@@ -183,11 +186,11 @@ export class CLIIntegration {
     const cliInfo = await this.detectCLI();
 
     if (!cliInfo.available) {
-      return { error: 'CLI not available' };
+      return { error: createErrorResponse('CLI not available', 'API_ERROR') };
     }
 
     if (!cliInfo.authenticated) {
-      return { error: 'CLI not authenticated. Run: onasis login' };
+      return { error: createErrorResponse('CLI not authenticated. Run: onasis login', 'AUTH_ERROR', 401) };
     }
 
     try {
@@ -210,23 +213,25 @@ export class CLIIntegration {
       }
 
       if (outputFormat === 'json') {
-        try {
-          const result = JSON.parse(stdout) as T;
-          return { data: result };
-        } catch (parseError) {
-          return { error: `Failed to parse CLI JSON output: ${parseError instanceof Error ? parseError.message : 'Unknown error'}` };
+        const parseResult = safeJsonParse<T>(stdout);
+        if (parseResult.success) {
+          return { data: parseResult.data };
         }
+        return { error: createErrorResponse(parseResult.error, 'VALIDATION_ERROR', 400) };
       }
 
       return { data: stdout as unknown as T };
 
     } catch (error) {
       if (error instanceof Error && error.message.includes('timeout')) {
-        return { error: 'CLI command timeout' };
+        return { error: createErrorResponse('CLI command timeout', 'TIMEOUT_ERROR', 408) };
       }
 
       return {
-        error: error instanceof Error ? error.message : 'CLI command failed'
+        error: createErrorResponse(
+          error instanceof Error ? error.message : 'CLI command failed',
+          'API_ERROR'
+        )
       };
     }
   }
@@ -332,7 +337,7 @@ export class CLIIntegration {
     const cliInfo = await this.detectCLI();
 
     if (!cliInfo.mcpAvailable) {
-      return { error: 'MCP not available via CLI' };
+      return { error: createErrorResponse('MCP not available via CLI', 'API_ERROR') };
     }
 
     return this.executeCLICommand<CLIMCPStatus>('mcp status');
@@ -342,7 +347,7 @@ export class CLIIntegration {
     const cliInfo = await this.detectCLI();
 
     if (!cliInfo.mcpAvailable) {
-      return { error: 'MCP not available via CLI' };
+      return { error: createErrorResponse('MCP not available via CLI', 'API_ERROR') };
     }
 
     return this.executeCLICommand<{ tools: CLIMCPTool[] }>('mcp tools');

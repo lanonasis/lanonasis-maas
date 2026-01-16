@@ -15,8 +15,35 @@ import type {
   SearchMemoryRequest,
   CreateTopicRequest,
   MemorySearchResult,
-  UserMemoryStats
+  UserMemoryStats,
+  // Intelligence types
+  EnhancedSearchRequest,
+  EnhancedSearchResponse,
+  SearchAnalytics,
+  AccessPatterns,
+  ExtendedMemoryStats,
+  AnalyticsDateRange,
+  CreateMemoryWithPreprocessingRequest,
+  UpdateMemoryWithPreprocessingRequest
 } from './types';
+
+import {
+  createMemorySchema,
+  updateMemorySchema,
+  searchMemorySchema,
+  createTopicSchema,
+  enhancedSearchSchema,
+  analyticsDateRangeSchema
+} from './types';
+
+import type { ApiErrorResponse } from './errors';
+import {
+  createErrorResponse,
+  createErrorFromResponse,
+  sleep,
+  calculateRetryDelay,
+  isRetryableError
+} from './utils';
 
 /**
  * Configuration options for the Memory Client
@@ -52,7 +79,7 @@ export interface CoreMemoryClientConfig {
 
   // Hooks for custom behavior
   /** Called when an error occurs */
-  onError?: (error: ApiError) => void;
+  onError?: (error: ApiErrorResponse) => void;
   /** Called before each request */
   onRequest?: (endpoint: string) => void;
   /** Called after each response */
@@ -60,22 +87,35 @@ export interface CoreMemoryClientConfig {
 }
 
 /**
- * Standard API response wrapper
+ * Standard API response wrapper with typed errors
+ * Replaces string errors with structured ApiErrorResponse
  */
 export interface ApiResponse<T> {
   data?: T;
-  error?: string;
+  /** Structured error response for programmatic handling */
+  error?: ApiErrorResponse;
+  /** Optional success message */
   message?: string;
+  /** Request metadata */
+  meta?: {
+    requestId?: string;
+    duration?: number;
+    retries?: number;
+  };
 }
 
 /**
- * API error with details
+ * Helper to check if response has error
  */
-export interface ApiError {
-  message: string;
-  code?: string;
-  statusCode?: number;
-  details?: unknown;
+export function hasError<T>(response: ApiResponse<T>): response is ApiResponse<T> & { error: ApiErrorResponse } {
+  return response.error !== undefined;
+}
+
+/**
+ * Helper to check if response has data
+ */
+export function hasData<T>(response: ApiResponse<T>): response is ApiResponse<T> & { data: T } {
+  return response.data !== undefined;
 }
 
 /**
@@ -151,13 +191,16 @@ export class CoreMemoryClient {
   }
 
   /**
-   * Make an HTTP request to the API
+   * Make an HTTP request to the API with retry support
    */
   private async request<T>(
     endpoint: string,
     options: RequestInit = {}
   ): Promise<ApiResponse<T>> {
     const startTime = Date.now();
+    const maxRetries = this.config.retry?.maxRetries ?? 3;
+    const baseDelay = this.config.retry?.retryDelay ?? 1000;
+    const backoff = this.config.retry?.backoff ?? 'exponential';
 
     // Call onRequest hook if provided
     if (this.config.onRequest) {
@@ -175,93 +218,150 @@ export class CoreMemoryClient {
 
     const url = `${baseUrl}/api/v1${endpoint}`;
 
-    try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), this.config.timeout);
+    let lastError: ApiErrorResponse | undefined;
+    let attempt = 0;
 
-      const response = await fetch(url, {
-        headers: { ...this.baseHeaders, ...options.headers },
-        signal: controller.signal,
-        ...options,
-      });
+    while (attempt <= maxRetries) {
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), this.config.timeout);
 
-      clearTimeout(timeoutId);
+        const response = await fetch(url, {
+          headers: { ...this.baseHeaders, ...options.headers },
+          signal: controller.signal,
+          ...options,
+        });
 
-      let data: T;
-      const contentType = response.headers.get('content-type');
+        clearTimeout(timeoutId);
 
-      if (contentType && contentType.includes('application/json')) {
-        data = await response.json() as T;
-      } else {
-        data = await response.text() as unknown as T;
-      }
+        let data: T;
+        const contentType = response.headers.get('content-type');
 
-      if (!response.ok) {
-        const error: ApiError = {
-          message: (data as Record<string, unknown>)?.error as string || `HTTP ${response.status}: ${response.statusText}`,
-          statusCode: response.status,
-          code: 'API_ERROR'
-        };
+        if (contentType && contentType.includes('application/json')) {
+          data = await response.json() as T;
+        } else {
+          data = await response.text() as unknown as T;
+        }
 
-        // Call onError hook if provided
+        if (!response.ok) {
+          const error = createErrorFromResponse(response.status, response.statusText, data);
+
+          // Only retry on retryable errors (5xx, 429, 408)
+          if (isRetryableError(response.status) && attempt < maxRetries) {
+            lastError = error;
+            const delay = calculateRetryDelay(attempt, baseDelay, backoff);
+            await sleep(delay);
+            attempt++;
+            continue;
+          }
+
+          // Call onError hook if provided
+          if (this.config.onError) {
+            try {
+              this.config.onError(error);
+            } catch (hookError) {
+              console.warn('onError hook error:', hookError);
+            }
+          }
+
+          return { error, meta: { duration: Date.now() - startTime, retries: attempt } };
+        }
+
+        // Call onResponse hook if provided
+        if (this.config.onResponse) {
+          try {
+            const duration = Date.now() - startTime;
+            this.config.onResponse(endpoint, duration);
+          } catch (error) {
+            console.warn('onResponse hook error:', error);
+          }
+        }
+
+        return { data, meta: { duration: Date.now() - startTime, retries: attempt } };
+
+      } catch (error) {
+        if (error instanceof Error && error.name === 'AbortError') {
+          const timeoutError = createErrorResponse('Request timeout', 'TIMEOUT_ERROR', 408);
+
+          // Retry on timeout
+          if (attempt < maxRetries) {
+            lastError = timeoutError;
+            const delay = calculateRetryDelay(attempt, baseDelay, backoff);
+            await sleep(delay);
+            attempt++;
+            continue;
+          }
+
+          if (this.config.onError) {
+            try {
+              this.config.onError(timeoutError);
+            } catch (hookError) {
+              console.warn('onError hook error:', hookError);
+            }
+          }
+
+          return { error: timeoutError, meta: { duration: Date.now() - startTime, retries: attempt } };
+        }
+
+        const networkError = createErrorResponse(
+          error instanceof Error ? error.message : 'Network error',
+          'NETWORK_ERROR'
+        );
+
+        // Retry on network errors
+        if (attempt < maxRetries) {
+          lastError = networkError;
+          const delay = calculateRetryDelay(attempt, baseDelay, backoff);
+          await sleep(delay);
+          attempt++;
+          continue;
+        }
+
         if (this.config.onError) {
           try {
-            this.config.onError(error);
+            this.config.onError(networkError);
           } catch (hookError) {
             console.warn('onError hook error:', hookError);
           }
         }
 
-        return { error: error.message };
+        return { error: networkError, meta: { duration: Date.now() - startTime, retries: attempt } };
       }
+    }
 
-      // Call onResponse hook if provided
-      if (this.config.onResponse) {
-        try {
-          const duration = Date.now() - startTime;
-          this.config.onResponse(endpoint, duration);
-        } catch (error) {
-          console.warn('onResponse hook error:', error);
-        }
-      }
+    // Should never reach here, but handle it gracefully
+    return {
+      error: lastError ?? createErrorResponse('Max retries exceeded', 'API_ERROR'),
+      meta: { duration: Date.now() - startTime, retries: attempt }
+    };
+  }
 
-      return { data };
-    } catch (error) {
-      if (error instanceof Error && error.name === 'AbortError') {
-        const timeoutError: ApiError = {
-          message: 'Request timeout',
-          code: 'TIMEOUT_ERROR',
-          statusCode: 408
-        };
-
-        if (this.config.onError) {
-          try {
-            this.config.onError(timeoutError);
-          } catch (hookError) {
-            console.warn('onError hook error:', hookError);
-          }
-        }
-
-        return { error: 'Request timeout' };
-      }
-
-      const networkError: ApiError = {
-        message: error instanceof Error ? error.message : 'Network error',
-        code: 'NETWORK_ERROR'
-      };
-
-      if (this.config.onError) {
-        try {
-          this.config.onError(networkError);
-        } catch (hookError) {
-          console.warn('onError hook error:', hookError);
-        }
-      }
+  /**
+   * Validate input using Zod schema and return validation error if invalid
+   */
+  private validateInput<T>(
+    schema: { safeParse: (data: unknown) => { success: boolean; error?: unknown; data?: T } },
+    data: unknown
+  ): ApiResponse<T> | null {
+    const result = schema.safeParse(data);
+    if (!result.success) {
+      // Extract error details from Zod error
+      const zodError = result.error as { issues?: Array<{ path: PropertyKey[]; message: string }> } | undefined;
+      const details = zodError?.issues?.map(issue => ({
+        field: issue.path.map(String).join('.'),
+        message: issue.message
+      })) ?? [];
 
       return {
-        error: error instanceof Error ? error.message : 'Network error'
+        error: createErrorResponse(
+          'Validation failed',
+          'VALIDATION_ERROR',
+          400,
+          details
+        )
       };
     }
+    return null;
   }
 
   /**
@@ -274,9 +374,15 @@ export class CoreMemoryClient {
   // Memory Operations
 
   /**
-   * Create a new memory
+   * Create a new memory with validation
    */
   async createMemory(memory: CreateMemoryRequest): Promise<ApiResponse<MemoryEntry>> {
+    // Validate input before making request
+    const validationError = this.validateInput(createMemorySchema, memory);
+    if (validationError) {
+      return { error: validationError.error };
+    }
+
     const enrichedMemory = this.enrichWithOrgContext(memory as Record<string, unknown>);
     return this.request<MemoryEntry>('/memory', {
       method: 'POST',
@@ -292,9 +398,15 @@ export class CoreMemoryClient {
   }
 
   /**
-   * Update an existing memory
+   * Update an existing memory with validation
    */
   async updateMemory(id: string, updates: UpdateMemoryRequest): Promise<ApiResponse<MemoryEntry>> {
+    // Validate input before making request
+    const validationError = this.validateInput(updateMemorySchema, updates);
+    if (validationError) {
+      return { error: validationError.error };
+    }
+
     return this.request<MemoryEntry>(`/memory/${encodeURIComponent(id)}`, {
       method: 'PUT',
       body: JSON.stringify(updates)
@@ -343,13 +455,20 @@ export class CoreMemoryClient {
   }
 
   /**
-   * Search memories using semantic search
+   * Search memories using semantic search with validation
    */
   async searchMemories(request: SearchMemoryRequest): Promise<ApiResponse<{
     results: MemorySearchResult[];
     total_results: number;
     search_time_ms: number;
   }>> {
+    // Validate input before making request
+    const validationError = this.validateInput(searchMemorySchema, request);
+    if (validationError) {
+      // Return error response (data will be undefined, only error is set)
+      return { error: validationError.error };
+    }
+
     const enrichedRequest = this.enrichWithOrgContext(request as Record<string, unknown>);
     return this.request('/memory/search', {
       method: 'POST',
@@ -374,9 +493,15 @@ export class CoreMemoryClient {
   // Topic Operations
 
   /**
-   * Create a new topic
+   * Create a new topic with validation
    */
   async createTopic(topic: CreateTopicRequest): Promise<ApiResponse<MemoryTopic>> {
+    // Validate input before making request
+    const validationError = this.validateInput(createTopicSchema, topic);
+    if (validationError) {
+      return { error: validationError.error };
+    }
+
     const enrichedTopic = this.enrichWithOrgContext(topic as Record<string, unknown>);
     return this.request<MemoryTopic>('/topics', {
       method: 'POST',
@@ -422,6 +547,217 @@ export class CoreMemoryClient {
    */
   async getMemoryStats(): Promise<ApiResponse<UserMemoryStats>> {
     return this.request<UserMemoryStats>('/memory/stats');
+  }
+
+  // ========================================
+  // Intelligence Features (v2.0)
+  // ========================================
+
+  /**
+   * Create a memory with preprocessing options (chunking, intelligence extraction)
+   *
+   * @example
+   * ```typescript
+   * const result = await client.createMemoryWithPreprocessing({
+   *   title: 'Auth System Docs',
+   *   content: 'Long content...',
+   *   memory_type: 'knowledge',
+   *   preprocessing: {
+   *     chunking: { strategy: 'semantic', maxChunkSize: 1000 },
+   *     extractMetadata: true
+   *   }
+   * });
+   * ```
+   */
+  async createMemoryWithPreprocessing(
+    memory: CreateMemoryWithPreprocessingRequest
+  ): Promise<ApiResponse<MemoryEntry>> {
+    // Validate base memory fields
+    const validationError = this.validateInput(createMemorySchema, memory);
+    if (validationError) {
+      return { error: validationError.error };
+    }
+
+    const enrichedMemory = this.enrichWithOrgContext(memory as unknown as Record<string, unknown>);
+    return this.request<MemoryEntry>('/memory', {
+      method: 'POST',
+      body: JSON.stringify(enrichedMemory)
+    });
+  }
+
+  /**
+   * Update a memory with re-chunking and embedding regeneration
+   *
+   * @example
+   * ```typescript
+   * const result = await client.updateMemoryWithPreprocessing('mem_123', {
+   *   content: 'Updated content...',
+   *   rechunk: true,
+   *   regenerate_embedding: true
+   * });
+   * ```
+   */
+  async updateMemoryWithPreprocessing(
+    id: string,
+    updates: UpdateMemoryWithPreprocessingRequest
+  ): Promise<ApiResponse<MemoryEntry>> {
+    const validationError = this.validateInput(updateMemorySchema, updates);
+    if (validationError) {
+      return { error: validationError.error };
+    }
+
+    return this.request<MemoryEntry>(`/memory/${encodeURIComponent(id)}`, {
+      method: 'PUT',
+      body: JSON.stringify(updates)
+    });
+  }
+
+  /**
+   * Enhanced semantic search with hybrid mode (vector + text)
+   *
+   * @example
+   * ```typescript
+   * const result = await client.enhancedSearch({
+   *   query: 'authentication flow',
+   *   search_mode: 'hybrid',
+   *   filters: { tags: ['auth'], project_id: 'proj_123' },
+   *   include_chunks: true
+   * });
+   * ```
+   */
+  async enhancedSearch(
+    request: EnhancedSearchRequest
+  ): Promise<ApiResponse<EnhancedSearchResponse>> {
+    const validationError = this.validateInput(enhancedSearchSchema, request);
+    if (validationError) {
+      return { error: validationError.error };
+    }
+
+    const enrichedRequest = this.enrichWithOrgContext(request as unknown as Record<string, unknown>);
+    return this.request<EnhancedSearchResponse>('/memory/search', {
+      method: 'POST',
+      body: JSON.stringify(enrichedRequest)
+    });
+  }
+
+  // ========================================
+  // Analytics Operations
+  // ========================================
+
+  /**
+   * Get search analytics data
+   *
+   * @example
+   * ```typescript
+   * const analytics = await client.getSearchAnalytics({
+   *   from: '2025-01-01',
+   *   to: '2025-12-31',
+   *   group_by: 'day'
+   * });
+   * ```
+   */
+  async getSearchAnalytics(
+    options: AnalyticsDateRange = {}
+  ): Promise<ApiResponse<SearchAnalytics>> {
+    const validationError = this.validateInput(analyticsDateRangeSchema, options);
+    if (validationError) {
+      return { error: validationError.error };
+    }
+
+    const params = new URLSearchParams();
+    if (options.from) params.append('from', options.from);
+    if (options.to) params.append('to', options.to);
+    if (options.group_by) params.append('group_by', options.group_by);
+
+    const queryString = params.toString();
+    const endpoint = queryString ? `/analytics/search?${queryString}` : '/analytics/search';
+
+    return this.request<SearchAnalytics>(endpoint);
+  }
+
+  /**
+   * Get memory access patterns
+   *
+   * @example
+   * ```typescript
+   * const patterns = await client.getAccessPatterns({
+   *   from: '2025-01-01',
+   *   to: '2025-12-31'
+   * });
+   * console.log(patterns.data?.most_accessed);
+   * ```
+   */
+  async getAccessPatterns(
+    options: AnalyticsDateRange = {}
+  ): Promise<ApiResponse<AccessPatterns>> {
+    const params = new URLSearchParams();
+    if (options.from) params.append('from', options.from);
+    if (options.to) params.append('to', options.to);
+
+    const queryString = params.toString();
+    const endpoint = queryString ? `/analytics/access?${queryString}` : '/analytics/access';
+
+    return this.request<AccessPatterns>(endpoint);
+  }
+
+  /**
+   * Get extended memory statistics with storage and activity metrics
+   *
+   * @example
+   * ```typescript
+   * const stats = await client.getExtendedStats();
+   * console.log(`Total chunks: ${stats.data?.storage.total_chunks}`);
+   * console.log(`Created today: ${stats.data?.activity.created_today}`);
+   * ```
+   */
+  async getExtendedStats(): Promise<ApiResponse<ExtendedMemoryStats>> {
+    return this.request<ExtendedMemoryStats>('/analytics/stats');
+  }
+
+  /**
+   * Get topic with its memories
+   *
+   * @example
+   * ```typescript
+   * const topic = await client.getTopicWithMemories('topic_123');
+   * console.log(topic.data?.memories);
+   * ```
+   */
+  async getTopicWithMemories(
+    topicId: string,
+    options: { limit?: number; offset?: number } = {}
+  ): Promise<ApiResponse<{
+    topic: MemoryTopic;
+    memories: MemoryEntry[];
+    total_memories: number;
+    subtopics: Array<{ id: string; name: string; memory_count: number }>;
+  }>> {
+    const params = new URLSearchParams();
+    if (options.limit) params.append('limit', String(options.limit));
+    if (options.offset) params.append('offset', String(options.offset));
+
+    const queryString = params.toString();
+    const endpoint = queryString
+      ? `/topics/${encodeURIComponent(topicId)}/memories?${queryString}`
+      : `/topics/${encodeURIComponent(topicId)}/memories`;
+
+    return this.request(endpoint);
+  }
+
+  /**
+   * Get topics in hierarchical structure
+   *
+   * @example
+   * ```typescript
+   * const topics = await client.getTopicsHierarchy();
+   * // Returns nested topic tree with children
+   * ```
+   */
+  async getTopicsHierarchy(): Promise<ApiResponse<Array<MemoryTopic & {
+    children: MemoryTopic[];
+    memory_count: number;
+  }>>> {
+    return this.request('/topics?include_hierarchy=true');
   }
 
   // Utility Methods

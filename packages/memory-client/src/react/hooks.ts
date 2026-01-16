@@ -13,7 +13,7 @@ import type {
   SearchMemoryRequest,
   MemorySearchResult
 } from '../core/types';
-import type { ApiError } from '../core/client';
+import type { ApiErrorResponse } from '../core/errors';
 
 /**
  * Hook to access the Memory Client instance
@@ -36,7 +36,7 @@ export function useMemoryClient() {
 export interface UseMemoriesResult {
   memories: MemoryEntry[];
   loading: boolean;
-  error: ApiError | null;
+  error: ApiErrorResponse | null;
   refresh: () => Promise<void>;
 }
 
@@ -77,7 +77,7 @@ export function useMemories(options?: {
   const client = useMemoryClient();
   const [memories, setMemories] = useState<MemoryEntry[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<ApiError | null>(null);
+  const [error, setError] = useState<ApiErrorResponse | null>(null);
 
   const loadMemories = useCallback(async () => {
     setLoading(true);
@@ -86,10 +86,7 @@ export function useMemories(options?: {
     const result = await client.listMemories(options);
 
     if (result.error) {
-      setError({
-        message: result.error,
-        code: 'API_ERROR'
-      });
+      setError(result.error);
       setMemories([]);
     } else if (result.data) {
       setMemories(result.data.data);
@@ -116,7 +113,7 @@ export function useMemories(options?: {
 export interface UseMemoryResult {
   memory: MemoryEntry | null;
   loading: boolean;
-  error: ApiError | null;
+  error: ApiErrorResponse | null;
   refresh: () => Promise<void>;
   update: (updates: UpdateMemoryRequest) => Promise<void>;
   deleteMemory: () => Promise<void>;
@@ -149,7 +146,7 @@ export function useMemory(id: string): UseMemoryResult {
   const client = useMemoryClient();
   const [memory, setMemory] = useState<MemoryEntry | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<ApiError | null>(null);
+  const [error, setError] = useState<ApiErrorResponse | null>(null);
 
   const loadMemory = useCallback(async () => {
     if (!id) {
@@ -164,10 +161,7 @@ export function useMemory(id: string): UseMemoryResult {
     const result = await client.getMemory(id);
 
     if (result.error) {
-      setError({
-        message: result.error,
-        code: 'API_ERROR'
-      });
+      setError(result.error);
       setMemory(null);
     } else if (result.data) {
       setMemory(result.data);
@@ -186,10 +180,7 @@ export function useMemory(id: string): UseMemoryResult {
     const result = await client.updateMemory(id, updates);
 
     if (result.error) {
-      setError({
-        message: result.error,
-        code: 'API_ERROR'
-      });
+      setError(result.error);
     } else if (result.data) {
       setMemory(result.data);
     }
@@ -201,10 +192,7 @@ export function useMemory(id: string): UseMemoryResult {
     const result = await client.deleteMemory(id);
 
     if (result.error) {
-      setError({
-        message: result.error,
-        code: 'API_ERROR'
-      });
+      setError(result.error);
     } else {
       setMemory(null);
     }
@@ -226,7 +214,7 @@ export function useMemory(id: string): UseMemoryResult {
 export interface UseCreateMemoryResult {
   createMemory: (memory: CreateMemoryRequest) => Promise<MemoryEntry | null>;
   loading: boolean;
-  error: ApiError | null;
+  error: ApiErrorResponse | null;
 }
 
 /**
@@ -263,7 +251,7 @@ export interface UseCreateMemoryResult {
 export function useCreateMemory(): UseCreateMemoryResult {
   const client = useMemoryClient();
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<ApiError | null>(null);
+  const [error, setError] = useState<ApiErrorResponse | null>(null);
 
   const createMemory = useCallback(async (memory: CreateMemoryRequest): Promise<MemoryEntry | null> => {
     setLoading(true);
@@ -272,10 +260,7 @@ export function useCreateMemory(): UseCreateMemoryResult {
     const result = await client.createMemory(memory);
 
     if (result.error) {
-      setError({
-        message: result.error,
-        code: 'API_ERROR'
-      });
+      setError(result.error);
       setLoading(false);
       return null;
     }
@@ -297,7 +282,7 @@ export function useCreateMemory(): UseCreateMemoryResult {
 export interface UseSearchMemoriesResult {
   results: MemorySearchResult[];
   loading: boolean;
-  error: ApiError | null;
+  error: ApiErrorResponse | null;
   search: (query: string, options?: Omit<SearchMemoryRequest, 'query'>) => Promise<void>;
   totalResults: number;
   searchTime: number;
@@ -342,10 +327,10 @@ export function useSearchMemories(debounceMs: number = 300): UseSearchMemoriesRe
   const client = useMemoryClient();
   const [results, setResults] = useState<MemorySearchResult[]>([]);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<ApiError | null>(null);
+  const [error, setError] = useState<ApiErrorResponse | null>(null);
   const [totalResults, setTotalResults] = useState(0);
   const [searchTime, setSearchTime] = useState(0);
-  const debounceTimer = useRef<NodeJS.Timeout | null>(null);
+  const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const search = useCallback(async (query: string, options?: Omit<SearchMemoryRequest, 'query'>) => {
     // Clear existing timer
@@ -367,10 +352,7 @@ export function useSearchMemories(debounceMs: number = 300): UseSearchMemoriesRe
       });
 
       if (result.error) {
-        setError({
-          message: result.error,
-          code: 'API_ERROR'
-        });
+        setError(result.error);
         setResults([]);
         setTotalResults(0);
         setSearchTime(0);
