@@ -92,7 +92,7 @@ router.get('/', alignedAuthMiddleware, asyncHandler(async (req: Request, res: Re
 /**
  * Broadcast message to all connected SSE clients
  */
-export function broadcastSSE(message: any, targetUserId?: string) {
+export function broadcastSSE(message: Record<string, unknown>, targetUserId?: string) {
   const data = `data: ${JSON.stringify({
     ...message,
     timestamp: new Date().toISOString()
@@ -119,7 +119,7 @@ export function broadcastSSE(message: any, targetUserId?: string) {
 /**
  * Send memory operation updates via SSE
  */
-export function notifyMemoryUpdate(userId: string, operation: string, memoryId: string, data?: any) {
+export function notifyMemoryUpdate(userId: string, operation: string, memoryId: string, data?: unknown) {
   broadcastSSE({
     type: 'memory_update',
     operation,
@@ -131,7 +131,7 @@ export function notifyMemoryUpdate(userId: string, operation: string, memoryId: 
 /**
  * Send API key updates via SSE
  */
-export function notifyApiKeyUpdate(userId: string, operation: string, keyId: string, data?: any) {
+export function notifyApiKeyUpdate(userId: string, operation: string, keyId: string, data?: unknown) {
   broadcastSSE({
     type: 'api_key_update',
     operation,

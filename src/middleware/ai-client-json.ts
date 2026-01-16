@@ -102,13 +102,12 @@ export function detectAIClient(req: AIClientRequest, res: Response, next: NextFu
 export function enforceJSONForAIClients(req: AIClientRequest, res: Response, next: NextFunction): void {
   if (req.isAIClient) {
     // Only override res.render for specific paths to prevent HTML responses
-    const originalRender = res.render;
     if (
       req.path === '/' ||
       req.path === '/dashboard' ||
       req.path.startsWith('/dashboard/')
     ) {
-      res.render = function(view: string, options?: any, callback?: any) {
+      res.render = function(_view: string, _options?: object, _callback?: (err: Error, html: string) => void) {
         // Instead of rendering HTML, return JSON error
         res.status(406).json({
           error: 'Not Acceptable',
@@ -122,8 +121,23 @@ export function enforceJSONForAIClients(req: AIClientRequest, res: Response, nex
     }
     
     // Override res.sendFile for static files
-    const originalSendFile = res.sendFile;
-    res.sendFile = function(path: string, options?: any, callback?: any) {
+    type SendFileOptions = Record<string, unknown>;
+    type SendFileCallback = (err?: Error) => void;
+    type SendFileFn = {
+      (path: string, fn?: SendFileCallback): void;
+      (path: string, options: SendFileOptions, fn?: SendFileCallback): void;
+    };
+
+    const originalSendFile = res.sendFile.bind(res) as unknown as SendFileFn;
+
+    const sendFileOverride: SendFileFn = function(
+      path: string,
+      optionsOrFn?: SendFileOptions | SendFileCallback,
+      fn?: SendFileCallback
+    ): void {
+      const callback: SendFileCallback | undefined = typeof optionsOrFn === 'function' ? optionsOrFn : fn;
+      const options: SendFileOptions | undefined = typeof optionsOrFn === 'function' ? undefined : optionsOrFn;
+
       // For AI clients requesting non-API paths, redirect to API
       if (req.path === '/' || req.path === '/dashboard' || req.path.startsWith('/dashboard/')) {
         res.status(200).json({
@@ -147,7 +161,7 @@ export function enforceJSONForAIClients(req: AIClientRequest, res: Response, nex
       } else {
         // For other files, call original but add JSON error handling
         if (callback) {
-          originalSendFile.call(this, path, options, (err: any) => {
+          const wrappedCallback: SendFileCallback = (err?: Error) => {
             if (err) {
               res.status(404).json({
                 error: 'File Not Found',
@@ -159,12 +173,24 @@ export function enforceJSONForAIClients(req: AIClientRequest, res: Response, nex
             } else {
               callback(err);
             }
-          });
+          };
+
+          if (options) {
+            originalSendFile(path, options, wrappedCallback);
+          } else {
+            originalSendFile(path, wrappedCallback);
+          }
         } else {
-          originalSendFile.call(this, path, options);
+          if (options) {
+            originalSendFile(path, options);
+          } else {
+            originalSendFile(path);
+          }
         }
       }
     };
+
+    res.sendFile = sendFileOverride as unknown as Response['sendFile'];
     
     // Set response headers for AI clients
     res.setHeader('X-API-Client-Detected', req.clientType || 'unknown');
@@ -181,11 +207,12 @@ export function enforceJSONForAIClients(req: AIClientRequest, res: Response, nex
 export function standardizeJSONResponse(req: AIClientRequest, res: Response, next: NextFunction): void {
   // Override res.json to add standard metadata
   const originalJson = res.json;
-  res.json = function(body: any) {
+  res.json = function(body: unknown) {
     // Add standard metadata for AI clients
-    if (req.isAIClient && typeof body === 'object' && body !== null && !body.meta) {
+    if (req.isAIClient && typeof body === 'object' && body !== null && !('meta' in (body as Record<string, unknown>))) {
+      const bodyObj = body as Record<string, unknown>;
       const standardBody = {
-        ...body,
+        ...bodyObj,
         meta: {
           timestamp: new Date().toISOString(),
           request_id: req.headers['x-request-id'] || 'unknown',
