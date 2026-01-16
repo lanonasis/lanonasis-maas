@@ -13,7 +13,7 @@ import type {
   SearchMemoryRequest,
   MemorySearchResult
 } from '../core/types';
-import type { ApiError } from '../core/client';
+import type { ApiErrorResponse } from '../core/errors';
 
 /**
  * Composable to list memories with optional filtering
@@ -55,7 +55,7 @@ export function useMemories(options?: {
   const client = useMemoryClient();
   const memories = ref<MemoryEntry[]>([]);
   const loading = ref(true);
-  const error = ref<ApiError | null>(null);
+  const error = ref<ApiErrorResponse | null>(null);
 
   async function loadMemories() {
     loading.value = true;
@@ -64,10 +64,7 @@ export function useMemories(options?: {
     const result = await client.listMemories(options);
 
     if (result.error) {
-      error.value = {
-        message: result.error,
-        code: 'API_ERROR'
-      };
+      error.value = result.error;
       memories.value = [];
     } else if (result.data) {
       memories.value = result.data.data;
@@ -114,7 +111,7 @@ export function useMemory(id: Ref<string> | (() => string) | string) {
   const client = useMemoryClient();
   const memory = ref<MemoryEntry | null>(null);
   const loading = ref(true);
-  const error = ref<ApiError | null>(null);
+  const error = ref<ApiErrorResponse | null>(null);
 
   const memoryId = computed(() => {
     if (typeof id === 'function') {
@@ -139,10 +136,7 @@ export function useMemory(id: Ref<string> | (() => string) | string) {
     const result = await client.getMemory(memoryId.value);
 
     if (result.error) {
-      error.value = {
-        message: result.error,
-        code: 'API_ERROR'
-      };
+      error.value = result.error;
       memory.value = null;
     } else if (result.data) {
       memory.value = result.data;
@@ -157,10 +151,7 @@ export function useMemory(id: Ref<string> | (() => string) | string) {
     const result = await client.updateMemory(memoryId.value, updates);
 
     if (result.error) {
-      error.value = {
-        message: result.error,
-        code: 'API_ERROR'
-      };
+      error.value = result.error;
     } else if (result.data) {
       memory.value = result.data;
     }
@@ -172,10 +163,7 @@ export function useMemory(id: Ref<string> | (() => string) | string) {
     const result = await client.deleteMemory(memoryId.value);
 
     if (result.error) {
-      error.value = {
-        message: result.error,
-        code: 'API_ERROR'
-      };
+      error.value = result.error;
     } else {
       memory.value = null;
     }
@@ -235,7 +223,7 @@ export function useMemory(id: Ref<string> | (() => string) | string) {
 export function useCreateMemory() {
   const client = useMemoryClient();
   const loading = ref(false);
-  const error = ref<ApiError | null>(null);
+  const error = ref<ApiErrorResponse | null>(null);
 
   async function createMemory(memory: CreateMemoryRequest): Promise<MemoryEntry | null> {
     loading.value = true;
@@ -244,10 +232,7 @@ export function useCreateMemory() {
     const result = await client.createMemory(memory);
 
     if (result.error) {
-      error.value = {
-        message: result.error,
-        code: 'API_ERROR'
-      };
+      error.value = result.error;
       loading.value = false;
       return null;
     }
@@ -302,7 +287,7 @@ export function useSearchMemories(debounceMs: number = 300) {
   const client = useMemoryClient();
   const results = ref<MemorySearchResult[]>([]);
   const loading = ref(false);
-  const error = ref<ApiError | null>(null);
+  const error = ref<ApiErrorResponse | null>(null);
   const totalResults = ref(0);
   const searchTime = ref(0);
   let debounceTimer: ReturnType<typeof setTimeout> | null = null;
@@ -327,10 +312,7 @@ export function useSearchMemories(debounceMs: number = 300) {
       });
 
       if (result.error) {
-        error.value = {
-          message: result.error,
-          code: 'API_ERROR'
-        };
+        error.value = result.error;
         results.value = [];
         totalResults.value = 0;
         searchTime.value = 0;
