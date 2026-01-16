@@ -157,7 +157,7 @@ export class MemoryConnector {
 }
 
 // Factory function for orchestrator integration
-export function memoryConnector(action: string, args: any) {
+export function memoryConnector(action: string, args: unknown) {
   const connector = new MemoryConnector();
 
   switch (action) {
@@ -168,17 +168,24 @@ export function memoryConnector(action: string, args: any) {
     case 'list':
       return connector.list(args as MemoryListArgs);
     case 'get':
-      return connector.get(args.id);
+      return connector.get((args as Record<string, unknown>).id as string);
     case 'update':
-      return connector.update(args.id, args.updates);
+      return connector.update(
+        (args as Record<string, unknown>).id as string,
+        (args as Record<string, unknown>).updates as Partial<MemoryCreateArgs>
+      );
     case 'delete':
-      return connector.delete(args.id);
+      return connector.delete((args as Record<string, unknown>).id as string);
     case 'stats':
       return connector.getStats();
     case 'list-topics':
       return connector.getTopics();
     case 'create-topic':
-      return connector.createTopic(args.name, args.description, args.parent_id);
+      return connector.createTopic(
+        (args as Record<string, unknown>).name as string,
+        (args as Record<string, unknown>).description as string | undefined,
+        (args as Record<string, unknown>).parent_id as string | undefined
+      );
     default:
       throw new Error(`Unknown memory action: ${action}`);
   }

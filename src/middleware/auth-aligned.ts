@@ -32,6 +32,13 @@ export { UnifiedUser, AuthenticatedUser };
 // Type alias for backward compatibility
 export type AlignedUser = UnifiedUser;
 
+function toRecord(value: unknown): Record<string, unknown> {
+  if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+    return value as Record<string, unknown>;
+  }
+  return {};
+}
+
 // ============================================
 // CORE ALIGNMENT: Request ID Middleware  
 // ============================================
@@ -191,23 +198,36 @@ export const alignedAuthMiddleware = async (
           return;
         }
 
-        let decoded: any;
+        let decoded: unknown;
         try {
           // Verify JWT token
           decoded = jwt.verify(token, jwtSecret);
-          logger.debug(`[${req.id}] JWT verified successfully`, { sub: decoded.sub });
-        } catch (err: any) {
-          logger.warn(`[${req.id}] JWT verification failed: ${err.message}`);
+          if (typeof decoded === 'object' && decoded !== null && 'sub' in decoded) {
+            logger.debug(`[${req.id}] JWT verified successfully`, { sub: (decoded as Record<string, unknown>).sub });
+          }
+        } catch (err: unknown) {
+          const errObj = typeof err === 'object' && err !== null ? (err as Record<string, unknown>) : {};
+          const errName = typeof errObj.name === 'string' ? errObj.name : undefined;
+          const errMessage = err instanceof Error ? err.message : 'JWT verification failed';
+          logger.warn(`[${req.id}] JWT verification failed: ${errMessage}`);
           res.status(401).json(createErrorEnvelope(req,
-            err.name === 'TokenExpiredError' ? 'JWT token has expired' : 'Invalid or malformed JWT token',
+            errName === 'TokenExpiredError' ? 'JWT token has expired' : 'Invalid or malformed JWT token',
             'AuthError',
-            err.name === 'TokenExpiredError' ? 'TOKEN_EXPIRED' : 'INVALID_JWT'
+            errName === 'TokenExpiredError' ? 'TOKEN_EXPIRED' : 'INVALID_JWT'
           ));
           return;
         }
 
         // Extract user info from JWT payload
-        const userId = decoded.sub || decoded.userId || decoded.user_id;
+        const decodedObj = typeof decoded === 'object' && decoded !== null ? (decoded as Record<string, unknown>) : {};
+        const userId =
+          typeof decodedObj.sub === 'string'
+            ? decodedObj.sub
+            : typeof decodedObj.userId === 'string'
+              ? decodedObj.userId
+              : typeof decodedObj.user_id === 'string'
+                ? decodedObj.user_id
+                : undefined;
         if (!userId) {
           logger.error(`[${req.id}] JWT missing user identifier`);
           res.status(401).json(createErrorEnvelope(req,
@@ -227,21 +247,25 @@ export const alignedAuthMiddleware = async (
           .single();
 
         // Resolve organization ID intelligently (handles missing/invalid org IDs)
-        const rawOrgId = decoded.organization_id || decoded.organizationId || decoded.org_id || userData?.organization_id;
+        const rawOrgId =
+          (typeof decodedObj.organization_id === 'string' ? decodedObj.organization_id : undefined) ||
+          (typeof decodedObj.organizationId === 'string' ? decodedObj.organizationId : undefined) ||
+          (typeof decodedObj.org_id === 'string' ? decodedObj.org_id : undefined) ||
+          userData?.organization_id;
         const orgResolution = await resolveOrganizationId(rawOrgId, userId);
 
         const alignedUser: UnifiedUser = {
           // JWTPayload properties (from JWT claims)
           userId: userId,
           organizationId: orgResolution.organizationId, // Resolved valid UUID
-          role: decoded.role || 'user',
-          plan: decoded.plan || 'free', // Plan from JWT claims, default to free
+          role: (typeof decodedObj.role === 'string' ? decodedObj.role : undefined) || 'user',
+          plan: (typeof decodedObj.plan === 'string' ? decodedObj.plan : undefined) || 'free', // Plan from JWT claims, default to free
           // Additional UnifiedUser properties
           id: userId,
-          email: decoded.email || '',
-          user_metadata: decoded.user_metadata || {},
-          app_metadata: decoded.app_metadata || {},
-          project_scope: decoded.project_scope
+          email: (typeof decodedObj.email === 'string' ? decodedObj.email : undefined) || '',
+          user_metadata: toRecord(decodedObj.user_metadata),
+          app_metadata: toRecord(decodedObj.app_metadata),
+          project_scope: (typeof decodedObj.project_scope === 'string' ? decodedObj.project_scope : undefined)
         };
 
         req.user = {
@@ -331,7 +355,7 @@ export async function authenticateApiKey(apiKey: string): Promise<AlignedUser | 
     const plan = 'free';
 
     // Resolve organization ID intelligently (handles missing/invalid org IDs)
-    const orgResolution = await resolveOrganizationId(undefined, keyRecord.user_id);
+    const orgResolution = await resolveOrganizationId(userData?.organization_id, keyRecord.user_id);
 
     const unifiedUser: UnifiedUser = {
       // JWTPayload properties

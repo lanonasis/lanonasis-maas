@@ -148,7 +148,7 @@ export class UIConnector {
 }
 
 // Factory function for orchestrator integration
-export function uiConnector(action: string, args: any = {}) {
+export function uiConnector(action: string, args: unknown = {}) {
   const connector = new UIConnector();
 
   switch (action) {
@@ -157,7 +157,7 @@ export function uiConnector(action: string, args: any = {}) {
     case 'show-memory':
       return connector.showMemory(args as ShowMemoryArgs);
     case 'open-visualizer':
-      return connector.openVisualizer(args);
+      return connector.openVisualizer(args as { memory_id?: string; topic_id?: string });
     case 'open-uploader':
       return connector.openUploader(args as OpenUploaderArgs);
     case 'show-stats':
@@ -167,7 +167,7 @@ export function uiConnector(action: string, args: any = {}) {
     case 'open-settings':
       return connector.openSettings();
     case 'show-help':
-      return connector.showHelp(args);
+      return connector.showHelp(args as { topic?: string });
     default:
       throw new Error(`Unknown UI action: ${action}`);
   }
