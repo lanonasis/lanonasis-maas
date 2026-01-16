@@ -60,11 +60,32 @@ export class MemoryCacheBridge {
             await this.cache.updateFromApi(memories);
             return memories;
         } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            if (this.isAuthError(errorMessage)) {
+                this.output.appendLine('[MemoryCacheBridge] Auth error detected. Refreshing client and retrying...');
+                try {
+                    await this.memoryService.refreshClient();
+                    const memories = await this.memoryService.listMemories(limit);
+                    await this.cache.updateFromApi(memories);
+                    return memories;
+                } catch (retryError) {
+                    this.output.appendLine(`[MemoryCacheBridge] Retry after auth refresh failed: ${retryError}`);
+                }
+            }
             this.output.appendLine(`[MemoryCacheBridge] Refresh failed, using cache: ${error}`);
             return fallback.length > 0 ? fallback : this.cache.getMemories();
         } finally {
             this.cache.setRefreshing(false);
         }
+    }
+
+    private isAuthError(message: string): boolean {
+        const normalized = message.toLowerCase();
+        return normalized.includes('authentication required')
+            || normalized.includes('unauthorized')
+            || normalized.includes('401')
+            || normalized.includes('auth token')
+            || normalized.includes('bearer');
     }
 
     private stripSearchScores(results: MemorySearchResult[]): MemoryEntry[] {
