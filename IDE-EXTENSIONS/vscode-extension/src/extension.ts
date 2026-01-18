@@ -10,8 +10,8 @@ import type { IMemoryService } from './services/IMemoryService';
 import { MemoryCache } from './services/MemoryCache';
 import { ApiKeyService } from './services/ApiKeyService';
 import type { ApiKey, Project, CreateApiKeyRequest } from './services/ApiKeyService';
-import { SecureApiKeyService } from './services/SecureApiKeyService';
-import { MemoryType, MemoryEntry, MemorySearchResult } from './types/memory-aligned';
+import { SecureApiKeyService, createVSCodeAdapter } from '@lanonasis/ide-extension-core';
+import { MemoryType, MemoryEntry, MemorySearchResult } from '@lanonasis/memory-client';
 // Unused error recovery utils - available for future use
 // import { withRetry, showErrorWithRecovery, withProgressAndRetry } from './utils/errorRecovery';
 import { runDiagnostics, formatDiagnosticResults } from './utils/diagnostics';
@@ -42,7 +42,19 @@ export async function activate(context: vscode.ExtensionContext) {
         }
     }
 
-    const secureApiKeyService = new SecureApiKeyService(context, outputChannel);
+    // Create VSCode adapter for shared core
+    const adapter = createVSCodeAdapter(
+        { context, outputChannel, vscode },
+        {
+            ideName: 'VSCode',
+            extensionName: 'lanonasis-memory',
+            extensionDisplayName: 'LanOnasis Memory Assistant',
+            commandPrefix: 'lanonasis',
+            userAgent: `VSCode/${vscode.version} LanOnasis-Memory/2.0.9`
+        }
+    );
+
+    const secureApiKeyService = new SecureApiKeyService(adapter);
     await secureApiKeyService.initialize();
 
     let memoryService: IMemoryService;

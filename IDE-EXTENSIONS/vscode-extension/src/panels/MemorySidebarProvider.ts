@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { EnhancedMemoryService } from '../services/EnhancedMemoryService';
 import type { IMemoryService } from '../services/IMemoryService';
-import { createMemorySchema, updateMemorySchema, type MemoryEntry } from '../types/memory-aligned';
+import { createMemorySchema, updateMemorySchema, type MemoryEntry } from '@lanonasis/memory-client';
 
 export class MemorySidebarProvider implements vscode.WebviewViewProvider {
     public static readonly viewType = 'lanonasis.sidebar';

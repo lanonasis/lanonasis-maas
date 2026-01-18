@@ -1,5 +1,5 @@
 import type { IMemoryService } from '../services/IMemoryService';
-import type { MemoryEntry, MemorySearchResult, CreateMemoryRequest } from '../types/memory-aligned';
+import type { MemoryEntry, MemorySearchResult, CreateMemoryRequest } from '@lanonasis/memory-client';
 import type { MemoryCacheBridge } from './MemoryCacheBridge';
 
 // Prototype-compatible memory interface

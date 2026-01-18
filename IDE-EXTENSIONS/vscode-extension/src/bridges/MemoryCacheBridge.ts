@@ -1,7 +1,7 @@
 import type { OutputChannel } from 'vscode';
 import type { IMemoryService } from '../services/IMemoryService';
 import { MemoryCache } from '../services/MemoryCache';
-import type { MemoryEntry, MemorySearchResult } from '../types/memory-aligned';
+import type { MemoryEntry, MemorySearchResult } from '@lanonasis/memory-client';
 
 interface CacheFetchOptions {
     force?: boolean;

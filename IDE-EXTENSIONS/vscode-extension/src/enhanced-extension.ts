@@ -6,8 +6,8 @@ import { ApiKeyTreeProvider } from './providers/ApiKeyTreeProvider';
 import { MemoryCompletionProvider } from './providers/MemoryCompletionProvider';
 import { ApiKeyService } from './services/ApiKeyService';
 import type { IMemoryService } from './services/IMemoryService';
-import type { MemoryEntry } from './types/memory-aligned';
-import { MemoryType } from './types/memory-aligned';
+import type { MemoryEntry } from '@lanonasis/memory-client';
+import { MemoryType } from '@lanonasis/memory-client';
 
 let enhancedMemoryService: EnhancedMemoryService;
 

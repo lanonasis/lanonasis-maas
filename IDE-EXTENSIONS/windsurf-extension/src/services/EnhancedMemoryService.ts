@@ -581,7 +581,7 @@ export class EnhancedMemoryService {
     const headers = {
       'Content-Type': 'application/json',
       'Authorization': authHeader,
-      'User-Agent': 'Lanonasis-Cursor-Extension/1.3.0',
+      'User-Agent': 'Windsurf LanOnasis-Memory/1.4.5',
       ...options.headers
     };
 
