@@ -21,12 +21,12 @@ Object.defineProperty(window, 'vscode', {
 
 // Enhance MessageEvent if needed (jsdom provides a basic one, but we ensure it has data)
 global.MessageEvent = class EnhancedMessageEvent extends Event {
-  data: any;
+  data: unknown;
   constructor(type: string, eventInitDict?: MessageEventInit) {
     super(type, eventInitDict);
     this.data = eventInitDict?.data;
   }
-} as any;
+} as unknown as typeof MessageEvent;
 
 // Note: We do NOT mock addEventListener/removeEventListener
 // jsdom provides real implementations that work with dispatchEvent
@@ -50,7 +50,7 @@ export const createMockMemory = (overrides: Partial<Memory> = {}): Memory => ({
   ...overrides,
 });
 
-export const createMockVSCodeMessage = (type: string, data?: any) => ({
+export const createMockVSCodeMessage = (type: string, data?: unknown) => ({
   data: { type, data }
 });
 

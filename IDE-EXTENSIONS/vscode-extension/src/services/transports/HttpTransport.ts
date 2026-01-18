@@ -184,10 +184,12 @@ export class HttpTransport implements ITransport {
   }
 
   on(event: TransportEvent, handler: TransportEventHandler): void {
-    if (!this.eventHandlers.has(event)) {
-      this.eventHandlers.set(event, new Set());
+    let handlers = this.eventHandlers.get(event);
+    if (!handlers) {
+      handlers = new Set();
+      this.eventHandlers.set(event, handlers);
     }
-    this.eventHandlers.get(event)!.add(handler);
+    handlers.add(handler);
   }
 
   off(event: TransportEvent, handler: TransportEventHandler): void {

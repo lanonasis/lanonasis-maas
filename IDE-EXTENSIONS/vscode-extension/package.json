@@ -89,6 +89,12 @@
         "icon": "$(file-add)"
       },
       {
+        "command": "lanonasis.createSampleMemory",
+        "title": "Create Sample Memory",
+        "category": "Lanonasis",
+        "icon": "$(lightbulb)"
+      },
+      {
         "command": "lanonasis.authenticate",
         "title": "Authenticate",
         "category": "Lanonasis",
@@ -654,7 +660,7 @@
     "@typescript-eslint/parser": "^8.49.0",
     "@vitejs/plugin-react": "^5.1.2",
     "@vscode/test-electron": "^2.5.2",
-    "@vscode/vsce": "^3.7.1",
+    "@vscode/vsce": "^3.9.0",
     "autoprefixer": "^10.4.22",
     "css-loader": "^7.1.2",
     "esbuild": "^0.27.2",
@@ -675,7 +681,9 @@
     "webpack-cli": "^6.0.1"
   },
   "overrides": {
+    "glob": "^11.1.0",
     "js-yaml": "^4.1.1",
+    "jws": "^3.2.3",
     "qs": "^6.14.1",
     "tar-fs": "^2.1.4",
     "tmp": "^0.2.4",

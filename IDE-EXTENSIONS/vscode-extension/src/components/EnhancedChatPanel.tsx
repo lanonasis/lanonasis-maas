@@ -10,14 +10,12 @@ import {
   Save,
   X,
   MessageSquare,
-  Clock,
-  ChevronDown,
   Clipboard,
 } from 'lucide-react';
 import Button from '@/components/ui/Button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '../utils/cn';
-import { useChatHistory, ChatMessage, ChatSession } from '../hooks/useChatHistory';
+import { useChatHistory } from '../hooks/useChatHistory';
 import type { Memory } from '../shared/types';
 
 interface EnhancedChatPanelProps {
@@ -52,7 +50,6 @@ export const EnhancedChatPanel: React.FC<EnhancedChatPanelProps> = ({
     startNewSession,
     loadSession,
     deleteSession,
-    saveCurrentSession,
   } = useChatHistory();
 
   // Auto-scroll to bottom when messages change
@@ -419,4 +416,3 @@ export const EnhancedChatPanel: React.FC<EnhancedChatPanelProps> = ({
     </div>
   );
 };
-

@@ -4,8 +4,8 @@
 
 This document tracks the implementation progress of the IDE Extension UX Enhancement project as defined in `tasks.md`. The project aims to create a unified, accessible, and performant user experience across all Lanonasis IDE extensions (VSCode, Cursor, Windsurf).
 
-**Last Updated**: 2024-12-04
-**Status**: Foundation Complete, Ready for Integration
+**Last Updated**: 2026-01-18
+**Status**: Phase 3 In Progress
 
 ---
 
@@ -182,6 +182,32 @@ Built into `SecureApiKeyService`:
   - 🔲 Mock HTTP server for callback testing
 - ✅ **Cursor Adapter**: `src/adapters/CursorAdapter.ts`
 - ✅ **Windsurf Adapter**: `src/adapters/WindsurfAdapter.ts`
+
+---
+
+### Phase 3: Enhanced Onboarding System ⚡ IN PROGRESS
+
+#### Completed Work
+- ✅ **Onboarding state service** with step tracking, persistence, skip/reset (Task 3.0/3.5)
+- ✅ **Sample memory creation command** to seed first memory (Task 3.4)
+- ✅ **Enhanced UI onboarding panel** with progress indicator and guided actions
+- ✅ **Welcome screen UI refresh** with hero and demo preview (Task 3.1)
+- ✅ **Authentication walkthrough polish** with loading signals + docs link (Task 3.2)
+- ✅ **Guided tour overlay** with spotlight + step prompts (Task 3.3)
+
+#### In Progress
+- ⚡ **Tutorial video placeholders** added to welcome screen (Task 3.6, pending recorded videos)
+
+**Location**:
+- `apps/lanonasis-maas/IDE-EXTENSIONS/vscode-extension/src/services/OnboardingService.ts`
+- `apps/lanonasis-maas/IDE-EXTENSIONS/vscode-extension/src/hooks/useOnboarding.tsx`
+- `apps/lanonasis-maas/IDE-EXTENSIONS/vscode-extension/src/components/OnboardingPanel.tsx`
+- `apps/lanonasis-maas/IDE-EXTENSIONS/vscode-extension/src/components/IDEPanel.tsx`
+- `apps/lanonasis-maas/IDE-EXTENSIONS/vscode-extension/src/extension.ts`
+- `apps/lanonasis-maas/IDE-EXTENSIONS/vscode-extension/src/panels/EnhancedSidebarProvider.ts`
+
+#### Remaining Tasks for Phase 3:
+- [ ] **Task 3.6**: Onboarding tutorial videos
 
 ---
 
