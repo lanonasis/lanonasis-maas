@@ -22,6 +22,7 @@ export const SearchBar = ({
         value={value}
         onChange={e => onChange(e.target.value)}
         disabled={disabled}
+        aria-label={placeholder}
         data-testid="input-search"
       />
     </div>

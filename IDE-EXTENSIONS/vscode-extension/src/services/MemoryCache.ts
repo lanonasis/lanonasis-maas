@@ -17,6 +17,7 @@ const CACHE_KEYS = {
 } as const;
 
 export class MemoryCache {
+    private readonly maxSize = 50;
     private memories: CachedMemory[] = [];
     private lastSyncAt: number | null = null;
     private isRefreshing = false;
@@ -35,6 +36,7 @@ export class MemoryCache {
 
             this.memories = cached;
             this.lastSyncAt = lastSync;
+            this.trimToLimit();
 
             this.output.appendLine(`[MemoryCache] Loaded ${this.memories.length} cached memories`);
         } catch (err) {
@@ -59,8 +61,8 @@ export class MemoryCache {
         };
     }
 
-    public getMemories(): MemoryEntry[] {
-        return [...this.memories];
+    public getMemories(limit: number = this.maxSize): MemoryEntry[] {
+        return [...this.memories].slice(0, limit);
     }
 
     public setRefreshing(refreshing: boolean): void {
@@ -78,6 +80,7 @@ export class MemoryCache {
             ...memory,
             _cachedAt: Date.now(),
         }));
+        this.trimToLimit();
         this.lastSyncAt = Date.now();
         await this.saveToStorage();
     }
@@ -89,6 +92,7 @@ export class MemoryCache {
         } else {
             this.memories.unshift({ ...memory, _cachedAt: Date.now() });
         }
+        this.trimToLimit();
         await this.saveToStorage();
     }
 
@@ -148,5 +152,12 @@ export class MemoryCache {
             .sort((a, b) => b.score - a.score)
             .slice(0, 10)
             .map((item) => item.memory);
+    }
+
+    private trimToLimit(): void {
+        if (this.memories.length <= this.maxSize) return;
+        this.memories = [...this.memories]
+            .sort((a, b) => (b._cachedAt || 0) - (a._cachedAt || 0))
+            .slice(0, this.maxSize);
     }
 }

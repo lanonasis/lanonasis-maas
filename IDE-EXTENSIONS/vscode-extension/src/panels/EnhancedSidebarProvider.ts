@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import type { IMemoryService } from '../services/IMemoryService';
+import type { IMemoryService, IEnhancedMemoryService } from '../services/IMemoryService';
 import type { ApiKeyService } from '../services/ApiKeyService';
 import { PrototypeUIBridge } from '../bridges/PrototypeUIBridge';
 import type { MemoryCacheBridge } from '../bridges/MemoryCacheBridge';
@@ -22,6 +22,7 @@ export class EnhancedSidebarProvider implements vscode.WebviewViewProvider {
     private _view?: vscode.WebviewView;
     private _bridge: PrototypeUIBridge;
     private _apiKeyService?: ApiKeyService;
+    private readonly cacheBridge?: MemoryCacheBridge;
     private readonly onboardingService?: OnboardingService;
 
     constructor(
@@ -33,6 +34,7 @@ export class EnhancedSidebarProvider implements vscode.WebviewViewProvider {
     ) {
         this._bridge = new PrototypeUIBridge(memoryService, cacheBridge);
         this._apiKeyService = apiKeyService;
+        this.cacheBridge = cacheBridge;
         this.onboardingService = onboardingService;
     }
 
@@ -110,6 +112,12 @@ export class EnhancedSidebarProvider implements vscode.WebviewViewProvider {
                 case 'searchMemories':
                     await this.handleSearch(data.data as string);
                     break;
+                case 'updateMemory':
+                    await this.handleUpdateMemory(data.data as { id: string; updates: Record<string, unknown> });
+                    break;
+                case 'deleteMemory':
+                    await this.handleDeleteMemory(data.data as string);
+                    break;
                 case 'chatQuery':
                     await this.handleChatQuery(data.data as string | { query: string; attachedMemories?: Array<{ id: string; title: string; content: string }> });
                     break;
@@ -154,6 +162,19 @@ export class EnhancedSidebarProvider implements vscode.WebviewViewProvider {
                     break;
                 case 'openSettings':
                     await vscode.commands.executeCommand('workbench.action.openSettings', 'lanonasis');
+                    break;
+                case 'getSidebarPreferences':
+                    await this.sendSidebarPreferences();
+                    break;
+                case 'updateSidebarPreferences':
+                    await this.handleUpdateSidebarPreferences(data.data as {
+                        typeOrder?: string[];
+                        hiddenTypes?: string[];
+                        theme?: string;
+                    });
+                    break;
+                case 'getConnectionStatus':
+                    await this.sendConnectionStatus();
                     break;
                 case 'captureClipboard':
                     await this.handleCaptureClipboard();
@@ -718,6 +739,100 @@ export class EnhancedSidebarProvider implements vscode.WebviewViewProvider {
         }
     }
 
+    private async handleUpdateMemory(payload: { id: string; updates: Record<string, unknown> }) {
+        try {
+            const { id, updates } = payload;
+            if (!id) {
+                throw new Error('Missing memory id');
+            }
+            const updated = await this._bridge.updateMemory(id, updates);
+            this._view?.webview.postMessage({
+                type: 'memoryUpdated',
+                data: updated
+            });
+            await this.sendMemories();
+        } catch (error) {
+            this._view?.webview.postMessage({
+                type: 'error',
+                data: 'Failed to update memory: ' + (error instanceof Error ? error.message : String(error))
+            });
+        }
+    }
+
+    private async handleDeleteMemory(memoryId: string) {
+        try {
+            if (!memoryId) {
+                throw new Error('Missing memory id');
+            }
+            await this._bridge.deleteMemory(memoryId);
+            this._view?.webview.postMessage({
+                type: 'memoryDeleted',
+                data: { id: memoryId }
+            });
+            await this.sendMemories();
+        } catch (error) {
+            this._view?.webview.postMessage({
+                type: 'error',
+                data: 'Failed to delete memory: ' + (error instanceof Error ? error.message : String(error))
+            });
+        }
+    }
+
+    private async sendSidebarPreferences(): Promise<void> {
+        const config = vscode.workspace.getConfiguration('lanonasis');
+        const typeOrder = config.get<string[]>('sidebarTypeOrder', []);
+        const hiddenTypes = config.get<string[]>('sidebarHiddenTypes', []);
+        const theme = config.get<string>('sidebarTheme', 'default');
+
+        this._view?.webview.postMessage({
+            type: 'sidebarPreferences',
+            data: { typeOrder, hiddenTypes, theme }
+        });
+    }
+
+    private async handleUpdateSidebarPreferences(preferences: {
+        typeOrder?: string[];
+        hiddenTypes?: string[];
+        theme?: string;
+    }): Promise<void> {
+        const config = vscode.workspace.getConfiguration('lanonasis');
+
+        if (preferences.typeOrder) {
+            await config.update('sidebarTypeOrder', preferences.typeOrder, vscode.ConfigurationTarget.Global);
+        }
+        if (preferences.hiddenTypes) {
+            await config.update('sidebarHiddenTypes', preferences.hiddenTypes, vscode.ConfigurationTarget.Global);
+        }
+        if (preferences.theme) {
+            await config.update('sidebarTheme', preferences.theme, vscode.ConfigurationTarget.Global);
+        }
+
+        await this.sendSidebarPreferences();
+    }
+
+    private async sendConnectionStatus(): Promise<void> {
+        const capabilities = this.isEnhancedService(this.memoryService)
+            ? this.memoryService.getCapabilities()
+            : null;
+        const cacheStatus = this.cacheBridge?.getStatus() ?? null;
+        const authenticated = capabilities?.authenticated ?? this.memoryService.isAuthenticated();
+        const connectionMode = capabilities?.cliAvailable ? 'cli' : 'http';
+
+        this._view?.webview.postMessage({
+            type: 'connectionStatus',
+            data: {
+                authenticated,
+                connectionMode,
+                capabilities,
+                cacheStatus
+            }
+        });
+    }
+
+    private isEnhancedService(service: IMemoryService): service is IEnhancedMemoryService {
+        return typeof (service as IEnhancedMemoryService).getCapabilities === 'function';
+    }
+
     private async sendMemories() {
         // Send loading state first
         this._view?.webview.postMessage({
@@ -756,6 +871,7 @@ export class EnhancedSidebarProvider implements vscode.WebviewViewProvider {
                 type: 'loading',
                 data: false
             });
+            await this.sendConnectionStatus();
         }
     }
 
@@ -796,6 +912,7 @@ export class EnhancedSidebarProvider implements vscode.WebviewViewProvider {
                 type: 'loading',
                 data: false
             });
+            await this.sendConnectionStatus();
         }
     }
 
@@ -806,6 +923,8 @@ export class EnhancedSidebarProvider implements vscode.WebviewViewProvider {
             // First check auth state - this determines if we should fetch memories
             await this.sendAuthState();
             await this.sendOnboardingState();
+            await this.sendSidebarPreferences();
+            await this.sendConnectionStatus();
 
             // Only fetch memories if we might be authenticated
             // The bridge will handle unauthenticated state gracefully
