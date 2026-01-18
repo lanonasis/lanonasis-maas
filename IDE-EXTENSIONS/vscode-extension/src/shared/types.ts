@@ -12,6 +12,16 @@ import {
 } from 'lucide-react';
 
 // Memory type compatible with prototype MemoryCard
+export type MemoryStatus = 'active' | 'archived' | 'draft' | 'deleted';
+
+export interface MemoryUpdateInput {
+  title?: string;
+  content?: string;
+  tags?: string[];
+  type?: string;
+  status?: MemoryStatus;
+}
+
 export interface Memory {
   id: string;
   title: string;
@@ -20,6 +30,8 @@ export interface Memory {
   tags: string[];
   icon: LucideIcon;
   type: string;
+  similarityScore?: number;
+  status?: MemoryStatus;
 }
 
 // Icon mapping
@@ -80,6 +92,7 @@ export function prototypeMemoryToMemory(proto: PrototypeMemory): Memory {
     tags: Array.isArray(safeProto.tags) ? safeProto.tags : [],
     icon: iconMap[safeProto.iconType || ''] || Terminal,
     type: safeProto.type || 'context',
+    similarityScore: safeProto.similarityScore,
+    status: safeProto.status,
   };
 }
-
