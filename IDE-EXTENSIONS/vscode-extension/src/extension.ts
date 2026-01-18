@@ -18,11 +18,13 @@ import { runDiagnostics, formatDiagnosticResults } from './utils/diagnostics';
 import { registerMemoryChatParticipant } from './chat/MemoryChatParticipant';
 import { MCPDiscoveryService, createMCPDiscoveryService } from './services/MCPDiscoveryService';
 import { MemoryCacheBridge } from './bridges/MemoryCacheBridge';
+import { OnboardingService, OnboardingStepId } from './services/OnboardingService';
 
 export async function activate(context: vscode.ExtensionContext) {
     console.log('Lanonasis Memory Extension is now active');
 
     const outputChannel = vscode.window.createOutputChannel('Lanonasis');
+    const onboardingService = new OnboardingService(context.globalState);
 
     // Initialize MCP auto-discovery service
     let mcpDiscoveryService: MCPDiscoveryService | null = null;
@@ -77,7 +79,13 @@ export async function activate(context: vscode.ExtensionContext) {
 
     // Register sidebar provider based on feature flag
     if (useEnhancedUI) {
-        sidebarProvider = new EnhancedSidebarProvider(context.extensionUri, memoryService, apiKeyService, memoryCacheBridge);
+        sidebarProvider = new EnhancedSidebarProvider(
+            context.extensionUri,
+            memoryService,
+            apiKeyService,
+            memoryCacheBridge,
+            onboardingService
+        );
         context.subscriptions.push(
             vscode.window.registerWebviewViewProvider(
                 EnhancedSidebarProvider.viewType,
@@ -99,6 +107,17 @@ export async function activate(context: vscode.ExtensionContext) {
     const memoryTreeProvider = new MemoryTreeProvider(memoryService);
     const apiKeyTreeProvider = new ApiKeyTreeProvider(apiKeyService);
 
+    const notifyOnboardingStep = async (step: OnboardingStepId) => {
+        try {
+            await onboardingService.markStepComplete(step);
+            if (sidebarProvider instanceof EnhancedSidebarProvider) {
+                await sidebarProvider.sendOnboardingState();
+            }
+        } catch (error) {
+            outputChannel.appendLine(`[Onboarding] Failed to update step ${step}: ${error instanceof Error ? error.message : String(error)}`);
+        }
+    };
+
     context.subscriptions.push(
         vscode.window.registerTreeDataProvider('lanonasisMemories', memoryTreeProvider),
         vscode.window.registerTreeDataProvider('lanonasisApiKeys', apiKeyTreeProvider)
@@ -110,7 +129,7 @@ export async function activate(context: vscode.ExtensionContext) {
         console.log('[Lanonasis] Chat Participant @lanonasis registered for Copilot Chat');
     } catch (error) {
         // Chat API might not be available (requires Copilot)
-        console.log('[Lanonasis] Chat Participant not available (requires GitHub Copilot)');
+        console.log('[Lanonasis] Chat Participant not available (requires GitHub Copilot)', error);
     }
 
     const completionProvider = new MemoryCompletionProvider(memoryService);
@@ -175,6 +194,7 @@ export async function activate(context: vscode.ExtensionContext) {
     const handleAuthenticationSuccess = async () => {
         await refreshServices();
         await applyAuthenticationState(true);
+        await notifyOnboardingStep('authenticate');
         announceEnhancedCapabilities();
     };
 
@@ -230,24 +250,28 @@ export async function activate(context: vscode.ExtensionContext) {
     const commands = [
         authenticateCommand,
         vscode.commands.registerCommand('lanonasis.searchMemory', async () => {
-            await searchMemories(memoryService);
+            await searchMemories(memoryService, notifyOnboardingStep);
         }),
 
         vscode.commands.registerCommand('lanonasis.createMemory', async () => {
-            await createMemoryFromSelection(memoryService);
+            await createMemoryFromSelection(memoryService, notifyOnboardingStep);
         }),
 
         vscode.commands.registerCommand('lanonasis.createMemoryFromFile', async () => {
-            await createMemoryFromFile(memoryService);
+            await createMemoryFromFile(memoryService, notifyOnboardingStep);
+        }),
+
+        vscode.commands.registerCommand('lanonasis.createSampleMemory', async () => {
+            await createSampleMemory(memoryService, notifyOnboardingStep);
         }),
 
         // Universal capture commands
         vscode.commands.registerCommand('lanonasis.captureContext', async () => {
-            await captureContextToMemory(memoryService);
+            await captureContextToMemory(memoryService, notifyOnboardingStep);
         }),
 
         vscode.commands.registerCommand('lanonasis.captureClipboard', async () => {
-            await captureClipboardToMemory(memoryService);
+            await captureClipboardToMemory(memoryService, notifyOnboardingStep);
         }),
 
         // Note: lanonasis.authenticate is registered earlier (line 125) to prevent timing issues
@@ -517,9 +541,9 @@ export async function activate(context: vscode.ExtensionContext) {
             // Smart capture: prefers selection, falls back to clipboard
             const editor = vscode.window.activeTextEditor;
             if (editor && !editor.selection.isEmpty) {
-                await captureContextToMemory(memoryService);
+                await captureContextToMemory(memoryService, notifyOnboardingStep);
             } else {
-                await captureClipboardToMemory(memoryService);
+                await captureClipboardToMemory(memoryService, notifyOnboardingStep);
             }
         })
     ];
@@ -543,18 +567,24 @@ export async function activate(context: vscode.ExtensionContext) {
         await applyAuthenticationState(false);
     }
 
-    const isFirstTime = context.globalState.get('lanonasis.firstTime', true);
-    if (isFirstTime) {
+    const onboardingStatus = await onboardingService.getStatus();
+    const isFirstTime = onboardingStatus.state.completedSteps.length === 0 && !onboardingStatus.state.skipped;
+    const legacyFirstTime = context.globalState.get('lanonasis.firstTime', true);
+
+    if (!useEnhancedUI && legacyFirstTime) {
         showWelcomeMessage();
         await context.globalState.update('lanonasis.firstTime', false);
     }
 
-    if (!hasStoredKey && !isFirstTime) {
+    if (!useEnhancedUI && !hasStoredKey && !isFirstTime && !legacyFirstTime) {
         await promptForAuthenticationIfMissing();
     }
 }
 
-async function searchMemories(memoryService: IMemoryService) {
+async function searchMemories(
+    memoryService: IMemoryService,
+    notifyOnboardingStep?: (step: OnboardingStepId) => Promise<void>
+) {
     const query = await vscode.window.showInputBox({
         prompt: 'Search memories',
         placeHolder: 'Enter search query...'
@@ -571,6 +601,9 @@ async function searchMemories(memoryService: IMemoryService) {
             const results = await memoryService.searchMemories(query);
             await showSearchResults(results, query);
         });
+        if (notifyOnboardingStep) {
+            await notifyOnboardingStep('search');
+        }
     } catch (error) {
         vscode.window.showErrorMessage(`Search failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
@@ -598,7 +631,10 @@ async function showSearchResults(results: MemorySearchResult[], query: string) {
     }
 }
 
-async function createMemoryFromSelection(memoryService: IMemoryService) {
+async function createMemoryFromSelection(
+    memoryService: IMemoryService,
+    notifyOnboardingStep?: (step: OnboardingStepId) => Promise<void>
+) {
     const editor = vscode.window.activeTextEditor;
     if (!editor || editor.selection.isEmpty) {
         vscode.window.showWarningMessage('Please select some text to create a memory');
@@ -640,12 +676,18 @@ async function createMemoryFromSelection(memoryService: IMemoryService) {
 
         vscode.window.showInformationMessage(`Memory "${title}" created successfully`);
         vscode.commands.executeCommand('lanonasis.refreshMemories');
+        if (notifyOnboardingStep) {
+            await notifyOnboardingStep('create_memory');
+        }
     } catch (error) {
         vscode.window.showErrorMessage(`Failed to create memory: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
 }
 
-async function createMemoryFromFile(memoryService: IMemoryService) {
+async function createMemoryFromFile(
+    memoryService: IMemoryService,
+    notifyOnboardingStep?: (step: OnboardingStepId) => Promise<void>
+) {
     const editor = vscode.window.activeTextEditor;
     if (!editor) {
         vscode.window.showWarningMessage('No active editor');
@@ -686,8 +728,55 @@ async function createMemoryFromFile(memoryService: IMemoryService) {
 
         vscode.window.showInformationMessage(`Memory "${title}" created from file`);
         vscode.commands.executeCommand('lanonasis.refreshMemories');
+        if (notifyOnboardingStep) {
+            await notifyOnboardingStep('create_memory');
+        }
     } catch (error) {
         vscode.window.showErrorMessage(`Failed to create memory: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+}
+
+async function createSampleMemory(
+    memoryService: IMemoryService,
+    notifyOnboardingStep?: (step: OnboardingStepId) => Promise<void>
+) {
+    const sampleTitle = 'Getting Started with LanOnasis Memory';
+    const sampleContent = [
+        'Welcome to your first memory!',
+        '',
+        'Use this space to store context, decisions, snippets, and reminders.',
+        '',
+        'Quick tips:',
+        '- Select text and run "Create Memory from Selection"',
+        '- Use "Search Memories" to retrieve relevant context',
+        '- Tag memories to keep related ideas together'
+    ].join('\n');
+
+    try {
+        await vscode.window.withProgress({
+            location: vscode.ProgressLocation.Notification,
+            title: 'Creating sample memory...',
+            cancellable: false
+        }, async () => {
+            await memoryService.createMemory({
+                title: sampleTitle,
+                content: sampleContent,
+                memory_type: 'context' as MemoryType,
+                tags: ['onboarding', 'sample'],
+                metadata: {
+                    source: 'onboarding',
+                    createdBy: 'sample-generator'
+                }
+            });
+        });
+
+        vscode.window.showInformationMessage('Sample memory created. Try searching for it next.');
+        vscode.commands.executeCommand('lanonasis.refreshMemories');
+        if (notifyOnboardingStep) {
+            await notifyOnboardingStep('create_memory');
+        }
+    } catch (error) {
+        vscode.window.showErrorMessage(`Failed to create sample memory: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
 }
 
@@ -754,7 +843,7 @@ Your AI-powered memory management system is ready. Let's get you started!`;
         } else if (selection === 'Enter API Key') {
             vscode.commands.executeCommand('lanonasis.authenticate', 'apikey');
         } else if (selection === 'Get API Key') {
-            vscode.env.openExternal(vscode.Uri.parse('https://api.lanonasis.com'));
+            vscode.env.openExternal(vscode.Uri.parse('https://docs.lanonasis.com/api-keys'));
         } else if (selection === 'Learn More') {
             showOnboardingGuide();
         }
@@ -1473,7 +1562,10 @@ async function deleteProject(project: Project, apiKeyService: ApiKeyService, api
 // UNIVERSAL CAPTURE FUNCTIONS
 // ============================================================================
 
-async function captureContextToMemory(memoryService: IMemoryService) {
+async function captureContextToMemory(
+    memoryService: IMemoryService,
+    notifyOnboardingStep?: (step: OnboardingStepId) => Promise<void>
+) {
     try {
         let content: string | undefined;
         let source = 'selection';
@@ -1536,13 +1628,19 @@ async function captureContextToMemory(memoryService: IMemoryService) {
 
         vscode.window.showInformationMessage(`📝 Memory captured: "${title}"`);
         vscode.commands.executeCommand('lanonasis.refreshMemories');
+        if (notifyOnboardingStep) {
+            await notifyOnboardingStep('create_memory');
+        }
 
     } catch (error) {
         vscode.window.showErrorMessage(`Failed to capture context: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
 }
 
-async function captureClipboardToMemory(memoryService: IMemoryService) {
+async function captureClipboardToMemory(
+    memoryService: IMemoryService,
+    notifyOnboardingStep?: (step: OnboardingStepId) => Promise<void>
+) {
     try {
         const clipboardContent = await vscode.env.clipboard.readText();
 
@@ -1595,6 +1693,9 @@ async function captureClipboardToMemory(memoryService: IMemoryService) {
 
         vscode.window.showInformationMessage(`📋 Clipboard captured: "${title}"`);
         vscode.commands.executeCommand('lanonasis.refreshMemories');
+        if (notifyOnboardingStep) {
+            await notifyOnboardingStep('create_memory');
+        }
 
     } catch (error) {
         vscode.window.showErrorMessage(`Failed to capture clipboard: ${error instanceof Error ? error.message : 'Unknown error'}`);

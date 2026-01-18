@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import type { MemorySearchResult } from '@lanonasis/memory-client';
 import type { IMemoryService } from '../services/IMemoryService';
 
 /**
@@ -438,7 +439,7 @@ async function handleRefineCommand(
     };
 }
 
-function buildRefinedPrompt(prompt: string, results: any[]): string {
+function buildRefinedPrompt(prompt: string, results: MemorySearchResult[]): string {
     const top = results.slice(0, 3).map(r => `- ${r.title}${r.tags?.length ? ` (tags: ${r.tags.join(', ')})` : ''}`).join('\n');
     const contextBlock = top ? `Context:\n${top}\n\n` : '';
     return `${contextBlock}Task: ${prompt}\n\nPlease use the above context, be concise, and include any relevant IDs, tags, or steps.`;
@@ -446,7 +447,7 @@ function buildRefinedPrompt(prompt: string, results: any[]): string {
 
 async function maybeCallRefineEndpoint(
     prompt: string,
-    results: any[]
+    results: MemorySearchResult[]
 ): Promise<string> {
     const refinedLocal = buildRefinedPrompt(prompt, results);
     const config = vscode.workspace.getConfiguration('lanonasis');
@@ -487,4 +488,3 @@ async function maybeCallRefineEndpoint(
         return refinedLocal;
     }
 }
-

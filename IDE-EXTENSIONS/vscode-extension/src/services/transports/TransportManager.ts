@@ -8,7 +8,6 @@ import {
   ITransport,
   TransportType,
   TransportConfig,
-  TransportStatus,
   TransportEvent,
   MCPToolRequest,
   MCPToolResponse,
@@ -118,7 +117,7 @@ export class TransportManager {
    * Send a request through the active transport
    */
   async send<T>(request: MCPToolRequest): Promise<MCPToolResponse<T>> {
-    if (!this.activeTransport || !this.activeTransport.isConnected()) {
+    if (!this.activeTransport || !this.activeTransportType || !this.activeTransport.isConnected()) {
       // Attempt reconnection
       try {
         await this.connect();
@@ -132,10 +131,21 @@ export class TransportManager {
       }
     }
 
-    const response = await this.activeTransport!.send<T>(request);
+    const transport = this.activeTransport;
+    const transportType = this.activeTransportType;
+    if (!transport || !transportType) {
+      return {
+        error: {
+          code: -1,
+          message: 'No transport available'
+        }
+      };
+    }
+
+    const response = await transport.send<T>(request);
 
     if (response.error) {
-      this.recordFailure(this.activeTransportType!);
+      this.recordFailure(transportType);
       await this.checkFallback();
     }
 
@@ -411,7 +421,7 @@ export class TransportManager {
    */
   private getTotalFailures(): number {
     let total = 0;
-    for (const [_type, tracking] of this.failureTracking) {
+    for (const [, tracking] of this.failureTracking) {
       total += tracking.count;
     }
     return total;

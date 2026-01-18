@@ -3,21 +3,37 @@ import type { IMemoryService } from '../services/IMemoryService';
 import type { ApiKeyService } from '../services/ApiKeyService';
 import { PrototypeUIBridge } from '../bridges/PrototypeUIBridge';
 import type { MemoryCacheBridge } from '../bridges/MemoryCacheBridge';
+import type { OnboardingService, OnboardingStepId } from '../services/OnboardingService';
+
+interface ApiKeyRecord {
+    id?: string;
+    keyId?: string;
+    name?: string;
+    scope?: string;
+    accessLevel?: string;
+    keyType?: string;
+    lastUsed?: string | Date;
+    lastUsedAt?: string | Date;
+    createdAt?: string | Date;
+}
 
 export class EnhancedSidebarProvider implements vscode.WebviewViewProvider {
     public static readonly viewType = 'lanonasis.sidebar';
     private _view?: vscode.WebviewView;
     private _bridge: PrototypeUIBridge;
     private _apiKeyService?: ApiKeyService;
+    private readonly onboardingService?: OnboardingService;
 
     constructor(
         private readonly _extensionUri: vscode.Uri,
         private readonly memoryService: IMemoryService,
         apiKeyService?: ApiKeyService,
         cacheBridge?: MemoryCacheBridge,
+        onboardingService?: OnboardingService,
     ) {
         this._bridge = new PrototypeUIBridge(memoryService, cacheBridge);
         this._apiKeyService = apiKeyService;
+        this.onboardingService = onboardingService;
     }
 
     public resolveWebviewView(
@@ -77,6 +93,9 @@ export class EnhancedSidebarProvider implements vscode.WebviewViewProvider {
                 case 'getAuthState':
                     await this.sendAuthState();
                     break;
+                case 'getOnboardingState':
+                    await this.sendOnboardingState();
+                    break;
                 case 'authenticate': {
                     const authData = data.data as { mode?: 'oauth' | 'apikey' } | undefined;
                     await this.handleAuthentication(authData?.mode);
@@ -102,6 +121,15 @@ export class EnhancedSidebarProvider implements vscode.WebviewViewProvider {
                     break;
                 case 'executeCommand':
                     await vscode.commands.executeCommand(data.data as string);
+                    break;
+                case 'completeOnboardingStep':
+                    await this.handleCompleteOnboardingStep(data.data as { step: OnboardingStepId });
+                    break;
+                case 'skipOnboarding':
+                    await this.handleSkipOnboarding();
+                    break;
+                case 'resetOnboarding':
+                    await this.handleResetOnboarding();
                     break;
                 case 'selectMemory':
                     await this.handleMemorySelection(data.data as string);
@@ -180,6 +208,18 @@ export class EnhancedSidebarProvider implements vscode.WebviewViewProvider {
         }
     }
 
+    public async sendOnboardingState(): Promise<void> {
+        if (!this.onboardingService) {
+            return;
+        }
+
+        const status = await this.onboardingService.getStatus();
+        this._view?.webview.postMessage({
+            type: 'onboardingState',
+            data: status
+        });
+    }
+
     private async handleLogout() {
         try {
             // Clear stored credentials and reset auth context
@@ -195,18 +235,70 @@ export class EnhancedSidebarProvider implements vscode.WebviewViewProvider {
 
     private async handleAuthentication(mode?: 'oauth' | 'apikey'): Promise<void> {
         try {
+            this._view?.webview.postMessage({
+                type: 'authLoading',
+                data: true
+            });
             // Trigger authentication through VS Code commands with mode
             await vscode.commands.executeCommand('lanonasis.authenticate', mode);
             // Wait a bit for auth to complete, then refresh state
             setTimeout(async () => {
                 await this.sendAuthState();
                 await this.sendMemories();
+                this._view?.webview.postMessage({
+                    type: 'authLoading',
+                    data: false
+                });
             }, 1000);
         } catch (error) {
             this._view?.webview.postMessage({
                 type: 'error',
                 data: 'Authentication failed: ' + (error instanceof Error ? error.message : String(error))
             });
+            this._view?.webview.postMessage({
+                type: 'authLoading',
+                data: false
+            });
+        }
+    }
+
+    private async handleCompleteOnboardingStep(payload: { step: OnboardingStepId }): Promise<void> {
+        if (!this.onboardingService) {
+            return;
+        }
+
+        await this.onboardingService.markStepComplete(payload.step);
+        await this.sendOnboardingState();
+    }
+
+    private async handleSkipOnboarding(): Promise<void> {
+        if (!this.onboardingService) {
+            return;
+        }
+
+        await this.onboardingService.skip();
+        await this.sendOnboardingState();
+    }
+
+    private async handleResetOnboarding(): Promise<void> {
+        if (!this.onboardingService) {
+            return;
+        }
+
+        await this.onboardingService.reset();
+        await this.sendOnboardingState();
+    }
+
+    private async updateOnboardingStep(step: OnboardingStepId): Promise<void> {
+        if (!this.onboardingService) {
+            return;
+        }
+
+        try {
+            await this.onboardingService.markStepComplete(step);
+            await this.sendOnboardingState();
+        } catch (error) {
+            console.warn('[EnhancedSidebarProvider] Failed to update onboarding step:', error);
         }
     }
 
@@ -238,8 +330,6 @@ export class EnhancedSidebarProvider implements vscode.WebviewViewProvider {
 
             // Combine attached and searched memories (dedupe by id)
             const attachedMemoryIds = attachedMemories.map(m => m.id);
-            const allMemoryIds = new Set(attachedMemoryIds);
-            const additionalMemories = searchResults.filter(m => !allMemoryIds.has(m.id));
 
             // Format results as a chat response
             const response = this.formatChatResponse(query, searchResults, attachedContext);
@@ -305,7 +395,7 @@ export class EnhancedSidebarProvider implements vscode.WebviewViewProvider {
 
     private async handleGetApiKeys(): Promise<void> {
         try {
-            let apiKeys: any[] = [];
+            let apiKeys: ApiKeyRecord[] = [];
 
             // Try to get API keys from ApiKeyService if available
             if (this._apiKeyService) {
@@ -575,6 +665,7 @@ export class EnhancedSidebarProvider implements vscode.WebviewViewProvider {
 
             // Refresh memories list
             await this.sendMemories();
+            await this.updateOnboardingStep('create_memory');
         } catch (error) {
             this._view?.webview.postMessage({
                 type: 'error',
@@ -618,6 +709,7 @@ export class EnhancedSidebarProvider implements vscode.WebviewViewProvider {
             });
             // Refresh memories list
             await this.sendMemories();
+            await this.updateOnboardingStep('create_memory');
         } catch (error) {
             this._view?.webview.postMessage({
                 type: 'error',
@@ -687,6 +779,7 @@ export class EnhancedSidebarProvider implements vscode.WebviewViewProvider {
                 type: 'memories',
                 data: results
             });
+            await this.updateOnboardingStep('search');
         } catch (error) {
             console.warn('[EnhancedSidebarProvider] Search failed:', error);
             this._view?.webview.postMessage({
@@ -712,6 +805,7 @@ export class EnhancedSidebarProvider implements vscode.WebviewViewProvider {
         try {
             // First check auth state - this determines if we should fetch memories
             await this.sendAuthState();
+            await this.sendOnboardingState();
 
             // Only fetch memories if we might be authenticated
             // The bridge will handle unauthenticated state gracefully

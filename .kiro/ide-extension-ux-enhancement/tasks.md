@@ -6,7 +6,7 @@ This implementation plan breaks down the IDE Extension UX Enhancement project in
 
 All tasks reference specific requirements from the requirements document and follow the design specifications. Tasks marked with `*` are optional and can be skipped to focus on core functionality first.
 
-**Status snapshot (2025-12-11):** Phase 1 ✅ complete; Phase 2 ⚡ in progress (5/7 done — remaining Cursor/Windsurf adapters, auth UI polish, and auth tests); Phases 3-17 not started.
+**Status snapshot (2026-01-18):** Phase 1 ✅ complete; Phase 2 ⚡ in progress (auth UI polish + auth tests remaining); Phase 3 ⚡ started; Phases 4-17 not started.
 
 ---
 
@@ -97,28 +97,28 @@ All tasks reference specific requirements from the requirements document and fol
 
 ## Phase 3: Enhanced Onboarding System
 
-- [ ] 3. Create OnboardingService
+- [x] 3. Create OnboardingService
   - Implement first-time detection using global state
   - Create onboarding progress tracking
   - Add methods to mark steps complete
   - Implement reset onboarding functionality
   - _Requirements: 1.1, 1.5_
 
-- [ ] 3.1 Design welcome screen UI
+- [x] 3.1 Design welcome screen UI
   - Create webview HTML template for welcome screen
   - Add hero section with product value proposition
   - Include animated demonstration (GIF or video)
   - Add clear authentication option buttons
   - _Requirements: 1.1, 1.2_
 
-- [ ] 3.2 Implement authentication guide
+- [x] 3.2 Implement authentication guide
   - Create step-by-step authentication walkthrough
   - Add visual indicators for OAuth vs API key
   - Implement browser opening with loading state
   - Show success confirmation with next steps
   - _Requirements: 1.2, 1.3_
 
-- [ ] 3.3 Create interactive feature tour
+- [x] 3.3 Create interactive feature tour
   - Implement tour overlay system
   - Highlight sidebar, tree view, command palette
   - Demonstrate memory creation from selection
@@ -126,14 +126,14 @@ All tasks reference specific requirements from the requirements document and fol
   - Explain CLI integration benefits
   - _Requirements: 1.3_
 
-- [ ] 3.4 Add sample memory creation
+- [x] 3.4 Add sample memory creation
   - Create pre-defined sample memory content
   - Implement one-click sample creation
   - Show memory in sidebar after creation
   - Explain memory types and organization
   - _Requirements: 1.4_
 
-- [ ] 3.5 Implement onboarding state management
+- [x] 3.5 Implement onboarding state management
   - Track completion of each onboarding step
   - Persist progress across sessions
   - Allow skipping with easy restart access

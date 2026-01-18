@@ -34,6 +34,8 @@ export function useAuth(): UseAuthReturn {
           setIsLoading(false);
           initialCheckDone.current = true;
         }
+      } else if (message.type === 'authLoading') {
+        setIsLoading(Boolean(message.data));
       }
     };
 
@@ -73,4 +75,3 @@ export function useAuth(): UseAuthReturn {
 
   return { isAuthenticated, isLoading, user, login, logout };
 }
-

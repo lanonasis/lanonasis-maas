@@ -191,7 +191,20 @@ export class WebSocketTransport implements ITransport {
         params: request.params
       });
 
-      this.ws!.send(message);
+      const socket = this.ws;
+      if (!socket || socket.readyState !== WebSocket.OPEN) {
+        this.pendingRequests.delete(id);
+        clearTimeout(timeout);
+        resolve({
+          error: {
+            code: -1,
+            message: 'Transport not connected'
+          }
+        });
+        return;
+      }
+
+      socket.send(message);
     });
   }
 
@@ -212,10 +225,12 @@ export class WebSocketTransport implements ITransport {
   }
 
   on(event: TransportEvent, handler: TransportEventHandler): void {
-    if (!this.eventHandlers.has(event)) {
-      this.eventHandlers.set(event, new Set());
+    let handlers = this.eventHandlers.get(event);
+    if (!handlers) {
+      handlers = new Set();
+      this.eventHandlers.set(event, handlers);
     }
-    this.eventHandlers.get(event)!.add(handler);
+    handlers.add(handler);
   }
 
   off(event: TransportEvent, handler: TransportEventHandler): void {
@@ -356,6 +371,7 @@ export class WebSocketTransport implements ITransport {
         await this.connect();
       } catch (error) {
         // handleClose will schedule next reconnect if needed
+        console.warn('[WebSocketTransport] Reconnect attempt failed:', error);
         this.isReconnecting = false;
       }
     }, delay);
@@ -374,7 +390,10 @@ export class WebSocketTransport implements ITransport {
     }
 
     while (this.messageQueue.length > 0) {
-      const queued = this.messageQueue.shift()!;
+      const queued = this.messageQueue.shift();
+      if (!queued) {
+        continue;
+      }
       const message = JSON.stringify({
         jsonrpc: '2.0',
         id: queued.id,
@@ -387,7 +406,7 @@ export class WebSocketTransport implements ITransport {
   }
 
   private rejectPendingRequests(reason: string): void {
-    for (const [id, pending] of this.pendingRequests) {
+    for (const [, pending] of this.pendingRequests) {
       clearTimeout(pending.timeout);
       pending.reject(new Error(reason));
     }
