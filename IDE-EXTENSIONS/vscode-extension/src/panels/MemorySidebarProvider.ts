@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { EnhancedMemoryService } from '../services/EnhancedMemoryService';
+import { isEnhancedMemoryService } from '../services/IMemoryService';
 import type { IMemoryService } from '../services/IMemoryService';
 import { createMemorySchema, updateMemorySchema, type MemoryEntry } from '@lanonasis/memory-client';
 
@@ -153,7 +153,7 @@ export class MemorySidebarProvider implements vscode.WebviewViewProvider {
 
                 if (useCache) {
                     // Use cached data immediately
-                    const enhancedInfo = this.memoryService instanceof EnhancedMemoryService
+                    const enhancedInfo = isEnhancedMemoryService(this.memoryService)
                         ? this.memoryService.getCapabilities()
                         : null;
 
@@ -187,7 +187,7 @@ export class MemorySidebarProvider implements vscode.WebviewViewProvider {
                 }
 
                 const memories = await this.memoryService.listMemories(50);
-                const enhancedInfo = this.memoryService instanceof EnhancedMemoryService
+                const enhancedInfo = isEnhancedMemoryService(this.memoryService)
                     ? this.memoryService.getCapabilities()
                     : null;
 
@@ -225,7 +225,7 @@ export class MemorySidebarProvider implements vscode.WebviewViewProvider {
                         message: `Failed to refresh: ${errorMsg}. Showing cached data.`
                     });
 
-                    const enhancedInfo = this.memoryService instanceof EnhancedMemoryService
+                    const enhancedInfo = isEnhancedMemoryService(this.memoryService)
                         ? this.memoryService.getCapabilities()
                         : null;
 

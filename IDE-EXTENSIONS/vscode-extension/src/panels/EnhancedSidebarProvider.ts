@@ -4,6 +4,8 @@ import type { ApiKeyService } from '../services/ApiKeyService';
 import { PrototypeUIBridge } from '../bridges/PrototypeUIBridge';
 import type { MemoryCacheBridge } from '../bridges/MemoryCacheBridge';
 import type { OnboardingService, OnboardingStepId } from '../services/OnboardingService';
+import type { OfflineService } from '../services/OfflineService';
+import type { OfflineQueueService } from '../services/OfflineQueueService';
 
 interface ApiKeyRecord {
     id?: string;
@@ -31,6 +33,8 @@ export class EnhancedSidebarProvider implements vscode.WebviewViewProvider {
         apiKeyService?: ApiKeyService,
         cacheBridge?: MemoryCacheBridge,
         onboardingService?: OnboardingService,
+        private readonly offlineService?: OfflineService,
+        private readonly offlineQueue?: OfflineQueueService,
     ) {
         this._bridge = new PrototypeUIBridge(memoryService, cacheBridge);
         this._apiKeyService = apiKeyService;
@@ -817,6 +821,8 @@ export class EnhancedSidebarProvider implements vscode.WebviewViewProvider {
         const cacheStatus = this.cacheBridge?.getStatus() ?? null;
         const authenticated = capabilities?.authenticated ?? this.memoryService.isAuthenticated();
         const connectionMode = capabilities?.cliAvailable ? 'cli' : 'http';
+        const offlineStatus = this.offlineService?.getStatus() ?? null;
+        const queueStatus = this.offlineQueue?.getStatus() ?? null;
 
         this._view?.webview.postMessage({
             type: 'connectionStatus',
@@ -824,7 +830,9 @@ export class EnhancedSidebarProvider implements vscode.WebviewViewProvider {
                 authenticated,
                 connectionMode,
                 capabilities,
-                cacheStatus
+                cacheStatus,
+                offline: offlineStatus ? !offlineStatus.online : undefined,
+                queueStatus
             }
         });
     }
