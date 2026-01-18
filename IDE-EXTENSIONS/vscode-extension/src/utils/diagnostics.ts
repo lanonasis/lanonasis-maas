@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { SecureApiKeyService } from '@lanonasis/ide-extension-core';
 import type { IMemoryService } from '../services/IMemoryService';
-import { EnhancedMemoryService } from '../services/EnhancedMemoryService';
+import { isEnhancedMemoryService } from '../services/IMemoryService';
 
 /**
  * System diagnostics and health check utilities
@@ -313,7 +313,7 @@ async function checkConnectionMode(
     outputChannel.appendLine('\n[6/7] Checking Connection Mode...');
 
     try {
-        if (memoryService instanceof EnhancedMemoryService) {
+        if (isEnhancedMemoryService(memoryService)) {
             const capabilities = memoryService.getCapabilities();
 
             if (capabilities) {
