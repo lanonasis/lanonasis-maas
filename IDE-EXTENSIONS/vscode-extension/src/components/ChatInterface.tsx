@@ -51,6 +51,7 @@ export const ChatInterface = ({
                   : 'Ask a question or search memories...' 
                 : 'Connect to start chatting'
             }
+            aria-label="Chat prompt"
             disabled={!isAuthenticated || disabled || isLoading}
             onKeyDown={handleKeyDown}
             className="w-full min-h-[40px] bg-transparent border-none text-[13px] text-[var(--vscode-input-foreground)] placeholder:text-[var(--vscode-input-placeholderForeground)] resize-none focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed font-sans"
@@ -74,6 +75,7 @@ export const ChatInterface = ({
             disabled={!isAuthenticated || disabled}
             onClick={onPaste}
             title="Paste from clipboard to create memory"
+            aria-label="Paste from clipboard to create memory"
             data-testid="btn-paste"
           >
             <ClipboardPaste className="h-3.5 w-3.5" />
@@ -93,6 +95,7 @@ export const ChatInterface = ({
             disabled={!isAuthenticated || disabled || isLoading || !value.trim()}
             onClick={handleSend}
             data-testid="btn-send"
+            aria-label="Send message"
           >
             {isLoading ? (
               <div className="h-3.5 w-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -111,4 +114,3 @@ export const ChatInterface = ({
     </div>
   );
 };
-

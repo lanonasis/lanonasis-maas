@@ -573,6 +573,33 @@
           "default": true,
           "description": "Enable bulk selection, tag, delete, and export actions in the sidebar"
         },
+        "lanonasis.sidebarTypeOrder": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "description": "Order of memory type sections in the enhanced sidebar"
+        },
+        "lanonasis.sidebarHiddenTypes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "description": "Memory type sections hidden in the enhanced sidebar"
+        },
+        "lanonasis.sidebarTheme": {
+          "type": "string",
+          "enum": [
+            "default",
+            "sunset",
+            "ocean",
+            "slate"
+          ],
+          "default": "default",
+          "description": "Accent theme for the enhanced sidebar"
+        },
         "lanonasis.memoryTemplates": {
           "type": "array",
           "items": {

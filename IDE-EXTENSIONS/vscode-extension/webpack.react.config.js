@@ -47,6 +47,10 @@ module.exports = {
     'vscode': 'commonjs vscode'
   },
   optimization: {
-    minimize: true
+    minimize: true,
+    usedExports: true,
+    sideEffects: true,
+    moduleIds: 'deterministic',
+    concatenateModules: true
   }
 };
