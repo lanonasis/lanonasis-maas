@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import type { MemoryEntry } from '../types/memory-aligned';
+import type { MemoryEntry } from '@lanonasis/memory-client';
 
 export interface CachedMemory extends MemoryEntry {
     _cachedAt?: number;

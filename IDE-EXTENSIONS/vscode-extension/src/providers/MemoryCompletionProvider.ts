@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import type { IMemoryService } from '../services/IMemoryService';
-import { MemorySearchResult } from '../types/memory-aligned';
+import { MemorySearchResult } from '@lanonasis/memory-client';
 
 export class MemoryCompletionProvider implements vscode.CompletionItemProvider {
     private cache: Map<string, { results: MemorySearchResult[]; timestamp: number }> = new Map();

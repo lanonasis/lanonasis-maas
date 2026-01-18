@@ -44,7 +44,7 @@ const VSCODE_BRANDING: BrandingConfig = {
   extensionName: 'lanonasis-memory',
   extensionDisplayName: 'LanOnasis Memory Assistant',
   commandPrefix: 'lanonasis',
-  userAgent: `VSCode/${vscode.version} LanOnasis-Memory/2.0.5`
+  userAgent: `VSCode/${vscode.version} LanOnasis-Memory/2.0.9`
 };
 
 /**

@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { SecureApiKeyService } from '../services/SecureApiKeyService';
+import { SecureApiKeyService } from '@lanonasis/ide-extension-core';
 import type { IMemoryService } from '../services/IMemoryService';
 import { EnhancedMemoryService } from '../services/EnhancedMemoryService';
 

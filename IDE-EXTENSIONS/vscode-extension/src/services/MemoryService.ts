@@ -1,11 +1,10 @@
 import * as vscode from 'vscode';
-import { MaaSClient, createMaaSClient } from './memory-client-sdk';
-import { CreateMemoryRequest, SearchMemoryRequest, MemoryEntry, MemorySearchResult, UserMemoryStats } from '../types/memory-aligned';
+import { CoreMemoryClient, createMemoryClient, CreateMemoryRequest, SearchMemoryRequest, MemoryEntry, MemorySearchResult, UserMemoryStats } from '@lanonasis/memory-client';
 import type { IMemoryService } from './IMemoryService';
-import { SecureApiKeyService } from './SecureApiKeyService';
+import { SecureApiKeyService } from '@lanonasis/ide-extension-core';
 
 export class MemoryService implements IMemoryService {
-    private client: MaaSClient | null = null;
+    private client: CoreMemoryClient | null = null;
     private config: vscode.WorkspaceConfiguration;
     private readonly secureApiKeyService?: SecureApiKeyService;
     private initializePromise: Promise<void> | null = null;
@@ -50,19 +49,19 @@ export class MemoryService implements IMemoryService {
 
         if (this.secureApiKeyService) {
             try {
-                // Check for OAuth Bearer token first
-                const authHeader = await this.secureApiKeyService.getAuthenticationHeader();
-                if (authHeader) {
-                    authToken = authHeader.replace('Bearer ', '');
+                const credential = await this.secureApiKeyService.getStoredCredentials();
+                if (credential?.type === 'oauth') {
+                    authToken = credential.token;
+                } else if (credential?.type === 'apiKey') {
+                    apiKey = credential.token;
                 }
             } catch (error) {
-                console.warn('[MemoryService] Failed to get OAuth token', error);
+                console.warn('[MemoryService] Failed to read stored credentials', error);
             }
+        }
 
-            // Fallback to API key if no OAuth token
-            if (!authToken) {
-                apiKey = await this.resolveApiKey();
-            }
+        if (!authToken && !apiKey) {
+            apiKey = await this.resolveApiKey();
         }
 
         if (authToken || apiKey) {
@@ -72,7 +71,7 @@ export class MemoryService implements IMemoryService {
                 apiKeyPrefix: apiKey ? apiKey.substring(0, 8) + '...' : null,
                 apiUrl: effectiveUrl
             });
-            this.client = createMaaSClient({
+            this.client = createMemoryClient({
                 apiUrl: effectiveUrl,
                 authToken: authToken || undefined,
                 apiKey: apiKey || undefined,
@@ -116,10 +115,10 @@ export class MemoryService implements IMemoryService {
         const useGateway = this.config.get<boolean>('useGateway', false);
         const effectiveUrl = useGateway ? gatewayUrl : apiUrl;
 
-        let testClient: MaaSClient | null = null;
+        let testClient: CoreMemoryClient | null = null;
 
         if (apiKey && apiKey.trim().length > 0) {
-            testClient = createMaaSClient({
+            testClient = createMemoryClient({
                 apiUrl: effectiveUrl,
                 apiKey,
                 timeout: 10000
@@ -133,7 +132,7 @@ export class MemoryService implements IMemoryService {
             throw new Error('No API key configured');
         }
 
-        const response = await testClient.getHealth();
+        const response = await testClient.healthCheck();
         if (response.error) {
             throw new Error(response.error);
         }
