@@ -15,7 +15,7 @@ export const SearchBar = ({
   disabled = false,
 }: SearchBarProps) => {
   return (
-    <div className="relative mb-3">
+    <div className="relative mb-3" data-tour="search">
       <Input
         placeholder={placeholder}
         className="vscode-input h-7 text-[13px] pl-2"
@@ -27,4 +27,3 @@ export const SearchBar = ({
     </div>
   );
 };
-

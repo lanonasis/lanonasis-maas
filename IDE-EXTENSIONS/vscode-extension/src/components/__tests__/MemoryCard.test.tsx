@@ -1,6 +1,6 @@
 import React from 'react';
 import { describe, test, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { MemoryCard } from '../MemoryCard';
 import type { Memory } from '../../shared/types';
 import { Lightbulb, Terminal, Hash } from 'lucide-react';

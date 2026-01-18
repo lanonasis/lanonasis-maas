@@ -35,7 +35,6 @@ interface UseChatHistoryReturn {
   deleteSession: (sessionId: string) => void;
 }
 
-const STORAGE_KEY = 'lanonasis.chatSessions';
 const MAX_SESSIONS = 50;
 const AUTO_SAVE_INTERVAL = 30000; // 30 seconds
 
@@ -256,4 +255,3 @@ export function useChatHistory(): UseChatHistoryReturn {
     deleteSession
   };
 }
-
