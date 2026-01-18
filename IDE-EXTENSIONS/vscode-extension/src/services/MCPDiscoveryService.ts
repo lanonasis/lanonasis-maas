@@ -36,11 +36,14 @@ export interface MCPHealthResponse {
 
 const DEFAULT_MCP_PORTS = [3001, 3002, 3000];
 const DEFAULT_MCP_HOST = 'localhost';
+// Conservative timeout to avoid false negatives on slower systems/networks.
 const DISCOVERY_TIMEOUT_MS = 2000;
 
 export class MCPDiscoveryService {
   private config: vscode.WorkspaceConfiguration;
   private discoveredServer: MCPServerInfo | null = null;
+  private lastDiscoveryAt: number | null = null;
+  private readonly discoveryCacheTtlMs = 60 * 1000;
   private statusBarItem: vscode.StatusBarItem;
   private outputChannel: vscode.OutputChannel;
 
@@ -59,6 +62,7 @@ export class MCPDiscoveryService {
    * Auto-discover MCP server using multiple strategies
    */
   async discover(): Promise<MCPServerInfo | null> {
+    this.config = vscode.workspace.getConfiguration('lanonasis');
     const enableAutoDiscover = this.config.get<boolean>('mcpAutoDiscover', true);
     const enableMCP = this.config.get<boolean>('enableMCP', true);
 
@@ -66,6 +70,12 @@ export class MCPDiscoveryService {
       this.log('MCP disabled in configuration');
       this.updateStatusBar(null);
       return null;
+    }
+
+    if (this.lastDiscoveryAt && (Date.now() - this.lastDiscoveryAt) < this.discoveryCacheTtlMs) {
+      this.log('Using cached MCP discovery result');
+      this.updateStatusBar(this.discoveredServer);
+      return this.discoveredServer;
     }
 
     // Strategy 1: Check configured URL
@@ -76,6 +86,7 @@ export class MCPDiscoveryService {
       if (server) {
         this.discoveredServer = server;
         this.updateStatusBar(server);
+        this.lastDiscoveryAt = Date.now();
         return server;
       }
     }
@@ -88,6 +99,7 @@ export class MCPDiscoveryService {
       if (server) {
         this.discoveredServer = server;
         this.updateStatusBar(server);
+        this.lastDiscoveryAt = Date.now();
         return server;
       }
     }
@@ -112,6 +124,7 @@ export class MCPDiscoveryService {
               this.showServerDetails();
             }
           });
+          this.lastDiscoveryAt = Date.now();
           return server;
         }
       }
@@ -119,6 +132,7 @@ export class MCPDiscoveryService {
 
     this.log('No MCP server found');
     this.updateStatusBar(null);
+    this.lastDiscoveryAt = Date.now();
     return null;
   }
 

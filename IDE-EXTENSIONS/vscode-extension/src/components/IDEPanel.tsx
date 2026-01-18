@@ -63,6 +63,13 @@ interface ConnectionStatusPayload {
     isRefreshing: boolean;
     count: number;
   } | null;
+  offline?: boolean;
+  queueStatus?: {
+    pending: number;
+    syncing: boolean;
+    lastError?: string;
+    lastSyncAt?: number;
+  } | null;
 }
 
 interface SidebarPreferences {
@@ -718,6 +725,11 @@ export const IDEPanel = () => {
   }, [sidebarPreferences.theme]);
 
   const syncStatusLabel = useMemo(() => {
+    const pending = connectionStatus?.queueStatus?.pending ?? 0;
+    const queueSyncing = connectionStatus?.queueStatus?.syncing ?? false;
+    if (pending > 0) {
+      return queueSyncing ? `Syncing (${pending} queued)` : `${pending} pending`;
+    }
     if (memoriesLoading || connectionStatus?.cacheStatus?.isRefreshing) {
       return 'Syncing';
     }
@@ -726,7 +738,17 @@ export const IDEPanel = () => {
       return `Synced ${syncDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
     }
     return 'Not synced';
-  }, [connectionStatus?.cacheStatus?.isRefreshing, connectionStatus?.cacheStatus?.lastSyncAt, memoriesLoading]);
+  }, [
+    connectionStatus?.cacheStatus?.isRefreshing,
+    connectionStatus?.cacheStatus?.lastSyncAt,
+    connectionStatus?.queueStatus?.pending,
+    connectionStatus?.queueStatus?.syncing,
+    memoriesLoading
+  ]);
+
+  const onlineIndicator = connectionStatus?.offline === undefined
+    ? isOnline
+    : !connectionStatus.offline;
 
   const trimmedQuery = searchQuery.trim();
   const canSaveSearch = trimmedQuery.length >= 2;
@@ -935,9 +957,9 @@ export const IDEPanel = () => {
             </span>
             <span className={cn(
               'rounded-full px-2 py-0.5',
-              isOnline ? 'bg-[var(--vscode-testing-iconPassed)]/15 text-[var(--vscode-testing-iconPassed)]' : 'bg-[var(--vscode-testing-iconFailed)]/15 text-[var(--vscode-testing-iconFailed)]'
+              onlineIndicator ? 'bg-[var(--vscode-testing-iconPassed)]/15 text-[var(--vscode-testing-iconPassed)]' : 'bg-[var(--vscode-testing-iconFailed)]/15 text-[var(--vscode-testing-iconFailed)]'
             )}>
-              {isOnline ? 'Online' : 'Offline'}
+              {onlineIndicator ? 'Online' : 'Offline'}
             </span>
           </div>
         </div>

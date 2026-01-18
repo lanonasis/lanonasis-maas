@@ -107,6 +107,12 @@
         "icon": "$(refresh)"
       },
       {
+        "command": "lanonasis.syncOfflineQueue",
+        "title": "Sync Offline Operations",
+        "category": "Lanonasis",
+        "icon": "$(sync)"
+      },
+      {
         "command": "lanonasis.openMemory",
         "title": "Open Memory",
         "category": "Lanonasis"
@@ -176,6 +182,18 @@
         "title": "Run System Diagnostics",
         "category": "Lanonasis",
         "icon": "$(checklist)"
+      },
+      {
+        "command": "lanonasis.autoFixIssues",
+        "title": "Auto-Fix Common Issues",
+        "category": "Lanonasis",
+        "icon": "$(tools)"
+      },
+      {
+        "command": "lanonasis.reportIssue",
+        "title": "Report Issue",
+        "category": "Lanonasis",
+        "icon": "$(report)"
       },
       {
         "command": "lanonasis.showLogs",

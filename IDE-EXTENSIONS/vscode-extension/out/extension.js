@@ -186,7 +186,7 @@ var require_util = __commonJS({
     function assertIs2(_arg) {
     }
     function assertNever2(_x) {
-      throw new Error("Unexpected value in exhaustive check");
+      throw new Error();
     }
     function assert2(_) {
     }
@@ -1841,8 +1841,8 @@ var require_versions = __commonJS({
     exports2.version = void 0;
     exports2.version = {
       major: 4,
-      minor: 2,
-      patch: 1
+      minor: 1,
+      patch: 13
     };
   }
 });
@@ -1879,8 +1879,8 @@ var require_schemas = __commonJS({
       return result;
     };
     Object.defineProperty(exports2, "__esModule", { value: true });
-    exports2.$ZodTuple = exports2.$ZodIntersection = exports2.$ZodDiscriminatedUnion = exports2.$ZodXor = exports2.$ZodUnion = exports2.$ZodObjectJIT = exports2.$ZodObject = exports2.$ZodArray = exports2.$ZodDate = exports2.$ZodVoid = exports2.$ZodNever = exports2.$ZodUnknown = exports2.$ZodAny = exports2.$ZodNull = exports2.$ZodUndefined = exports2.$ZodSymbol = exports2.$ZodBigIntFormat = exports2.$ZodBigInt = exports2.$ZodBoolean = exports2.$ZodNumberFormat = exports2.$ZodNumber = exports2.$ZodCustomStringFormat = exports2.$ZodJWT = exports2.$ZodE164 = exports2.$ZodBase64URL = exports2.$ZodBase64 = exports2.$ZodCIDRv6 = exports2.$ZodCIDRv4 = exports2.$ZodMAC = exports2.$ZodIPv6 = exports2.$ZodIPv4 = exports2.$ZodISODuration = exports2.$ZodISOTime = exports2.$ZodISODate = exports2.$ZodISODateTime = exports2.$ZodKSUID = exports2.$ZodXID = exports2.$ZodULID = exports2.$ZodCUID2 = exports2.$ZodCUID = exports2.$ZodNanoID = exports2.$ZodEmoji = exports2.$ZodURL = exports2.$ZodEmail = exports2.$ZodUUID = exports2.$ZodGUID = exports2.$ZodStringFormat = exports2.$ZodString = exports2.clone = exports2.$ZodType = void 0;
-    exports2.$ZodCustom = exports2.$ZodLazy = exports2.$ZodPromise = exports2.$ZodFunction = exports2.$ZodTemplateLiteral = exports2.$ZodReadonly = exports2.$ZodCodec = exports2.$ZodPipe = exports2.$ZodNaN = exports2.$ZodCatch = exports2.$ZodSuccess = exports2.$ZodNonOptional = exports2.$ZodPrefault = exports2.$ZodDefault = exports2.$ZodNullable = exports2.$ZodOptional = exports2.$ZodTransform = exports2.$ZodFile = exports2.$ZodLiteral = exports2.$ZodEnum = exports2.$ZodSet = exports2.$ZodMap = exports2.$ZodRecord = void 0;
+    exports2.$ZodRecord = exports2.$ZodTuple = exports2.$ZodIntersection = exports2.$ZodDiscriminatedUnion = exports2.$ZodUnion = exports2.$ZodObjectJIT = exports2.$ZodObject = exports2.$ZodArray = exports2.$ZodDate = exports2.$ZodVoid = exports2.$ZodNever = exports2.$ZodUnknown = exports2.$ZodAny = exports2.$ZodNull = exports2.$ZodUndefined = exports2.$ZodSymbol = exports2.$ZodBigIntFormat = exports2.$ZodBigInt = exports2.$ZodBoolean = exports2.$ZodNumberFormat = exports2.$ZodNumber = exports2.$ZodCustomStringFormat = exports2.$ZodJWT = exports2.$ZodE164 = exports2.$ZodBase64URL = exports2.$ZodBase64 = exports2.$ZodCIDRv6 = exports2.$ZodCIDRv4 = exports2.$ZodMAC = exports2.$ZodIPv6 = exports2.$ZodIPv4 = exports2.$ZodISODuration = exports2.$ZodISOTime = exports2.$ZodISODate = exports2.$ZodISODateTime = exports2.$ZodKSUID = exports2.$ZodXID = exports2.$ZodULID = exports2.$ZodCUID2 = exports2.$ZodCUID = exports2.$ZodNanoID = exports2.$ZodEmoji = exports2.$ZodURL = exports2.$ZodEmail = exports2.$ZodUUID = exports2.$ZodGUID = exports2.$ZodStringFormat = exports2.$ZodString = exports2.clone = exports2.$ZodType = void 0;
+    exports2.$ZodCustom = exports2.$ZodLazy = exports2.$ZodPromise = exports2.$ZodFunction = exports2.$ZodTemplateLiteral = exports2.$ZodReadonly = exports2.$ZodCodec = exports2.$ZodPipe = exports2.$ZodNaN = exports2.$ZodCatch = exports2.$ZodSuccess = exports2.$ZodNonOptional = exports2.$ZodPrefault = exports2.$ZodDefault = exports2.$ZodNullable = exports2.$ZodOptional = exports2.$ZodTransform = exports2.$ZodFile = exports2.$ZodLiteral = exports2.$ZodEnum = exports2.$ZodSet = exports2.$ZodMap = void 0;
     exports2.isValidBase64 = isValidBase642;
     exports2.isValidBase64URL = isValidBase64URL2;
     exports2.isValidJWT = isValidJWT2;
@@ -2801,62 +2801,7 @@ var require_schemas = __commonJS({
         });
       };
     });
-    function handleExclusiveUnionResults2(results, final, inst, ctx) {
-      const successes = results.filter((r) => r.issues.length === 0);
-      if (successes.length === 1) {
-        final.value = successes[0].value;
-        return final;
-      }
-      if (successes.length === 0) {
-        final.issues.push({
-          code: "invalid_union",
-          input: final.value,
-          inst,
-          errors: results.map((result) => result.issues.map((iss) => util.finalizeIssue(iss, ctx, core.config())))
-        });
-      } else {
-        final.issues.push({
-          code: "invalid_union",
-          input: final.value,
-          inst,
-          errors: [],
-          inclusive: false
-        });
-      }
-      return final;
-    }
-    exports2.$ZodXor = core.$constructor("$ZodXor", (inst, def) => {
-      exports2.$ZodUnion.init(inst, def);
-      def.inclusive = false;
-      const single = def.options.length === 1;
-      const first = def.options[0]._zod.run;
-      inst._zod.parse = (payload, ctx) => {
-        if (single) {
-          return first(payload, ctx);
-        }
-        let async = false;
-        const results = [];
-        for (const option of def.options) {
-          const result = option._zod.run({
-            value: payload.value,
-            issues: []
-          }, ctx);
-          if (result instanceof Promise) {
-            results.push(result);
-            async = true;
-          } else {
-            results.push(result);
-          }
-        }
-        if (!async)
-          return handleExclusiveUnionResults2(results, payload, inst, ctx);
-        return Promise.all(results).then((results2) => {
-          return handleExclusiveUnionResults2(results2, payload, inst, ctx);
-        });
-      };
-    });
     exports2.$ZodDiscriminatedUnion = /* @__PURE__ */ core.$constructor("$ZodDiscriminatedUnion", (inst, def) => {
-      def.inclusive = false;
       exports2.$ZodUnion.init(inst, def);
       const _super = inst._zod.parse;
       util.defineLazy(inst._zod, "propValues", () => {
@@ -3132,18 +3077,15 @@ var require_schemas = __commonJS({
               throw new Error("Async schemas not supported in object keys currently");
             }
             if (keyResult.issues.length) {
-              if (def.mode === "loose") {
-                payload.value[key] = input[key];
-              } else {
-                payload.issues.push({
-                  code: "invalid_key",
-                  origin: "record",
-                  issues: keyResult.issues.map((iss) => util.finalizeIssue(iss, ctx, core.config())),
-                  input: key,
-                  path: [key],
-                  inst
-                });
-              }
+              payload.issues.push({
+                code: "invalid_key",
+                origin: "record",
+                issues: keyResult.issues.map((iss) => util.finalizeIssue(iss, ctx, core.config())),
+                input: key,
+                path: [key],
+                inst
+              });
+              payload.value[keyResult.value] = keyResult.value;
               continue;
             }
             const result = def.valueType._zod.run({ value: input[key], issues: [] }, ctx);
@@ -11539,7 +11481,6 @@ var require_api = __commonJS({
     exports2._slugify = _slugify2;
     exports2._array = _array2;
     exports2._union = _union2;
-    exports2._xor = _xor2;
     exports2._discriminatedUnion = _discriminatedUnion2;
     exports2._intersection = _intersection2;
     exports2._tuple = _tuple2;
@@ -12196,14 +12137,6 @@ var require_api = __commonJS({
         ...util.normalizeParams(params)
       });
     }
-    function _xor2(Class2, options, params) {
-      return new Class2({
-        type: "union",
-        options,
-        inclusive: false,
-        ...util.normalizeParams(params)
-      });
-    }
     function _discriminatedUnion2(Class2, discriminator, options, params) {
       return new Class2({
         type: "union",
@@ -12506,249 +12439,731 @@ var require_to_json_schema = __commonJS({
   "node_modules/zod/v4/core/to-json-schema.cjs"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
-    exports2.createStandardJSONSchemaMethod = exports2.createToJSONSchemaMethod = void 0;
-    exports2.initializeContext = initializeContext2;
-    exports2.process = process3;
-    exports2.extractDefs = extractDefs2;
-    exports2.finalize = finalize2;
+    exports2.JSONSchemaGenerator = void 0;
+    exports2.toJSONSchema = toJSONSchema2;
     var registries_js_1 = require_registries();
-    function initializeContext2(params) {
-      let target = params?.target ?? "draft-2020-12";
-      if (target === "draft-4")
-        target = "draft-04";
-      if (target === "draft-7")
-        target = "draft-07";
-      return {
-        processors: params.processors ?? {},
-        metadataRegistry: params?.metadata ?? registries_js_1.globalRegistry,
-        target,
-        unrepresentable: params?.unrepresentable ?? "throw",
-        override: params?.override ?? (() => {
-        }),
-        io: params?.io ?? "output",
-        counter: 0,
-        seen: /* @__PURE__ */ new Map(),
-        cycles: params?.cycles ?? "ref",
-        reused: params?.reused ?? "inline",
-        external: params?.external ?? void 0
-      };
-    }
-    function process3(schema, ctx, _params = { path: [], schemaPath: [] }) {
-      var _a2;
-      const def = schema._zod.def;
-      const seen = ctx.seen.get(schema);
-      if (seen) {
-        seen.count++;
-        const isCycle = _params.schemaPath.includes(schema);
-        if (isCycle) {
-          seen.cycle = _params.path;
-        }
-        return seen.schema;
+    var util_js_1 = require_util();
+    var JSONSchemaGenerator2 = class {
+      constructor(params) {
+        this.counter = 0;
+        this.metadataRegistry = params?.metadata ?? registries_js_1.globalRegistry;
+        this.target = params?.target ?? "draft-2020-12";
+        this.unrepresentable = params?.unrepresentable ?? "throw";
+        this.override = params?.override ?? (() => {
+        });
+        this.io = params?.io ?? "output";
+        this.seen = /* @__PURE__ */ new Map();
       }
-      const result = { schema: {}, count: 1, cycle: void 0, path: _params.path };
-      ctx.seen.set(schema, result);
-      const overrideSchema = schema._zod.toJSONSchema?.();
-      if (overrideSchema) {
-        result.schema = overrideSchema;
-      } else {
-        const params = {
-          ..._params,
-          schemaPath: [..._params.schemaPath, schema],
-          path: _params.path
+      process(schema, _params = { path: [], schemaPath: [] }) {
+        var _a2;
+        const def = schema._zod.def;
+        const formatMap = {
+          guid: "uuid",
+          url: "uri",
+          datetime: "date-time",
+          json_string: "json-string",
+          regex: ""
+          // do not set
         };
-        const parent = schema._zod.parent;
-        if (parent) {
-          result.ref = parent;
-          process3(parent, ctx, params);
-          ctx.seen.get(parent).isParent = true;
-        } else if (schema._zod.processJSONSchema) {
-          schema._zod.processJSONSchema(ctx, result.schema, params);
+        const seen = this.seen.get(schema);
+        if (seen) {
+          seen.count++;
+          const isCycle = _params.schemaPath.includes(schema);
+          if (isCycle) {
+            seen.cycle = _params.path;
+          }
+          return seen.schema;
+        }
+        const result = { schema: {}, count: 1, cycle: void 0, path: _params.path };
+        this.seen.set(schema, result);
+        const overrideSchema = schema._zod.toJSONSchema?.();
+        if (overrideSchema) {
+          result.schema = overrideSchema;
         } else {
-          const _json = result.schema;
-          const processor = ctx.processors[def.type];
-          if (!processor) {
-            throw new Error(`[toJSONSchema]: Non-representable type encountered: ${def.type}`);
+          const params = {
+            ..._params,
+            schemaPath: [..._params.schemaPath, schema],
+            path: _params.path
+          };
+          const parent = schema._zod.parent;
+          if (parent) {
+            result.ref = parent;
+            this.process(parent, params);
+            this.seen.get(parent).isParent = true;
+          } else {
+            const _json = result.schema;
+            switch (def.type) {
+              case "string": {
+                const json2 = _json;
+                json2.type = "string";
+                const { minimum, maximum, format, patterns, contentEncoding } = schema._zod.bag;
+                if (typeof minimum === "number")
+                  json2.minLength = minimum;
+                if (typeof maximum === "number")
+                  json2.maxLength = maximum;
+                if (format) {
+                  json2.format = formatMap[format] ?? format;
+                  if (json2.format === "")
+                    delete json2.format;
+                }
+                if (contentEncoding)
+                  json2.contentEncoding = contentEncoding;
+                if (patterns && patterns.size > 0) {
+                  const regexes = [...patterns];
+                  if (regexes.length === 1)
+                    json2.pattern = regexes[0].source;
+                  else if (regexes.length > 1) {
+                    result.schema.allOf = [
+                      ...regexes.map((regex) => ({
+                        ...this.target === "draft-7" || this.target === "draft-4" || this.target === "openapi-3.0" ? { type: "string" } : {},
+                        pattern: regex.source
+                      }))
+                    ];
+                  }
+                }
+                break;
+              }
+              case "number": {
+                const json2 = _json;
+                const { minimum, maximum, format, multipleOf, exclusiveMaximum, exclusiveMinimum } = schema._zod.bag;
+                if (typeof format === "string" && format.includes("int"))
+                  json2.type = "integer";
+                else
+                  json2.type = "number";
+                if (typeof exclusiveMinimum === "number") {
+                  if (this.target === "draft-4" || this.target === "openapi-3.0") {
+                    json2.minimum = exclusiveMinimum;
+                    json2.exclusiveMinimum = true;
+                  } else {
+                    json2.exclusiveMinimum = exclusiveMinimum;
+                  }
+                }
+                if (typeof minimum === "number") {
+                  json2.minimum = minimum;
+                  if (typeof exclusiveMinimum === "number" && this.target !== "draft-4") {
+                    if (exclusiveMinimum >= minimum)
+                      delete json2.minimum;
+                    else
+                      delete json2.exclusiveMinimum;
+                  }
+                }
+                if (typeof exclusiveMaximum === "number") {
+                  if (this.target === "draft-4" || this.target === "openapi-3.0") {
+                    json2.maximum = exclusiveMaximum;
+                    json2.exclusiveMaximum = true;
+                  } else {
+                    json2.exclusiveMaximum = exclusiveMaximum;
+                  }
+                }
+                if (typeof maximum === "number") {
+                  json2.maximum = maximum;
+                  if (typeof exclusiveMaximum === "number" && this.target !== "draft-4") {
+                    if (exclusiveMaximum <= maximum)
+                      delete json2.maximum;
+                    else
+                      delete json2.exclusiveMaximum;
+                  }
+                }
+                if (typeof multipleOf === "number")
+                  json2.multipleOf = multipleOf;
+                break;
+              }
+              case "boolean": {
+                const json2 = _json;
+                json2.type = "boolean";
+                break;
+              }
+              case "bigint": {
+                if (this.unrepresentable === "throw") {
+                  throw new Error("BigInt cannot be represented in JSON Schema");
+                }
+                break;
+              }
+              case "symbol": {
+                if (this.unrepresentable === "throw") {
+                  throw new Error("Symbols cannot be represented in JSON Schema");
+                }
+                break;
+              }
+              case "null": {
+                if (this.target === "openapi-3.0") {
+                  _json.type = "string";
+                  _json.nullable = true;
+                  _json.enum = [null];
+                } else
+                  _json.type = "null";
+                break;
+              }
+              case "any": {
+                break;
+              }
+              case "unknown": {
+                break;
+              }
+              case "undefined": {
+                if (this.unrepresentable === "throw") {
+                  throw new Error("Undefined cannot be represented in JSON Schema");
+                }
+                break;
+              }
+              case "void": {
+                if (this.unrepresentable === "throw") {
+                  throw new Error("Void cannot be represented in JSON Schema");
+                }
+                break;
+              }
+              case "never": {
+                _json.not = {};
+                break;
+              }
+              case "date": {
+                if (this.unrepresentable === "throw") {
+                  throw new Error("Date cannot be represented in JSON Schema");
+                }
+                break;
+              }
+              case "array": {
+                const json2 = _json;
+                const { minimum, maximum } = schema._zod.bag;
+                if (typeof minimum === "number")
+                  json2.minItems = minimum;
+                if (typeof maximum === "number")
+                  json2.maxItems = maximum;
+                json2.type = "array";
+                json2.items = this.process(def.element, { ...params, path: [...params.path, "items"] });
+                break;
+              }
+              case "object": {
+                const json2 = _json;
+                json2.type = "object";
+                json2.properties = {};
+                const shape = def.shape;
+                for (const key in shape) {
+                  json2.properties[key] = this.process(shape[key], {
+                    ...params,
+                    path: [...params.path, "properties", key]
+                  });
+                }
+                const allKeys = new Set(Object.keys(shape));
+                const requiredKeys = new Set([...allKeys].filter((key) => {
+                  const v = def.shape[key]._zod;
+                  if (this.io === "input") {
+                    return v.optin === void 0;
+                  } else {
+                    return v.optout === void 0;
+                  }
+                }));
+                if (requiredKeys.size > 0) {
+                  json2.required = Array.from(requiredKeys);
+                }
+                if (def.catchall?._zod.def.type === "never") {
+                  json2.additionalProperties = false;
+                } else if (!def.catchall) {
+                  if (this.io === "output")
+                    json2.additionalProperties = false;
+                } else if (def.catchall) {
+                  json2.additionalProperties = this.process(def.catchall, {
+                    ...params,
+                    path: [...params.path, "additionalProperties"]
+                  });
+                }
+                break;
+              }
+              case "union": {
+                const json2 = _json;
+                const isDiscriminated = def.discriminator !== void 0;
+                const options = def.options.map((x, i) => this.process(x, {
+                  ...params,
+                  path: [...params.path, isDiscriminated ? "oneOf" : "anyOf", i]
+                }));
+                if (isDiscriminated) {
+                  json2.oneOf = options;
+                } else {
+                  json2.anyOf = options;
+                }
+                break;
+              }
+              case "intersection": {
+                const json2 = _json;
+                const a = this.process(def.left, {
+                  ...params,
+                  path: [...params.path, "allOf", 0]
+                });
+                const b = this.process(def.right, {
+                  ...params,
+                  path: [...params.path, "allOf", 1]
+                });
+                const isSimpleIntersection = (val) => "allOf" in val && Object.keys(val).length === 1;
+                const allOf = [
+                  ...isSimpleIntersection(a) ? a.allOf : [a],
+                  ...isSimpleIntersection(b) ? b.allOf : [b]
+                ];
+                json2.allOf = allOf;
+                break;
+              }
+              case "tuple": {
+                const json2 = _json;
+                json2.type = "array";
+                const prefixPath = this.target === "draft-2020-12" ? "prefixItems" : "items";
+                const restPath = this.target === "draft-2020-12" ? "items" : this.target === "openapi-3.0" ? "items" : "additionalItems";
+                const prefixItems = def.items.map((x, i) => this.process(x, {
+                  ...params,
+                  path: [...params.path, prefixPath, i]
+                }));
+                const rest = def.rest ? this.process(def.rest, {
+                  ...params,
+                  path: [...params.path, restPath, ...this.target === "openapi-3.0" ? [def.items.length] : []]
+                }) : null;
+                if (this.target === "draft-2020-12") {
+                  json2.prefixItems = prefixItems;
+                  if (rest) {
+                    json2.items = rest;
+                  }
+                } else if (this.target === "openapi-3.0") {
+                  json2.items = {
+                    anyOf: prefixItems
+                  };
+                  if (rest) {
+                    json2.items.anyOf.push(rest);
+                  }
+                  json2.minItems = prefixItems.length;
+                  if (!rest) {
+                    json2.maxItems = prefixItems.length;
+                  }
+                } else {
+                  json2.items = prefixItems;
+                  if (rest) {
+                    json2.additionalItems = rest;
+                  }
+                }
+                const { minimum, maximum } = schema._zod.bag;
+                if (typeof minimum === "number")
+                  json2.minItems = minimum;
+                if (typeof maximum === "number")
+                  json2.maxItems = maximum;
+                break;
+              }
+              case "record": {
+                const json2 = _json;
+                json2.type = "object";
+                if (this.target === "draft-7" || this.target === "draft-2020-12") {
+                  json2.propertyNames = this.process(def.keyType, {
+                    ...params,
+                    path: [...params.path, "propertyNames"]
+                  });
+                }
+                json2.additionalProperties = this.process(def.valueType, {
+                  ...params,
+                  path: [...params.path, "additionalProperties"]
+                });
+                break;
+              }
+              case "map": {
+                if (this.unrepresentable === "throw") {
+                  throw new Error("Map cannot be represented in JSON Schema");
+                }
+                break;
+              }
+              case "set": {
+                if (this.unrepresentable === "throw") {
+                  throw new Error("Set cannot be represented in JSON Schema");
+                }
+                break;
+              }
+              case "enum": {
+                const json2 = _json;
+                const values = (0, util_js_1.getEnumValues)(def.entries);
+                if (values.every((v) => typeof v === "number"))
+                  json2.type = "number";
+                if (values.every((v) => typeof v === "string"))
+                  json2.type = "string";
+                json2.enum = values;
+                break;
+              }
+              case "literal": {
+                const json2 = _json;
+                const vals = [];
+                for (const val of def.values) {
+                  if (val === void 0) {
+                    if (this.unrepresentable === "throw") {
+                      throw new Error("Literal `undefined` cannot be represented in JSON Schema");
+                    } else {
+                    }
+                  } else if (typeof val === "bigint") {
+                    if (this.unrepresentable === "throw") {
+                      throw new Error("BigInt literals cannot be represented in JSON Schema");
+                    } else {
+                      vals.push(Number(val));
+                    }
+                  } else {
+                    vals.push(val);
+                  }
+                }
+                if (vals.length === 0) {
+                } else if (vals.length === 1) {
+                  const val = vals[0];
+                  json2.type = val === null ? "null" : typeof val;
+                  if (this.target === "draft-4" || this.target === "openapi-3.0") {
+                    json2.enum = [val];
+                  } else {
+                    json2.const = val;
+                  }
+                } else {
+                  if (vals.every((v) => typeof v === "number"))
+                    json2.type = "number";
+                  if (vals.every((v) => typeof v === "string"))
+                    json2.type = "string";
+                  if (vals.every((v) => typeof v === "boolean"))
+                    json2.type = "string";
+                  if (vals.every((v) => v === null))
+                    json2.type = "null";
+                  json2.enum = vals;
+                }
+                break;
+              }
+              case "file": {
+                const json2 = _json;
+                const file2 = {
+                  type: "string",
+                  format: "binary",
+                  contentEncoding: "binary"
+                };
+                const { minimum, maximum, mime } = schema._zod.bag;
+                if (minimum !== void 0)
+                  file2.minLength = minimum;
+                if (maximum !== void 0)
+                  file2.maxLength = maximum;
+                if (mime) {
+                  if (mime.length === 1) {
+                    file2.contentMediaType = mime[0];
+                    Object.assign(json2, file2);
+                  } else {
+                    json2.anyOf = mime.map((m) => {
+                      const mFile = { ...file2, contentMediaType: m };
+                      return mFile;
+                    });
+                  }
+                } else {
+                  Object.assign(json2, file2);
+                }
+                break;
+              }
+              case "transform": {
+                if (this.unrepresentable === "throw") {
+                  throw new Error("Transforms cannot be represented in JSON Schema");
+                }
+                break;
+              }
+              case "nullable": {
+                const inner = this.process(def.innerType, params);
+                if (this.target === "openapi-3.0") {
+                  result.ref = def.innerType;
+                  _json.nullable = true;
+                } else {
+                  _json.anyOf = [inner, { type: "null" }];
+                }
+                break;
+              }
+              case "nonoptional": {
+                this.process(def.innerType, params);
+                result.ref = def.innerType;
+                break;
+              }
+              case "success": {
+                const json2 = _json;
+                json2.type = "boolean";
+                break;
+              }
+              case "default": {
+                this.process(def.innerType, params);
+                result.ref = def.innerType;
+                _json.default = JSON.parse(JSON.stringify(def.defaultValue));
+                break;
+              }
+              case "prefault": {
+                this.process(def.innerType, params);
+                result.ref = def.innerType;
+                if (this.io === "input")
+                  _json._prefault = JSON.parse(JSON.stringify(def.defaultValue));
+                break;
+              }
+              case "catch": {
+                this.process(def.innerType, params);
+                result.ref = def.innerType;
+                let catchValue;
+                try {
+                  catchValue = def.catchValue(void 0);
+                } catch {
+                  throw new Error("Dynamic catch values are not supported in JSON Schema");
+                }
+                _json.default = catchValue;
+                break;
+              }
+              case "nan": {
+                if (this.unrepresentable === "throw") {
+                  throw new Error("NaN cannot be represented in JSON Schema");
+                }
+                break;
+              }
+              case "template_literal": {
+                const json2 = _json;
+                const pattern = schema._zod.pattern;
+                if (!pattern)
+                  throw new Error("Pattern not found in template literal");
+                json2.type = "string";
+                json2.pattern = pattern.source;
+                break;
+              }
+              case "pipe": {
+                const innerType = this.io === "input" ? def.in._zod.def.type === "transform" ? def.out : def.in : def.out;
+                this.process(innerType, params);
+                result.ref = innerType;
+                break;
+              }
+              case "readonly": {
+                this.process(def.innerType, params);
+                result.ref = def.innerType;
+                _json.readOnly = true;
+                break;
+              }
+              // passthrough types
+              case "promise": {
+                this.process(def.innerType, params);
+                result.ref = def.innerType;
+                break;
+              }
+              case "optional": {
+                this.process(def.innerType, params);
+                result.ref = def.innerType;
+                break;
+              }
+              case "lazy": {
+                const innerType = schema._zod.innerType;
+                this.process(innerType, params);
+                result.ref = innerType;
+                break;
+              }
+              case "custom": {
+                if (this.unrepresentable === "throw") {
+                  throw new Error("Custom types cannot be represented in JSON Schema");
+                }
+                break;
+              }
+              case "function": {
+                if (this.unrepresentable === "throw") {
+                  throw new Error("Function types cannot be represented in JSON Schema");
+                }
+                break;
+              }
+              default: {
+                def;
+              }
+            }
           }
-          processor(schema, ctx, _json, params);
         }
+        const meta3 = this.metadataRegistry.get(schema);
+        if (meta3)
+          Object.assign(result.schema, meta3);
+        if (this.io === "input" && isTransforming2(schema)) {
+          delete result.schema.examples;
+          delete result.schema.default;
+        }
+        if (this.io === "input" && result.schema._prefault)
+          (_a2 = result.schema).default ?? (_a2.default = result.schema._prefault);
+        delete result.schema._prefault;
+        const _result = this.seen.get(schema);
+        return _result.schema;
       }
-      const meta3 = ctx.metadataRegistry.get(schema);
-      if (meta3)
-        Object.assign(result.schema, meta3);
-      if (ctx.io === "input" && isTransforming2(schema)) {
-        delete result.schema.examples;
-        delete result.schema.default;
-      }
-      if (ctx.io === "input" && result.schema._prefault)
-        (_a2 = result.schema).default ?? (_a2.default = result.schema._prefault);
-      delete result.schema._prefault;
-      const _result = ctx.seen.get(schema);
-      return _result.schema;
-    }
-    function extractDefs2(ctx, schema) {
-      const root = ctx.seen.get(schema);
-      if (!root)
-        throw new Error("Unprocessed schema. This is a bug in Zod.");
-      const makeURI = (entry) => {
-        const defsSegment = ctx.target === "draft-2020-12" ? "$defs" : "definitions";
-        if (ctx.external) {
-          const externalId = ctx.external.registry.get(entry[0])?.id;
-          const uriGenerator = ctx.external.uri ?? ((id2) => id2);
-          if (externalId) {
-            return { ref: uriGenerator(externalId) };
+      emit(schema, _params) {
+        const params = {
+          cycles: _params?.cycles ?? "ref",
+          reused: _params?.reused ?? "inline",
+          // unrepresentable: _params?.unrepresentable ?? "throw",
+          // uri: _params?.uri ?? ((id) => `${id}`),
+          external: _params?.external ?? void 0
+        };
+        const root = this.seen.get(schema);
+        if (!root)
+          throw new Error("Unprocessed schema. This is a bug in Zod.");
+        const makeURI = (entry) => {
+          const defsSegment = this.target === "draft-2020-12" ? "$defs" : "definitions";
+          if (params.external) {
+            const externalId = params.external.registry.get(entry[0])?.id;
+            const uriGenerator = params.external.uri ?? ((id2) => id2);
+            if (externalId) {
+              return { ref: uriGenerator(externalId) };
+            }
+            const id = entry[1].defId ?? entry[1].schema.id ?? `schema${this.counter++}`;
+            entry[1].defId = id;
+            return { defId: id, ref: `${uriGenerator("__shared")}#/${defsSegment}/${id}` };
           }
-          const id = entry[1].defId ?? entry[1].schema.id ?? `schema${ctx.counter++}`;
-          entry[1].defId = id;
-          return { defId: id, ref: `${uriGenerator("__shared")}#/${defsSegment}/${id}` };
-        }
-        if (entry[1] === root) {
-          return { ref: "#" };
-        }
-        const uriPrefix = `#`;
-        const defUriPrefix = `${uriPrefix}/${defsSegment}/`;
-        const defId = entry[1].schema.id ?? `__schema${ctx.counter++}`;
-        return { defId, ref: defUriPrefix + defId };
-      };
-      const extractToDef = (entry) => {
-        if (entry[1].schema.$ref) {
-          return;
-        }
-        const seen = entry[1];
-        const { ref, defId } = makeURI(entry);
-        seen.def = { ...seen.schema };
-        if (defId)
-          seen.defId = defId;
-        const schema2 = seen.schema;
-        for (const key in schema2) {
-          delete schema2[key];
-        }
-        schema2.$ref = ref;
-      };
-      if (ctx.cycles === "throw") {
-        for (const entry of ctx.seen.entries()) {
+          if (entry[1] === root) {
+            return { ref: "#" };
+          }
+          const uriPrefix = `#`;
+          const defUriPrefix = `${uriPrefix}/${defsSegment}/`;
+          const defId = entry[1].schema.id ?? `__schema${this.counter++}`;
+          return { defId, ref: defUriPrefix + defId };
+        };
+        const extractToDef = (entry) => {
+          if (entry[1].schema.$ref) {
+            return;
+          }
           const seen = entry[1];
-          if (seen.cycle) {
-            throw new Error(`Cycle detected: #/${seen.cycle?.join("/")}/<root>
+          const { ref, defId } = makeURI(entry);
+          seen.def = { ...seen.schema };
+          if (defId)
+            seen.defId = defId;
+          const schema2 = seen.schema;
+          for (const key in schema2) {
+            delete schema2[key];
+          }
+          schema2.$ref = ref;
+        };
+        if (params.cycles === "throw") {
+          for (const entry of this.seen.entries()) {
+            const seen = entry[1];
+            if (seen.cycle) {
+              throw new Error(`Cycle detected: #/${seen.cycle?.join("/")}/<root>
 
 Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.`);
-          }
-        }
-      }
-      for (const entry of ctx.seen.entries()) {
-        const seen = entry[1];
-        if (schema === entry[0]) {
-          extractToDef(entry);
-          continue;
-        }
-        if (ctx.external) {
-          const ext = ctx.external.registry.get(entry[0])?.id;
-          if (schema !== entry[0] && ext) {
-            extractToDef(entry);
-            continue;
-          }
-        }
-        const id = ctx.metadataRegistry.get(entry[0])?.id;
-        if (id) {
-          extractToDef(entry);
-          continue;
-        }
-        if (seen.cycle) {
-          extractToDef(entry);
-          continue;
-        }
-        if (seen.count > 1) {
-          if (ctx.reused === "ref") {
-            extractToDef(entry);
-            continue;
-          }
-        }
-      }
-    }
-    function finalize2(ctx, schema) {
-      const root = ctx.seen.get(schema);
-      if (!root)
-        throw new Error("Unprocessed schema. This is a bug in Zod.");
-      const flattenRef = (zodSchema) => {
-        const seen = ctx.seen.get(zodSchema);
-        const schema2 = seen.def ?? seen.schema;
-        const _cached = { ...schema2 };
-        if (seen.ref === null) {
-          return;
-        }
-        const ref = seen.ref;
-        seen.ref = null;
-        if (ref) {
-          flattenRef(ref);
-          const refSchema = ctx.seen.get(ref).schema;
-          if (refSchema.$ref && (ctx.target === "draft-07" || ctx.target === "draft-04" || ctx.target === "openapi-3.0")) {
-            schema2.allOf = schema2.allOf ?? [];
-            schema2.allOf.push(refSchema);
-          } else {
-            Object.assign(schema2, refSchema);
-            Object.assign(schema2, _cached);
-          }
-        }
-        if (!seen.isParent)
-          ctx.override({
-            zodSchema,
-            jsonSchema: schema2,
-            path: seen.path ?? []
-          });
-      };
-      for (const entry of [...ctx.seen.entries()].reverse()) {
-        flattenRef(entry[0]);
-      }
-      const result = {};
-      if (ctx.target === "draft-2020-12") {
-        result.$schema = "https://json-schema.org/draft/2020-12/schema";
-      } else if (ctx.target === "draft-07") {
-        result.$schema = "http://json-schema.org/draft-07/schema#";
-      } else if (ctx.target === "draft-04") {
-        result.$schema = "http://json-schema.org/draft-04/schema#";
-      } else if (ctx.target === "openapi-3.0") {
-      } else {
-      }
-      if (ctx.external?.uri) {
-        const id = ctx.external.registry.get(schema)?.id;
-        if (!id)
-          throw new Error("Schema is missing an `id` property");
-        result.$id = ctx.external.uri(id);
-      }
-      Object.assign(result, root.def ?? root.schema);
-      const defs = ctx.external?.defs ?? {};
-      for (const entry of ctx.seen.entries()) {
-        const seen = entry[1];
-        if (seen.def && seen.defId) {
-          defs[seen.defId] = seen.def;
-        }
-      }
-      if (ctx.external) {
-      } else {
-        if (Object.keys(defs).length > 0) {
-          if (ctx.target === "draft-2020-12") {
-            result.$defs = defs;
-          } else {
-            result.definitions = defs;
-          }
-        }
-      }
-      try {
-        const finalized = JSON.parse(JSON.stringify(result));
-        Object.defineProperty(finalized, "~standard", {
-          value: {
-            ...schema["~standard"],
-            jsonSchema: {
-              input: (0, exports2.createStandardJSONSchemaMethod)(schema, "input"),
-              output: (0, exports2.createStandardJSONSchemaMethod)(schema, "output")
             }
-          },
-          enumerable: false,
-          writable: false
-        });
-        return finalized;
-      } catch (_err) {
-        throw new Error("Error converting schema to JSON.");
+          }
+        }
+        for (const entry of this.seen.entries()) {
+          const seen = entry[1];
+          if (schema === entry[0]) {
+            extractToDef(entry);
+            continue;
+          }
+          if (params.external) {
+            const ext = params.external.registry.get(entry[0])?.id;
+            if (schema !== entry[0] && ext) {
+              extractToDef(entry);
+              continue;
+            }
+          }
+          const id = this.metadataRegistry.get(entry[0])?.id;
+          if (id) {
+            extractToDef(entry);
+            continue;
+          }
+          if (seen.cycle) {
+            extractToDef(entry);
+            continue;
+          }
+          if (seen.count > 1) {
+            if (params.reused === "ref") {
+              extractToDef(entry);
+              continue;
+            }
+          }
+        }
+        const flattenRef = (zodSchema, params2) => {
+          const seen = this.seen.get(zodSchema);
+          const schema2 = seen.def ?? seen.schema;
+          const _cached = { ...schema2 };
+          if (seen.ref === null) {
+            return;
+          }
+          const ref = seen.ref;
+          seen.ref = null;
+          if (ref) {
+            flattenRef(ref, params2);
+            const refSchema = this.seen.get(ref).schema;
+            if (refSchema.$ref && (params2.target === "draft-7" || params2.target === "draft-4" || params2.target === "openapi-3.0")) {
+              schema2.allOf = schema2.allOf ?? [];
+              schema2.allOf.push(refSchema);
+            } else {
+              Object.assign(schema2, refSchema);
+              Object.assign(schema2, _cached);
+            }
+          }
+          if (!seen.isParent)
+            this.override({
+              zodSchema,
+              jsonSchema: schema2,
+              path: seen.path ?? []
+            });
+        };
+        for (const entry of [...this.seen.entries()].reverse()) {
+          flattenRef(entry[0], { target: this.target });
+        }
+        const result = {};
+        if (this.target === "draft-2020-12") {
+          result.$schema = "https://json-schema.org/draft/2020-12/schema";
+        } else if (this.target === "draft-7") {
+          result.$schema = "http://json-schema.org/draft-07/schema#";
+        } else if (this.target === "draft-4") {
+          result.$schema = "http://json-schema.org/draft-04/schema#";
+        } else if (this.target === "openapi-3.0") {
+        } else {
+          console.warn(`Invalid target: ${this.target}`);
+        }
+        if (params.external?.uri) {
+          const id = params.external.registry.get(schema)?.id;
+          if (!id)
+            throw new Error("Schema is missing an `id` property");
+          result.$id = params.external.uri(id);
+        }
+        Object.assign(result, root.def);
+        const defs = params.external?.defs ?? {};
+        for (const entry of this.seen.entries()) {
+          const seen = entry[1];
+          if (seen.def && seen.defId) {
+            defs[seen.defId] = seen.def;
+          }
+        }
+        if (params.external) {
+        } else {
+          if (Object.keys(defs).length > 0) {
+            if (this.target === "draft-2020-12") {
+              result.$defs = defs;
+            } else {
+              result.definitions = defs;
+            }
+          }
+        }
+        try {
+          return JSON.parse(JSON.stringify(result));
+        } catch (_err) {
+          throw new Error("Error converting schema to JSON.");
+        }
       }
+    };
+    exports2.JSONSchemaGenerator = JSONSchemaGenerator2;
+    function toJSONSchema2(input, _params) {
+      if (input instanceof registries_js_1.$ZodRegistry) {
+        const gen2 = new JSONSchemaGenerator2(_params);
+        const defs = {};
+        for (const entry of input._idmap.entries()) {
+          const [_, schema] = entry;
+          gen2.process(schema);
+        }
+        const schemas = {};
+        const external = {
+          registry: input,
+          uri: _params?.uri,
+          defs
+        };
+        for (const entry of input._idmap.entries()) {
+          const [key, schema] = entry;
+          schemas[key] = gen2.emit(schema, {
+            ..._params,
+            external
+          });
+        }
+        if (Object.keys(defs).length > 0) {
+          const defsSegment = gen2.target === "draft-2020-12" ? "$defs" : "definitions";
+          schemas.__shared = {
+            [defsSegment]: defs
+          };
+        }
+        return { schemas };
+      }
+      const gen = new JSONSchemaGenerator2(_params);
+      gen.process(input);
+      return gen.emit(input, _params);
     }
     function isTransforming2(_schema, _ctx) {
       const ctx = _ctx ?? { seen: /* @__PURE__ */ new Set() };
@@ -12801,684 +13216,6 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
       }
       return false;
     }
-    var createToJSONSchemaMethod2 = (schema, processors = {}) => (params) => {
-      const ctx = initializeContext2({ ...params, processors });
-      process3(schema, ctx);
-      extractDefs2(ctx, schema);
-      return finalize2(ctx, schema);
-    };
-    exports2.createToJSONSchemaMethod = createToJSONSchemaMethod2;
-    var createStandardJSONSchemaMethod2 = (schema, io) => (params) => {
-      const { libraryOptions, target } = params ?? {};
-      const ctx = initializeContext2({ ...libraryOptions ?? {}, target, io, processors: {} });
-      process3(schema, ctx);
-      extractDefs2(ctx, schema);
-      return finalize2(ctx, schema);
-    };
-    exports2.createStandardJSONSchemaMethod = createStandardJSONSchemaMethod2;
-  }
-});
-
-// node_modules/zod/v4/core/json-schema-processors.cjs
-var require_json_schema_processors = __commonJS({
-  "node_modules/zod/v4/core/json-schema-processors.cjs"(exports2) {
-    "use strict";
-    Object.defineProperty(exports2, "__esModule", { value: true });
-    exports2.allProcessors = exports2.lazyProcessor = exports2.optionalProcessor = exports2.promiseProcessor = exports2.readonlyProcessor = exports2.pipeProcessor = exports2.catchProcessor = exports2.prefaultProcessor = exports2.defaultProcessor = exports2.nonoptionalProcessor = exports2.nullableProcessor = exports2.recordProcessor = exports2.tupleProcessor = exports2.intersectionProcessor = exports2.unionProcessor = exports2.objectProcessor = exports2.arrayProcessor = exports2.setProcessor = exports2.mapProcessor = exports2.transformProcessor = exports2.functionProcessor = exports2.customProcessor = exports2.successProcessor = exports2.fileProcessor = exports2.templateLiteralProcessor = exports2.nanProcessor = exports2.literalProcessor = exports2.enumProcessor = exports2.dateProcessor = exports2.unknownProcessor = exports2.anyProcessor = exports2.neverProcessor = exports2.voidProcessor = exports2.undefinedProcessor = exports2.nullProcessor = exports2.symbolProcessor = exports2.bigintProcessor = exports2.booleanProcessor = exports2.numberProcessor = exports2.stringProcessor = void 0;
-    exports2.toJSONSchema = toJSONSchema2;
-    var to_json_schema_js_1 = require_to_json_schema();
-    var util_js_1 = require_util();
-    var formatMap2 = {
-      guid: "uuid",
-      url: "uri",
-      datetime: "date-time",
-      json_string: "json-string",
-      regex: ""
-      // do not set
-    };
-    var stringProcessor2 = (schema, ctx, _json, _params) => {
-      const json2 = _json;
-      json2.type = "string";
-      const { minimum, maximum, format, patterns, contentEncoding } = schema._zod.bag;
-      if (typeof minimum === "number")
-        json2.minLength = minimum;
-      if (typeof maximum === "number")
-        json2.maxLength = maximum;
-      if (format) {
-        json2.format = formatMap2[format] ?? format;
-        if (json2.format === "")
-          delete json2.format;
-      }
-      if (contentEncoding)
-        json2.contentEncoding = contentEncoding;
-      if (patterns && patterns.size > 0) {
-        const regexes = [...patterns];
-        if (regexes.length === 1)
-          json2.pattern = regexes[0].source;
-        else if (regexes.length > 1) {
-          json2.allOf = [
-            ...regexes.map((regex) => ({
-              ...ctx.target === "draft-07" || ctx.target === "draft-04" || ctx.target === "openapi-3.0" ? { type: "string" } : {},
-              pattern: regex.source
-            }))
-          ];
-        }
-      }
-    };
-    exports2.stringProcessor = stringProcessor2;
-    var numberProcessor2 = (schema, ctx, _json, _params) => {
-      const json2 = _json;
-      const { minimum, maximum, format, multipleOf, exclusiveMaximum, exclusiveMinimum } = schema._zod.bag;
-      if (typeof format === "string" && format.includes("int"))
-        json2.type = "integer";
-      else
-        json2.type = "number";
-      if (typeof exclusiveMinimum === "number") {
-        if (ctx.target === "draft-04" || ctx.target === "openapi-3.0") {
-          json2.minimum = exclusiveMinimum;
-          json2.exclusiveMinimum = true;
-        } else {
-          json2.exclusiveMinimum = exclusiveMinimum;
-        }
-      }
-      if (typeof minimum === "number") {
-        json2.minimum = minimum;
-        if (typeof exclusiveMinimum === "number" && ctx.target !== "draft-04") {
-          if (exclusiveMinimum >= minimum)
-            delete json2.minimum;
-          else
-            delete json2.exclusiveMinimum;
-        }
-      }
-      if (typeof exclusiveMaximum === "number") {
-        if (ctx.target === "draft-04" || ctx.target === "openapi-3.0") {
-          json2.maximum = exclusiveMaximum;
-          json2.exclusiveMaximum = true;
-        } else {
-          json2.exclusiveMaximum = exclusiveMaximum;
-        }
-      }
-      if (typeof maximum === "number") {
-        json2.maximum = maximum;
-        if (typeof exclusiveMaximum === "number" && ctx.target !== "draft-04") {
-          if (exclusiveMaximum <= maximum)
-            delete json2.maximum;
-          else
-            delete json2.exclusiveMaximum;
-        }
-      }
-      if (typeof multipleOf === "number")
-        json2.multipleOf = multipleOf;
-    };
-    exports2.numberProcessor = numberProcessor2;
-    var booleanProcessor2 = (_schema, _ctx, json2, _params) => {
-      json2.type = "boolean";
-    };
-    exports2.booleanProcessor = booleanProcessor2;
-    var bigintProcessor2 = (_schema, ctx, _json, _params) => {
-      if (ctx.unrepresentable === "throw") {
-        throw new Error("BigInt cannot be represented in JSON Schema");
-      }
-    };
-    exports2.bigintProcessor = bigintProcessor2;
-    var symbolProcessor2 = (_schema, ctx, _json, _params) => {
-      if (ctx.unrepresentable === "throw") {
-        throw new Error("Symbols cannot be represented in JSON Schema");
-      }
-    };
-    exports2.symbolProcessor = symbolProcessor2;
-    var nullProcessor2 = (_schema, ctx, json2, _params) => {
-      if (ctx.target === "openapi-3.0") {
-        json2.type = "string";
-        json2.nullable = true;
-        json2.enum = [null];
-      } else {
-        json2.type = "null";
-      }
-    };
-    exports2.nullProcessor = nullProcessor2;
-    var undefinedProcessor2 = (_schema, ctx, _json, _params) => {
-      if (ctx.unrepresentable === "throw") {
-        throw new Error("Undefined cannot be represented in JSON Schema");
-      }
-    };
-    exports2.undefinedProcessor = undefinedProcessor2;
-    var voidProcessor2 = (_schema, ctx, _json, _params) => {
-      if (ctx.unrepresentable === "throw") {
-        throw new Error("Void cannot be represented in JSON Schema");
-      }
-    };
-    exports2.voidProcessor = voidProcessor2;
-    var neverProcessor2 = (_schema, _ctx, json2, _params) => {
-      json2.not = {};
-    };
-    exports2.neverProcessor = neverProcessor2;
-    var anyProcessor2 = (_schema, _ctx, _json, _params) => {
-    };
-    exports2.anyProcessor = anyProcessor2;
-    var unknownProcessor2 = (_schema, _ctx, _json, _params) => {
-    };
-    exports2.unknownProcessor = unknownProcessor2;
-    var dateProcessor2 = (_schema, ctx, _json, _params) => {
-      if (ctx.unrepresentable === "throw") {
-        throw new Error("Date cannot be represented in JSON Schema");
-      }
-    };
-    exports2.dateProcessor = dateProcessor2;
-    var enumProcessor2 = (schema, _ctx, json2, _params) => {
-      const def = schema._zod.def;
-      const values = (0, util_js_1.getEnumValues)(def.entries);
-      if (values.every((v) => typeof v === "number"))
-        json2.type = "number";
-      if (values.every((v) => typeof v === "string"))
-        json2.type = "string";
-      json2.enum = values;
-    };
-    exports2.enumProcessor = enumProcessor2;
-    var literalProcessor2 = (schema, ctx, json2, _params) => {
-      const def = schema._zod.def;
-      const vals = [];
-      for (const val of def.values) {
-        if (val === void 0) {
-          if (ctx.unrepresentable === "throw") {
-            throw new Error("Literal `undefined` cannot be represented in JSON Schema");
-          } else {
-          }
-        } else if (typeof val === "bigint") {
-          if (ctx.unrepresentable === "throw") {
-            throw new Error("BigInt literals cannot be represented in JSON Schema");
-          } else {
-            vals.push(Number(val));
-          }
-        } else {
-          vals.push(val);
-        }
-      }
-      if (vals.length === 0) {
-      } else if (vals.length === 1) {
-        const val = vals[0];
-        json2.type = val === null ? "null" : typeof val;
-        if (ctx.target === "draft-04" || ctx.target === "openapi-3.0") {
-          json2.enum = [val];
-        } else {
-          json2.const = val;
-        }
-      } else {
-        if (vals.every((v) => typeof v === "number"))
-          json2.type = "number";
-        if (vals.every((v) => typeof v === "string"))
-          json2.type = "string";
-        if (vals.every((v) => typeof v === "boolean"))
-          json2.type = "boolean";
-        if (vals.every((v) => v === null))
-          json2.type = "null";
-        json2.enum = vals;
-      }
-    };
-    exports2.literalProcessor = literalProcessor2;
-    var nanProcessor2 = (_schema, ctx, _json, _params) => {
-      if (ctx.unrepresentable === "throw") {
-        throw new Error("NaN cannot be represented in JSON Schema");
-      }
-    };
-    exports2.nanProcessor = nanProcessor2;
-    var templateLiteralProcessor2 = (schema, _ctx, json2, _params) => {
-      const _json = json2;
-      const pattern = schema._zod.pattern;
-      if (!pattern)
-        throw new Error("Pattern not found in template literal");
-      _json.type = "string";
-      _json.pattern = pattern.source;
-    };
-    exports2.templateLiteralProcessor = templateLiteralProcessor2;
-    var fileProcessor2 = (schema, _ctx, json2, _params) => {
-      const _json = json2;
-      const file2 = {
-        type: "string",
-        format: "binary",
-        contentEncoding: "binary"
-      };
-      const { minimum, maximum, mime } = schema._zod.bag;
-      if (minimum !== void 0)
-        file2.minLength = minimum;
-      if (maximum !== void 0)
-        file2.maxLength = maximum;
-      if (mime) {
-        if (mime.length === 1) {
-          file2.contentMediaType = mime[0];
-          Object.assign(_json, file2);
-        } else {
-          _json.anyOf = mime.map((m) => {
-            const mFile = { ...file2, contentMediaType: m };
-            return mFile;
-          });
-        }
-      } else {
-        Object.assign(_json, file2);
-      }
-    };
-    exports2.fileProcessor = fileProcessor2;
-    var successProcessor2 = (_schema, _ctx, json2, _params) => {
-      json2.type = "boolean";
-    };
-    exports2.successProcessor = successProcessor2;
-    var customProcessor2 = (_schema, ctx, _json, _params) => {
-      if (ctx.unrepresentable === "throw") {
-        throw new Error("Custom types cannot be represented in JSON Schema");
-      }
-    };
-    exports2.customProcessor = customProcessor2;
-    var functionProcessor2 = (_schema, ctx, _json, _params) => {
-      if (ctx.unrepresentable === "throw") {
-        throw new Error("Function types cannot be represented in JSON Schema");
-      }
-    };
-    exports2.functionProcessor = functionProcessor2;
-    var transformProcessor2 = (_schema, ctx, _json, _params) => {
-      if (ctx.unrepresentable === "throw") {
-        throw new Error("Transforms cannot be represented in JSON Schema");
-      }
-    };
-    exports2.transformProcessor = transformProcessor2;
-    var mapProcessor2 = (_schema, ctx, _json, _params) => {
-      if (ctx.unrepresentable === "throw") {
-        throw new Error("Map cannot be represented in JSON Schema");
-      }
-    };
-    exports2.mapProcessor = mapProcessor2;
-    var setProcessor2 = (_schema, ctx, _json, _params) => {
-      if (ctx.unrepresentable === "throw") {
-        throw new Error("Set cannot be represented in JSON Schema");
-      }
-    };
-    exports2.setProcessor = setProcessor2;
-    var arrayProcessor2 = (schema, ctx, _json, params) => {
-      const json2 = _json;
-      const def = schema._zod.def;
-      const { minimum, maximum } = schema._zod.bag;
-      if (typeof minimum === "number")
-        json2.minItems = minimum;
-      if (typeof maximum === "number")
-        json2.maxItems = maximum;
-      json2.type = "array";
-      json2.items = (0, to_json_schema_js_1.process)(def.element, ctx, { ...params, path: [...params.path, "items"] });
-    };
-    exports2.arrayProcessor = arrayProcessor2;
-    var objectProcessor2 = (schema, ctx, _json, params) => {
-      const json2 = _json;
-      const def = schema._zod.def;
-      json2.type = "object";
-      json2.properties = {};
-      const shape = def.shape;
-      for (const key in shape) {
-        json2.properties[key] = (0, to_json_schema_js_1.process)(shape[key], ctx, {
-          ...params,
-          path: [...params.path, "properties", key]
-        });
-      }
-      const allKeys = new Set(Object.keys(shape));
-      const requiredKeys = new Set([...allKeys].filter((key) => {
-        const v = def.shape[key]._zod;
-        if (ctx.io === "input") {
-          return v.optin === void 0;
-        } else {
-          return v.optout === void 0;
-        }
-      }));
-      if (requiredKeys.size > 0) {
-        json2.required = Array.from(requiredKeys);
-      }
-      if (def.catchall?._zod.def.type === "never") {
-        json2.additionalProperties = false;
-      } else if (!def.catchall) {
-        if (ctx.io === "output")
-          json2.additionalProperties = false;
-      } else if (def.catchall) {
-        json2.additionalProperties = (0, to_json_schema_js_1.process)(def.catchall, ctx, {
-          ...params,
-          path: [...params.path, "additionalProperties"]
-        });
-      }
-    };
-    exports2.objectProcessor = objectProcessor2;
-    var unionProcessor2 = (schema, ctx, json2, params) => {
-      const def = schema._zod.def;
-      const isExclusive = def.inclusive === false;
-      const options = def.options.map((x, i) => (0, to_json_schema_js_1.process)(x, ctx, {
-        ...params,
-        path: [...params.path, isExclusive ? "oneOf" : "anyOf", i]
-      }));
-      if (isExclusive) {
-        json2.oneOf = options;
-      } else {
-        json2.anyOf = options;
-      }
-    };
-    exports2.unionProcessor = unionProcessor2;
-    var intersectionProcessor2 = (schema, ctx, json2, params) => {
-      const def = schema._zod.def;
-      const a = (0, to_json_schema_js_1.process)(def.left, ctx, {
-        ...params,
-        path: [...params.path, "allOf", 0]
-      });
-      const b = (0, to_json_schema_js_1.process)(def.right, ctx, {
-        ...params,
-        path: [...params.path, "allOf", 1]
-      });
-      const isSimpleIntersection = (val) => "allOf" in val && Object.keys(val).length === 1;
-      const allOf = [
-        ...isSimpleIntersection(a) ? a.allOf : [a],
-        ...isSimpleIntersection(b) ? b.allOf : [b]
-      ];
-      json2.allOf = allOf;
-    };
-    exports2.intersectionProcessor = intersectionProcessor2;
-    var tupleProcessor2 = (schema, ctx, _json, params) => {
-      const json2 = _json;
-      const def = schema._zod.def;
-      json2.type = "array";
-      const prefixPath = ctx.target === "draft-2020-12" ? "prefixItems" : "items";
-      const restPath = ctx.target === "draft-2020-12" ? "items" : ctx.target === "openapi-3.0" ? "items" : "additionalItems";
-      const prefixItems = def.items.map((x, i) => (0, to_json_schema_js_1.process)(x, ctx, {
-        ...params,
-        path: [...params.path, prefixPath, i]
-      }));
-      const rest = def.rest ? (0, to_json_schema_js_1.process)(def.rest, ctx, {
-        ...params,
-        path: [...params.path, restPath, ...ctx.target === "openapi-3.0" ? [def.items.length] : []]
-      }) : null;
-      if (ctx.target === "draft-2020-12") {
-        json2.prefixItems = prefixItems;
-        if (rest) {
-          json2.items = rest;
-        }
-      } else if (ctx.target === "openapi-3.0") {
-        json2.items = {
-          anyOf: prefixItems
-        };
-        if (rest) {
-          json2.items.anyOf.push(rest);
-        }
-        json2.minItems = prefixItems.length;
-        if (!rest) {
-          json2.maxItems = prefixItems.length;
-        }
-      } else {
-        json2.items = prefixItems;
-        if (rest) {
-          json2.additionalItems = rest;
-        }
-      }
-      const { minimum, maximum } = schema._zod.bag;
-      if (typeof minimum === "number")
-        json2.minItems = minimum;
-      if (typeof maximum === "number")
-        json2.maxItems = maximum;
-    };
-    exports2.tupleProcessor = tupleProcessor2;
-    var recordProcessor2 = (schema, ctx, _json, params) => {
-      const json2 = _json;
-      const def = schema._zod.def;
-      json2.type = "object";
-      if (ctx.target === "draft-07" || ctx.target === "draft-2020-12") {
-        json2.propertyNames = (0, to_json_schema_js_1.process)(def.keyType, ctx, {
-          ...params,
-          path: [...params.path, "propertyNames"]
-        });
-      }
-      json2.additionalProperties = (0, to_json_schema_js_1.process)(def.valueType, ctx, {
-        ...params,
-        path: [...params.path, "additionalProperties"]
-      });
-    };
-    exports2.recordProcessor = recordProcessor2;
-    var nullableProcessor2 = (schema, ctx, json2, params) => {
-      const def = schema._zod.def;
-      const inner = (0, to_json_schema_js_1.process)(def.innerType, ctx, params);
-      const seen = ctx.seen.get(schema);
-      if (ctx.target === "openapi-3.0") {
-        seen.ref = def.innerType;
-        json2.nullable = true;
-      } else {
-        json2.anyOf = [inner, { type: "null" }];
-      }
-    };
-    exports2.nullableProcessor = nullableProcessor2;
-    var nonoptionalProcessor2 = (schema, ctx, _json, params) => {
-      const def = schema._zod.def;
-      (0, to_json_schema_js_1.process)(def.innerType, ctx, params);
-      const seen = ctx.seen.get(schema);
-      seen.ref = def.innerType;
-    };
-    exports2.nonoptionalProcessor = nonoptionalProcessor2;
-    var defaultProcessor2 = (schema, ctx, json2, params) => {
-      const def = schema._zod.def;
-      (0, to_json_schema_js_1.process)(def.innerType, ctx, params);
-      const seen = ctx.seen.get(schema);
-      seen.ref = def.innerType;
-      json2.default = JSON.parse(JSON.stringify(def.defaultValue));
-    };
-    exports2.defaultProcessor = defaultProcessor2;
-    var prefaultProcessor2 = (schema, ctx, json2, params) => {
-      const def = schema._zod.def;
-      (0, to_json_schema_js_1.process)(def.innerType, ctx, params);
-      const seen = ctx.seen.get(schema);
-      seen.ref = def.innerType;
-      if (ctx.io === "input")
-        json2._prefault = JSON.parse(JSON.stringify(def.defaultValue));
-    };
-    exports2.prefaultProcessor = prefaultProcessor2;
-    var catchProcessor2 = (schema, ctx, json2, params) => {
-      const def = schema._zod.def;
-      (0, to_json_schema_js_1.process)(def.innerType, ctx, params);
-      const seen = ctx.seen.get(schema);
-      seen.ref = def.innerType;
-      let catchValue;
-      try {
-        catchValue = def.catchValue(void 0);
-      } catch {
-        throw new Error("Dynamic catch values are not supported in JSON Schema");
-      }
-      json2.default = catchValue;
-    };
-    exports2.catchProcessor = catchProcessor2;
-    var pipeProcessor2 = (schema, ctx, _json, params) => {
-      const def = schema._zod.def;
-      const innerType = ctx.io === "input" ? def.in._zod.def.type === "transform" ? def.out : def.in : def.out;
-      (0, to_json_schema_js_1.process)(innerType, ctx, params);
-      const seen = ctx.seen.get(schema);
-      seen.ref = innerType;
-    };
-    exports2.pipeProcessor = pipeProcessor2;
-    var readonlyProcessor2 = (schema, ctx, json2, params) => {
-      const def = schema._zod.def;
-      (0, to_json_schema_js_1.process)(def.innerType, ctx, params);
-      const seen = ctx.seen.get(schema);
-      seen.ref = def.innerType;
-      json2.readOnly = true;
-    };
-    exports2.readonlyProcessor = readonlyProcessor2;
-    var promiseProcessor2 = (schema, ctx, _json, params) => {
-      const def = schema._zod.def;
-      (0, to_json_schema_js_1.process)(def.innerType, ctx, params);
-      const seen = ctx.seen.get(schema);
-      seen.ref = def.innerType;
-    };
-    exports2.promiseProcessor = promiseProcessor2;
-    var optionalProcessor2 = (schema, ctx, _json, params) => {
-      const def = schema._zod.def;
-      (0, to_json_schema_js_1.process)(def.innerType, ctx, params);
-      const seen = ctx.seen.get(schema);
-      seen.ref = def.innerType;
-    };
-    exports2.optionalProcessor = optionalProcessor2;
-    var lazyProcessor2 = (schema, ctx, _json, params) => {
-      const innerType = schema._zod.innerType;
-      (0, to_json_schema_js_1.process)(innerType, ctx, params);
-      const seen = ctx.seen.get(schema);
-      seen.ref = innerType;
-    };
-    exports2.lazyProcessor = lazyProcessor2;
-    exports2.allProcessors = {
-      string: exports2.stringProcessor,
-      number: exports2.numberProcessor,
-      boolean: exports2.booleanProcessor,
-      bigint: exports2.bigintProcessor,
-      symbol: exports2.symbolProcessor,
-      null: exports2.nullProcessor,
-      undefined: exports2.undefinedProcessor,
-      void: exports2.voidProcessor,
-      never: exports2.neverProcessor,
-      any: exports2.anyProcessor,
-      unknown: exports2.unknownProcessor,
-      date: exports2.dateProcessor,
-      enum: exports2.enumProcessor,
-      literal: exports2.literalProcessor,
-      nan: exports2.nanProcessor,
-      template_literal: exports2.templateLiteralProcessor,
-      file: exports2.fileProcessor,
-      success: exports2.successProcessor,
-      custom: exports2.customProcessor,
-      function: exports2.functionProcessor,
-      transform: exports2.transformProcessor,
-      map: exports2.mapProcessor,
-      set: exports2.setProcessor,
-      array: exports2.arrayProcessor,
-      object: exports2.objectProcessor,
-      union: exports2.unionProcessor,
-      intersection: exports2.intersectionProcessor,
-      tuple: exports2.tupleProcessor,
-      record: exports2.recordProcessor,
-      nullable: exports2.nullableProcessor,
-      nonoptional: exports2.nonoptionalProcessor,
-      default: exports2.defaultProcessor,
-      prefault: exports2.prefaultProcessor,
-      catch: exports2.catchProcessor,
-      pipe: exports2.pipeProcessor,
-      readonly: exports2.readonlyProcessor,
-      promise: exports2.promiseProcessor,
-      optional: exports2.optionalProcessor,
-      lazy: exports2.lazyProcessor
-    };
-    function toJSONSchema2(input, params) {
-      if ("_idmap" in input) {
-        const registry2 = input;
-        const ctx2 = (0, to_json_schema_js_1.initializeContext)({ ...params, processors: exports2.allProcessors });
-        const defs = {};
-        for (const entry of registry2._idmap.entries()) {
-          const [_, schema] = entry;
-          (0, to_json_schema_js_1.process)(schema, ctx2);
-        }
-        const schemas = {};
-        const external = {
-          registry: registry2,
-          uri: params?.uri,
-          defs
-        };
-        ctx2.external = external;
-        for (const entry of registry2._idmap.entries()) {
-          const [key, schema] = entry;
-          (0, to_json_schema_js_1.extractDefs)(ctx2, schema);
-          schemas[key] = (0, to_json_schema_js_1.finalize)(ctx2, schema);
-        }
-        if (Object.keys(defs).length > 0) {
-          const defsSegment = ctx2.target === "draft-2020-12" ? "$defs" : "definitions";
-          schemas.__shared = {
-            [defsSegment]: defs
-          };
-        }
-        return { schemas };
-      }
-      const ctx = (0, to_json_schema_js_1.initializeContext)({ ...params, processors: exports2.allProcessors });
-      (0, to_json_schema_js_1.process)(input, ctx);
-      (0, to_json_schema_js_1.extractDefs)(ctx, input);
-      return (0, to_json_schema_js_1.finalize)(ctx, input);
-    }
-  }
-});
-
-// node_modules/zod/v4/core/json-schema-generator.cjs
-var require_json_schema_generator = __commonJS({
-  "node_modules/zod/v4/core/json-schema-generator.cjs"(exports2) {
-    "use strict";
-    Object.defineProperty(exports2, "__esModule", { value: true });
-    exports2.JSONSchemaGenerator = void 0;
-    var json_schema_processors_js_1 = require_json_schema_processors();
-    var to_json_schema_js_1 = require_to_json_schema();
-    var JSONSchemaGenerator2 = class {
-      /** @deprecated Access via ctx instead */
-      get metadataRegistry() {
-        return this.ctx.metadataRegistry;
-      }
-      /** @deprecated Access via ctx instead */
-      get target() {
-        return this.ctx.target;
-      }
-      /** @deprecated Access via ctx instead */
-      get unrepresentable() {
-        return this.ctx.unrepresentable;
-      }
-      /** @deprecated Access via ctx instead */
-      get override() {
-        return this.ctx.override;
-      }
-      /** @deprecated Access via ctx instead */
-      get io() {
-        return this.ctx.io;
-      }
-      /** @deprecated Access via ctx instead */
-      get counter() {
-        return this.ctx.counter;
-      }
-      set counter(value) {
-        this.ctx.counter = value;
-      }
-      /** @deprecated Access via ctx instead */
-      get seen() {
-        return this.ctx.seen;
-      }
-      constructor(params) {
-        let normalizedTarget = params?.target ?? "draft-2020-12";
-        if (normalizedTarget === "draft-4")
-          normalizedTarget = "draft-04";
-        if (normalizedTarget === "draft-7")
-          normalizedTarget = "draft-07";
-        this.ctx = (0, to_json_schema_js_1.initializeContext)({
-          processors: json_schema_processors_js_1.allProcessors,
-          target: normalizedTarget,
-          ...params?.metadata && { metadata: params.metadata },
-          ...params?.unrepresentable && { unrepresentable: params.unrepresentable },
-          ...params?.override && { override: params.override },
-          ...params?.io && { io: params.io }
-        });
-      }
-      /**
-       * Process a schema to prepare it for JSON Schema generation.
-       * This must be called before emit().
-       */
-      process(schema, _params = { path: [], schemaPath: [] }) {
-        return (0, to_json_schema_js_1.process)(schema, this.ctx, _params);
-      }
-      /**
-       * Emit the final JSON Schema after processing.
-       * Must call process() first.
-       */
-      emit(schema, _params) {
-        if (_params) {
-          if (_params.cycles)
-            this.ctx.cycles = _params.cycles;
-          if (_params.reused)
-            this.ctx.reused = _params.reused;
-          if (_params.external)
-            this.ctx.external = _params.external;
-        }
-        (0, to_json_schema_js_1.extractDefs)(this.ctx, schema);
-        const result = (0, to_json_schema_js_1.finalize)(this.ctx, schema);
-        const { "~standard": _, ...plainResult } = result;
-        return plainResult;
-      }
-    };
-    exports2.JSONSchemaGenerator = JSONSchemaGenerator2;
   }
 });
 
@@ -13525,7 +13262,7 @@ var require_core2 = __commonJS({
       return result;
     };
     Object.defineProperty(exports2, "__esModule", { value: true });
-    exports2.JSONSchema = exports2.JSONSchemaGenerator = exports2.toJSONSchema = exports2.locales = exports2.regexes = exports2.util = void 0;
+    exports2.JSONSchema = exports2.locales = exports2.regexes = exports2.util = void 0;
     __exportStar(require_core(), exports2);
     __exportStar(require_parse(), exports2);
     __exportStar(require_errors(), exports2);
@@ -13539,14 +13276,6 @@ var require_core2 = __commonJS({
     __exportStar(require_doc(), exports2);
     __exportStar(require_api(), exports2);
     __exportStar(require_to_json_schema(), exports2);
-    var json_schema_processors_js_1 = require_json_schema_processors();
-    Object.defineProperty(exports2, "toJSONSchema", { enumerable: true, get: function() {
-      return json_schema_processors_js_1.toJSONSchema;
-    } });
-    var json_schema_generator_js_1 = require_json_schema_generator();
-    Object.defineProperty(exports2, "JSONSchemaGenerator", { enumerable: true, get: function() {
-      return json_schema_generator_js_1.JSONSchemaGenerator;
-    } });
     exports2.JSONSchema = __importStar(require_json_schema());
   }
 });
@@ -13877,8 +13606,8 @@ var require_schemas2 = __commonJS({
       return result;
     };
     Object.defineProperty(exports2, "__esModule", { value: true });
-    exports2.ZodLiteral = exports2.ZodEnum = exports2.ZodSet = exports2.ZodMap = exports2.ZodRecord = exports2.ZodTuple = exports2.ZodIntersection = exports2.ZodDiscriminatedUnion = exports2.ZodXor = exports2.ZodUnion = exports2.ZodObject = exports2.ZodArray = exports2.ZodDate = exports2.ZodVoid = exports2.ZodNever = exports2.ZodUnknown = exports2.ZodAny = exports2.ZodNull = exports2.ZodUndefined = exports2.ZodSymbol = exports2.ZodBigIntFormat = exports2.ZodBigInt = exports2.ZodBoolean = exports2.ZodNumberFormat = exports2.ZodNumber = exports2.ZodCustomStringFormat = exports2.ZodJWT = exports2.ZodE164 = exports2.ZodBase64URL = exports2.ZodBase64 = exports2.ZodCIDRv6 = exports2.ZodCIDRv4 = exports2.ZodIPv6 = exports2.ZodMAC = exports2.ZodIPv4 = exports2.ZodKSUID = exports2.ZodXID = exports2.ZodULID = exports2.ZodCUID2 = exports2.ZodCUID = exports2.ZodNanoID = exports2.ZodEmoji = exports2.ZodURL = exports2.ZodUUID = exports2.ZodGUID = exports2.ZodEmail = exports2.ZodStringFormat = exports2.ZodString = exports2._ZodString = exports2.ZodType = void 0;
-    exports2.stringbool = exports2.meta = exports2.describe = exports2.ZodCustom = exports2.ZodFunction = exports2.ZodPromise = exports2.ZodLazy = exports2.ZodTemplateLiteral = exports2.ZodReadonly = exports2.ZodCodec = exports2.ZodPipe = exports2.ZodNaN = exports2.ZodCatch = exports2.ZodSuccess = exports2.ZodNonOptional = exports2.ZodPrefault = exports2.ZodDefault = exports2.ZodNullable = exports2.ZodOptional = exports2.ZodTransform = exports2.ZodFile = void 0;
+    exports2.ZodFile = exports2.ZodLiteral = exports2.ZodEnum = exports2.ZodSet = exports2.ZodMap = exports2.ZodRecord = exports2.ZodTuple = exports2.ZodIntersection = exports2.ZodDiscriminatedUnion = exports2.ZodUnion = exports2.ZodObject = exports2.ZodArray = exports2.ZodDate = exports2.ZodVoid = exports2.ZodNever = exports2.ZodUnknown = exports2.ZodAny = exports2.ZodNull = exports2.ZodUndefined = exports2.ZodSymbol = exports2.ZodBigIntFormat = exports2.ZodBigInt = exports2.ZodBoolean = exports2.ZodNumberFormat = exports2.ZodNumber = exports2.ZodCustomStringFormat = exports2.ZodJWT = exports2.ZodE164 = exports2.ZodBase64URL = exports2.ZodBase64 = exports2.ZodCIDRv6 = exports2.ZodCIDRv4 = exports2.ZodIPv6 = exports2.ZodMAC = exports2.ZodIPv4 = exports2.ZodKSUID = exports2.ZodXID = exports2.ZodULID = exports2.ZodCUID2 = exports2.ZodCUID = exports2.ZodNanoID = exports2.ZodEmoji = exports2.ZodURL = exports2.ZodUUID = exports2.ZodGUID = exports2.ZodEmail = exports2.ZodStringFormat = exports2.ZodString = exports2._ZodString = exports2.ZodType = void 0;
+    exports2.stringbool = exports2.meta = exports2.describe = exports2.ZodCustom = exports2.ZodFunction = exports2.ZodPromise = exports2.ZodLazy = exports2.ZodTemplateLiteral = exports2.ZodReadonly = exports2.ZodCodec = exports2.ZodPipe = exports2.ZodNaN = exports2.ZodCatch = exports2.ZodSuccess = exports2.ZodNonOptional = exports2.ZodPrefault = exports2.ZodDefault = exports2.ZodNullable = exports2.ZodOptional = exports2.ZodTransform = void 0;
     exports2.string = string4;
     exports2.email = email3;
     exports2.guid = guid3;
@@ -13932,13 +13661,11 @@ var require_schemas2 = __commonJS({
     exports2.strictObject = strictObject2;
     exports2.looseObject = looseObject2;
     exports2.union = union2;
-    exports2.xor = xor2;
     exports2.discriminatedUnion = discriminatedUnion2;
     exports2.intersection = intersection2;
     exports2.tuple = tuple2;
     exports2.record = record2;
     exports2.partialRecord = partialRecord2;
-    exports2.looseRecord = looseRecord2;
     exports2.map = map2;
     exports2.set = set2;
     exports2.enum = _enum3;
@@ -13974,20 +13701,11 @@ var require_schemas2 = __commonJS({
     exports2.preprocess = preprocess2;
     var core = __importStar(require_core2());
     var index_js_1 = require_core2();
-    var processors = __importStar(require_json_schema_processors());
-    var to_json_schema_js_1 = require_to_json_schema();
     var checks = __importStar(require_checks2());
     var iso = __importStar(require_iso());
     var parse3 = __importStar(require_parse2());
     exports2.ZodType = core.$constructor("ZodType", (inst, def) => {
       core.$ZodType.init(inst, def);
-      Object.assign(inst["~standard"], {
-        jsonSchema: {
-          input: (0, to_json_schema_js_1.createStandardJSONSchemaMethod)(inst, "input"),
-          output: (0, to_json_schema_js_1.createStandardJSONSchemaMethod)(inst, "output")
-        }
-      });
-      inst.toJSONSchema = (0, to_json_schema_js_1.createToJSONSchemaMethod)(inst, {});
       inst.def = def;
       inst.type = def.type;
       Object.defineProperty(inst, "_def", { value: def });
@@ -14060,7 +13778,6 @@ var require_schemas2 = __commonJS({
     exports2._ZodString = core.$constructor("_ZodString", (inst, def) => {
       core.$ZodString.init(inst, def);
       exports2.ZodType.init(inst, def);
-      inst._zod.processJSONSchema = (ctx, json3, params) => processors.stringProcessor(inst, ctx, json3, params);
       const bag = inst._zod.bag;
       inst.format = bag.format ?? null;
       inst.minLength = bag.minimum ?? null;
@@ -14299,7 +14016,6 @@ var require_schemas2 = __commonJS({
     exports2.ZodNumber = core.$constructor("ZodNumber", (inst, def) => {
       core.$ZodNumber.init(inst, def);
       exports2.ZodType.init(inst, def);
-      inst._zod.processJSONSchema = (ctx, json3, params) => processors.numberProcessor(inst, ctx, json3, params);
       inst.gt = (value, params) => inst.check(checks.gt(value, params));
       inst.gte = (value, params) => inst.check(checks.gte(value, params));
       inst.min = (value, params) => inst.check(checks.gte(value, params));
@@ -14347,7 +14063,6 @@ var require_schemas2 = __commonJS({
     exports2.ZodBoolean = core.$constructor("ZodBoolean", (inst, def) => {
       core.$ZodBoolean.init(inst, def);
       exports2.ZodType.init(inst, def);
-      inst._zod.processJSONSchema = (ctx, json3, params) => processors.booleanProcessor(inst, ctx, json3, params);
     });
     function boolean4(params) {
       return core._boolean(exports2.ZodBoolean, params);
@@ -14355,7 +14070,6 @@ var require_schemas2 = __commonJS({
     exports2.ZodBigInt = core.$constructor("ZodBigInt", (inst, def) => {
       core.$ZodBigInt.init(inst, def);
       exports2.ZodType.init(inst, def);
-      inst._zod.processJSONSchema = (ctx, json3, params) => processors.bigintProcessor(inst, ctx, json3, params);
       inst.gte = (value, params) => inst.check(checks.gte(value, params));
       inst.min = (value, params) => inst.check(checks.gte(value, params));
       inst.gt = (value, params) => inst.check(checks.gt(value, params));
@@ -14390,7 +14104,6 @@ var require_schemas2 = __commonJS({
     exports2.ZodSymbol = core.$constructor("ZodSymbol", (inst, def) => {
       core.$ZodSymbol.init(inst, def);
       exports2.ZodType.init(inst, def);
-      inst._zod.processJSONSchema = (ctx, json3, params) => processors.symbolProcessor(inst, ctx, json3, params);
     });
     function symbol2(params) {
       return core._symbol(exports2.ZodSymbol, params);
@@ -14398,7 +14111,6 @@ var require_schemas2 = __commonJS({
     exports2.ZodUndefined = core.$constructor("ZodUndefined", (inst, def) => {
       core.$ZodUndefined.init(inst, def);
       exports2.ZodType.init(inst, def);
-      inst._zod.processJSONSchema = (ctx, json3, params) => processors.undefinedProcessor(inst, ctx, json3, params);
     });
     function _undefined4(params) {
       return core._undefined(exports2.ZodUndefined, params);
@@ -14406,7 +14118,6 @@ var require_schemas2 = __commonJS({
     exports2.ZodNull = core.$constructor("ZodNull", (inst, def) => {
       core.$ZodNull.init(inst, def);
       exports2.ZodType.init(inst, def);
-      inst._zod.processJSONSchema = (ctx, json3, params) => processors.nullProcessor(inst, ctx, json3, params);
     });
     function _null4(params) {
       return core._null(exports2.ZodNull, params);
@@ -14414,7 +14125,6 @@ var require_schemas2 = __commonJS({
     exports2.ZodAny = core.$constructor("ZodAny", (inst, def) => {
       core.$ZodAny.init(inst, def);
       exports2.ZodType.init(inst, def);
-      inst._zod.processJSONSchema = (ctx, json3, params) => processors.anyProcessor(inst, ctx, json3, params);
     });
     function any2() {
       return core._any(exports2.ZodAny);
@@ -14422,7 +14132,6 @@ var require_schemas2 = __commonJS({
     exports2.ZodUnknown = core.$constructor("ZodUnknown", (inst, def) => {
       core.$ZodUnknown.init(inst, def);
       exports2.ZodType.init(inst, def);
-      inst._zod.processJSONSchema = (ctx, json3, params) => processors.unknownProcessor(inst, ctx, json3, params);
     });
     function unknown2() {
       return core._unknown(exports2.ZodUnknown);
@@ -14430,7 +14139,6 @@ var require_schemas2 = __commonJS({
     exports2.ZodNever = core.$constructor("ZodNever", (inst, def) => {
       core.$ZodNever.init(inst, def);
       exports2.ZodType.init(inst, def);
-      inst._zod.processJSONSchema = (ctx, json3, params) => processors.neverProcessor(inst, ctx, json3, params);
     });
     function never2(params) {
       return core._never(exports2.ZodNever, params);
@@ -14438,7 +14146,6 @@ var require_schemas2 = __commonJS({
     exports2.ZodVoid = core.$constructor("ZodVoid", (inst, def) => {
       core.$ZodVoid.init(inst, def);
       exports2.ZodType.init(inst, def);
-      inst._zod.processJSONSchema = (ctx, json3, params) => processors.voidProcessor(inst, ctx, json3, params);
     });
     function _void3(params) {
       return core._void(exports2.ZodVoid, params);
@@ -14446,7 +14153,6 @@ var require_schemas2 = __commonJS({
     exports2.ZodDate = core.$constructor("ZodDate", (inst, def) => {
       core.$ZodDate.init(inst, def);
       exports2.ZodType.init(inst, def);
-      inst._zod.processJSONSchema = (ctx, json3, params) => processors.dateProcessor(inst, ctx, json3, params);
       inst.min = (value, params) => inst.check(checks.gte(value, params));
       inst.max = (value, params) => inst.check(checks.lte(value, params));
       const c = inst._zod.bag;
@@ -14459,7 +14165,6 @@ var require_schemas2 = __commonJS({
     exports2.ZodArray = core.$constructor("ZodArray", (inst, def) => {
       core.$ZodArray.init(inst, def);
       exports2.ZodType.init(inst, def);
-      inst._zod.processJSONSchema = (ctx, json3, params) => processors.arrayProcessor(inst, ctx, json3, params);
       inst.element = def.element;
       inst.min = (minLength, params) => inst.check(checks.minLength(minLength, params));
       inst.nonempty = (params) => inst.check(checks.minLength(1, params));
@@ -14477,7 +14182,6 @@ var require_schemas2 = __commonJS({
     exports2.ZodObject = core.$constructor("ZodObject", (inst, def) => {
       core.$ZodObjectJIT.init(inst, def);
       exports2.ZodType.init(inst, def);
-      inst._zod.processJSONSchema = (ctx, json3, params) => processors.objectProcessor(inst, ctx, json3, params);
       index_js_1.util.defineLazy(inst, "shape", () => {
         return def.shape;
       });
@@ -14526,27 +14230,12 @@ var require_schemas2 = __commonJS({
     exports2.ZodUnion = core.$constructor("ZodUnion", (inst, def) => {
       core.$ZodUnion.init(inst, def);
       exports2.ZodType.init(inst, def);
-      inst._zod.processJSONSchema = (ctx, json3, params) => processors.unionProcessor(inst, ctx, json3, params);
       inst.options = def.options;
     });
     function union2(options, params) {
       return new exports2.ZodUnion({
         type: "union",
         options,
-        ...index_js_1.util.normalizeParams(params)
-      });
-    }
-    exports2.ZodXor = core.$constructor("ZodXor", (inst, def) => {
-      exports2.ZodUnion.init(inst, def);
-      core.$ZodXor.init(inst, def);
-      inst._zod.processJSONSchema = (ctx, json3, params) => processors.unionProcessor(inst, ctx, json3, params);
-      inst.options = def.options;
-    });
-    function xor2(options, params) {
-      return new exports2.ZodXor({
-        type: "union",
-        options,
-        inclusive: false,
         ...index_js_1.util.normalizeParams(params)
       });
     }
@@ -14565,7 +14254,6 @@ var require_schemas2 = __commonJS({
     exports2.ZodIntersection = core.$constructor("ZodIntersection", (inst, def) => {
       core.$ZodIntersection.init(inst, def);
       exports2.ZodType.init(inst, def);
-      inst._zod.processJSONSchema = (ctx, json3, params) => processors.intersectionProcessor(inst, ctx, json3, params);
     });
     function intersection2(left, right) {
       return new exports2.ZodIntersection({
@@ -14577,7 +14265,6 @@ var require_schemas2 = __commonJS({
     exports2.ZodTuple = core.$constructor("ZodTuple", (inst, def) => {
       core.$ZodTuple.init(inst, def);
       exports2.ZodType.init(inst, def);
-      inst._zod.processJSONSchema = (ctx, json3, params) => processors.tupleProcessor(inst, ctx, json3, params);
       inst.rest = (rest) => inst.clone({
         ...inst._zod.def,
         rest
@@ -14597,7 +14284,6 @@ var require_schemas2 = __commonJS({
     exports2.ZodRecord = core.$constructor("ZodRecord", (inst, def) => {
       core.$ZodRecord.init(inst, def);
       exports2.ZodType.init(inst, def);
-      inst._zod.processJSONSchema = (ctx, json3, params) => processors.recordProcessor(inst, ctx, json3, params);
       inst.keyType = def.keyType;
       inst.valueType = def.valueType;
     });
@@ -14619,19 +14305,9 @@ var require_schemas2 = __commonJS({
         ...index_js_1.util.normalizeParams(params)
       });
     }
-    function looseRecord2(keyType, valueType, params) {
-      return new exports2.ZodRecord({
-        type: "record",
-        keyType,
-        valueType,
-        mode: "loose",
-        ...index_js_1.util.normalizeParams(params)
-      });
-    }
     exports2.ZodMap = core.$constructor("ZodMap", (inst, def) => {
       core.$ZodMap.init(inst, def);
       exports2.ZodType.init(inst, def);
-      inst._zod.processJSONSchema = (ctx, json3, params) => processors.mapProcessor(inst, ctx, json3, params);
       inst.keyType = def.keyType;
       inst.valueType = def.valueType;
     });
@@ -14646,7 +14322,6 @@ var require_schemas2 = __commonJS({
     exports2.ZodSet = core.$constructor("ZodSet", (inst, def) => {
       core.$ZodSet.init(inst, def);
       exports2.ZodType.init(inst, def);
-      inst._zod.processJSONSchema = (ctx, json3, params) => processors.setProcessor(inst, ctx, json3, params);
       inst.min = (...args) => inst.check(core._minSize(...args));
       inst.nonempty = (params) => inst.check(core._minSize(1, params));
       inst.max = (...args) => inst.check(core._maxSize(...args));
@@ -14662,7 +14337,6 @@ var require_schemas2 = __commonJS({
     exports2.ZodEnum = core.$constructor("ZodEnum", (inst, def) => {
       core.$ZodEnum.init(inst, def);
       exports2.ZodType.init(inst, def);
-      inst._zod.processJSONSchema = (ctx, json3, params) => processors.enumProcessor(inst, ctx, json3, params);
       inst.enum = def.entries;
       inst.options = Object.values(def.entries);
       const keys = new Set(Object.keys(def.entries));
@@ -14715,7 +14389,6 @@ var require_schemas2 = __commonJS({
     exports2.ZodLiteral = core.$constructor("ZodLiteral", (inst, def) => {
       core.$ZodLiteral.init(inst, def);
       exports2.ZodType.init(inst, def);
-      inst._zod.processJSONSchema = (ctx, json3, params) => processors.literalProcessor(inst, ctx, json3, params);
       inst.values = new Set(def.values);
       Object.defineProperty(inst, "value", {
         get() {
@@ -14736,7 +14409,6 @@ var require_schemas2 = __commonJS({
     exports2.ZodFile = core.$constructor("ZodFile", (inst, def) => {
       core.$ZodFile.init(inst, def);
       exports2.ZodType.init(inst, def);
-      inst._zod.processJSONSchema = (ctx, json3, params) => processors.fileProcessor(inst, ctx, json3, params);
       inst.min = (size, params) => inst.check(core._minSize(size, params));
       inst.max = (size, params) => inst.check(core._maxSize(size, params));
       inst.mime = (types, params) => inst.check(core._mime(Array.isArray(types) ? types : [types], params));
@@ -14747,7 +14419,6 @@ var require_schemas2 = __commonJS({
     exports2.ZodTransform = core.$constructor("ZodTransform", (inst, def) => {
       core.$ZodTransform.init(inst, def);
       exports2.ZodType.init(inst, def);
-      inst._zod.processJSONSchema = (ctx, json3, params) => processors.transformProcessor(inst, ctx, json3, params);
       inst._zod.parse = (payload, _ctx) => {
         if (_ctx.direction === "backward") {
           throw new core.$ZodEncodeError(inst.constructor.name);
@@ -14785,7 +14456,6 @@ var require_schemas2 = __commonJS({
     exports2.ZodOptional = core.$constructor("ZodOptional", (inst, def) => {
       core.$ZodOptional.init(inst, def);
       exports2.ZodType.init(inst, def);
-      inst._zod.processJSONSchema = (ctx, json3, params) => processors.optionalProcessor(inst, ctx, json3, params);
       inst.unwrap = () => inst._zod.def.innerType;
     });
     function optional2(innerType) {
@@ -14797,7 +14467,6 @@ var require_schemas2 = __commonJS({
     exports2.ZodNullable = core.$constructor("ZodNullable", (inst, def) => {
       core.$ZodNullable.init(inst, def);
       exports2.ZodType.init(inst, def);
-      inst._zod.processJSONSchema = (ctx, json3, params) => processors.nullableProcessor(inst, ctx, json3, params);
       inst.unwrap = () => inst._zod.def.innerType;
     });
     function nullable2(innerType) {
@@ -14812,7 +14481,6 @@ var require_schemas2 = __commonJS({
     exports2.ZodDefault = core.$constructor("ZodDefault", (inst, def) => {
       core.$ZodDefault.init(inst, def);
       exports2.ZodType.init(inst, def);
-      inst._zod.processJSONSchema = (ctx, json3, params) => processors.defaultProcessor(inst, ctx, json3, params);
       inst.unwrap = () => inst._zod.def.innerType;
       inst.removeDefault = inst.unwrap;
     });
@@ -14828,7 +14496,6 @@ var require_schemas2 = __commonJS({
     exports2.ZodPrefault = core.$constructor("ZodPrefault", (inst, def) => {
       core.$ZodPrefault.init(inst, def);
       exports2.ZodType.init(inst, def);
-      inst._zod.processJSONSchema = (ctx, json3, params) => processors.prefaultProcessor(inst, ctx, json3, params);
       inst.unwrap = () => inst._zod.def.innerType;
     });
     function prefault2(innerType, defaultValue) {
@@ -14843,7 +14510,6 @@ var require_schemas2 = __commonJS({
     exports2.ZodNonOptional = core.$constructor("ZodNonOptional", (inst, def) => {
       core.$ZodNonOptional.init(inst, def);
       exports2.ZodType.init(inst, def);
-      inst._zod.processJSONSchema = (ctx, json3, params) => processors.nonoptionalProcessor(inst, ctx, json3, params);
       inst.unwrap = () => inst._zod.def.innerType;
     });
     function nonoptional2(innerType, params) {
@@ -14856,7 +14522,6 @@ var require_schemas2 = __commonJS({
     exports2.ZodSuccess = core.$constructor("ZodSuccess", (inst, def) => {
       core.$ZodSuccess.init(inst, def);
       exports2.ZodType.init(inst, def);
-      inst._zod.processJSONSchema = (ctx, json3, params) => processors.successProcessor(inst, ctx, json3, params);
       inst.unwrap = () => inst._zod.def.innerType;
     });
     function success2(innerType) {
@@ -14868,7 +14533,6 @@ var require_schemas2 = __commonJS({
     exports2.ZodCatch = core.$constructor("ZodCatch", (inst, def) => {
       core.$ZodCatch.init(inst, def);
       exports2.ZodType.init(inst, def);
-      inst._zod.processJSONSchema = (ctx, json3, params) => processors.catchProcessor(inst, ctx, json3, params);
       inst.unwrap = () => inst._zod.def.innerType;
       inst.removeCatch = inst.unwrap;
     });
@@ -14882,7 +14546,6 @@ var require_schemas2 = __commonJS({
     exports2.ZodNaN = core.$constructor("ZodNaN", (inst, def) => {
       core.$ZodNaN.init(inst, def);
       exports2.ZodType.init(inst, def);
-      inst._zod.processJSONSchema = (ctx, json3, params) => processors.nanProcessor(inst, ctx, json3, params);
     });
     function nan2(params) {
       return core._nan(exports2.ZodNaN, params);
@@ -14890,7 +14553,6 @@ var require_schemas2 = __commonJS({
     exports2.ZodPipe = core.$constructor("ZodPipe", (inst, def) => {
       core.$ZodPipe.init(inst, def);
       exports2.ZodType.init(inst, def);
-      inst._zod.processJSONSchema = (ctx, json3, params) => processors.pipeProcessor(inst, ctx, json3, params);
       inst.in = def.in;
       inst.out = def.out;
     });
@@ -14918,7 +14580,6 @@ var require_schemas2 = __commonJS({
     exports2.ZodReadonly = core.$constructor("ZodReadonly", (inst, def) => {
       core.$ZodReadonly.init(inst, def);
       exports2.ZodType.init(inst, def);
-      inst._zod.processJSONSchema = (ctx, json3, params) => processors.readonlyProcessor(inst, ctx, json3, params);
       inst.unwrap = () => inst._zod.def.innerType;
     });
     function readonly2(innerType) {
@@ -14930,7 +14591,6 @@ var require_schemas2 = __commonJS({
     exports2.ZodTemplateLiteral = core.$constructor("ZodTemplateLiteral", (inst, def) => {
       core.$ZodTemplateLiteral.init(inst, def);
       exports2.ZodType.init(inst, def);
-      inst._zod.processJSONSchema = (ctx, json3, params) => processors.templateLiteralProcessor(inst, ctx, json3, params);
     });
     function templateLiteral2(parts, params) {
       return new exports2.ZodTemplateLiteral({
@@ -14942,7 +14602,6 @@ var require_schemas2 = __commonJS({
     exports2.ZodLazy = core.$constructor("ZodLazy", (inst, def) => {
       core.$ZodLazy.init(inst, def);
       exports2.ZodType.init(inst, def);
-      inst._zod.processJSONSchema = (ctx, json3, params) => processors.lazyProcessor(inst, ctx, json3, params);
       inst.unwrap = () => inst._zod.def.getter();
     });
     function lazy2(getter) {
@@ -14954,7 +14613,6 @@ var require_schemas2 = __commonJS({
     exports2.ZodPromise = core.$constructor("ZodPromise", (inst, def) => {
       core.$ZodPromise.init(inst, def);
       exports2.ZodType.init(inst, def);
-      inst._zod.processJSONSchema = (ctx, json3, params) => processors.promiseProcessor(inst, ctx, json3, params);
       inst.unwrap = () => inst._zod.def.innerType;
     });
     function promise2(innerType) {
@@ -14966,7 +14624,6 @@ var require_schemas2 = __commonJS({
     exports2.ZodFunction = core.$constructor("ZodFunction", (inst, def) => {
       core.$ZodFunction.init(inst, def);
       exports2.ZodType.init(inst, def);
-      inst._zod.processJSONSchema = (ctx, json3, params) => processors.functionProcessor(inst, ctx, json3, params);
     });
     function _function2(params) {
       return new exports2.ZodFunction({
@@ -14978,7 +14635,6 @@ var require_schemas2 = __commonJS({
     exports2.ZodCustom = core.$constructor("ZodCustom", (inst, def) => {
       core.$ZodCustom.init(inst, def);
       exports2.ZodType.init(inst, def);
-      inst._zod.processJSONSchema = (ctx, json3, params) => processors.customProcessor(inst, ctx, json3, params);
     });
     function check2(fn) {
       const ch = new core.$ZodCheck({
@@ -15100,424 +14756,6 @@ var require_compat = __commonJS({
   }
 });
 
-// node_modules/zod/v4/classic/from-json-schema.cjs
-var require_from_json_schema = __commonJS({
-  "node_modules/zod/v4/classic/from-json-schema.cjs"(exports2) {
-    "use strict";
-    var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
-      if (k2 === void 0) k2 = k;
-      var desc = Object.getOwnPropertyDescriptor(m, k);
-      if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-        desc = { enumerable: true, get: function() {
-          return m[k];
-        } };
-      }
-      Object.defineProperty(o, k2, desc);
-    }) : (function(o, m, k, k2) {
-      if (k2 === void 0) k2 = k;
-      o[k2] = m[k];
-    }));
-    var __setModuleDefault = exports2 && exports2.__setModuleDefault || (Object.create ? (function(o, v) {
-      Object.defineProperty(o, "default", { enumerable: true, value: v });
-    }) : function(o, v) {
-      o["default"] = v;
-    });
-    var __importStar = exports2 && exports2.__importStar || function(mod) {
-      if (mod && mod.__esModule) return mod;
-      var result = {};
-      if (mod != null) {
-        for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
-      }
-      __setModuleDefault(result, mod);
-      return result;
-    };
-    Object.defineProperty(exports2, "__esModule", { value: true });
-    exports2.fromJSONSchema = fromJSONSchema2;
-    var _checks = __importStar(require_checks2());
-    var _iso = __importStar(require_iso());
-    var _schemas = __importStar(require_schemas2());
-    var z2 = {
-      ..._schemas,
-      ..._checks,
-      iso: _iso
-    };
-    function detectVersion2(schema, defaultTarget) {
-      const $schema = schema.$schema;
-      if ($schema === "https://json-schema.org/draft/2020-12/schema") {
-        return "draft-2020-12";
-      }
-      if ($schema === "http://json-schema.org/draft-07/schema#") {
-        return "draft-7";
-      }
-      if ($schema === "http://json-schema.org/draft-04/schema#") {
-        return "draft-4";
-      }
-      return defaultTarget ?? "draft-2020-12";
-    }
-    function resolveRef2(ref, ctx) {
-      if (!ref.startsWith("#")) {
-        throw new Error("External $ref is not supported, only local refs (#/...) are allowed");
-      }
-      const path = ref.slice(1).split("/").filter(Boolean);
-      if (path.length === 0) {
-        return ctx.rootSchema;
-      }
-      const defsKey = ctx.version === "draft-2020-12" ? "$defs" : "definitions";
-      if (path[0] === defsKey) {
-        const key = path[1];
-        if (!key || !ctx.defs[key]) {
-          throw new Error(`Reference not found: ${ref}`);
-        }
-        return ctx.defs[key];
-      }
-      throw new Error(`Reference not found: ${ref}`);
-    }
-    function convertBaseSchema2(schema, ctx) {
-      if (schema.not !== void 0) {
-        if (typeof schema.not === "object" && Object.keys(schema.not).length === 0) {
-          return z2.never();
-        }
-        throw new Error("not is not supported in Zod (except { not: {} } for never)");
-      }
-      if (schema.unevaluatedItems !== void 0) {
-        throw new Error("unevaluatedItems is not supported");
-      }
-      if (schema.unevaluatedProperties !== void 0) {
-        throw new Error("unevaluatedProperties is not supported");
-      }
-      if (schema.if !== void 0 || schema.then !== void 0 || schema.else !== void 0) {
-        throw new Error("Conditional schemas (if/then/else) are not supported");
-      }
-      if (schema.dependentSchemas !== void 0 || schema.dependentRequired !== void 0) {
-        throw new Error("dependentSchemas and dependentRequired are not supported");
-      }
-      if (schema.$ref) {
-        const refPath = schema.$ref;
-        if (ctx.refs.has(refPath)) {
-          return ctx.refs.get(refPath);
-        }
-        if (ctx.processing.has(refPath)) {
-          return z2.lazy(() => {
-            if (!ctx.refs.has(refPath)) {
-              throw new Error(`Circular reference not resolved: ${refPath}`);
-            }
-            return ctx.refs.get(refPath);
-          });
-        }
-        ctx.processing.add(refPath);
-        const resolved = resolveRef2(refPath, ctx);
-        const zodSchema2 = convertSchema2(resolved, ctx);
-        ctx.refs.set(refPath, zodSchema2);
-        ctx.processing.delete(refPath);
-        return zodSchema2;
-      }
-      if (schema.enum !== void 0) {
-        const enumValues = schema.enum;
-        if (ctx.version === "openapi-3.0" && schema.nullable === true && enumValues.length === 1 && enumValues[0] === null) {
-          return z2.null();
-        }
-        if (enumValues.length === 0) {
-          return z2.never();
-        }
-        if (enumValues.length === 1) {
-          return z2.literal(enumValues[0]);
-        }
-        if (enumValues.every((v) => typeof v === "string")) {
-          return z2.enum(enumValues);
-        }
-        const literalSchemas = enumValues.map((v) => z2.literal(v));
-        if (literalSchemas.length < 2) {
-          return literalSchemas[0];
-        }
-        return z2.union([literalSchemas[0], literalSchemas[1], ...literalSchemas.slice(2)]);
-      }
-      if (schema.const !== void 0) {
-        return z2.literal(schema.const);
-      }
-      const type = schema.type;
-      if (Array.isArray(type)) {
-        const typeSchemas = type.map((t) => {
-          const typeSchema = { ...schema, type: t };
-          return convertBaseSchema2(typeSchema, ctx);
-        });
-        if (typeSchemas.length === 0) {
-          return z2.never();
-        }
-        if (typeSchemas.length === 1) {
-          return typeSchemas[0];
-        }
-        return z2.union(typeSchemas);
-      }
-      if (!type) {
-        return z2.any();
-      }
-      let zodSchema;
-      switch (type) {
-        case "string": {
-          let stringSchema = z2.string();
-          if (schema.format) {
-            const format = schema.format;
-            if (format === "email") {
-              stringSchema = stringSchema.check(z2.email());
-            } else if (format === "uri" || format === "uri-reference") {
-              stringSchema = stringSchema.check(z2.url());
-            } else if (format === "uuid" || format === "guid") {
-              stringSchema = stringSchema.check(z2.uuid());
-            } else if (format === "date-time") {
-              stringSchema = stringSchema.check(z2.iso.datetime());
-            } else if (format === "date") {
-              stringSchema = stringSchema.check(z2.iso.date());
-            } else if (format === "time") {
-              stringSchema = stringSchema.check(z2.iso.time());
-            } else if (format === "duration") {
-              stringSchema = stringSchema.check(z2.iso.duration());
-            } else if (format === "ipv4") {
-              stringSchema = stringSchema.check(z2.ipv4());
-            } else if (format === "ipv6") {
-              stringSchema = stringSchema.check(z2.ipv6());
-            } else if (format === "mac") {
-              stringSchema = stringSchema.check(z2.mac());
-            } else if (format === "cidr") {
-              stringSchema = stringSchema.check(z2.cidrv4());
-            } else if (format === "cidr-v6") {
-              stringSchema = stringSchema.check(z2.cidrv6());
-            } else if (format === "base64") {
-              stringSchema = stringSchema.check(z2.base64());
-            } else if (format === "base64url") {
-              stringSchema = stringSchema.check(z2.base64url());
-            } else if (format === "e164") {
-              stringSchema = stringSchema.check(z2.e164());
-            } else if (format === "jwt") {
-              stringSchema = stringSchema.check(z2.jwt());
-            } else if (format === "emoji") {
-              stringSchema = stringSchema.check(z2.emoji());
-            } else if (format === "nanoid") {
-              stringSchema = stringSchema.check(z2.nanoid());
-            } else if (format === "cuid") {
-              stringSchema = stringSchema.check(z2.cuid());
-            } else if (format === "cuid2") {
-              stringSchema = stringSchema.check(z2.cuid2());
-            } else if (format === "ulid") {
-              stringSchema = stringSchema.check(z2.ulid());
-            } else if (format === "xid") {
-              stringSchema = stringSchema.check(z2.xid());
-            } else if (format === "ksuid") {
-              stringSchema = stringSchema.check(z2.ksuid());
-            }
-          }
-          if (typeof schema.minLength === "number") {
-            stringSchema = stringSchema.min(schema.minLength);
-          }
-          if (typeof schema.maxLength === "number") {
-            stringSchema = stringSchema.max(schema.maxLength);
-          }
-          if (schema.pattern) {
-            stringSchema = stringSchema.regex(new RegExp(schema.pattern));
-          }
-          zodSchema = stringSchema;
-          break;
-        }
-        case "number":
-        case "integer": {
-          let numberSchema = type === "integer" ? z2.number().int() : z2.number();
-          if (typeof schema.minimum === "number") {
-            numberSchema = numberSchema.min(schema.minimum);
-          }
-          if (typeof schema.maximum === "number") {
-            numberSchema = numberSchema.max(schema.maximum);
-          }
-          if (typeof schema.exclusiveMinimum === "number") {
-            numberSchema = numberSchema.gt(schema.exclusiveMinimum);
-          } else if (schema.exclusiveMinimum === true && typeof schema.minimum === "number") {
-            numberSchema = numberSchema.gt(schema.minimum);
-          }
-          if (typeof schema.exclusiveMaximum === "number") {
-            numberSchema = numberSchema.lt(schema.exclusiveMaximum);
-          } else if (schema.exclusiveMaximum === true && typeof schema.maximum === "number") {
-            numberSchema = numberSchema.lt(schema.maximum);
-          }
-          if (typeof schema.multipleOf === "number") {
-            numberSchema = numberSchema.multipleOf(schema.multipleOf);
-          }
-          zodSchema = numberSchema;
-          break;
-        }
-        case "boolean": {
-          zodSchema = z2.boolean();
-          break;
-        }
-        case "null": {
-          zodSchema = z2.null();
-          break;
-        }
-        case "object": {
-          const shape = {};
-          const properties = schema.properties || {};
-          const requiredSet = new Set(schema.required || []);
-          for (const [key, propSchema] of Object.entries(properties)) {
-            const propZodSchema = convertSchema2(propSchema, ctx);
-            shape[key] = requiredSet.has(key) ? propZodSchema : propZodSchema.optional();
-          }
-          if (schema.propertyNames) {
-            const keySchema = convertSchema2(schema.propertyNames, ctx);
-            const valueSchema = schema.additionalProperties && typeof schema.additionalProperties === "object" ? convertSchema2(schema.additionalProperties, ctx) : z2.any();
-            if (Object.keys(shape).length === 0) {
-              zodSchema = z2.record(keySchema, valueSchema);
-              break;
-            }
-            const objectSchema2 = z2.object(shape).passthrough();
-            const recordSchema = z2.looseRecord(keySchema, valueSchema);
-            zodSchema = z2.intersection(objectSchema2, recordSchema);
-            break;
-          }
-          if (schema.patternProperties) {
-            const patternProps = schema.patternProperties;
-            const patternKeys = Object.keys(patternProps);
-            const looseRecords = [];
-            for (const pattern of patternKeys) {
-              const patternValue = convertSchema2(patternProps[pattern], ctx);
-              const keySchema = z2.string().regex(new RegExp(pattern));
-              looseRecords.push(z2.looseRecord(keySchema, patternValue));
-            }
-            const schemasToIntersect = [];
-            if (Object.keys(shape).length > 0) {
-              schemasToIntersect.push(z2.object(shape).passthrough());
-            }
-            schemasToIntersect.push(...looseRecords);
-            if (schemasToIntersect.length === 0) {
-              zodSchema = z2.object({}).passthrough();
-            } else if (schemasToIntersect.length === 1) {
-              zodSchema = schemasToIntersect[0];
-            } else {
-              let result = z2.intersection(schemasToIntersect[0], schemasToIntersect[1]);
-              for (let i = 2; i < schemasToIntersect.length; i++) {
-                result = z2.intersection(result, schemasToIntersect[i]);
-              }
-              zodSchema = result;
-            }
-            break;
-          }
-          const objectSchema = z2.object(shape);
-          if (schema.additionalProperties === false) {
-            zodSchema = objectSchema.strict();
-          } else if (typeof schema.additionalProperties === "object") {
-            zodSchema = objectSchema.catchall(convertSchema2(schema.additionalProperties, ctx));
-          } else {
-            zodSchema = objectSchema.passthrough();
-          }
-          break;
-        }
-        case "array": {
-          const prefixItems = schema.prefixItems;
-          const items = schema.items;
-          if (prefixItems && Array.isArray(prefixItems)) {
-            const tupleItems = prefixItems.map((item) => convertSchema2(item, ctx));
-            const rest = items && typeof items === "object" && !Array.isArray(items) ? convertSchema2(items, ctx) : void 0;
-            if (rest) {
-              zodSchema = z2.tuple(tupleItems).rest(rest);
-            } else {
-              zodSchema = z2.tuple(tupleItems);
-            }
-            if (typeof schema.minItems === "number") {
-              zodSchema = zodSchema.check(z2.minLength(schema.minItems));
-            }
-            if (typeof schema.maxItems === "number") {
-              zodSchema = zodSchema.check(z2.maxLength(schema.maxItems));
-            }
-          } else if (Array.isArray(items)) {
-            const tupleItems = items.map((item) => convertSchema2(item, ctx));
-            const rest = schema.additionalItems && typeof schema.additionalItems === "object" ? convertSchema2(schema.additionalItems, ctx) : void 0;
-            if (rest) {
-              zodSchema = z2.tuple(tupleItems).rest(rest);
-            } else {
-              zodSchema = z2.tuple(tupleItems);
-            }
-            if (typeof schema.minItems === "number") {
-              zodSchema = zodSchema.check(z2.minLength(schema.minItems));
-            }
-            if (typeof schema.maxItems === "number") {
-              zodSchema = zodSchema.check(z2.maxLength(schema.maxItems));
-            }
-          } else if (items !== void 0) {
-            const element = convertSchema2(items, ctx);
-            let arraySchema = z2.array(element);
-            if (typeof schema.minItems === "number") {
-              arraySchema = arraySchema.min(schema.minItems);
-            }
-            if (typeof schema.maxItems === "number") {
-              arraySchema = arraySchema.max(schema.maxItems);
-            }
-            zodSchema = arraySchema;
-          } else {
-            zodSchema = z2.array(z2.any());
-          }
-          break;
-        }
-        default:
-          throw new Error(`Unsupported type: ${type}`);
-      }
-      if (schema.description) {
-        zodSchema = zodSchema.describe(schema.description);
-      }
-      if (schema.default !== void 0) {
-        zodSchema = zodSchema.default(schema.default);
-      }
-      return zodSchema;
-    }
-    function convertSchema2(schema, ctx) {
-      if (typeof schema === "boolean") {
-        return schema ? z2.any() : z2.never();
-      }
-      let baseSchema = convertBaseSchema2(schema, ctx);
-      const hasExplicitType = schema.type || schema.enum !== void 0 || schema.const !== void 0;
-      if (schema.anyOf && Array.isArray(schema.anyOf)) {
-        const options = schema.anyOf.map((s) => convertSchema2(s, ctx));
-        const anyOfUnion = z2.union(options);
-        baseSchema = hasExplicitType ? z2.intersection(baseSchema, anyOfUnion) : anyOfUnion;
-      }
-      if (schema.oneOf && Array.isArray(schema.oneOf)) {
-        const options = schema.oneOf.map((s) => convertSchema2(s, ctx));
-        const oneOfUnion = z2.xor(options);
-        baseSchema = hasExplicitType ? z2.intersection(baseSchema, oneOfUnion) : oneOfUnion;
-      }
-      if (schema.allOf && Array.isArray(schema.allOf)) {
-        if (schema.allOf.length === 0) {
-          baseSchema = hasExplicitType ? baseSchema : z2.any();
-        } else {
-          let result = hasExplicitType ? baseSchema : convertSchema2(schema.allOf[0], ctx);
-          const startIdx = hasExplicitType ? 0 : 1;
-          for (let i = startIdx; i < schema.allOf.length; i++) {
-            result = z2.intersection(result, convertSchema2(schema.allOf[i], ctx));
-          }
-          baseSchema = result;
-        }
-      }
-      if (schema.nullable === true && ctx.version === "openapi-3.0") {
-        baseSchema = z2.nullable(baseSchema);
-      }
-      if (schema.readOnly === true) {
-        baseSchema = z2.readonly(baseSchema);
-      }
-      return baseSchema;
-    }
-    function fromJSONSchema2(schema, params) {
-      if (typeof schema === "boolean") {
-        return schema ? z2.any() : z2.never();
-      }
-      const version4 = detectVersion2(schema, params?.defaultTarget);
-      const defs = schema.$defs || schema.definitions || {};
-      const ctx = {
-        version: version4,
-        defs,
-        refs: /* @__PURE__ */ new Map(),
-        processing: /* @__PURE__ */ new Set(),
-        rootSchema: schema
-      };
-      return convertSchema2(schema, ctx);
-    }
-  }
-});
-
 // node_modules/zod/v4/classic/coerce.cjs
 var require_coerce = __commonJS({
   "node_modules/zod/v4/classic/coerce.cjs"(exports2) {
@@ -15613,7 +14851,7 @@ var require_external = __commonJS({
       return mod && mod.__esModule ? mod : { "default": mod };
     };
     Object.defineProperty(exports2, "__esModule", { value: true });
-    exports2.coerce = exports2.iso = exports2.ZodISODuration = exports2.ZodISOTime = exports2.ZodISODate = exports2.ZodISODateTime = exports2.locales = exports2.fromJSONSchema = exports2.toJSONSchema = exports2.NEVER = exports2.util = exports2.TimePrecision = exports2.flattenError = exports2.formatError = exports2.prettifyError = exports2.treeifyError = exports2.regexes = exports2.clone = exports2.$brand = exports2.$input = exports2.$output = exports2.config = exports2.registry = exports2.globalRegistry = exports2.core = void 0;
+    exports2.coerce = exports2.iso = exports2.ZodISODuration = exports2.ZodISOTime = exports2.ZodISODate = exports2.ZodISODateTime = exports2.locales = exports2.NEVER = exports2.util = exports2.TimePrecision = exports2.toJSONSchema = exports2.flattenError = exports2.formatError = exports2.prettifyError = exports2.treeifyError = exports2.regexes = exports2.clone = exports2.$brand = exports2.$input = exports2.$output = exports2.config = exports2.registry = exports2.globalRegistry = exports2.core = void 0;
     exports2.core = __importStar(require_core2());
     __exportStar(require_schemas2(), exports2);
     __exportStar(require_checks2(), exports2);
@@ -15660,6 +14898,9 @@ var require_external = __commonJS({
     Object.defineProperty(exports2, "flattenError", { enumerable: true, get: function() {
       return index_js_2.flattenError;
     } });
+    Object.defineProperty(exports2, "toJSONSchema", { enumerable: true, get: function() {
+      return index_js_2.toJSONSchema;
+    } });
     Object.defineProperty(exports2, "TimePrecision", { enumerable: true, get: function() {
       return index_js_2.TimePrecision;
     } });
@@ -15668,14 +14909,6 @@ var require_external = __commonJS({
     } });
     Object.defineProperty(exports2, "NEVER", { enumerable: true, get: function() {
       return index_js_2.NEVER;
-    } });
-    var json_schema_processors_js_1 = require_json_schema_processors();
-    Object.defineProperty(exports2, "toJSONSchema", { enumerable: true, get: function() {
-      return json_schema_processors_js_1.toJSONSchema;
-    } });
-    var from_json_schema_js_1 = require_from_json_schema();
-    Object.defineProperty(exports2, "fromJSONSchema", { enumerable: true, get: function() {
-      return from_json_schema_js_1.fromJSONSchema;
     } });
     exports2.locales = __importStar(require_locales());
     var iso_js_1 = require_iso();
@@ -15732,24 +14965,219 @@ var require_zod = __commonJS({
     };
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.z = void 0;
-    var z2 = __importStar(require_external());
-    exports2.z = z2;
+    var z = __importStar(require_external());
+    exports2.z = z;
     __exportStar(require_external(), exports2);
-    exports2.default = z2;
+    exports2.default = z;
   }
 });
 
-// node_modules/@lanonasis/memory-client/dist/index.js
-var dist_exports = {};
-function createMemoryClient(config2) {
-  return new CoreMemoryClient(config2);
-}
-var zod, CoreMemoryClient, MEMORY_TYPES, MEMORY_STATUSES, createMemorySchema, updateMemorySchema, searchMemorySchema, createTopicSchema, MemoryClientError, ApiError, AuthenticationError, ValidationError, TimeoutError, RateLimitError, NotFoundError, VERSION, CLIENT_NAME, isBrowser, isNode, defaultConfigs;
-var init_dist = __esm({
-  "node_modules/@lanonasis/memory-client/dist/index.js"() {
+// node_modules/@lanonasis/memory-client/dist/index.cjs
+var require_dist = __commonJS({
+  "node_modules/@lanonasis/memory-client/dist/index.cjs"(exports2) {
     "use strict";
-    zod = require_zod();
-    CoreMemoryClient = class {
+    var zod = require_zod();
+    var child_process = require("child_process");
+    var util = require("util");
+    var MEMORY_TYPES2 = ["context", "project", "knowledge", "reference", "personal", "workflow"];
+    var MEMORY_STATUSES2 = ["active", "archived", "draft", "deleted"];
+    var createMemorySchema2 = zod.z.object({
+      title: zod.z.string().min(1).max(500),
+      content: zod.z.string().min(1).max(5e4),
+      summary: zod.z.string().max(1e3).optional(),
+      memory_type: zod.z.enum(MEMORY_TYPES2).default("context"),
+      topic_id: zod.z.string().uuid().optional(),
+      project_ref: zod.z.string().max(100).optional(),
+      tags: zod.z.array(zod.z.string().min(1).max(50)).max(20).default([]),
+      metadata: zod.z.record(zod.z.string(), zod.z.unknown()).optional()
+    });
+    var updateMemorySchema2 = zod.z.object({
+      title: zod.z.string().min(1).max(500).optional(),
+      content: zod.z.string().min(1).max(5e4).optional(),
+      summary: zod.z.string().max(1e3).optional(),
+      memory_type: zod.z.enum(MEMORY_TYPES2).optional(),
+      status: zod.z.enum(MEMORY_STATUSES2).optional(),
+      topic_id: zod.z.string().uuid().nullable().optional(),
+      project_ref: zod.z.string().max(100).nullable().optional(),
+      tags: zod.z.array(zod.z.string().min(1).max(50)).max(20).optional(),
+      metadata: zod.z.record(zod.z.string(), zod.z.unknown()).optional()
+    });
+    var searchMemorySchema2 = zod.z.object({
+      query: zod.z.string().min(1).max(1e3),
+      memory_types: zod.z.array(zod.z.enum(MEMORY_TYPES2)).optional(),
+      tags: zod.z.array(zod.z.string()).optional(),
+      topic_id: zod.z.string().uuid().optional(),
+      project_ref: zod.z.string().optional(),
+      status: zod.z.enum(MEMORY_STATUSES2).default("active"),
+      limit: zod.z.number().int().min(1).max(100).default(20),
+      threshold: zod.z.number().min(0).max(1).default(0.7)
+    });
+    var createTopicSchema2 = zod.z.object({
+      name: zod.z.string().min(1).max(100),
+      description: zod.z.string().max(500).optional(),
+      color: zod.z.string().regex(/^#[0-9A-Fa-f]{6}$/).optional(),
+      icon: zod.z.string().max(50).optional(),
+      parent_topic_id: zod.z.string().uuid().optional()
+    });
+    zod.z.object({
+      memory_id: zod.z.string().uuid().optional(),
+      content: zod.z.string().min(1).optional(),
+      title: zod.z.string().optional(),
+      existing_tags: zod.z.array(zod.z.string()).optional(),
+      max_suggestions: zod.z.number().int().min(1).max(10).optional()
+    }).refine((data) => data.memory_id || data.content, {
+      message: "Either memory_id or content is required"
+    });
+    zod.z.object({
+      time_range_days: zod.z.number().int().min(1).max(365).optional(),
+      include_insights: zod.z.boolean().optional(),
+      response_format: zod.z.enum(["json", "markdown"]).optional()
+    });
+    zod.z.object({
+      include_recommendations: zod.z.boolean().optional(),
+      detailed_breakdown: zod.z.boolean().optional()
+    });
+    zod.z.object({
+      memory_id: zod.z.string().uuid().optional(),
+      query: zod.z.string().min(1).optional(),
+      limit: zod.z.number().int().min(1).max(20).optional(),
+      similarity_threshold: zod.z.number().min(0).max(1).optional(),
+      exclude_ids: zod.z.array(zod.z.string().uuid()).optional()
+    }).refine((data) => data.memory_id || data.query, {
+      message: "Either memory_id or query is required"
+    });
+    zod.z.object({
+      similarity_threshold: zod.z.number().min(0).max(1).optional(),
+      include_archived: zod.z.boolean().optional(),
+      limit: zod.z.number().int().min(1).max(50).optional()
+    });
+    zod.z.object({
+      memory_ids: zod.z.array(zod.z.string().uuid()).optional(),
+      topic: zod.z.string().min(1).optional(),
+      time_range_days: zod.z.number().int().min(1).max(365).optional(),
+      insight_types: zod.z.array(zod.z.enum(["themes", "connections", "gaps", "actions", "summary"])).optional(),
+      detail_level: zod.z.enum(["brief", "detailed", "comprehensive"]).optional()
+    });
+    var CHUNKING_STRATEGIES2 = ["semantic", "fixed-size", "paragraph", "sentence", "code-block"];
+    var CONTENT_TYPES = ["text", "code", "markdown", "json", "yaml"];
+    var SEARCH_MODES2 = ["vector", "text", "hybrid"];
+    var preprocessingOptionsSchema2 = zod.z.object({
+      chunking: zod.z.object({
+        strategy: zod.z.enum(CHUNKING_STRATEGIES2).optional(),
+        maxChunkSize: zod.z.number().int().min(100).max(1e4).optional(),
+        overlap: zod.z.number().int().min(0).max(500).optional()
+      }).optional(),
+      cleanContent: zod.z.boolean().optional(),
+      extractMetadata: zod.z.boolean().optional()
+    }).optional();
+    var enhancedSearchSchema2 = zod.z.object({
+      query: zod.z.string().min(1).max(1e3),
+      type: zod.z.enum(MEMORY_TYPES2).optional(),
+      threshold: zod.z.number().min(0).max(1).default(0.7),
+      limit: zod.z.number().int().min(1).max(100).default(20),
+      search_mode: zod.z.enum(SEARCH_MODES2).default("hybrid"),
+      filters: zod.z.object({
+        tags: zod.z.array(zod.z.string()).optional(),
+        project_id: zod.z.string().uuid().optional(),
+        topic_id: zod.z.string().uuid().optional(),
+        date_range: zod.z.object({
+          from: zod.z.string().optional(),
+          to: zod.z.string().optional()
+        }).optional()
+      }).optional(),
+      include_chunks: zod.z.boolean().default(false)
+    });
+    var analyticsDateRangeSchema2 = zod.z.object({
+      from: zod.z.string().optional(),
+      to: zod.z.string().optional(),
+      group_by: zod.z.enum(["day", "week", "month"]).default("day")
+    });
+    function safeJsonParse(input) {
+      try {
+        const data = JSON.parse(input);
+        return { success: true, data };
+      } catch (error46) {
+        const message = error46 instanceof Error ? error46.message : "Unknown JSON parse error";
+        return { success: false, error: `Invalid JSON: ${message}` };
+      }
+    }
+    function httpStatusToErrorCode2(status) {
+      switch (status) {
+        case 400:
+          return "VALIDATION_ERROR";
+        case 401:
+          return "AUTH_ERROR";
+        case 403:
+          return "FORBIDDEN";
+        case 404:
+          return "NOT_FOUND";
+        case 408:
+          return "TIMEOUT_ERROR";
+        case 409:
+          return "CONFLICT";
+        case 429:
+          return "RATE_LIMIT_ERROR";
+        case 500:
+        case 502:
+        case 503:
+        case 504:
+          return "SERVER_ERROR";
+        default:
+          return "API_ERROR";
+      }
+    }
+    function createErrorResponse2(message, code = "API_ERROR", statusCode, details) {
+      return {
+        code,
+        message,
+        statusCode,
+        details,
+        timestamp: (/* @__PURE__ */ new Date()).toISOString()
+      };
+    }
+    function createErrorFromResponse2(status, statusText, body) {
+      const code = httpStatusToErrorCode2(status);
+      let message = `HTTP ${status}: ${statusText}`;
+      let details = void 0;
+      if (body && typeof body === "object") {
+        const bodyObj = body;
+        if (typeof bodyObj.error === "string") {
+          message = bodyObj.error;
+        } else if (typeof bodyObj.message === "string") {
+          message = bodyObj.message;
+        }
+        if (bodyObj.details) {
+          details = bodyObj.details;
+        }
+      }
+      return createErrorResponse2(message, code, status, details);
+    }
+    function sleep2(ms) {
+      return new Promise((resolve) => setTimeout(resolve, ms));
+    }
+    function calculateRetryDelay2(attempt, baseDelay = 1e3, backoff = "exponential", maxDelay = 3e4) {
+      let delay;
+      if (backoff === "exponential") {
+        delay = baseDelay * Math.pow(2, attempt);
+      } else {
+        delay = baseDelay * (attempt + 1);
+      }
+      const jitter = delay * 0.2 * (Math.random() * 2 - 1);
+      delay = Math.min(delay + jitter, maxDelay);
+      return Math.round(delay);
+    }
+    function isRetryableError2(statusCode) {
+      if (!statusCode)
+        return true;
+      return statusCode >= 500 || statusCode === 429 || statusCode === 408;
+    }
+    function hasError(response) {
+      return response.error !== void 0;
+    }
+    function hasData(response) {
+      return response.data !== void 0;
+    }
+    var CoreMemoryClient3 = class {
       constructor(config2) {
         this.config = {
           timeout: 3e4,
@@ -15758,6 +15186,8 @@ var init_dist = __esm({
         this.baseHeaders = {
           "Content-Type": "application/json",
           "User-Agent": "@lanonasis/memory-client/2.0.0",
+          "X-Project-Scope": "lanonasis-maas",
+          // Required by backend auth middleware
           ...config2.headers
         };
         if (config2.authToken) {
@@ -15789,10 +15219,13 @@ var init_dist = __esm({
         return body;
       }
       /**
-       * Make an HTTP request to the API
+       * Make an HTTP request to the API with retry support
        */
       async request(endpoint, options = {}) {
         const startTime = Date.now();
+        const maxRetries = this.config.retry?.maxRetries ?? 3;
+        const baseDelay = this.config.retry?.retryDelay ?? 1e3;
+        const backoff = this.config.retry?.backoff ?? "exponential";
         if (this.config.onRequest) {
           try {
             this.config.onRequest(endpoint);
@@ -15802,77 +15235,110 @@ var init_dist = __esm({
         }
         const baseUrl = this.config.apiUrl.includes("/api") ? this.config.apiUrl.replace("/api", "") : this.config.apiUrl;
         const url2 = `${baseUrl}/api/v1${endpoint}`;
-        try {
-          const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), this.config.timeout);
-          const response = await fetch(url2, {
-            headers: { ...this.baseHeaders, ...options.headers },
-            signal: controller.signal,
-            ...options
-          });
-          clearTimeout(timeoutId);
-          let data;
-          const contentType = response.headers.get("content-type");
-          if (contentType && contentType.includes("application/json")) {
-            data = await response.json();
-          } else {
-            data = await response.text();
-          }
-          if (!response.ok) {
-            const error46 = {
-              message: data?.error || `HTTP ${response.status}: ${response.statusText}`,
-              statusCode: response.status,
-              code: "API_ERROR"
-            };
+        let lastError;
+        let attempt = 0;
+        while (attempt <= maxRetries) {
+          try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), this.config.timeout);
+            const response = await fetch(url2, {
+              headers: { ...this.baseHeaders, ...options.headers },
+              signal: controller.signal,
+              ...options
+            });
+            clearTimeout(timeoutId);
+            let data;
+            const contentType = response.headers.get("content-type");
+            if (contentType && contentType.includes("application/json")) {
+              data = await response.json();
+            } else {
+              data = await response.text();
+            }
+            if (!response.ok) {
+              const error46 = createErrorFromResponse2(response.status, response.statusText, data);
+              if (isRetryableError2(response.status) && attempt < maxRetries) {
+                lastError = error46;
+                const delay = calculateRetryDelay2(attempt, baseDelay, backoff);
+                await sleep2(delay);
+                attempt++;
+                continue;
+              }
+              if (this.config.onError) {
+                try {
+                  this.config.onError(error46);
+                } catch (hookError) {
+                  console.warn("onError hook error:", hookError);
+                }
+              }
+              return { error: error46, meta: { duration: Date.now() - startTime, retries: attempt } };
+            }
+            if (this.config.onResponse) {
+              try {
+                const duration3 = Date.now() - startTime;
+                this.config.onResponse(endpoint, duration3);
+              } catch (error46) {
+                console.warn("onResponse hook error:", error46);
+              }
+            }
+            return { data, meta: { duration: Date.now() - startTime, retries: attempt } };
+          } catch (error46) {
+            if (error46 instanceof Error && error46.name === "AbortError") {
+              const timeoutError = createErrorResponse2("Request timeout", "TIMEOUT_ERROR", 408);
+              if (attempt < maxRetries) {
+                lastError = timeoutError;
+                const delay = calculateRetryDelay2(attempt, baseDelay, backoff);
+                await sleep2(delay);
+                attempt++;
+                continue;
+              }
+              if (this.config.onError) {
+                try {
+                  this.config.onError(timeoutError);
+                } catch (hookError) {
+                  console.warn("onError hook error:", hookError);
+                }
+              }
+              return { error: timeoutError, meta: { duration: Date.now() - startTime, retries: attempt } };
+            }
+            const networkError = createErrorResponse2(error46 instanceof Error ? error46.message : "Network error", "NETWORK_ERROR");
+            if (attempt < maxRetries) {
+              lastError = networkError;
+              const delay = calculateRetryDelay2(attempt, baseDelay, backoff);
+              await sleep2(delay);
+              attempt++;
+              continue;
+            }
             if (this.config.onError) {
               try {
-                this.config.onError(error46);
+                this.config.onError(networkError);
               } catch (hookError) {
                 console.warn("onError hook error:", hookError);
               }
             }
-            return { error: error46.message };
+            return { error: networkError, meta: { duration: Date.now() - startTime, retries: attempt } };
           }
-          if (this.config.onResponse) {
-            try {
-              const duration3 = Date.now() - startTime;
-              this.config.onResponse(endpoint, duration3);
-            } catch (error46) {
-              console.warn("onResponse hook error:", error46);
-            }
-          }
-          return { data };
-        } catch (error46) {
-          if (error46 instanceof Error && error46.name === "AbortError") {
-            const timeoutError = {
-              message: "Request timeout",
-              code: "TIMEOUT_ERROR",
-              statusCode: 408
-            };
-            if (this.config.onError) {
-              try {
-                this.config.onError(timeoutError);
-              } catch (hookError) {
-                console.warn("onError hook error:", hookError);
-              }
-            }
-            return { error: "Request timeout" };
-          }
-          const networkError = {
-            message: error46 instanceof Error ? error46.message : "Network error",
-            code: "NETWORK_ERROR"
-          };
-          if (this.config.onError) {
-            try {
-              this.config.onError(networkError);
-            } catch (hookError) {
-              console.warn("onError hook error:", hookError);
-            }
-          }
+        }
+        return {
+          error: lastError ?? createErrorResponse2("Max retries exceeded", "API_ERROR"),
+          meta: { duration: Date.now() - startTime, retries: attempt }
+        };
+      }
+      /**
+       * Validate input using Zod schema and return validation error if invalid
+       */
+      validateInput(schema, data) {
+        const result = schema.safeParse(data);
+        if (!result.success) {
+          const zodError = result.error;
+          const details = zodError?.issues?.map((issue2) => ({
+            field: issue2.path.map(String).join("."),
+            message: issue2.message
+          })) ?? [];
           return {
-            error: error46 instanceof Error ? error46.message : "Network error"
+            error: createErrorResponse2("Validation failed", "VALIDATION_ERROR", 400, details)
           };
         }
+        return null;
       }
       /**
        * Test the API connection and authentication
@@ -15882,9 +15348,13 @@ var init_dist = __esm({
       }
       // Memory Operations
       /**
-       * Create a new memory
+       * Create a new memory with validation
        */
       async createMemory(memory) {
+        const validationError = this.validateInput(createMemorySchema2, memory);
+        if (validationError) {
+          return { error: validationError.error };
+        }
         const enrichedMemory = this.enrichWithOrgContext(memory);
         return this.request("/memory", {
           method: "POST",
@@ -15898,9 +15368,13 @@ var init_dist = __esm({
         return this.request(`/memory/${encodeURIComponent(id)}`);
       }
       /**
-       * Update an existing memory
+       * Update an existing memory with validation
        */
       async updateMemory(id, updates) {
+        const validationError = this.validateInput(updateMemorySchema2, updates);
+        if (validationError) {
+          return { error: validationError.error };
+        }
         return this.request(`/memory/${encodeURIComponent(id)}`, {
           method: "PUT",
           body: JSON.stringify(updates)
@@ -15933,9 +15407,13 @@ var init_dist = __esm({
         return this.request(endpoint);
       }
       /**
-       * Search memories using semantic search
+       * Search memories using semantic search with validation
        */
       async searchMemories(request) {
+        const validationError = this.validateInput(searchMemorySchema2, request);
+        if (validationError) {
+          return { error: validationError.error };
+        }
         const enrichedRequest = this.enrichWithOrgContext(request);
         return this.request("/memory/search", {
           method: "POST",
@@ -15954,9 +15432,13 @@ var init_dist = __esm({
       }
       // Topic Operations
       /**
-       * Create a new topic
+       * Create a new topic with validation
        */
       async createTopic(topic) {
+        const validationError = this.validateInput(createTopicSchema2, topic);
+        if (validationError) {
+          return { error: validationError.error };
+        }
         const enrichedTopic = this.enrichWithOrgContext(topic);
         return this.request("/topics", {
           method: "POST",
@@ -15998,6 +15480,179 @@ var init_dist = __esm({
       async getMemoryStats() {
         return this.request("/memory/stats");
       }
+      // ========================================
+      // Intelligence Features (v2.0)
+      // ========================================
+      /**
+       * Create a memory with preprocessing options (chunking, intelligence extraction)
+       *
+       * @example
+       * ```typescript
+       * const result = await client.createMemoryWithPreprocessing({
+       *   title: 'Auth System Docs',
+       *   content: 'Long content...',
+       *   memory_type: 'knowledge',
+       *   preprocessing: {
+       *     chunking: { strategy: 'semantic', maxChunkSize: 1000 },
+       *     extractMetadata: true
+       *   }
+       * });
+       * ```
+       */
+      async createMemoryWithPreprocessing(memory) {
+        const validationError = this.validateInput(createMemorySchema2, memory);
+        if (validationError) {
+          return { error: validationError.error };
+        }
+        const enrichedMemory = this.enrichWithOrgContext(memory);
+        return this.request("/memory", {
+          method: "POST",
+          body: JSON.stringify(enrichedMemory)
+        });
+      }
+      /**
+       * Update a memory with re-chunking and embedding regeneration
+       *
+       * @example
+       * ```typescript
+       * const result = await client.updateMemoryWithPreprocessing('mem_123', {
+       *   content: 'Updated content...',
+       *   rechunk: true,
+       *   regenerate_embedding: true
+       * });
+       * ```
+       */
+      async updateMemoryWithPreprocessing(id, updates) {
+        const validationError = this.validateInput(updateMemorySchema2, updates);
+        if (validationError) {
+          return { error: validationError.error };
+        }
+        return this.request(`/memory/${encodeURIComponent(id)}`, {
+          method: "PUT",
+          body: JSON.stringify(updates)
+        });
+      }
+      /**
+       * Enhanced semantic search with hybrid mode (vector + text)
+       *
+       * @example
+       * ```typescript
+       * const result = await client.enhancedSearch({
+       *   query: 'authentication flow',
+       *   search_mode: 'hybrid',
+       *   filters: { tags: ['auth'], project_id: 'proj_123' },
+       *   include_chunks: true
+       * });
+       * ```
+       */
+      async enhancedSearch(request) {
+        const validationError = this.validateInput(enhancedSearchSchema2, request);
+        if (validationError) {
+          return { error: validationError.error };
+        }
+        const enrichedRequest = this.enrichWithOrgContext(request);
+        return this.request("/memory/search", {
+          method: "POST",
+          body: JSON.stringify(enrichedRequest)
+        });
+      }
+      // ========================================
+      // Analytics Operations
+      // ========================================
+      /**
+       * Get search analytics data
+       *
+       * @example
+       * ```typescript
+       * const analytics = await client.getSearchAnalytics({
+       *   from: '2025-01-01',
+       *   to: '2025-12-31',
+       *   group_by: 'day'
+       * });
+       * ```
+       */
+      async getSearchAnalytics(options = {}) {
+        const validationError = this.validateInput(analyticsDateRangeSchema2, options);
+        if (validationError) {
+          return { error: validationError.error };
+        }
+        const params = new URLSearchParams();
+        if (options.from)
+          params.append("from", options.from);
+        if (options.to)
+          params.append("to", options.to);
+        if (options.group_by)
+          params.append("group_by", options.group_by);
+        const queryString = params.toString();
+        const endpoint = queryString ? `/analytics/search?${queryString}` : "/analytics/search";
+        return this.request(endpoint);
+      }
+      /**
+       * Get memory access patterns
+       *
+       * @example
+       * ```typescript
+       * const patterns = await client.getAccessPatterns({
+       *   from: '2025-01-01',
+       *   to: '2025-12-31'
+       * });
+       * console.log(patterns.data?.most_accessed);
+       * ```
+       */
+      async getAccessPatterns(options = {}) {
+        const params = new URLSearchParams();
+        if (options.from)
+          params.append("from", options.from);
+        if (options.to)
+          params.append("to", options.to);
+        const queryString = params.toString();
+        const endpoint = queryString ? `/analytics/access?${queryString}` : "/analytics/access";
+        return this.request(endpoint);
+      }
+      /**
+       * Get extended memory statistics with storage and activity metrics
+       *
+       * @example
+       * ```typescript
+       * const stats = await client.getExtendedStats();
+       * console.log(`Total chunks: ${stats.data?.storage.total_chunks}`);
+       * console.log(`Created today: ${stats.data?.activity.created_today}`);
+       * ```
+       */
+      async getExtendedStats() {
+        return this.request("/analytics/stats");
+      }
+      /**
+       * Get topic with its memories
+       *
+       * @example
+       * ```typescript
+       * const topic = await client.getTopicWithMemories('topic_123');
+       * console.log(topic.data?.memories);
+       * ```
+       */
+      async getTopicWithMemories(topicId, options = {}) {
+        const params = new URLSearchParams();
+        if (options.limit)
+          params.append("limit", String(options.limit));
+        if (options.offset)
+          params.append("offset", String(options.offset));
+        const queryString = params.toString();
+        const endpoint = queryString ? `/topics/${encodeURIComponent(topicId)}/memories?${queryString}` : `/topics/${encodeURIComponent(topicId)}/memories`;
+        return this.request(endpoint);
+      }
+      /**
+       * Get topics in hierarchical structure
+       *
+       * @example
+       * ```typescript
+       * const topics = await client.getTopicsHierarchy();
+       * // Returns nested topic tree with children
+       * ```
+       */
+      async getTopicsHierarchy() {
+        return this.request("/topics?include_hierarchy=true");
+      }
       // Utility Methods
       /**
        * Update authentication token
@@ -16037,48 +15692,26 @@ var init_dist = __esm({
         return safeConfig;
       }
     };
-    MEMORY_TYPES = ["context", "project", "knowledge", "reference", "personal", "workflow"];
-    MEMORY_STATUSES = ["active", "archived", "draft", "deleted"];
-    createMemorySchema = zod.z.object({
-      title: zod.z.string().min(1).max(500),
-      content: zod.z.string().min(1).max(5e4),
-      summary: zod.z.string().max(1e3).optional(),
-      memory_type: zod.z.enum(MEMORY_TYPES).default("context"),
-      topic_id: zod.z.string().uuid().optional(),
-      project_ref: zod.z.string().max(100).optional(),
-      tags: zod.z.array(zod.z.string().min(1).max(50)).max(20).default([]),
-      metadata: zod.z.record(zod.z.string(), zod.z.unknown()).optional()
-    });
-    updateMemorySchema = zod.z.object({
-      title: zod.z.string().min(1).max(500).optional(),
-      content: zod.z.string().min(1).max(5e4).optional(),
-      summary: zod.z.string().max(1e3).optional(),
-      memory_type: zod.z.enum(MEMORY_TYPES).optional(),
-      status: zod.z.enum(MEMORY_STATUSES).optional(),
-      topic_id: zod.z.string().uuid().nullable().optional(),
-      project_ref: zod.z.string().max(100).nullable().optional(),
-      tags: zod.z.array(zod.z.string().min(1).max(50)).max(20).optional(),
-      metadata: zod.z.record(zod.z.string(), zod.z.unknown()).optional()
-    });
-    searchMemorySchema = zod.z.object({
-      query: zod.z.string().min(1).max(1e3),
-      memory_types: zod.z.array(zod.z.enum(MEMORY_TYPES)).optional(),
-      tags: zod.z.array(zod.z.string()).optional(),
-      topic_id: zod.z.string().uuid().optional(),
-      project_ref: zod.z.string().optional(),
-      status: zod.z.enum(MEMORY_STATUSES).default("active"),
-      limit: zod.z.number().int().min(1).max(100).default(20),
-      threshold: zod.z.number().min(0).max(1).default(0.7)
-    });
-    createTopicSchema = zod.z.object({
-      name: zod.z.string().min(1).max(100),
-      description: zod.z.string().max(500).optional(),
-      color: zod.z.string().regex(/^#[0-9A-Fa-f]{6}$/).optional(),
-      icon: zod.z.string().max(50).optional(),
-      parent_topic_id: zod.z.string().uuid().optional()
-    });
-    MemoryClientError = class _MemoryClientError extends Error {
-      constructor(message, code, statusCode, details) {
+    function createMemoryClient2(config2) {
+      return new CoreMemoryClient3(config2);
+    }
+    var ERROR_CODES = [
+      "API_ERROR",
+      "AUTH_ERROR",
+      "VALIDATION_ERROR",
+      "TIMEOUT_ERROR",
+      "RATE_LIMIT_ERROR",
+      "NOT_FOUND",
+      "NETWORK_ERROR",
+      "FORBIDDEN",
+      "CONFLICT",
+      "SERVER_ERROR"
+    ];
+    function isApiErrorResponse(value) {
+      return typeof value === "object" && value !== null && "code" in value && "message" in value && typeof value.code === "string" && typeof value.message === "string";
+    }
+    var MemoryClientError = class _MemoryClientError extends Error {
+      constructor(message, code = "API_ERROR", statusCode, details) {
         super(message);
         this.code = code;
         this.statusCode = statusCode;
@@ -16088,48 +15721,163 @@ var init_dist = __esm({
           Error.captureStackTrace(this, _MemoryClientError);
         }
       }
+      /**
+       * Convert to ApiErrorResponse for consistent API responses
+       */
+      toResponse() {
+        return {
+          code: this.code,
+          message: this.message,
+          statusCode: this.statusCode,
+          details: this.details,
+          timestamp: (/* @__PURE__ */ new Date()).toISOString()
+        };
+      }
     };
-    ApiError = class extends MemoryClientError {
+    var ApiError = class _ApiError extends MemoryClientError {
       constructor(message, statusCode, details) {
         super(message, "API_ERROR", statusCode, details);
         this.name = "ApiError";
       }
+      /**
+       * Create from an HTTP response
+       */
+      static fromResponse(status, statusText, body) {
+        let message = `HTTP ${status}: ${statusText}`;
+        let details = void 0;
+        if (body && typeof body === "object") {
+          const bodyObj = body;
+          if (typeof bodyObj.error === "string") {
+            message = bodyObj.error;
+          } else if (typeof bodyObj.message === "string") {
+            message = bodyObj.message;
+          }
+          if (bodyObj.details) {
+            details = bodyObj.details;
+          }
+        }
+        return new _ApiError(message, status, details);
+      }
     };
-    AuthenticationError = class extends MemoryClientError {
+    var AuthenticationError = class extends MemoryClientError {
       constructor(message = "Authentication required") {
         super(message, "AUTH_ERROR", 401);
         this.name = "AuthenticationError";
       }
     };
-    ValidationError = class extends MemoryClientError {
+    var ValidationError = class _ValidationError extends MemoryClientError {
       constructor(message, details) {
         super(message, "VALIDATION_ERROR", 400, details);
         this.name = "ValidationError";
+        this.validationErrors = [];
+        if (Array.isArray(details)) {
+          this.validationErrors = details.filter((item) => typeof item === "object" && item !== null && typeof item.field === "string" && typeof item.message === "string");
+        }
+      }
+      /**
+       * Create from Zod error
+       */
+      static fromZodError(error46) {
+        const details = error46.issues.map((issue2) => ({
+          field: issue2.path.join("."),
+          message: issue2.message
+        }));
+        return new _ValidationError("Validation failed", details);
       }
     };
-    TimeoutError = class extends MemoryClientError {
+    var TimeoutError = class extends MemoryClientError {
       constructor(message = "Request timeout") {
         super(message, "TIMEOUT_ERROR", 408);
         this.name = "TimeoutError";
       }
     };
-    RateLimitError = class extends MemoryClientError {
-      constructor(message = "Rate limit exceeded") {
-        super(message, "RATE_LIMIT_ERROR", 429);
+    var RateLimitError = class extends MemoryClientError {
+      constructor(message = "Rate limit exceeded", retryAfter) {
+        super(message, "RATE_LIMIT_ERROR", 429, { retryAfter });
         this.name = "RateLimitError";
+        this.retryAfter = retryAfter;
       }
     };
-    NotFoundError = class extends MemoryClientError {
+    var NotFoundError = class extends MemoryClientError {
       constructor(resource) {
         super(`${resource} not found`, "NOT_FOUND", 404);
         this.name = "NotFoundError";
+        this.resource = resource;
       }
     };
-    VERSION = "2.0.0";
-    CLIENT_NAME = "@lanonasis/memory-client";
-    isBrowser = typeof window !== "undefined";
-    isNode = typeof globalThis !== "undefined" && "process" in globalThis && globalThis.process?.versions?.node;
-    defaultConfigs = {
+    var NetworkError = class extends MemoryClientError {
+      constructor(message = "Network error") {
+        super(message, "NETWORK_ERROR");
+        this.name = "NetworkError";
+      }
+    };
+    var ServerError = class extends MemoryClientError {
+      constructor(message, statusCode = 500) {
+        super(message, "SERVER_ERROR", statusCode);
+        this.name = "ServerError";
+      }
+    };
+    function createErrorFromStatus(status, message, details) {
+      switch (status) {
+        case 400:
+          return new ValidationError(message, details);
+        case 401:
+          return new AuthenticationError(message);
+        case 404:
+          return new NotFoundError(message);
+        case 408:
+          return new TimeoutError(message);
+        case 429:
+          return new RateLimitError(message);
+        case 500:
+        case 502:
+        case 503:
+        case 504:
+          return new ServerError(message, status);
+        default:
+          return new ApiError(message, status, details);
+      }
+    }
+    var VERSION = "2.0.0";
+    var CLIENT_NAME = "@lanonasis/memory-client";
+    var isBrowser = typeof window !== "undefined";
+    var isNode2 = typeof globalThis !== "undefined" && "process" in globalThis && globalThis.process?.versions?.node;
+    var isEdge = !isBrowser && !isNode2;
+    function getEnvironment() {
+      if (isBrowser)
+        return "browser";
+      if (isNode2)
+        return "node";
+      return "edge";
+    }
+    async function createClient(config2) {
+      const environment = getEnvironment();
+      if (environment === "node") {
+        try {
+          const { createNodeMemoryClient: createNodeMemoryClient2 } = await Promise.resolve().then(function() {
+            return index;
+          });
+          return await createNodeMemoryClient2({
+            ...config2,
+            preferCLI: config2.preferCLI ?? true,
+            enableMCP: config2.enableMCP ?? true
+          });
+        } catch {
+          console.warn("Failed to load Node.js client, falling back to core client");
+        }
+      }
+      const clientConfig = {
+        apiUrl: config2.apiUrl,
+        apiKey: config2.apiKey,
+        authToken: config2.authToken,
+        organizationId: config2.organizationId,
+        timeout: config2.timeout ?? (environment === "edge" ? 5e3 : 3e4),
+        headers: config2.headers,
+        retry: config2.retry
+      };
+      return createMemoryClient2(clientConfig);
+    }
+    var defaultConfigs = {
       development: {
         apiUrl: "http://localhost:3001",
         timeout: 3e4
@@ -16143,27 +15891,595 @@ var init_dist = __esm({
         timeout: 5e3
       }
     };
-    exports.ApiErrorClass = ApiError;
-    exports.AuthenticationError = AuthenticationError;
-    exports.CLIENT_NAME = CLIENT_NAME;
-    exports.CoreMemoryClient = CoreMemoryClient;
-    exports.MEMORY_STATUSES = MEMORY_STATUSES;
-    exports.MEMORY_TYPES = MEMORY_TYPES;
-    exports.MemoryClient = CoreMemoryClient;
-    exports.MemoryClientError = MemoryClientError;
-    exports.NotFoundError = NotFoundError;
-    exports.RateLimitError = RateLimitError;
-    exports.TimeoutError = TimeoutError;
-    exports.VERSION = VERSION;
-    exports.ValidationError = ValidationError;
-    exports.createMemoryClient = createMemoryClient;
-    exports.createMemorySchema = createMemorySchema;
-    exports.createTopicSchema = createTopicSchema;
-    exports.defaultConfigs = defaultConfigs;
-    exports.isBrowser = isBrowser;
-    exports.isNode = isNode;
-    exports.searchMemorySchema = searchMemorySchema;
-    exports.updateMemorySchema = updateMemorySchema;
+    var execAsync2 = util.promisify(child_process.exec);
+    var CLIIntegration = class {
+      constructor() {
+        this.cliInfo = null;
+        this.detectionPromise = null;
+      }
+      /**
+       * Detect if CLI is available and get its capabilities
+       */
+      async detectCLI() {
+        if (this.cliInfo) {
+          return this.cliInfo;
+        }
+        if (this.detectionPromise) {
+          return this.detectionPromise;
+        }
+        this.detectionPromise = this.performDetection();
+        this.cliInfo = await this.detectionPromise;
+        return this.cliInfo;
+      }
+      async performDetection() {
+        try {
+          let versionOutput = "";
+          try {
+            const { stdout } = await execAsync2("onasis --version 2>/dev/null", { timeout: 5e3 });
+            versionOutput = stdout;
+          } catch {
+            const { stdout } = await execAsync2("lanonasis --version 2>/dev/null", { timeout: 5e3 });
+            versionOutput = stdout;
+          }
+          const version4 = versionOutput.trim();
+          const versionMatch = version4.match(/(\d+)\.(\d+)\.(\d+)/);
+          if (!versionMatch) {
+            return { available: false };
+          }
+          const [, major, minor, patch] = versionMatch.map(Number);
+          const isCompatible = major > 1 || major === 1 && minor > 5 || major === 1 && minor === 5 && patch >= 2;
+          if (!isCompatible) {
+            return {
+              available: true,
+              version: version4,
+              mcpAvailable: false,
+              authenticated: false
+            };
+          }
+          let mcpAvailable = false;
+          try {
+            await execAsync2("onasis mcp status --output json 2>/dev/null || lanonasis mcp status --output json 2>/dev/null", {
+              timeout: 3e3
+            });
+            mcpAvailable = true;
+          } catch {
+          }
+          let authenticated = false;
+          try {
+            const { stdout: authOutput } = await execAsync2("onasis auth status --output json 2>/dev/null || lanonasis auth status --output json 2>/dev/null", {
+              timeout: 3e3
+            });
+            const parseResult = safeJsonParse(authOutput);
+            if (parseResult.success) {
+              authenticated = parseResult.data.authenticated === true;
+            }
+          } catch {
+          }
+          return {
+            available: true,
+            version: version4,
+            mcpAvailable,
+            authenticated
+          };
+        } catch {
+          return { available: false };
+        }
+      }
+      /**
+       * Execute CLI command and return parsed JSON result
+       */
+      async executeCLICommand(command, options = {}) {
+        const cliInfo = await this.detectCLI();
+        if (!cliInfo.available) {
+          return { error: createErrorResponse2("CLI not available", "API_ERROR") };
+        }
+        if (!cliInfo.authenticated) {
+          return { error: createErrorResponse2("CLI not authenticated. Run: onasis login", "AUTH_ERROR", 401) };
+        }
+        try {
+          const timeout = options.timeout || 3e4;
+          const outputFormat = options.outputFormat || "json";
+          const verbose = options.verbose ? "--verbose" : "";
+          const cliCmd = await this.getPreferredCLICommand();
+          const fullCommand = `${cliCmd} ${command} --output ${outputFormat} ${verbose}`.trim();
+          const { stdout, stderr } = await execAsync2(fullCommand, {
+            timeout,
+            maxBuffer: 1024 * 1024
+            // 1MB buffer
+          });
+          if (stderr && stderr.trim()) {
+            console.warn("CLI warning:", stderr);
+          }
+          if (outputFormat === "json") {
+            const parseResult = safeJsonParse(stdout);
+            if (parseResult.success) {
+              return { data: parseResult.data };
+            }
+            return { error: createErrorResponse2(parseResult.error, "VALIDATION_ERROR", 400) };
+          }
+          return { data: stdout };
+        } catch (error46) {
+          if (error46 instanceof Error && error46.message.includes("timeout")) {
+            return { error: createErrorResponse2("CLI command timeout", "TIMEOUT_ERROR", 408) };
+          }
+          return {
+            error: createErrorResponse2(error46 instanceof Error ? error46.message : "CLI command failed", "API_ERROR")
+          };
+        }
+      }
+      /**
+       * Get preferred CLI command (onasis for Golden Contract, fallback to lanonasis)
+       */
+      async getPreferredCLICommand() {
+        try {
+          child_process.execSync("which onasis", { stdio: "ignore", timeout: 1e3 });
+          return "onasis";
+        } catch {
+          return "lanonasis";
+        }
+      }
+      /**
+       * Memory operations via CLI
+       */
+      async createMemoryViaCLI(title, content, options = {}) {
+        const { memoryType = "context", tags = [], topicId } = options;
+        let command = `memory create --title "${title}" --content "${content}" --memory-type ${memoryType}`;
+        if (tags.length > 0) {
+          command += ` --tags "${tags.join(",")}"`;
+        }
+        if (topicId) {
+          command += ` --topic-id "${topicId}"`;
+        }
+        return this.executeCLICommand(command);
+      }
+      async listMemoriesViaCLI(options = {}) {
+        let command = "memory list";
+        if (options.limit) {
+          command += ` --limit ${options.limit}`;
+        }
+        if (options.memoryType) {
+          command += ` --memory-type ${options.memoryType}`;
+        }
+        if (options.tags && options.tags.length > 0) {
+          command += ` --tags "${options.tags.join(",")}"`;
+        }
+        if (options.sortBy) {
+          command += ` --sort-by ${options.sortBy}`;
+        }
+        return this.executeCLICommand(command);
+      }
+      async searchMemoriesViaCLI(query, options = {}) {
+        let command = `memory search "${query}"`;
+        if (options.limit) {
+          command += ` --limit ${options.limit}`;
+        }
+        if (options.memoryTypes && options.memoryTypes.length > 0) {
+          command += ` --memory-types "${options.memoryTypes.join(",")}"`;
+        }
+        return this.executeCLICommand(command);
+      }
+      /**
+       * Health check via CLI
+       */
+      async healthCheckViaCLI() {
+        return this.executeCLICommand("health");
+      }
+      /**
+       * MCP-specific operations
+       */
+      async getMCPStatus() {
+        const cliInfo = await this.detectCLI();
+        if (!cliInfo.mcpAvailable) {
+          return { error: createErrorResponse2("MCP not available via CLI", "API_ERROR") };
+        }
+        return this.executeCLICommand("mcp status");
+      }
+      async listMCPTools() {
+        const cliInfo = await this.detectCLI();
+        if (!cliInfo.mcpAvailable) {
+          return { error: createErrorResponse2("MCP not available via CLI", "API_ERROR") };
+        }
+        return this.executeCLICommand("mcp tools");
+      }
+      /**
+       * Authentication operations
+       */
+      async getAuthStatus() {
+        return this.executeCLICommand("auth status");
+      }
+      /**
+       * Check if specific CLI features are available
+       */
+      async getCapabilities() {
+        const cliInfo = await this.detectCLI();
+        return {
+          cliAvailable: cliInfo.available,
+          version: cliInfo.version,
+          mcpSupport: cliInfo.mcpAvailable || false,
+          authenticated: cliInfo.authenticated || false,
+          goldenContract: cliInfo.available && this.isGoldenContractCompliant(cliInfo.version)
+        };
+      }
+      isGoldenContractCompliant(version4) {
+        if (!version4)
+          return false;
+        const versionMatch = version4.match(/(\d+)\.(\d+)\.(\d+)/);
+        if (!versionMatch)
+          return false;
+        const [, major, minor, patch] = versionMatch.map(Number);
+        return major > 1 || major === 1 && minor > 5 || major === 1 && minor === 5 && patch >= 2;
+      }
+      /**
+       * Force refresh CLI detection
+       */
+      async refresh() {
+        this.cliInfo = null;
+        this.detectionPromise = null;
+        return this.detectCLI();
+      }
+      /**
+       * Get cached CLI info without re-detection
+       */
+      getCachedInfo() {
+        return this.cliInfo;
+      }
+    };
+    var EnhancedMemoryClient = class {
+      createDefaultCapabilities() {
+        return {
+          cliAvailable: false,
+          mcpSupport: false,
+          authenticated: false,
+          goldenContract: false
+        };
+      }
+      constructor(config2) {
+        this.capabilities = null;
+        const mergedConfig = {
+          ...config2,
+          preferCLI: config2.preferCLI ?? true,
+          enableMCP: config2.enableMCP ?? true,
+          cliDetectionTimeout: config2.cliDetectionTimeout ?? 5e3,
+          fallbackToAPI: config2.fallbackToAPI ?? true,
+          minCLIVersion: config2.minCLIVersion ?? "1.5.2",
+          verbose: config2.verbose ?? false,
+          timeout: config2.timeout ?? 3e4,
+          apiUrl: config2.apiUrl || "https://api.lanonasis.com",
+          apiKey: config2.apiKey || process.env.LANONASIS_API_KEY || "",
+          authToken: config2.authToken || "",
+          headers: config2.headers || {}
+        };
+        this.config = mergedConfig;
+        this.directClient = new CoreMemoryClient3(config2);
+        this.cliIntegration = new CLIIntegration();
+      }
+      /**
+       * Initialize the client and detect capabilities
+       */
+      async initialize() {
+        try {
+          const detectionPromise = this.cliIntegration.getCapabilities();
+          const capabilities = this.config.cliDetectionTimeout > 0 ? await Promise.race([
+            detectionPromise,
+            new Promise((resolve) => {
+              setTimeout(() => resolve(null), this.config.cliDetectionTimeout);
+            })
+          ]) : await detectionPromise;
+          if (capabilities) {
+            this.capabilities = capabilities;
+            if (this.config.verbose && capabilities.cliAvailable && !capabilities.authenticated) {
+              const suggestedCommand = capabilities.goldenContract ? "onasis login" : "lanonasis login";
+              console.warn(`CLI detected but not authenticated. Run '${suggestedCommand}' to enable enhanced SDK features.`);
+            }
+          } else {
+            this.capabilities = this.createDefaultCapabilities();
+            if (this.config.verbose) {
+              console.warn(`CLI detection timed out after ${this.config.cliDetectionTimeout}ms. Falling back to API mode.`);
+            }
+          }
+        } catch (error46) {
+          if (this.config.verbose) {
+            console.warn("CLI detection failed:", error46);
+          }
+          this.capabilities = this.createDefaultCapabilities();
+        }
+      }
+      /**
+       * Get current capabilities
+       */
+      async getCapabilities() {
+        if (!this.capabilities) {
+          await this.initialize();
+        }
+        if (!this.capabilities) {
+          this.capabilities = this.createDefaultCapabilities();
+        }
+        return this.capabilities;
+      }
+      /**
+       * Determine if operation should use CLI
+       */
+      async shouldUseCLI() {
+        const capabilities = await this.getCapabilities();
+        return this.config.preferCLI && capabilities.cliAvailable && capabilities.authenticated && capabilities.goldenContract;
+      }
+      /**
+       * Execute operation with intelligent routing
+       */
+      async executeOperation(operation, cliOperation, apiOperation) {
+        const useCLI = await this.shouldUseCLI();
+        const capabilities = await this.getCapabilities();
+        if (useCLI) {
+          try {
+            const result = await cliOperation();
+            if (result.error && this.config.fallbackToAPI) {
+              console.warn(`CLI ${operation} failed, falling back to API:`, result.error);
+              const apiResult = await apiOperation();
+              return {
+                ...apiResult,
+                source: "api",
+                mcpUsed: false
+              };
+            }
+            return {
+              ...result,
+              source: "cli",
+              mcpUsed: capabilities.mcpSupport
+            };
+          } catch (error46) {
+            if (this.config.fallbackToAPI) {
+              console.warn(`CLI ${operation} error, falling back to API:`, error46);
+              const apiResult = await apiOperation();
+              return {
+                ...apiResult,
+                source: "api",
+                mcpUsed: false
+              };
+            }
+            return {
+              error: createErrorResponse2(error46 instanceof Error ? error46.message : `CLI ${operation} failed`, "API_ERROR"),
+              source: "cli",
+              mcpUsed: false
+            };
+          }
+        } else {
+          const result = await apiOperation();
+          return {
+            ...result,
+            source: "api",
+            mcpUsed: false
+          };
+        }
+      }
+      // Enhanced API Methods
+      /**
+       * Health check with intelligent routing
+       */
+      async healthCheck() {
+        return this.executeOperation("health check", () => this.cliIntegration.healthCheckViaCLI(), () => this.directClient.healthCheck());
+      }
+      /**
+       * Create memory with CLI/API routing
+       */
+      async createMemory(memory) {
+        return this.executeOperation("create memory", () => this.cliIntegration.createMemoryViaCLI(memory.title, memory.content, {
+          memoryType: memory.memory_type,
+          tags: memory.tags,
+          topicId: memory.topic_id
+        }), () => this.directClient.createMemory(memory));
+      }
+      /**
+       * List memories with intelligent routing
+       */
+      async listMemories(options = {}) {
+        return this.executeOperation("list memories", () => this.cliIntegration.listMemoriesViaCLI({
+          limit: options.limit,
+          memoryType: options.memory_type,
+          tags: options.tags,
+          sortBy: options.sort
+        }), () => this.directClient.listMemories(options));
+      }
+      /**
+       * Search memories with MCP enhancement when available
+       */
+      async searchMemories(request) {
+        return this.executeOperation("search memories", () => this.cliIntegration.searchMemoriesViaCLI(request.query, {
+          limit: request.limit,
+          memoryTypes: request.memory_types
+        }), () => this.directClient.searchMemories(request));
+      }
+      /**
+       * Get memory by ID (API only for now)
+       */
+      async getMemory(id) {
+        const result = await this.directClient.getMemory(id);
+        return {
+          ...result,
+          source: "api",
+          mcpUsed: false
+        };
+      }
+      /**
+       * Update memory (API only for now)
+       */
+      async updateMemory(id, updates) {
+        const result = await this.directClient.updateMemory(id, updates);
+        return {
+          ...result,
+          source: "api",
+          mcpUsed: false
+        };
+      }
+      /**
+       * Delete memory (API only for now)
+       */
+      async deleteMemory(id) {
+        const result = await this.directClient.deleteMemory(id);
+        return {
+          ...result,
+          source: "api",
+          mcpUsed: false
+        };
+      }
+      // Topic Operations (API only for now)
+      async createTopic(topic) {
+        const result = await this.directClient.createTopic(topic);
+        return { ...result, source: "api", mcpUsed: false };
+      }
+      async getTopics() {
+        const result = await this.directClient.getTopics();
+        return { ...result, source: "api", mcpUsed: false };
+      }
+      async getTopic(id) {
+        const result = await this.directClient.getTopic(id);
+        return { ...result, source: "api", mcpUsed: false };
+      }
+      async updateTopic(id, updates) {
+        const result = await this.directClient.updateTopic(id, updates);
+        return { ...result, source: "api", mcpUsed: false };
+      }
+      async deleteTopic(id) {
+        const result = await this.directClient.deleteTopic(id);
+        return { ...result, source: "api", mcpUsed: false };
+      }
+      /**
+       * Get memory statistics
+       */
+      async getMemoryStats() {
+        const result = await this.directClient.getMemoryStats();
+        return { ...result, source: "api", mcpUsed: false };
+      }
+      // Utility Methods
+      /**
+       * Force CLI re-detection
+       */
+      async refreshCLIDetection() {
+        this.capabilities = null;
+        await this.cliIntegration.refresh();
+        await this.initialize();
+      }
+      /**
+       * Get authentication status from CLI
+       */
+      async getAuthStatus() {
+        try {
+          const result = await this.cliIntegration.getAuthStatus();
+          return { ...result, source: "cli", mcpUsed: false };
+        } catch (error46) {
+          return {
+            error: createErrorResponse2(error46 instanceof Error ? error46.message : "Auth status check failed", "API_ERROR"),
+            source: "cli",
+            mcpUsed: false
+          };
+        }
+      }
+      /**
+       * Get MCP status when available
+       */
+      async getMCPStatus() {
+        const capabilities = await this.getCapabilities();
+        if (!capabilities.mcpSupport) {
+          return {
+            error: createErrorResponse2("MCP not available", "API_ERROR"),
+            source: "cli",
+            mcpUsed: false
+          };
+        }
+        try {
+          const result = await this.cliIntegration.getMCPStatus();
+          return { ...result, source: "cli", mcpUsed: true };
+        } catch (error46) {
+          return {
+            error: createErrorResponse2(error46 instanceof Error ? error46.message : "MCP status check failed", "API_ERROR"),
+            source: "cli",
+            mcpUsed: false
+          };
+        }
+      }
+      /**
+       * Update authentication for both CLI and API client
+       */
+      setAuthToken(token) {
+        this.directClient.setAuthToken(token);
+      }
+      setApiKey(apiKey) {
+        this.directClient.setApiKey(apiKey);
+      }
+      clearAuth() {
+        this.directClient.clearAuth();
+      }
+      /**
+       * Update configuration
+       */
+      updateConfig(updates) {
+        this.config = { ...this.config, ...updates };
+        this.directClient.updateConfig(updates);
+      }
+      /**
+       * Get configuration summary
+       */
+      getConfigSummary() {
+        return {
+          apiUrl: this.config.apiUrl,
+          preferCLI: this.config.preferCLI,
+          enableMCP: this.config.enableMCP,
+          capabilities: this.capabilities || void 0
+        };
+      }
+    };
+    async function createNodeMemoryClient(config2) {
+      const client = new EnhancedMemoryClient(config2);
+      await client.initialize();
+      return client;
+    }
+    var index = /* @__PURE__ */ Object.freeze({
+      __proto__: null,
+      CLIIntegration,
+      EnhancedMemoryClient,
+      createNodeMemoryClient
+    });
+    exports2.ApiError = ApiError;
+    exports2.AuthenticationError = AuthenticationError;
+    exports2.CHUNKING_STRATEGIES = CHUNKING_STRATEGIES2;
+    exports2.CLIENT_NAME = CLIENT_NAME;
+    exports2.CONTENT_TYPES = CONTENT_TYPES;
+    exports2.CoreMemoryClient = CoreMemoryClient3;
+    exports2.ERROR_CODES = ERROR_CODES;
+    exports2.MEMORY_STATUSES = MEMORY_STATUSES2;
+    exports2.MEMORY_TYPES = MEMORY_TYPES2;
+    exports2.MemoryClient = CoreMemoryClient3;
+    exports2.MemoryClientError = MemoryClientError;
+    exports2.NetworkError = NetworkError;
+    exports2.NotFoundError = NotFoundError;
+    exports2.RateLimitError = RateLimitError;
+    exports2.SEARCH_MODES = SEARCH_MODES2;
+    exports2.ServerError = ServerError;
+    exports2.TimeoutError = TimeoutError;
+    exports2.VERSION = VERSION;
+    exports2.ValidationError = ValidationError;
+    exports2.analyticsDateRangeSchema = analyticsDateRangeSchema2;
+    exports2.calculateRetryDelay = calculateRetryDelay2;
+    exports2.createClient = createClient;
+    exports2.createErrorFromStatus = createErrorFromStatus;
+    exports2.createErrorResponse = createErrorResponse2;
+    exports2.createMemoryClient = createMemoryClient2;
+    exports2.createMemorySchema = createMemorySchema2;
+    exports2.createTopicSchema = createTopicSchema2;
+    exports2.defaultConfigs = defaultConfigs;
+    exports2.enhancedSearchSchema = enhancedSearchSchema2;
+    exports2.getEnvironment = getEnvironment;
+    exports2.hasData = hasData;
+    exports2.hasError = hasError;
+    exports2.httpStatusToErrorCode = httpStatusToErrorCode2;
+    exports2.isApiErrorResponse = isApiErrorResponse;
+    exports2.isBrowser = isBrowser;
+    exports2.isEdge = isEdge;
+    exports2.isNode = isNode2;
+    exports2.isRetryableError = isRetryableError2;
+    exports2.preprocessingOptionsSchema = preprocessingOptionsSchema2;
+    exports2.safeJsonParse = safeJsonParse;
+    exports2.searchMemorySchema = searchMemorySchema2;
+    exports2.updateMemorySchema = updateMemorySchema2;
   }
 });
 
@@ -20332,10 +20648,10 @@ var require_zod2 = __commonJS({
     };
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.z = void 0;
-    var z2 = __importStar(require_external2());
-    exports2.z = z2;
+    var z = __importStar(require_external2());
+    exports2.z = z;
     __exportStar(require_external2(), exports2);
-    exports2.default = z2;
+    exports2.default = z;
   }
 });
 
@@ -20560,8 +20876,8 @@ var require_VSCodeAdapter = __commonJS({
       }
     };
     var VSCodeNotification = class {
-      constructor(vscode13) {
-        this.vscode = vscode13;
+      constructor(vscode16) {
+        this.vscode = vscode16;
       }
       async showInformation(message, ...actions) {
         return await this.vscode.window.showInformationMessage(message, ...actions);
@@ -20583,8 +20899,8 @@ var require_VSCodeAdapter = __commonJS({
       }
     };
     var VSCodeInputBox = class {
-      constructor(vscode13) {
-        this.vscode = vscode13;
+      constructor(vscode16) {
+        this.vscode = vscode16;
       }
       async showInputBox(options) {
         return await this.vscode.window.showInputBox({
@@ -20597,16 +20913,16 @@ var require_VSCodeAdapter = __commonJS({
       }
     };
     var VSCodeBrowser = class {
-      constructor(vscode13) {
-        this.vscode = vscode13;
+      constructor(vscode16) {
+        this.vscode = vscode16;
       }
       async openExternal(url2) {
         return await this.vscode.env.openExternal(this.vscode.Uri.parse(url2));
       }
     };
     var VSCodeConfiguration = class {
-      constructor(vscode13) {
-        this.vscode = vscode13;
+      constructor(vscode16) {
+        this.vscode = vscode16;
       }
       get(section, defaultValue) {
         const config2 = this.vscode.workspace.getConfiguration();
@@ -20622,14 +20938,14 @@ var require_VSCodeAdapter = __commonJS({
       }
     };
     var VSCodeAdapter = class {
-      constructor(vscodeContext, outputChannel, vscode13, branding) {
+      constructor(vscodeContext, outputChannel, vscode16, branding) {
         this.secureStorage = new VSCodeSecureStorage(vscodeContext);
         this.outputChannel = new VSCodeOutputChannelAdapter(outputChannel);
         this.context = new VSCodeContext(vscodeContext);
-        this.notification = new VSCodeNotification(vscode13);
-        this.input = new VSCodeInputBox(vscode13);
-        this.browser = new VSCodeBrowser(vscode13);
-        this.configuration = new VSCodeConfiguration(vscode13);
+        this.notification = new VSCodeNotification(vscode16);
+        this.input = new VSCodeInputBox(vscode16);
+        this.browser = new VSCodeBrowser(vscode16);
+        this.configuration = new VSCodeConfiguration(vscode16);
         this.branding = branding;
       }
       getConfig() {
@@ -20656,8 +20972,8 @@ var require_VSCodeAdapter = __commonJS({
     var createVSCodeAdapter2 = (nativeContext, branding) => {
       const context = nativeContext.context;
       const outputChannel = nativeContext.outputChannel;
-      const vscode13 = nativeContext.vscode;
-      return new VSCodeAdapter(context, outputChannel, vscode13, branding);
+      const vscode16 = nativeContext.vscode;
+      return new VSCodeAdapter(context, outputChannel, vscode16, branding);
     };
     exports2.createVSCodeAdapter = createVSCodeAdapter2;
   }
@@ -20817,8 +21133,8 @@ var require_crypto = __commonJS({
       return hashApiKeyBrowser(apiKey);
     }
     function generateApiKey() {
-      const randomBytes = crypto.randomBytes(36);
-      const randomString2 = randomBytes.toString("base64url");
+      const randomBytes2 = crypto.randomBytes(36);
+      const randomString2 = randomBytes2.toString("base64url");
       return `lns_${randomString2}`;
     }
     function verifyApiKey(apiKey, storedHash) {
@@ -21395,7 +21711,7 @@ var require_SecureApiKeyService = __commonJS({
 });
 
 // ../../packages/ide-extension-core/dist/index.js
-var require_dist = __commonJS({
+var require_dist2 = __commonJS({
   "../../packages/ide-extension-core/dist/index.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
@@ -21447,6 +21763,374 @@ var require_dist = __commonJS({
   }
 });
 
+// src/chat/MemoryChatParticipant.ts
+var MemoryChatParticipant_exports = {};
+__export(MemoryChatParticipant_exports, {
+  CHAT_PARTICIPANT_ID: () => CHAT_PARTICIPANT_ID,
+  SLASH_COMMANDS: () => SLASH_COMMANDS,
+  registerMemoryChatParticipant: () => registerMemoryChatParticipant
+});
+function registerMemoryChatParticipant(context, memoryService) {
+  const participant = vscode14.chat.createChatParticipant(
+    CHAT_PARTICIPANT_ID,
+    createChatRequestHandler(memoryService)
+  );
+  participant.iconPath = vscode14.Uri.joinPath(context.extensionUri, "images", "icon.png");
+  participant.onDidReceiveFeedback((feedback) => {
+    console.log("[MemoryChatParticipant] Received feedback:", feedback.kind);
+  });
+  context.subscriptions.push(participant);
+  console.log("[MemoryChatParticipant] @lanonasis chat participant registered");
+  return participant;
+}
+function createChatRequestHandler(memoryService) {
+  return async (request, context, stream, token) => {
+    const { prompt, command } = request;
+    try {
+      if (command) {
+        return await handleSlashCommand(command, prompt, memoryService, stream, token);
+      }
+      return await handleSemanticQuery(prompt, memoryService, stream, context, token);
+    } catch (error46) {
+      stream.markdown(`\u274C **Error:** ${error46 instanceof Error ? error46.message : "An unexpected error occurred"}`);
+      return { errorDetails: { message: error46 instanceof Error ? error46.message : "Unknown error" } };
+    }
+  };
+}
+async function handleSlashCommand(command, prompt, memoryService, stream, token) {
+  switch (command) {
+    case "recall":
+      return await handleRecallCommand(prompt, memoryService, stream, token);
+    case "save":
+      return await handleSaveCommand(prompt, stream);
+    case "list":
+      return await handleListCommand(memoryService, stream, token);
+    case "context":
+      return await handleContextCommand(prompt, memoryService, stream, token);
+    case "refine":
+      return await handleRefineCommand(prompt, memoryService, stream, token);
+    default:
+      stream.markdown(`Unknown command: \`/${command}\`. Available commands: ${SLASH_COMMANDS.map((c) => `/${c.name}`).join(", ")}`);
+      return {};
+  }
+}
+async function handleRecallCommand(query, memoryService, stream, token) {
+  if (!query.trim()) {
+    stream.markdown("Please provide a search query. Example: `@lanonasis /recall how to deploy to production`");
+    return {};
+  }
+  stream.progress("Searching memories...");
+  const results = await memoryService.searchMemories(query, { limit: 5 });
+  if (token.isCancellationRequested) {
+    return { errorDetails: { message: "Search cancelled" } };
+  }
+  if (results.length === 0) {
+    stream.markdown(`No memories found for "${query}". Try a different search term or create new memories.`);
+    stream.button({
+      command: "lanonasis.createMemoryFromFile",
+      title: "\u{1F4DD} Create Memory"
+    });
+    return {};
+  }
+  stream.markdown(`## \u{1F9E0} Found ${results.length} relevant memories
+
+`);
+  results.forEach((result, index) => {
+    stream.markdown(`### ${index + 1}. ${result.title}
+`);
+    stream.markdown(`${result.content.substring(0, 300)}${result.content.length > 300 ? "..." : ""}
+
+`);
+    if (result.tags && result.tags.length > 0) {
+      stream.markdown(`*Tags: ${result.tags.join(", ")}*
+
+`);
+    }
+    stream.markdown("---\n\n");
+  });
+  stream.button({
+    command: "lanonasis.searchMemory",
+    title: "\u{1F50D} Search More"
+  });
+  return {
+    metadata: {
+      command: "recall",
+      resultCount: results.length
+    }
+  };
+}
+async function handleSaveCommand(title, stream) {
+  const editor = vscode14.window.activeTextEditor;
+  if (editor && !editor.selection.isEmpty) {
+    stream.markdown("\u{1F4BE} Saving selected text as a memory...\n\n");
+    stream.button({
+      command: "lanonasis.createMemory",
+      title: "\u{1F4DD} Create from Selection"
+    });
+  } else {
+    stream.markdown("To save a memory:\n\n");
+    stream.markdown("1. **Select text** in the editor and run `@lanonasis /save`\n");
+    stream.markdown("2. Use **Quick Capture** with `\u2318\u21E7S` / `Ctrl+Shift+S`\n");
+    stream.markdown("3. Or click below to create from clipboard:\n\n");
+    stream.button({
+      command: "lanonasis.captureClipboard",
+      title: "\u{1F4CB} Capture Clipboard"
+    });
+  }
+  if (title.trim()) {
+    stream.markdown(`
+*Suggested title: "${title}"*`);
+  }
+  return {};
+}
+async function handleListCommand(memoryService, stream, token) {
+  stream.progress("Loading memories...");
+  const memories = await memoryService.listMemories(10);
+  if (token.isCancellationRequested) {
+    return { errorDetails: { message: "List cancelled" } };
+  }
+  if (!memories || memories.length === 0) {
+    stream.markdown("\u{1F4ED} No memories found. Start building your memory bank!\n\n");
+    stream.button({
+      command: "lanonasis.createMemoryFromFile",
+      title: "\u{1F4DD} Create First Memory"
+    });
+    return {};
+  }
+  stream.markdown(`## \u{1F4DA} Recent Memories (${memories.length})
+
+`);
+  memories.forEach((memory, index) => {
+    const typeEmoji = getTypeEmoji(memory.memory_type);
+    stream.markdown(`${index + 1}. ${typeEmoji} **${memory.title}** - _${memory.memory_type}_
+`);
+  });
+  stream.markdown("\n");
+  stream.button({
+    command: "lanonasis.searchMemory",
+    title: "\u{1F50D} Search Memories"
+  });
+  return {
+    metadata: {
+      command: "list",
+      count: memories.length
+    }
+  };
+}
+async function handleContextCommand(additionalQuery, memoryService, stream, token) {
+  const editor = vscode14.window.activeTextEditor;
+  const fileName = editor?.document.fileName || "";
+  const fileExtension = fileName.split(".").pop() || "";
+  const workspaceName = vscode14.workspace.name || "";
+  const contextTerms = [];
+  if (workspaceName) contextTerms.push(workspaceName);
+  if (fileExtension) contextTerms.push(fileExtension);
+  if (additionalQuery) contextTerms.push(additionalQuery);
+  const query = contextTerms.join(" ") || "development context";
+  stream.progress(`Finding relevant context for ${fileName ? `"${fileName.split("/").pop()}"` : "your workspace"}...`);
+  const results = await memoryService.searchMemories(query, { limit: 5 });
+  if (token.isCancellationRequested) {
+    return { errorDetails: { message: "Context search cancelled" } };
+  }
+  stream.markdown(`## \u{1F4D1} Relevant Context
+
+`);
+  if (results.length === 0) {
+    stream.markdown(`No relevant memories found for the current context.
+
+`);
+    stream.markdown(`*Search terms: ${query}*
+
+`);
+  } else {
+    stream.markdown(`Found ${results.length} relevant memories:
+
+`);
+    results.forEach((result, index) => {
+      stream.markdown(`### ${index + 1}. ${result.title}
+`);
+      stream.markdown(`${result.content.substring(0, 200)}...
+
+`);
+    });
+  }
+  stream.markdown(`
+\u{1F4A1} *Tip: Use \`@lanonasis /save\` to save important context for later.*`);
+  return {
+    metadata: {
+      command: "context",
+      query,
+      resultCount: results.length
+    }
+  };
+}
+async function handleSemanticQuery(prompt, memoryService, stream, context, token) {
+  if (!prompt.trim()) {
+    stream.markdown("\u{1F44B} **Welcome to LanOnasis Memory!**\n\n");
+    stream.markdown("I can help you manage your knowledge and context. Try:\n\n");
+    stream.markdown("- `@lanonasis /recall <query>` - Search memories\n");
+    stream.markdown("- `@lanonasis /save` - Save current selection\n");
+    stream.markdown("- `@lanonasis /list` - View recent memories\n");
+    stream.markdown("- `@lanonasis /context` - Get context for current file\n\n");
+    stream.markdown("Or just ask me anything about your stored knowledge!\n");
+    return {};
+  }
+  stream.progress("Searching your memory bank...");
+  const results = await memoryService.searchMemories(prompt, { limit: 5 });
+  if (token.isCancellationRequested) {
+    return { errorDetails: { message: "Cancelled" } };
+  }
+  if (results.length === 0) {
+    stream.markdown(`I couldn't find any memories related to "${prompt}".
+
+`);
+    stream.markdown(`Would you like to:
+`);
+    stream.button({
+      command: "lanonasis.createMemory",
+      title: "\u{1F4DD} Create Memory"
+    });
+    stream.button({
+      command: "lanonasis.searchMemory",
+      title: "\u{1F50D} Try Different Search"
+    });
+    return {};
+  }
+  stream.markdown(`## \u{1F9E0} Based on your memories:
+
+`);
+  const topResult = results[0];
+  stream.markdown(`**Most relevant:** ${topResult.title}
+
+`);
+  stream.markdown(`${topResult.content}
+
+`);
+  if (results.length > 1) {
+    stream.markdown(`---
+
+**Related memories:**
+`);
+    results.slice(1).forEach((result, index) => {
+      stream.markdown(`${index + 2}. ${result.title}
+`);
+    });
+  }
+  const refined = await maybeCallRefineEndpoint(prompt, results);
+  if (refined) {
+    stream.markdown(`
+### \u2728 Refined Prompt Suggestion
+\`\`\`
+${refined}
+\`\`\`
+`);
+  }
+  return {
+    metadata: {
+      query: prompt,
+      resultCount: results.length,
+      topMemory: topResult.id
+    }
+  };
+}
+function getTypeEmoji(type) {
+  const emojiMap = {
+    context: "\u{1F4AD}",
+    knowledge: "\u{1F4DA}",
+    project: "\u{1F4C1}",
+    reference: "\u{1F517}",
+    personal: "\u{1F464}",
+    workflow: "\u2699\uFE0F",
+    conversation: "\u{1F4AC}"
+  };
+  return emojiMap[type] || "\u{1F4DD}";
+}
+async function handleRefineCommand(prompt, memoryService, stream, token) {
+  if (!prompt.trim()) {
+    stream.markdown("Paste a prompt to refine. Example: `@lanonasis /refine Generate a deployment checklist`");
+    return {};
+  }
+  stream.progress("Retrieving context for refinement...");
+  const results = await memoryService.searchMemories(prompt, { limit: 5 });
+  if (token.isCancellationRequested) return { errorDetails: { message: "Refine cancelled" } };
+  const refined = await maybeCallRefineEndpoint(prompt, results);
+  stream.markdown("### \u2728 Refined Prompt\n");
+  stream.markdown("```\n" + refined + "\n```");
+  if (results.length) {
+    stream.markdown("\n#### Context used\n");
+    results.forEach((r, idx) => {
+      stream.markdown(`${idx + 1}. ${r.title}${r.tags?.length ? ` \u2014 tags: ${r.tags.join(", ")}` : ""}`);
+    });
+  }
+  return {
+    metadata: {
+      command: "refine",
+      resultCount: results.length
+    }
+  };
+}
+function buildRefinedPrompt(prompt, results) {
+  const top = results.slice(0, 3).map((r) => `- ${r.title}${r.tags?.length ? ` (tags: ${r.tags.join(", ")})` : ""}`).join("\n");
+  const contextBlock = top ? `Context:
+${top}
+
+` : "";
+  return `${contextBlock}Task: ${prompt}
+
+Please use the above context, be concise, and include any relevant IDs, tags, or steps.`;
+}
+async function maybeCallRefineEndpoint(prompt, results) {
+  const refinedLocal = buildRefinedPrompt(prompt, results);
+  const config2 = vscode14.workspace.getConfiguration("lanonasis");
+  const endpoint = config2.get("refineEndpoint");
+  const apiKey = config2.get("refineApiKey");
+  if (!endpoint || !apiKey) {
+    return refinedLocal;
+  }
+  try {
+    const payload = {
+      prompt,
+      context: results.slice(0, 5).map((r) => ({
+        title: r.title,
+        tags: r.tags,
+        snippet: r.content?.substring(0, 500) || ""
+      }))
+    };
+    const resp = await fetch(endpoint, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${apiKey}`
+      },
+      body: JSON.stringify(payload)
+    });
+    if (!resp.ok) {
+      return refinedLocal;
+    }
+    const data = await resp.json();
+    const refined = data?.refinedPrompt || data?.refined_prompt || data?.prompt;
+    return typeof refined === "string" && refined.trim().length > 0 ? refined : refinedLocal;
+  } catch (err) {
+    console.warn("[lanonasis] refine endpoint failed, falling back to local prompt builder", err);
+    return refinedLocal;
+  }
+}
+var vscode14, CHAT_PARTICIPANT_ID, SLASH_COMMANDS;
+var init_MemoryChatParticipant = __esm({
+  "src/chat/MemoryChatParticipant.ts"() {
+    "use strict";
+    vscode14 = __toESM(require("vscode"));
+    CHAT_PARTICIPANT_ID = "lanonasis-memory.memory-assistant";
+    SLASH_COMMANDS = [
+      { name: "recall", description: "Search and recall memories semantically" },
+      { name: "save", description: "Save current context or selection as a memory" },
+      { name: "list", description: "List recent memories" },
+      { name: "context", description: "Get relevant context for current file/project" },
+      { name: "refine", description: "Refine a prompt using your memories as context" }
+    ];
+  }
+});
+
 // src/extension.ts
 var extension_exports = {};
 __export(extension_exports, {
@@ -21454,7 +22138,7 @@ __export(extension_exports, {
   deactivate: () => deactivate
 });
 module.exports = __toCommonJS(extension_exports);
-var vscode12 = __toESM(require("vscode"));
+var vscode15 = __toESM(require("vscode"));
 
 // src/providers/MemoryTreeProvider.ts
 var vscode = __toESM(require("vscode"));
@@ -21963,449 +22647,12 @@ var ApiKeyTreeProvider = class {
 };
 
 // src/panels/MemorySidebarProvider.ts
-var vscode5 = __toESM(require("vscode"));
-
-// src/services/EnhancedMemoryService.ts
 var vscode4 = __toESM(require("vscode"));
-function getErrorMessage(error46, fallback) {
-  if (!error46) return fallback;
-  if (typeof error46 === "string") return error46;
-  return error46.message || fallback;
+
+// src/services/IMemoryService.ts
+function isEnhancedMemoryService(service) {
+  return typeof service.getCapabilities === "function";
 }
-var cachedMemoryClientModule;
-var attemptedMemoryClientLoad = false;
-function getMemoryClientModule() {
-  if (!attemptedMemoryClientLoad) {
-    attemptedMemoryClientLoad = true;
-    try {
-      cachedMemoryClientModule = (init_dist(), __toCommonJS(dist_exports));
-    } catch (error46) {
-      console.warn("[EnhancedMemoryService] @lanonasis/memory-client not available. Falling back to basic service.", error46);
-      cachedMemoryClientModule = void 0;
-    }
-  }
-  return cachedMemoryClientModule;
-}
-var EnhancedMemoryService = class _EnhancedMemoryService {
-  constructor(secureApiKeyService) {
-    this.client = null;
-    this.connectionCapabilities = null;
-    const sdkModule = getMemoryClientModule();
-    if (!sdkModule) {
-      throw new Error("@lanonasis/memory-client module not available");
-    }
-    this.sdk = sdkModule;
-    this.secureApiKeyService = secureApiKeyService;
-    this.config = vscode4.workspace.getConfiguration("lanonasis");
-    this.showPerformanceFeedback = this.config.get("showPerformanceFeedback", false);
-    this.statusBarItem = vscode4.window.createStatusBarItem(
-      vscode4.StatusBarAlignment.Right,
-      100
-    );
-    this.statusBarItem.command = "lanonasis.showConnectionInfo";
-    this.initializeClient();
-  }
-  async initializeClient() {
-    const { CoreMemoryClient: CoreMemoryClient4 } = this.sdk;
-    const credential = await this.secureApiKeyService.getStoredCredentials();
-    if (!credential) {
-      this.client = null;
-      this.updateStatusBar(false, "No API Key");
-      return;
-    }
-    try {
-      const clientConfig = this.buildClientConfigFromCredential(credential);
-      const apiUrl = this.config.get("apiUrl", "https://api.lanonasis.com");
-      const useGateway = this.config.get("useGateway", true);
-      clientConfig.apiUrl = useGateway ? this.config.get("gatewayUrl", "https://api.lanonasis.com") : apiUrl;
-      const verbose = this.config.get("verboseLogging", false);
-      if (verbose && false) {
-        verboseLoggingWarningShown = true;
-        console.info(
-          "[EnhancedMemoryService] Note: Verbose logging is enabled. Disable via Settings > Lanonasis > Verbose Logging for production use."
-        );
-      }
-      this.client = new CoreMemoryClient4(clientConfig);
-      this.connectionCapabilities = await this.detectCapabilities();
-      this.updateStatusBar(true, this.getConnectionStatus());
-    } catch (error46) {
-      console.warn("Enhanced Memory Service initialization failed:", error46);
-      this.client = null;
-      this.updateStatusBar(false, "Initialization Failed");
-      throw error46;
-    }
-  }
-  async detectCapabilities() {
-    if (!this.client) {
-      return {
-        authenticated: false,
-        connectionMode: "http"
-      };
-    }
-    try {
-      const healthResult = await this.client.healthCheck();
-      return {
-        authenticated: healthResult.error === void 0,
-        connectionMode: "http"
-      };
-    } catch {
-      return {
-        authenticated: false,
-        connectionMode: "http"
-      };
-    }
-  }
-  getConnectionStatus() {
-    if (!this.connectionCapabilities) return "Unknown";
-    return this.connectionCapabilities.authenticated ? "HTTP API" : "Disconnected";
-  }
-  updateStatusBar(connected, status) {
-    if (connected) {
-      this.statusBarItem.text = `$(database) ${status}`;
-      this.statusBarItem.backgroundColor = void 0;
-      this.statusBarItem.tooltip = `Lanonasis Memory: Connected via ${status}`;
-    } else {
-      this.statusBarItem.text = `$(alert) ${status}`;
-      this.statusBarItem.backgroundColor = new vscode4.ThemeColor("statusBarItem.errorBackground");
-      this.statusBarItem.tooltip = `Lanonasis Memory: ${status}`;
-    }
-    this.statusBarItem.show();
-  }
-  async refreshClient() {
-    this.config = vscode4.workspace.getConfiguration("lanonasis");
-    await this.initializeClient();
-  }
-  async refreshConfig() {
-    await this.refreshClient();
-  }
-  isAuthenticated() {
-    return this.client !== null;
-  }
-  getCapabilities() {
-    if (!this.connectionCapabilities) return null;
-    return {
-      cliAvailable: false,
-      mcpSupport: false,
-      authenticated: this.connectionCapabilities.authenticated,
-      goldenContract: false
-    };
-  }
-  async testConnection(apiKey) {
-    const { CoreMemoryClient: CoreMemoryClient4 } = this.sdk;
-    let testClient = this.client;
-    if (apiKey) {
-      const config2 = this.buildClientConfigFromCredential({ type: "apiKey", token: apiKey });
-      testClient = new CoreMemoryClient4(config2);
-    }
-    if (!testClient) {
-      const credential = await this.secureApiKeyService.getStoredCredentials();
-      if (!credential) {
-        throw new Error("No API key configured");
-      }
-      const config2 = this.buildClientConfigFromCredential(credential);
-      testClient = new CoreMemoryClient4(config2);
-    }
-    const testRequest = this.toSDKSearchRequest({
-      query: "connection test",
-      limit: 1,
-      status: "active",
-      threshold: 0.1
-    });
-    const result = await testClient.searchMemories(testRequest);
-    if (result.error) {
-      throw new Error(getErrorMessage(result.error, "Connection test failed"));
-    }
-    if (!apiKey) {
-      this.connectionCapabilities = await this.detectCapabilities();
-      this.updateStatusBar(true, this.getConnectionStatus());
-    }
-  }
-  async createMemory(memory) {
-    if (!this.client) {
-      throw new Error("Not authenticated. Please configure your API key.");
-    }
-    const sdkMemory = this.toSDKCreateRequest(memory);
-    const result = await this.client.createMemory(sdkMemory);
-    if (result.error || !result.data) {
-      throw new Error(getErrorMessage(result.error, "Failed to create memory"));
-    }
-    this.showOperationFeedback("create", result);
-    return this.convertSDKMemoryEntry(result.data);
-  }
-  async updateMemory(id, memory) {
-    if (!this.client) {
-      throw new Error("Not authenticated. Please configure your API key.");
-    }
-    const sdkMemory = this.toSDKUpdateRequest(memory);
-    const result = await this.client.updateMemory(id, sdkMemory);
-    if (result.error || !result.data) {
-      throw new Error(getErrorMessage(result.error, "Failed to update memory"));
-    }
-    this.showOperationFeedback("update", result);
-    return this.convertSDKMemoryEntry(result.data);
-  }
-  async searchMemories(query, options = {}) {
-    if (!this.client) {
-      throw new Error("Not authenticated. Please configure your API key.");
-    }
-    const searchRequest = {
-      query,
-      limit: 20,
-      threshold: 0.7,
-      status: "active",
-      ...options
-    };
-    const sdkSearchRequest = this.toSDKSearchRequest(searchRequest);
-    const result = await this.client.searchMemories(sdkSearchRequest);
-    if (result.error || !result.data) {
-      throw new Error(getErrorMessage(result.error, "Search failed"));
-    }
-    if (this.config.get("verboseLogging", false)) {
-      this.showOperationFeedback("search", result);
-    }
-    return this.convertSDKSearchResults(result.data.results);
-  }
-  async getMemory(id) {
-    if (!this.client) {
-      throw new Error("Not authenticated. Please configure your API key.");
-    }
-    const result = await this.client.getMemory(id);
-    if (result.error || !result.data) {
-      throw new Error(getErrorMessage(result.error, "Memory not found"));
-    }
-    return this.convertSDKMemoryEntry(result.data);
-  }
-  async listMemories(limit = 50) {
-    if (!this.client) {
-      throw new Error("Not authenticated. Please configure your API key.");
-    }
-    if (typeof limit !== "number" || limit < 0) {
-      throw new Error("limit must be a non-negative number");
-    }
-    const validatedLimit = Math.min(Math.max(1, Math.floor(limit)), 1e3);
-    const result = await this.client.listMemories({
-      limit: validatedLimit,
-      sort: "updated_at",
-      order: "desc"
-    });
-    if (result.error || !result.data) {
-      const message = getErrorMessage(result.error, "Failed to fetch memories");
-      if (this.isAuthError(message)) {
-        await this.refreshClient();
-        if (!this.client) {
-          throw new Error(message);
-        }
-        const retry = await this.client.listMemories({
-          limit: validatedLimit,
-          sort: "updated_at",
-          order: "desc"
-        });
-        if (retry.error || !retry.data) {
-          throw new Error(getErrorMessage(retry.error, message));
-        }
-        return retry.data.data.map((entry) => this.convertSDKMemoryEntry(entry));
-      }
-      throw new Error(message);
-    }
-    return result.data.data.map((entry) => this.convertSDKMemoryEntry(entry));
-  }
-  async deleteMemory(id) {
-    if (!this.client) {
-      throw new Error("Not authenticated. Please configure your API key.");
-    }
-    const result = await this.client.deleteMemory(id);
-    if (result.error) {
-      throw new Error(getErrorMessage(result.error, "Failed to delete memory"));
-    }
-    this.showOperationFeedback("delete", result);
-  }
-  async getMemoryStats() {
-    if (!this.client) {
-      throw new Error("Not authenticated. Please configure your API key.");
-    }
-    const result = await this.client.getMemoryStats();
-    if (result.error || !result.data) {
-      throw new Error(getErrorMessage(result.error, "Failed to fetch stats"));
-    }
-    return this.convertSDKUserMemoryStats(result.data);
-  }
-  showOperationFeedback(operation, result) {
-    if (!this.showPerformanceFeedback) return;
-    const source = result.source === "cli" ? result.mcpUsed ? "CLI+MCP" : "CLI" : "API";
-    const message = `${operation} completed via ${source}`;
-    vscode4.window.setStatusBarMessage(
-      `$(check) ${message}`,
-      2e3
-    );
-  }
-  async showConnectionInfo() {
-    const caps = this.connectionCapabilities;
-    if (!caps) {
-      vscode4.window.showInformationMessage("Connection status: Unknown");
-      return;
-    }
-    const details = [
-      `Connection Mode: ${caps.connectionMode.toUpperCase()}`,
-      `Authenticated: ${caps.authenticated ? "\u2705" : "\u274C"}`
-    ];
-    const message = `Lanonasis Memory Connection Status:
-
-${details.join("\n")}`;
-    if (caps.authenticated) {
-      vscode4.window.showInformationMessage(
-        `${message}
-
-Connected via HTTP API.`
-      );
-    } else {
-      vscode4.window.showWarningMessage(
-        `${message}
-
-Please authenticate to access memory features.`
-      );
-    }
-  }
-  toSDKCreateRequest(memory) {
-    const { memory_type, ...rest } = memory;
-    return {
-      ...rest,
-      memory_type: this.mapMemoryType(memory_type)
-    };
-  }
-  toSDKUpdateRequest(memory) {
-    const { memory_type, ...rest } = memory;
-    const result = { ...rest };
-    if (memory_type !== void 0) {
-      result.memory_type = this.mapMemoryType(memory_type);
-    }
-    return result;
-  }
-  toSDKSearchRequest(request) {
-    const { memory_types, ...rest } = request;
-    const sdkTypes = memory_types?.map((type) => this.mapMemoryType(type));
-    const sdkRequest = {
-      ...rest,
-      ...sdkTypes ? { memory_types: sdkTypes } : {}
-    };
-    return sdkRequest;
-  }
-  mapMemoryType(vscodeType) {
-    const typeMap = {
-      knowledge: "knowledge",
-      project: "project",
-      context: "context",
-      reference: "reference",
-      personal: "personal",
-      workflow: "workflow"
-    };
-    return typeMap[vscodeType] ?? "context";
-  }
-  mapMemoryTypeFromSDK(sdkType) {
-    const typeMap = {
-      context: "context",
-      project: "project",
-      knowledge: "knowledge",
-      reference: "reference",
-      personal: "personal",
-      workflow: "workflow"
-    };
-    return typeMap[sdkType] ?? "context";
-  }
-  convertSDKMemoryEntry(sdkEntry) {
-    return {
-      ...sdkEntry,
-      memory_type: this.mapMemoryTypeFromSDK(sdkEntry.memory_type)
-    };
-  }
-  buildClientConfigFromCredential(credential) {
-    const vscodeConfig = vscode4.workspace.getConfiguration("lanonasis");
-    const apiUrl = vscodeConfig.get("apiUrl", "https://api.lanonasis.com");
-    const config2 = {
-      apiUrl,
-      apiKey: credential.type === "apiKey" ? credential.token : void 0,
-      timeout: 3e4,
-      retry: {
-        maxRetries: 3,
-        retryDelay: 1e3,
-        backoff: "exponential"
-      },
-      headers: {
-        "X-Client-Type": "vscode-extension",
-        "X-Client-Version": "2.0.5",
-        "X-Project-Scope": "lanonasis-maas"
-        // Required by backend auth middleware
-      }
-    };
-    if (credential.type === "oauth") {
-      config2.apiKey = void 0;
-      config2.authToken = credential.token;
-      try {
-        const parts = credential.token.split(".");
-        if (parts.length >= 2) {
-          const payload = JSON.parse(Buffer.from(parts[1], "base64").toString());
-          if (payload.sub || payload.user_id) {
-            config2.userId = payload.sub || payload.user_id;
-          }
-        }
-      } catch {
-      }
-    }
-    const organizationId = vscodeConfig.get("organizationId");
-    if (organizationId) {
-      config2.headers = {
-        ...config2.headers,
-        "X-Organization-ID": organizationId
-      };
-      config2.organizationId = organizationId;
-    }
-    return config2;
-  }
-  convertSDKSearchResults(sdkResults) {
-    return sdkResults.map((result) => ({
-      ...result,
-      memory_type: this.mapMemoryTypeFromSDK(result.memory_type)
-    }));
-  }
-  isAuthError(message) {
-    const normalized = message.toLowerCase();
-    return normalized.includes("authentication required") || normalized.includes("unauthorized") || normalized.includes("401") || normalized.includes("auth token") || normalized.includes("bearer");
-  }
-  convertSDKUserMemoryStats(stats) {
-    const initial = {
-      knowledge: 0,
-      project: 0,
-      context: 0,
-      reference: 0,
-      personal: 0,
-      workflow: 0
-    };
-    const memoriesByType = { ...initial };
-    for (const [key, value] of Object.entries(stats.memories_by_type)) {
-      const mappedKey = this.mapMemoryTypeFromSDK(key);
-      memoriesByType[mappedKey] = value;
-    }
-    return {
-      ...stats,
-      memories_by_type: memoriesByType
-    };
-  }
-  dispose() {
-    this.statusBarItem.dispose();
-  }
-  // Migration helper for existing MemoryService users
-  static async migrateFromBasicService(secureApiKeyService) {
-    const enhanced = new _EnhancedMemoryService(secureApiKeyService);
-    vscode4.window.showInformationMessage(
-      "Upgraded to Enhanced Memory Service!",
-      "Learn More"
-    ).then((selection) => {
-      if (selection === "Learn More") {
-        vscode4.env.openExternal(vscode4.Uri.parse("https://docs.lanonasis.com/sdk"));
-      }
-    });
-    return enhanced;
-  }
-};
 
 // node_modules/zod/v4/classic/external.js
 var external_exports = {};
@@ -22489,7 +22736,6 @@ __export(external_exports, {
   ZodUnknown: () => ZodUnknown,
   ZodVoid: () => ZodVoid,
   ZodXID: () => ZodXID,
-  ZodXor: () => ZodXor,
   _ZodString: () => _ZodString,
   _default: () => _default2,
   _function: () => _function,
@@ -22528,7 +22774,6 @@ __export(external_exports, {
   float32: () => float32,
   float64: () => float64,
   formatError: () => formatError,
-  fromJSONSchema: () => fromJSONSchema,
   function: () => _function,
   getErrorMap: () => getErrorMap,
   globalRegistry: () => globalRegistry,
@@ -22557,7 +22802,6 @@ __export(external_exports, {
   literal: () => literal,
   locales: () => locales_exports,
   looseObject: () => looseObject,
-  looseRecord: () => looseRecord,
   lowercase: () => _lowercase,
   lt: () => _lt,
   lte: () => _lte,
@@ -22642,8 +22886,7 @@ __export(external_exports, {
   uuidv6: () => uuidv6,
   uuidv7: () => uuidv7,
   void: () => _void2,
-  xid: () => xid2,
-  xor: () => xor
+  xid: () => xid2
 });
 
 // node_modules/zod/v4/core/index.js
@@ -22747,7 +22990,6 @@ __export(core_exports2, {
   $ZodUnknown: () => $ZodUnknown,
   $ZodVoid: () => $ZodVoid,
   $ZodXID: () => $ZodXID,
-  $ZodXor: () => $ZodXor,
   $brand: () => $brand,
   $constructor: () => $constructor,
   $input: () => $input,
@@ -22882,23 +23124,17 @@ __export(core_exports2, {
   _uuidv7: () => _uuidv7,
   _void: () => _void,
   _xid: () => _xid,
-  _xor: () => _xor,
   clone: () => clone,
   config: () => config,
-  createStandardJSONSchemaMethod: () => createStandardJSONSchemaMethod,
-  createToJSONSchemaMethod: () => createToJSONSchemaMethod,
   decode: () => decode,
   decodeAsync: () => decodeAsync,
   describe: () => describe,
   encode: () => encode,
   encodeAsync: () => encodeAsync,
-  extractDefs: () => extractDefs,
-  finalize: () => finalize,
   flattenError: () => flattenError,
   formatError: () => formatError,
   globalConfig: () => globalConfig,
   globalRegistry: () => globalRegistry,
-  initializeContext: () => initializeContext,
   isValidBase64: () => isValidBase64,
   isValidBase64URL: () => isValidBase64URL,
   isValidJWT: () => isValidJWT,
@@ -22907,7 +23143,6 @@ __export(core_exports2, {
   parse: () => parse,
   parseAsync: () => parseAsync,
   prettifyError: () => prettifyError,
-  process: () => process2,
   regexes: () => regexes_exports,
   registry: () => registry,
   safeDecode: () => safeDecode,
@@ -23072,7 +23307,7 @@ function assertNotEqual(val) {
 function assertIs(_arg) {
 }
 function assertNever(_x) {
-  throw new Error("Unexpected value in exhaustive check");
+  throw new Error();
 }
 function assert(_) {
 }
@@ -24600,8 +24835,8 @@ var Doc = class {
 // node_modules/zod/v4/core/versions.js
 var version = {
   major: 4,
-  minor: 2,
-  patch: 1
+  minor: 1,
+  patch: 13
 };
 
 // node_modules/zod/v4/core/schemas.js
@@ -25511,62 +25746,7 @@ var $ZodUnion = /* @__PURE__ */ $constructor("$ZodUnion", (inst, def) => {
     });
   };
 });
-function handleExclusiveUnionResults(results, final, inst, ctx) {
-  const successes = results.filter((r) => r.issues.length === 0);
-  if (successes.length === 1) {
-    final.value = successes[0].value;
-    return final;
-  }
-  if (successes.length === 0) {
-    final.issues.push({
-      code: "invalid_union",
-      input: final.value,
-      inst,
-      errors: results.map((result) => result.issues.map((iss) => finalizeIssue(iss, ctx, config())))
-    });
-  } else {
-    final.issues.push({
-      code: "invalid_union",
-      input: final.value,
-      inst,
-      errors: [],
-      inclusive: false
-    });
-  }
-  return final;
-}
-var $ZodXor = /* @__PURE__ */ $constructor("$ZodXor", (inst, def) => {
-  $ZodUnion.init(inst, def);
-  def.inclusive = false;
-  const single = def.options.length === 1;
-  const first = def.options[0]._zod.run;
-  inst._zod.parse = (payload, ctx) => {
-    if (single) {
-      return first(payload, ctx);
-    }
-    let async = false;
-    const results = [];
-    for (const option of def.options) {
-      const result = option._zod.run({
-        value: payload.value,
-        issues: []
-      }, ctx);
-      if (result instanceof Promise) {
-        results.push(result);
-        async = true;
-      } else {
-        results.push(result);
-      }
-    }
-    if (!async)
-      return handleExclusiveUnionResults(results, payload, inst, ctx);
-    return Promise.all(results).then((results2) => {
-      return handleExclusiveUnionResults(results2, payload, inst, ctx);
-    });
-  };
-});
 var $ZodDiscriminatedUnion = /* @__PURE__ */ $constructor("$ZodDiscriminatedUnion", (inst, def) => {
-  def.inclusive = false;
   $ZodUnion.init(inst, def);
   const _super = inst._zod.parse;
   defineLazy(inst._zod, "propValues", () => {
@@ -25842,18 +26022,15 @@ var $ZodRecord = /* @__PURE__ */ $constructor("$ZodRecord", (inst, def) => {
           throw new Error("Async schemas not supported in object keys currently");
         }
         if (keyResult.issues.length) {
-          if (def.mode === "loose") {
-            payload.value[key] = input[key];
-          } else {
-            payload.issues.push({
-              code: "invalid_key",
-              origin: "record",
-              issues: keyResult.issues.map((iss) => finalizeIssue(iss, ctx, config())),
-              input: key,
-              path: [key],
-              inst
-            });
-          }
+          payload.issues.push({
+            code: "invalid_key",
+            origin: "record",
+            issues: keyResult.issues.map((iss) => finalizeIssue(iss, ctx, config())),
+            input: key,
+            path: [key],
+            inst
+          });
+          payload.value[keyResult.value] = keyResult.value;
           continue;
         }
         const result = def.valueType._zod.run({ value: input[key], issues: [] }, ctx);
@@ -32940,14 +33117,6 @@ function _union(Class2, options, params) {
     ...normalizeParams(params)
   });
 }
-function _xor(Class2, options, params) {
-  return new Class2({
-    type: "union",
-    options,
-    inclusive: false,
-    ...normalizeParams(params)
-  });
-}
 function _discriminatedUnion(Class2, discriminator, options, params) {
   return new Class2({
     type: "union",
@@ -33244,243 +33413,726 @@ function _stringFormat(Class2, format, fnOrRegex, _params = {}) {
 }
 
 // node_modules/zod/v4/core/to-json-schema.js
-function initializeContext(params) {
-  let target = params?.target ?? "draft-2020-12";
-  if (target === "draft-4")
-    target = "draft-04";
-  if (target === "draft-7")
-    target = "draft-07";
-  return {
-    processors: params.processors ?? {},
-    metadataRegistry: params?.metadata ?? globalRegistry,
-    target,
-    unrepresentable: params?.unrepresentable ?? "throw",
-    override: params?.override ?? (() => {
-    }),
-    io: params?.io ?? "output",
-    counter: 0,
-    seen: /* @__PURE__ */ new Map(),
-    cycles: params?.cycles ?? "ref",
-    reused: params?.reused ?? "inline",
-    external: params?.external ?? void 0
-  };
-}
-function process2(schema, ctx, _params = { path: [], schemaPath: [] }) {
-  var _a2;
-  const def = schema._zod.def;
-  const seen = ctx.seen.get(schema);
-  if (seen) {
-    seen.count++;
-    const isCycle = _params.schemaPath.includes(schema);
-    if (isCycle) {
-      seen.cycle = _params.path;
-    }
-    return seen.schema;
+var JSONSchemaGenerator = class {
+  constructor(params) {
+    this.counter = 0;
+    this.metadataRegistry = params?.metadata ?? globalRegistry;
+    this.target = params?.target ?? "draft-2020-12";
+    this.unrepresentable = params?.unrepresentable ?? "throw";
+    this.override = params?.override ?? (() => {
+    });
+    this.io = params?.io ?? "output";
+    this.seen = /* @__PURE__ */ new Map();
   }
-  const result = { schema: {}, count: 1, cycle: void 0, path: _params.path };
-  ctx.seen.set(schema, result);
-  const overrideSchema = schema._zod.toJSONSchema?.();
-  if (overrideSchema) {
-    result.schema = overrideSchema;
-  } else {
-    const params = {
-      ..._params,
-      schemaPath: [..._params.schemaPath, schema],
-      path: _params.path
+  process(schema, _params = { path: [], schemaPath: [] }) {
+    var _a2;
+    const def = schema._zod.def;
+    const formatMap = {
+      guid: "uuid",
+      url: "uri",
+      datetime: "date-time",
+      json_string: "json-string",
+      regex: ""
+      // do not set
     };
-    const parent = schema._zod.parent;
-    if (parent) {
-      result.ref = parent;
-      process2(parent, ctx, params);
-      ctx.seen.get(parent).isParent = true;
-    } else if (schema._zod.processJSONSchema) {
-      schema._zod.processJSONSchema(ctx, result.schema, params);
+    const seen = this.seen.get(schema);
+    if (seen) {
+      seen.count++;
+      const isCycle = _params.schemaPath.includes(schema);
+      if (isCycle) {
+        seen.cycle = _params.path;
+      }
+      return seen.schema;
+    }
+    const result = { schema: {}, count: 1, cycle: void 0, path: _params.path };
+    this.seen.set(schema, result);
+    const overrideSchema = schema._zod.toJSONSchema?.();
+    if (overrideSchema) {
+      result.schema = overrideSchema;
     } else {
-      const _json = result.schema;
-      const processor = ctx.processors[def.type];
-      if (!processor) {
-        throw new Error(`[toJSONSchema]: Non-representable type encountered: ${def.type}`);
+      const params = {
+        ..._params,
+        schemaPath: [..._params.schemaPath, schema],
+        path: _params.path
+      };
+      const parent = schema._zod.parent;
+      if (parent) {
+        result.ref = parent;
+        this.process(parent, params);
+        this.seen.get(parent).isParent = true;
+      } else {
+        const _json = result.schema;
+        switch (def.type) {
+          case "string": {
+            const json2 = _json;
+            json2.type = "string";
+            const { minimum, maximum, format, patterns, contentEncoding } = schema._zod.bag;
+            if (typeof minimum === "number")
+              json2.minLength = minimum;
+            if (typeof maximum === "number")
+              json2.maxLength = maximum;
+            if (format) {
+              json2.format = formatMap[format] ?? format;
+              if (json2.format === "")
+                delete json2.format;
+            }
+            if (contentEncoding)
+              json2.contentEncoding = contentEncoding;
+            if (patterns && patterns.size > 0) {
+              const regexes = [...patterns];
+              if (regexes.length === 1)
+                json2.pattern = regexes[0].source;
+              else if (regexes.length > 1) {
+                result.schema.allOf = [
+                  ...regexes.map((regex) => ({
+                    ...this.target === "draft-7" || this.target === "draft-4" || this.target === "openapi-3.0" ? { type: "string" } : {},
+                    pattern: regex.source
+                  }))
+                ];
+              }
+            }
+            break;
+          }
+          case "number": {
+            const json2 = _json;
+            const { minimum, maximum, format, multipleOf, exclusiveMaximum, exclusiveMinimum } = schema._zod.bag;
+            if (typeof format === "string" && format.includes("int"))
+              json2.type = "integer";
+            else
+              json2.type = "number";
+            if (typeof exclusiveMinimum === "number") {
+              if (this.target === "draft-4" || this.target === "openapi-3.0") {
+                json2.minimum = exclusiveMinimum;
+                json2.exclusiveMinimum = true;
+              } else {
+                json2.exclusiveMinimum = exclusiveMinimum;
+              }
+            }
+            if (typeof minimum === "number") {
+              json2.minimum = minimum;
+              if (typeof exclusiveMinimum === "number" && this.target !== "draft-4") {
+                if (exclusiveMinimum >= minimum)
+                  delete json2.minimum;
+                else
+                  delete json2.exclusiveMinimum;
+              }
+            }
+            if (typeof exclusiveMaximum === "number") {
+              if (this.target === "draft-4" || this.target === "openapi-3.0") {
+                json2.maximum = exclusiveMaximum;
+                json2.exclusiveMaximum = true;
+              } else {
+                json2.exclusiveMaximum = exclusiveMaximum;
+              }
+            }
+            if (typeof maximum === "number") {
+              json2.maximum = maximum;
+              if (typeof exclusiveMaximum === "number" && this.target !== "draft-4") {
+                if (exclusiveMaximum <= maximum)
+                  delete json2.maximum;
+                else
+                  delete json2.exclusiveMaximum;
+              }
+            }
+            if (typeof multipleOf === "number")
+              json2.multipleOf = multipleOf;
+            break;
+          }
+          case "boolean": {
+            const json2 = _json;
+            json2.type = "boolean";
+            break;
+          }
+          case "bigint": {
+            if (this.unrepresentable === "throw") {
+              throw new Error("BigInt cannot be represented in JSON Schema");
+            }
+            break;
+          }
+          case "symbol": {
+            if (this.unrepresentable === "throw") {
+              throw new Error("Symbols cannot be represented in JSON Schema");
+            }
+            break;
+          }
+          case "null": {
+            if (this.target === "openapi-3.0") {
+              _json.type = "string";
+              _json.nullable = true;
+              _json.enum = [null];
+            } else
+              _json.type = "null";
+            break;
+          }
+          case "any": {
+            break;
+          }
+          case "unknown": {
+            break;
+          }
+          case "undefined": {
+            if (this.unrepresentable === "throw") {
+              throw new Error("Undefined cannot be represented in JSON Schema");
+            }
+            break;
+          }
+          case "void": {
+            if (this.unrepresentable === "throw") {
+              throw new Error("Void cannot be represented in JSON Schema");
+            }
+            break;
+          }
+          case "never": {
+            _json.not = {};
+            break;
+          }
+          case "date": {
+            if (this.unrepresentable === "throw") {
+              throw new Error("Date cannot be represented in JSON Schema");
+            }
+            break;
+          }
+          case "array": {
+            const json2 = _json;
+            const { minimum, maximum } = schema._zod.bag;
+            if (typeof minimum === "number")
+              json2.minItems = minimum;
+            if (typeof maximum === "number")
+              json2.maxItems = maximum;
+            json2.type = "array";
+            json2.items = this.process(def.element, { ...params, path: [...params.path, "items"] });
+            break;
+          }
+          case "object": {
+            const json2 = _json;
+            json2.type = "object";
+            json2.properties = {};
+            const shape = def.shape;
+            for (const key in shape) {
+              json2.properties[key] = this.process(shape[key], {
+                ...params,
+                path: [...params.path, "properties", key]
+              });
+            }
+            const allKeys = new Set(Object.keys(shape));
+            const requiredKeys = new Set([...allKeys].filter((key) => {
+              const v = def.shape[key]._zod;
+              if (this.io === "input") {
+                return v.optin === void 0;
+              } else {
+                return v.optout === void 0;
+              }
+            }));
+            if (requiredKeys.size > 0) {
+              json2.required = Array.from(requiredKeys);
+            }
+            if (def.catchall?._zod.def.type === "never") {
+              json2.additionalProperties = false;
+            } else if (!def.catchall) {
+              if (this.io === "output")
+                json2.additionalProperties = false;
+            } else if (def.catchall) {
+              json2.additionalProperties = this.process(def.catchall, {
+                ...params,
+                path: [...params.path, "additionalProperties"]
+              });
+            }
+            break;
+          }
+          case "union": {
+            const json2 = _json;
+            const isDiscriminated = def.discriminator !== void 0;
+            const options = def.options.map((x, i) => this.process(x, {
+              ...params,
+              path: [...params.path, isDiscriminated ? "oneOf" : "anyOf", i]
+            }));
+            if (isDiscriminated) {
+              json2.oneOf = options;
+            } else {
+              json2.anyOf = options;
+            }
+            break;
+          }
+          case "intersection": {
+            const json2 = _json;
+            const a = this.process(def.left, {
+              ...params,
+              path: [...params.path, "allOf", 0]
+            });
+            const b = this.process(def.right, {
+              ...params,
+              path: [...params.path, "allOf", 1]
+            });
+            const isSimpleIntersection = (val) => "allOf" in val && Object.keys(val).length === 1;
+            const allOf = [
+              ...isSimpleIntersection(a) ? a.allOf : [a],
+              ...isSimpleIntersection(b) ? b.allOf : [b]
+            ];
+            json2.allOf = allOf;
+            break;
+          }
+          case "tuple": {
+            const json2 = _json;
+            json2.type = "array";
+            const prefixPath = this.target === "draft-2020-12" ? "prefixItems" : "items";
+            const restPath = this.target === "draft-2020-12" ? "items" : this.target === "openapi-3.0" ? "items" : "additionalItems";
+            const prefixItems = def.items.map((x, i) => this.process(x, {
+              ...params,
+              path: [...params.path, prefixPath, i]
+            }));
+            const rest = def.rest ? this.process(def.rest, {
+              ...params,
+              path: [...params.path, restPath, ...this.target === "openapi-3.0" ? [def.items.length] : []]
+            }) : null;
+            if (this.target === "draft-2020-12") {
+              json2.prefixItems = prefixItems;
+              if (rest) {
+                json2.items = rest;
+              }
+            } else if (this.target === "openapi-3.0") {
+              json2.items = {
+                anyOf: prefixItems
+              };
+              if (rest) {
+                json2.items.anyOf.push(rest);
+              }
+              json2.minItems = prefixItems.length;
+              if (!rest) {
+                json2.maxItems = prefixItems.length;
+              }
+            } else {
+              json2.items = prefixItems;
+              if (rest) {
+                json2.additionalItems = rest;
+              }
+            }
+            const { minimum, maximum } = schema._zod.bag;
+            if (typeof minimum === "number")
+              json2.minItems = minimum;
+            if (typeof maximum === "number")
+              json2.maxItems = maximum;
+            break;
+          }
+          case "record": {
+            const json2 = _json;
+            json2.type = "object";
+            if (this.target === "draft-7" || this.target === "draft-2020-12") {
+              json2.propertyNames = this.process(def.keyType, {
+                ...params,
+                path: [...params.path, "propertyNames"]
+              });
+            }
+            json2.additionalProperties = this.process(def.valueType, {
+              ...params,
+              path: [...params.path, "additionalProperties"]
+            });
+            break;
+          }
+          case "map": {
+            if (this.unrepresentable === "throw") {
+              throw new Error("Map cannot be represented in JSON Schema");
+            }
+            break;
+          }
+          case "set": {
+            if (this.unrepresentable === "throw") {
+              throw new Error("Set cannot be represented in JSON Schema");
+            }
+            break;
+          }
+          case "enum": {
+            const json2 = _json;
+            const values = getEnumValues(def.entries);
+            if (values.every((v) => typeof v === "number"))
+              json2.type = "number";
+            if (values.every((v) => typeof v === "string"))
+              json2.type = "string";
+            json2.enum = values;
+            break;
+          }
+          case "literal": {
+            const json2 = _json;
+            const vals = [];
+            for (const val of def.values) {
+              if (val === void 0) {
+                if (this.unrepresentable === "throw") {
+                  throw new Error("Literal `undefined` cannot be represented in JSON Schema");
+                } else {
+                }
+              } else if (typeof val === "bigint") {
+                if (this.unrepresentable === "throw") {
+                  throw new Error("BigInt literals cannot be represented in JSON Schema");
+                } else {
+                  vals.push(Number(val));
+                }
+              } else {
+                vals.push(val);
+              }
+            }
+            if (vals.length === 0) {
+            } else if (vals.length === 1) {
+              const val = vals[0];
+              json2.type = val === null ? "null" : typeof val;
+              if (this.target === "draft-4" || this.target === "openapi-3.0") {
+                json2.enum = [val];
+              } else {
+                json2.const = val;
+              }
+            } else {
+              if (vals.every((v) => typeof v === "number"))
+                json2.type = "number";
+              if (vals.every((v) => typeof v === "string"))
+                json2.type = "string";
+              if (vals.every((v) => typeof v === "boolean"))
+                json2.type = "string";
+              if (vals.every((v) => v === null))
+                json2.type = "null";
+              json2.enum = vals;
+            }
+            break;
+          }
+          case "file": {
+            const json2 = _json;
+            const file2 = {
+              type: "string",
+              format: "binary",
+              contentEncoding: "binary"
+            };
+            const { minimum, maximum, mime } = schema._zod.bag;
+            if (minimum !== void 0)
+              file2.minLength = minimum;
+            if (maximum !== void 0)
+              file2.maxLength = maximum;
+            if (mime) {
+              if (mime.length === 1) {
+                file2.contentMediaType = mime[0];
+                Object.assign(json2, file2);
+              } else {
+                json2.anyOf = mime.map((m) => {
+                  const mFile = { ...file2, contentMediaType: m };
+                  return mFile;
+                });
+              }
+            } else {
+              Object.assign(json2, file2);
+            }
+            break;
+          }
+          case "transform": {
+            if (this.unrepresentable === "throw") {
+              throw new Error("Transforms cannot be represented in JSON Schema");
+            }
+            break;
+          }
+          case "nullable": {
+            const inner = this.process(def.innerType, params);
+            if (this.target === "openapi-3.0") {
+              result.ref = def.innerType;
+              _json.nullable = true;
+            } else {
+              _json.anyOf = [inner, { type: "null" }];
+            }
+            break;
+          }
+          case "nonoptional": {
+            this.process(def.innerType, params);
+            result.ref = def.innerType;
+            break;
+          }
+          case "success": {
+            const json2 = _json;
+            json2.type = "boolean";
+            break;
+          }
+          case "default": {
+            this.process(def.innerType, params);
+            result.ref = def.innerType;
+            _json.default = JSON.parse(JSON.stringify(def.defaultValue));
+            break;
+          }
+          case "prefault": {
+            this.process(def.innerType, params);
+            result.ref = def.innerType;
+            if (this.io === "input")
+              _json._prefault = JSON.parse(JSON.stringify(def.defaultValue));
+            break;
+          }
+          case "catch": {
+            this.process(def.innerType, params);
+            result.ref = def.innerType;
+            let catchValue;
+            try {
+              catchValue = def.catchValue(void 0);
+            } catch {
+              throw new Error("Dynamic catch values are not supported in JSON Schema");
+            }
+            _json.default = catchValue;
+            break;
+          }
+          case "nan": {
+            if (this.unrepresentable === "throw") {
+              throw new Error("NaN cannot be represented in JSON Schema");
+            }
+            break;
+          }
+          case "template_literal": {
+            const json2 = _json;
+            const pattern = schema._zod.pattern;
+            if (!pattern)
+              throw new Error("Pattern not found in template literal");
+            json2.type = "string";
+            json2.pattern = pattern.source;
+            break;
+          }
+          case "pipe": {
+            const innerType = this.io === "input" ? def.in._zod.def.type === "transform" ? def.out : def.in : def.out;
+            this.process(innerType, params);
+            result.ref = innerType;
+            break;
+          }
+          case "readonly": {
+            this.process(def.innerType, params);
+            result.ref = def.innerType;
+            _json.readOnly = true;
+            break;
+          }
+          // passthrough types
+          case "promise": {
+            this.process(def.innerType, params);
+            result.ref = def.innerType;
+            break;
+          }
+          case "optional": {
+            this.process(def.innerType, params);
+            result.ref = def.innerType;
+            break;
+          }
+          case "lazy": {
+            const innerType = schema._zod.innerType;
+            this.process(innerType, params);
+            result.ref = innerType;
+            break;
+          }
+          case "custom": {
+            if (this.unrepresentable === "throw") {
+              throw new Error("Custom types cannot be represented in JSON Schema");
+            }
+            break;
+          }
+          case "function": {
+            if (this.unrepresentable === "throw") {
+              throw new Error("Function types cannot be represented in JSON Schema");
+            }
+            break;
+          }
+          default: {
+            def;
+          }
+        }
       }
-      processor(schema, ctx, _json, params);
     }
+    const meta3 = this.metadataRegistry.get(schema);
+    if (meta3)
+      Object.assign(result.schema, meta3);
+    if (this.io === "input" && isTransforming(schema)) {
+      delete result.schema.examples;
+      delete result.schema.default;
+    }
+    if (this.io === "input" && result.schema._prefault)
+      (_a2 = result.schema).default ?? (_a2.default = result.schema._prefault);
+    delete result.schema._prefault;
+    const _result = this.seen.get(schema);
+    return _result.schema;
   }
-  const meta3 = ctx.metadataRegistry.get(schema);
-  if (meta3)
-    Object.assign(result.schema, meta3);
-  if (ctx.io === "input" && isTransforming(schema)) {
-    delete result.schema.examples;
-    delete result.schema.default;
-  }
-  if (ctx.io === "input" && result.schema._prefault)
-    (_a2 = result.schema).default ?? (_a2.default = result.schema._prefault);
-  delete result.schema._prefault;
-  const _result = ctx.seen.get(schema);
-  return _result.schema;
-}
-function extractDefs(ctx, schema) {
-  const root = ctx.seen.get(schema);
-  if (!root)
-    throw new Error("Unprocessed schema. This is a bug in Zod.");
-  const makeURI = (entry) => {
-    const defsSegment = ctx.target === "draft-2020-12" ? "$defs" : "definitions";
-    if (ctx.external) {
-      const externalId = ctx.external.registry.get(entry[0])?.id;
-      const uriGenerator = ctx.external.uri ?? ((id2) => id2);
-      if (externalId) {
-        return { ref: uriGenerator(externalId) };
+  emit(schema, _params) {
+    const params = {
+      cycles: _params?.cycles ?? "ref",
+      reused: _params?.reused ?? "inline",
+      // unrepresentable: _params?.unrepresentable ?? "throw",
+      // uri: _params?.uri ?? ((id) => `${id}`),
+      external: _params?.external ?? void 0
+    };
+    const root = this.seen.get(schema);
+    if (!root)
+      throw new Error("Unprocessed schema. This is a bug in Zod.");
+    const makeURI = (entry) => {
+      const defsSegment = this.target === "draft-2020-12" ? "$defs" : "definitions";
+      if (params.external) {
+        const externalId = params.external.registry.get(entry[0])?.id;
+        const uriGenerator = params.external.uri ?? ((id2) => id2);
+        if (externalId) {
+          return { ref: uriGenerator(externalId) };
+        }
+        const id = entry[1].defId ?? entry[1].schema.id ?? `schema${this.counter++}`;
+        entry[1].defId = id;
+        return { defId: id, ref: `${uriGenerator("__shared")}#/${defsSegment}/${id}` };
       }
-      const id = entry[1].defId ?? entry[1].schema.id ?? `schema${ctx.counter++}`;
-      entry[1].defId = id;
-      return { defId: id, ref: `${uriGenerator("__shared")}#/${defsSegment}/${id}` };
-    }
-    if (entry[1] === root) {
-      return { ref: "#" };
-    }
-    const uriPrefix = `#`;
-    const defUriPrefix = `${uriPrefix}/${defsSegment}/`;
-    const defId = entry[1].schema.id ?? `__schema${ctx.counter++}`;
-    return { defId, ref: defUriPrefix + defId };
-  };
-  const extractToDef = (entry) => {
-    if (entry[1].schema.$ref) {
-      return;
-    }
-    const seen = entry[1];
-    const { ref, defId } = makeURI(entry);
-    seen.def = { ...seen.schema };
-    if (defId)
-      seen.defId = defId;
-    const schema2 = seen.schema;
-    for (const key in schema2) {
-      delete schema2[key];
-    }
-    schema2.$ref = ref;
-  };
-  if (ctx.cycles === "throw") {
-    for (const entry of ctx.seen.entries()) {
+      if (entry[1] === root) {
+        return { ref: "#" };
+      }
+      const uriPrefix = `#`;
+      const defUriPrefix = `${uriPrefix}/${defsSegment}/`;
+      const defId = entry[1].schema.id ?? `__schema${this.counter++}`;
+      return { defId, ref: defUriPrefix + defId };
+    };
+    const extractToDef = (entry) => {
+      if (entry[1].schema.$ref) {
+        return;
+      }
       const seen = entry[1];
-      if (seen.cycle) {
-        throw new Error(`Cycle detected: #/${seen.cycle?.join("/")}/<root>
+      const { ref, defId } = makeURI(entry);
+      seen.def = { ...seen.schema };
+      if (defId)
+        seen.defId = defId;
+      const schema2 = seen.schema;
+      for (const key in schema2) {
+        delete schema2[key];
+      }
+      schema2.$ref = ref;
+    };
+    if (params.cycles === "throw") {
+      for (const entry of this.seen.entries()) {
+        const seen = entry[1];
+        if (seen.cycle) {
+          throw new Error(`Cycle detected: #/${seen.cycle?.join("/")}/<root>
 
 Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.`);
-      }
-    }
-  }
-  for (const entry of ctx.seen.entries()) {
-    const seen = entry[1];
-    if (schema === entry[0]) {
-      extractToDef(entry);
-      continue;
-    }
-    if (ctx.external) {
-      const ext = ctx.external.registry.get(entry[0])?.id;
-      if (schema !== entry[0] && ext) {
-        extractToDef(entry);
-        continue;
-      }
-    }
-    const id = ctx.metadataRegistry.get(entry[0])?.id;
-    if (id) {
-      extractToDef(entry);
-      continue;
-    }
-    if (seen.cycle) {
-      extractToDef(entry);
-      continue;
-    }
-    if (seen.count > 1) {
-      if (ctx.reused === "ref") {
-        extractToDef(entry);
-        continue;
-      }
-    }
-  }
-}
-function finalize(ctx, schema) {
-  const root = ctx.seen.get(schema);
-  if (!root)
-    throw new Error("Unprocessed schema. This is a bug in Zod.");
-  const flattenRef = (zodSchema) => {
-    const seen = ctx.seen.get(zodSchema);
-    const schema2 = seen.def ?? seen.schema;
-    const _cached = { ...schema2 };
-    if (seen.ref === null) {
-      return;
-    }
-    const ref = seen.ref;
-    seen.ref = null;
-    if (ref) {
-      flattenRef(ref);
-      const refSchema = ctx.seen.get(ref).schema;
-      if (refSchema.$ref && (ctx.target === "draft-07" || ctx.target === "draft-04" || ctx.target === "openapi-3.0")) {
-        schema2.allOf = schema2.allOf ?? [];
-        schema2.allOf.push(refSchema);
-      } else {
-        Object.assign(schema2, refSchema);
-        Object.assign(schema2, _cached);
-      }
-    }
-    if (!seen.isParent)
-      ctx.override({
-        zodSchema,
-        jsonSchema: schema2,
-        path: seen.path ?? []
-      });
-  };
-  for (const entry of [...ctx.seen.entries()].reverse()) {
-    flattenRef(entry[0]);
-  }
-  const result = {};
-  if (ctx.target === "draft-2020-12") {
-    result.$schema = "https://json-schema.org/draft/2020-12/schema";
-  } else if (ctx.target === "draft-07") {
-    result.$schema = "http://json-schema.org/draft-07/schema#";
-  } else if (ctx.target === "draft-04") {
-    result.$schema = "http://json-schema.org/draft-04/schema#";
-  } else if (ctx.target === "openapi-3.0") {
-  } else {
-  }
-  if (ctx.external?.uri) {
-    const id = ctx.external.registry.get(schema)?.id;
-    if (!id)
-      throw new Error("Schema is missing an `id` property");
-    result.$id = ctx.external.uri(id);
-  }
-  Object.assign(result, root.def ?? root.schema);
-  const defs = ctx.external?.defs ?? {};
-  for (const entry of ctx.seen.entries()) {
-    const seen = entry[1];
-    if (seen.def && seen.defId) {
-      defs[seen.defId] = seen.def;
-    }
-  }
-  if (ctx.external) {
-  } else {
-    if (Object.keys(defs).length > 0) {
-      if (ctx.target === "draft-2020-12") {
-        result.$defs = defs;
-      } else {
-        result.definitions = defs;
-      }
-    }
-  }
-  try {
-    const finalized = JSON.parse(JSON.stringify(result));
-    Object.defineProperty(finalized, "~standard", {
-      value: {
-        ...schema["~standard"],
-        jsonSchema: {
-          input: createStandardJSONSchemaMethod(schema, "input"),
-          output: createStandardJSONSchemaMethod(schema, "output")
         }
-      },
-      enumerable: false,
-      writable: false
-    });
-    return finalized;
-  } catch (_err) {
-    throw new Error("Error converting schema to JSON.");
+      }
+    }
+    for (const entry of this.seen.entries()) {
+      const seen = entry[1];
+      if (schema === entry[0]) {
+        extractToDef(entry);
+        continue;
+      }
+      if (params.external) {
+        const ext = params.external.registry.get(entry[0])?.id;
+        if (schema !== entry[0] && ext) {
+          extractToDef(entry);
+          continue;
+        }
+      }
+      const id = this.metadataRegistry.get(entry[0])?.id;
+      if (id) {
+        extractToDef(entry);
+        continue;
+      }
+      if (seen.cycle) {
+        extractToDef(entry);
+        continue;
+      }
+      if (seen.count > 1) {
+        if (params.reused === "ref") {
+          extractToDef(entry);
+          continue;
+        }
+      }
+    }
+    const flattenRef = (zodSchema, params2) => {
+      const seen = this.seen.get(zodSchema);
+      const schema2 = seen.def ?? seen.schema;
+      const _cached = { ...schema2 };
+      if (seen.ref === null) {
+        return;
+      }
+      const ref = seen.ref;
+      seen.ref = null;
+      if (ref) {
+        flattenRef(ref, params2);
+        const refSchema = this.seen.get(ref).schema;
+        if (refSchema.$ref && (params2.target === "draft-7" || params2.target === "draft-4" || params2.target === "openapi-3.0")) {
+          schema2.allOf = schema2.allOf ?? [];
+          schema2.allOf.push(refSchema);
+        } else {
+          Object.assign(schema2, refSchema);
+          Object.assign(schema2, _cached);
+        }
+      }
+      if (!seen.isParent)
+        this.override({
+          zodSchema,
+          jsonSchema: schema2,
+          path: seen.path ?? []
+        });
+    };
+    for (const entry of [...this.seen.entries()].reverse()) {
+      flattenRef(entry[0], { target: this.target });
+    }
+    const result = {};
+    if (this.target === "draft-2020-12") {
+      result.$schema = "https://json-schema.org/draft/2020-12/schema";
+    } else if (this.target === "draft-7") {
+      result.$schema = "http://json-schema.org/draft-07/schema#";
+    } else if (this.target === "draft-4") {
+      result.$schema = "http://json-schema.org/draft-04/schema#";
+    } else if (this.target === "openapi-3.0") {
+    } else {
+      console.warn(`Invalid target: ${this.target}`);
+    }
+    if (params.external?.uri) {
+      const id = params.external.registry.get(schema)?.id;
+      if (!id)
+        throw new Error("Schema is missing an `id` property");
+      result.$id = params.external.uri(id);
+    }
+    Object.assign(result, root.def);
+    const defs = params.external?.defs ?? {};
+    for (const entry of this.seen.entries()) {
+      const seen = entry[1];
+      if (seen.def && seen.defId) {
+        defs[seen.defId] = seen.def;
+      }
+    }
+    if (params.external) {
+    } else {
+      if (Object.keys(defs).length > 0) {
+        if (this.target === "draft-2020-12") {
+          result.$defs = defs;
+        } else {
+          result.definitions = defs;
+        }
+      }
+    }
+    try {
+      return JSON.parse(JSON.stringify(result));
+    } catch (_err) {
+      throw new Error("Error converting schema to JSON.");
+    }
   }
+};
+function toJSONSchema(input, _params) {
+  if (input instanceof $ZodRegistry) {
+    const gen2 = new JSONSchemaGenerator(_params);
+    const defs = {};
+    for (const entry of input._idmap.entries()) {
+      const [_, schema] = entry;
+      gen2.process(schema);
+    }
+    const schemas = {};
+    const external = {
+      registry: input,
+      uri: _params?.uri,
+      defs
+    };
+    for (const entry of input._idmap.entries()) {
+      const [key, schema] = entry;
+      schemas[key] = gen2.emit(schema, {
+        ..._params,
+        external
+      });
+    }
+    if (Object.keys(defs).length > 0) {
+      const defsSegment = gen2.target === "draft-2020-12" ? "$defs" : "definitions";
+      schemas.__shared = {
+        [defsSegment]: defs
+      };
+    }
+    return { schemas };
+  }
+  const gen = new JSONSchemaGenerator(_params);
+  gen.process(input);
+  return gen.emit(input, _params);
 }
 function isTransforming(_schema, _ctx) {
   const ctx = _ctx ?? { seen: /* @__PURE__ */ new Set() };
@@ -33533,827 +34185,9 @@ function isTransforming(_schema, _ctx) {
   }
   return false;
 }
-var createToJSONSchemaMethod = (schema, processors = {}) => (params) => {
-  const ctx = initializeContext({ ...params, processors });
-  process2(schema, ctx);
-  extractDefs(ctx, schema);
-  return finalize(ctx, schema);
-};
-var createStandardJSONSchemaMethod = (schema, io) => (params) => {
-  const { libraryOptions, target } = params ?? {};
-  const ctx = initializeContext({ ...libraryOptions ?? {}, target, io, processors: {} });
-  process2(schema, ctx);
-  extractDefs(ctx, schema);
-  return finalize(ctx, schema);
-};
-
-// node_modules/zod/v4/core/json-schema-processors.js
-var formatMap = {
-  guid: "uuid",
-  url: "uri",
-  datetime: "date-time",
-  json_string: "json-string",
-  regex: ""
-  // do not set
-};
-var stringProcessor = (schema, ctx, _json, _params) => {
-  const json2 = _json;
-  json2.type = "string";
-  const { minimum, maximum, format, patterns, contentEncoding } = schema._zod.bag;
-  if (typeof minimum === "number")
-    json2.minLength = minimum;
-  if (typeof maximum === "number")
-    json2.maxLength = maximum;
-  if (format) {
-    json2.format = formatMap[format] ?? format;
-    if (json2.format === "")
-      delete json2.format;
-  }
-  if (contentEncoding)
-    json2.contentEncoding = contentEncoding;
-  if (patterns && patterns.size > 0) {
-    const regexes = [...patterns];
-    if (regexes.length === 1)
-      json2.pattern = regexes[0].source;
-    else if (regexes.length > 1) {
-      json2.allOf = [
-        ...regexes.map((regex) => ({
-          ...ctx.target === "draft-07" || ctx.target === "draft-04" || ctx.target === "openapi-3.0" ? { type: "string" } : {},
-          pattern: regex.source
-        }))
-      ];
-    }
-  }
-};
-var numberProcessor = (schema, ctx, _json, _params) => {
-  const json2 = _json;
-  const { minimum, maximum, format, multipleOf, exclusiveMaximum, exclusiveMinimum } = schema._zod.bag;
-  if (typeof format === "string" && format.includes("int"))
-    json2.type = "integer";
-  else
-    json2.type = "number";
-  if (typeof exclusiveMinimum === "number") {
-    if (ctx.target === "draft-04" || ctx.target === "openapi-3.0") {
-      json2.minimum = exclusiveMinimum;
-      json2.exclusiveMinimum = true;
-    } else {
-      json2.exclusiveMinimum = exclusiveMinimum;
-    }
-  }
-  if (typeof minimum === "number") {
-    json2.minimum = minimum;
-    if (typeof exclusiveMinimum === "number" && ctx.target !== "draft-04") {
-      if (exclusiveMinimum >= minimum)
-        delete json2.minimum;
-      else
-        delete json2.exclusiveMinimum;
-    }
-  }
-  if (typeof exclusiveMaximum === "number") {
-    if (ctx.target === "draft-04" || ctx.target === "openapi-3.0") {
-      json2.maximum = exclusiveMaximum;
-      json2.exclusiveMaximum = true;
-    } else {
-      json2.exclusiveMaximum = exclusiveMaximum;
-    }
-  }
-  if (typeof maximum === "number") {
-    json2.maximum = maximum;
-    if (typeof exclusiveMaximum === "number" && ctx.target !== "draft-04") {
-      if (exclusiveMaximum <= maximum)
-        delete json2.maximum;
-      else
-        delete json2.exclusiveMaximum;
-    }
-  }
-  if (typeof multipleOf === "number")
-    json2.multipleOf = multipleOf;
-};
-var booleanProcessor = (_schema, _ctx, json2, _params) => {
-  json2.type = "boolean";
-};
-var bigintProcessor = (_schema, ctx, _json, _params) => {
-  if (ctx.unrepresentable === "throw") {
-    throw new Error("BigInt cannot be represented in JSON Schema");
-  }
-};
-var symbolProcessor = (_schema, ctx, _json, _params) => {
-  if (ctx.unrepresentable === "throw") {
-    throw new Error("Symbols cannot be represented in JSON Schema");
-  }
-};
-var nullProcessor = (_schema, ctx, json2, _params) => {
-  if (ctx.target === "openapi-3.0") {
-    json2.type = "string";
-    json2.nullable = true;
-    json2.enum = [null];
-  } else {
-    json2.type = "null";
-  }
-};
-var undefinedProcessor = (_schema, ctx, _json, _params) => {
-  if (ctx.unrepresentable === "throw") {
-    throw new Error("Undefined cannot be represented in JSON Schema");
-  }
-};
-var voidProcessor = (_schema, ctx, _json, _params) => {
-  if (ctx.unrepresentable === "throw") {
-    throw new Error("Void cannot be represented in JSON Schema");
-  }
-};
-var neverProcessor = (_schema, _ctx, json2, _params) => {
-  json2.not = {};
-};
-var anyProcessor = (_schema, _ctx, _json, _params) => {
-};
-var unknownProcessor = (_schema, _ctx, _json, _params) => {
-};
-var dateProcessor = (_schema, ctx, _json, _params) => {
-  if (ctx.unrepresentable === "throw") {
-    throw new Error("Date cannot be represented in JSON Schema");
-  }
-};
-var enumProcessor = (schema, _ctx, json2, _params) => {
-  const def = schema._zod.def;
-  const values = getEnumValues(def.entries);
-  if (values.every((v) => typeof v === "number"))
-    json2.type = "number";
-  if (values.every((v) => typeof v === "string"))
-    json2.type = "string";
-  json2.enum = values;
-};
-var literalProcessor = (schema, ctx, json2, _params) => {
-  const def = schema._zod.def;
-  const vals = [];
-  for (const val of def.values) {
-    if (val === void 0) {
-      if (ctx.unrepresentable === "throw") {
-        throw new Error("Literal `undefined` cannot be represented in JSON Schema");
-      } else {
-      }
-    } else if (typeof val === "bigint") {
-      if (ctx.unrepresentable === "throw") {
-        throw new Error("BigInt literals cannot be represented in JSON Schema");
-      } else {
-        vals.push(Number(val));
-      }
-    } else {
-      vals.push(val);
-    }
-  }
-  if (vals.length === 0) {
-  } else if (vals.length === 1) {
-    const val = vals[0];
-    json2.type = val === null ? "null" : typeof val;
-    if (ctx.target === "draft-04" || ctx.target === "openapi-3.0") {
-      json2.enum = [val];
-    } else {
-      json2.const = val;
-    }
-  } else {
-    if (vals.every((v) => typeof v === "number"))
-      json2.type = "number";
-    if (vals.every((v) => typeof v === "string"))
-      json2.type = "string";
-    if (vals.every((v) => typeof v === "boolean"))
-      json2.type = "boolean";
-    if (vals.every((v) => v === null))
-      json2.type = "null";
-    json2.enum = vals;
-  }
-};
-var nanProcessor = (_schema, ctx, _json, _params) => {
-  if (ctx.unrepresentable === "throw") {
-    throw new Error("NaN cannot be represented in JSON Schema");
-  }
-};
-var templateLiteralProcessor = (schema, _ctx, json2, _params) => {
-  const _json = json2;
-  const pattern = schema._zod.pattern;
-  if (!pattern)
-    throw new Error("Pattern not found in template literal");
-  _json.type = "string";
-  _json.pattern = pattern.source;
-};
-var fileProcessor = (schema, _ctx, json2, _params) => {
-  const _json = json2;
-  const file2 = {
-    type: "string",
-    format: "binary",
-    contentEncoding: "binary"
-  };
-  const { minimum, maximum, mime } = schema._zod.bag;
-  if (minimum !== void 0)
-    file2.minLength = minimum;
-  if (maximum !== void 0)
-    file2.maxLength = maximum;
-  if (mime) {
-    if (mime.length === 1) {
-      file2.contentMediaType = mime[0];
-      Object.assign(_json, file2);
-    } else {
-      _json.anyOf = mime.map((m) => {
-        const mFile = { ...file2, contentMediaType: m };
-        return mFile;
-      });
-    }
-  } else {
-    Object.assign(_json, file2);
-  }
-};
-var successProcessor = (_schema, _ctx, json2, _params) => {
-  json2.type = "boolean";
-};
-var customProcessor = (_schema, ctx, _json, _params) => {
-  if (ctx.unrepresentable === "throw") {
-    throw new Error("Custom types cannot be represented in JSON Schema");
-  }
-};
-var functionProcessor = (_schema, ctx, _json, _params) => {
-  if (ctx.unrepresentable === "throw") {
-    throw new Error("Function types cannot be represented in JSON Schema");
-  }
-};
-var transformProcessor = (_schema, ctx, _json, _params) => {
-  if (ctx.unrepresentable === "throw") {
-    throw new Error("Transforms cannot be represented in JSON Schema");
-  }
-};
-var mapProcessor = (_schema, ctx, _json, _params) => {
-  if (ctx.unrepresentable === "throw") {
-    throw new Error("Map cannot be represented in JSON Schema");
-  }
-};
-var setProcessor = (_schema, ctx, _json, _params) => {
-  if (ctx.unrepresentable === "throw") {
-    throw new Error("Set cannot be represented in JSON Schema");
-  }
-};
-var arrayProcessor = (schema, ctx, _json, params) => {
-  const json2 = _json;
-  const def = schema._zod.def;
-  const { minimum, maximum } = schema._zod.bag;
-  if (typeof minimum === "number")
-    json2.minItems = minimum;
-  if (typeof maximum === "number")
-    json2.maxItems = maximum;
-  json2.type = "array";
-  json2.items = process2(def.element, ctx, { ...params, path: [...params.path, "items"] });
-};
-var objectProcessor = (schema, ctx, _json, params) => {
-  const json2 = _json;
-  const def = schema._zod.def;
-  json2.type = "object";
-  json2.properties = {};
-  const shape = def.shape;
-  for (const key in shape) {
-    json2.properties[key] = process2(shape[key], ctx, {
-      ...params,
-      path: [...params.path, "properties", key]
-    });
-  }
-  const allKeys = new Set(Object.keys(shape));
-  const requiredKeys = new Set([...allKeys].filter((key) => {
-    const v = def.shape[key]._zod;
-    if (ctx.io === "input") {
-      return v.optin === void 0;
-    } else {
-      return v.optout === void 0;
-    }
-  }));
-  if (requiredKeys.size > 0) {
-    json2.required = Array.from(requiredKeys);
-  }
-  if (def.catchall?._zod.def.type === "never") {
-    json2.additionalProperties = false;
-  } else if (!def.catchall) {
-    if (ctx.io === "output")
-      json2.additionalProperties = false;
-  } else if (def.catchall) {
-    json2.additionalProperties = process2(def.catchall, ctx, {
-      ...params,
-      path: [...params.path, "additionalProperties"]
-    });
-  }
-};
-var unionProcessor = (schema, ctx, json2, params) => {
-  const def = schema._zod.def;
-  const isExclusive = def.inclusive === false;
-  const options = def.options.map((x, i) => process2(x, ctx, {
-    ...params,
-    path: [...params.path, isExclusive ? "oneOf" : "anyOf", i]
-  }));
-  if (isExclusive) {
-    json2.oneOf = options;
-  } else {
-    json2.anyOf = options;
-  }
-};
-var intersectionProcessor = (schema, ctx, json2, params) => {
-  const def = schema._zod.def;
-  const a = process2(def.left, ctx, {
-    ...params,
-    path: [...params.path, "allOf", 0]
-  });
-  const b = process2(def.right, ctx, {
-    ...params,
-    path: [...params.path, "allOf", 1]
-  });
-  const isSimpleIntersection = (val) => "allOf" in val && Object.keys(val).length === 1;
-  const allOf = [
-    ...isSimpleIntersection(a) ? a.allOf : [a],
-    ...isSimpleIntersection(b) ? b.allOf : [b]
-  ];
-  json2.allOf = allOf;
-};
-var tupleProcessor = (schema, ctx, _json, params) => {
-  const json2 = _json;
-  const def = schema._zod.def;
-  json2.type = "array";
-  const prefixPath = ctx.target === "draft-2020-12" ? "prefixItems" : "items";
-  const restPath = ctx.target === "draft-2020-12" ? "items" : ctx.target === "openapi-3.0" ? "items" : "additionalItems";
-  const prefixItems = def.items.map((x, i) => process2(x, ctx, {
-    ...params,
-    path: [...params.path, prefixPath, i]
-  }));
-  const rest = def.rest ? process2(def.rest, ctx, {
-    ...params,
-    path: [...params.path, restPath, ...ctx.target === "openapi-3.0" ? [def.items.length] : []]
-  }) : null;
-  if (ctx.target === "draft-2020-12") {
-    json2.prefixItems = prefixItems;
-    if (rest) {
-      json2.items = rest;
-    }
-  } else if (ctx.target === "openapi-3.0") {
-    json2.items = {
-      anyOf: prefixItems
-    };
-    if (rest) {
-      json2.items.anyOf.push(rest);
-    }
-    json2.minItems = prefixItems.length;
-    if (!rest) {
-      json2.maxItems = prefixItems.length;
-    }
-  } else {
-    json2.items = prefixItems;
-    if (rest) {
-      json2.additionalItems = rest;
-    }
-  }
-  const { minimum, maximum } = schema._zod.bag;
-  if (typeof minimum === "number")
-    json2.minItems = minimum;
-  if (typeof maximum === "number")
-    json2.maxItems = maximum;
-};
-var recordProcessor = (schema, ctx, _json, params) => {
-  const json2 = _json;
-  const def = schema._zod.def;
-  json2.type = "object";
-  if (ctx.target === "draft-07" || ctx.target === "draft-2020-12") {
-    json2.propertyNames = process2(def.keyType, ctx, {
-      ...params,
-      path: [...params.path, "propertyNames"]
-    });
-  }
-  json2.additionalProperties = process2(def.valueType, ctx, {
-    ...params,
-    path: [...params.path, "additionalProperties"]
-  });
-};
-var nullableProcessor = (schema, ctx, json2, params) => {
-  const def = schema._zod.def;
-  const inner = process2(def.innerType, ctx, params);
-  const seen = ctx.seen.get(schema);
-  if (ctx.target === "openapi-3.0") {
-    seen.ref = def.innerType;
-    json2.nullable = true;
-  } else {
-    json2.anyOf = [inner, { type: "null" }];
-  }
-};
-var nonoptionalProcessor = (schema, ctx, _json, params) => {
-  const def = schema._zod.def;
-  process2(def.innerType, ctx, params);
-  const seen = ctx.seen.get(schema);
-  seen.ref = def.innerType;
-};
-var defaultProcessor = (schema, ctx, json2, params) => {
-  const def = schema._zod.def;
-  process2(def.innerType, ctx, params);
-  const seen = ctx.seen.get(schema);
-  seen.ref = def.innerType;
-  json2.default = JSON.parse(JSON.stringify(def.defaultValue));
-};
-var prefaultProcessor = (schema, ctx, json2, params) => {
-  const def = schema._zod.def;
-  process2(def.innerType, ctx, params);
-  const seen = ctx.seen.get(schema);
-  seen.ref = def.innerType;
-  if (ctx.io === "input")
-    json2._prefault = JSON.parse(JSON.stringify(def.defaultValue));
-};
-var catchProcessor = (schema, ctx, json2, params) => {
-  const def = schema._zod.def;
-  process2(def.innerType, ctx, params);
-  const seen = ctx.seen.get(schema);
-  seen.ref = def.innerType;
-  let catchValue;
-  try {
-    catchValue = def.catchValue(void 0);
-  } catch {
-    throw new Error("Dynamic catch values are not supported in JSON Schema");
-  }
-  json2.default = catchValue;
-};
-var pipeProcessor = (schema, ctx, _json, params) => {
-  const def = schema._zod.def;
-  const innerType = ctx.io === "input" ? def.in._zod.def.type === "transform" ? def.out : def.in : def.out;
-  process2(innerType, ctx, params);
-  const seen = ctx.seen.get(schema);
-  seen.ref = innerType;
-};
-var readonlyProcessor = (schema, ctx, json2, params) => {
-  const def = schema._zod.def;
-  process2(def.innerType, ctx, params);
-  const seen = ctx.seen.get(schema);
-  seen.ref = def.innerType;
-  json2.readOnly = true;
-};
-var promiseProcessor = (schema, ctx, _json, params) => {
-  const def = schema._zod.def;
-  process2(def.innerType, ctx, params);
-  const seen = ctx.seen.get(schema);
-  seen.ref = def.innerType;
-};
-var optionalProcessor = (schema, ctx, _json, params) => {
-  const def = schema._zod.def;
-  process2(def.innerType, ctx, params);
-  const seen = ctx.seen.get(schema);
-  seen.ref = def.innerType;
-};
-var lazyProcessor = (schema, ctx, _json, params) => {
-  const innerType = schema._zod.innerType;
-  process2(innerType, ctx, params);
-  const seen = ctx.seen.get(schema);
-  seen.ref = innerType;
-};
-var allProcessors = {
-  string: stringProcessor,
-  number: numberProcessor,
-  boolean: booleanProcessor,
-  bigint: bigintProcessor,
-  symbol: symbolProcessor,
-  null: nullProcessor,
-  undefined: undefinedProcessor,
-  void: voidProcessor,
-  never: neverProcessor,
-  any: anyProcessor,
-  unknown: unknownProcessor,
-  date: dateProcessor,
-  enum: enumProcessor,
-  literal: literalProcessor,
-  nan: nanProcessor,
-  template_literal: templateLiteralProcessor,
-  file: fileProcessor,
-  success: successProcessor,
-  custom: customProcessor,
-  function: functionProcessor,
-  transform: transformProcessor,
-  map: mapProcessor,
-  set: setProcessor,
-  array: arrayProcessor,
-  object: objectProcessor,
-  union: unionProcessor,
-  intersection: intersectionProcessor,
-  tuple: tupleProcessor,
-  record: recordProcessor,
-  nullable: nullableProcessor,
-  nonoptional: nonoptionalProcessor,
-  default: defaultProcessor,
-  prefault: prefaultProcessor,
-  catch: catchProcessor,
-  pipe: pipeProcessor,
-  readonly: readonlyProcessor,
-  promise: promiseProcessor,
-  optional: optionalProcessor,
-  lazy: lazyProcessor
-};
-function toJSONSchema(input, params) {
-  if ("_idmap" in input) {
-    const registry2 = input;
-    const ctx2 = initializeContext({ ...params, processors: allProcessors });
-    const defs = {};
-    for (const entry of registry2._idmap.entries()) {
-      const [_, schema] = entry;
-      process2(schema, ctx2);
-    }
-    const schemas = {};
-    const external = {
-      registry: registry2,
-      uri: params?.uri,
-      defs
-    };
-    ctx2.external = external;
-    for (const entry of registry2._idmap.entries()) {
-      const [key, schema] = entry;
-      extractDefs(ctx2, schema);
-      schemas[key] = finalize(ctx2, schema);
-    }
-    if (Object.keys(defs).length > 0) {
-      const defsSegment = ctx2.target === "draft-2020-12" ? "$defs" : "definitions";
-      schemas.__shared = {
-        [defsSegment]: defs
-      };
-    }
-    return { schemas };
-  }
-  const ctx = initializeContext({ ...params, processors: allProcessors });
-  process2(input, ctx);
-  extractDefs(ctx, input);
-  return finalize(ctx, input);
-}
-
-// node_modules/zod/v4/core/json-schema-generator.js
-var JSONSchemaGenerator = class {
-  /** @deprecated Access via ctx instead */
-  get metadataRegistry() {
-    return this.ctx.metadataRegistry;
-  }
-  /** @deprecated Access via ctx instead */
-  get target() {
-    return this.ctx.target;
-  }
-  /** @deprecated Access via ctx instead */
-  get unrepresentable() {
-    return this.ctx.unrepresentable;
-  }
-  /** @deprecated Access via ctx instead */
-  get override() {
-    return this.ctx.override;
-  }
-  /** @deprecated Access via ctx instead */
-  get io() {
-    return this.ctx.io;
-  }
-  /** @deprecated Access via ctx instead */
-  get counter() {
-    return this.ctx.counter;
-  }
-  set counter(value) {
-    this.ctx.counter = value;
-  }
-  /** @deprecated Access via ctx instead */
-  get seen() {
-    return this.ctx.seen;
-  }
-  constructor(params) {
-    let normalizedTarget = params?.target ?? "draft-2020-12";
-    if (normalizedTarget === "draft-4")
-      normalizedTarget = "draft-04";
-    if (normalizedTarget === "draft-7")
-      normalizedTarget = "draft-07";
-    this.ctx = initializeContext({
-      processors: allProcessors,
-      target: normalizedTarget,
-      ...params?.metadata && { metadata: params.metadata },
-      ...params?.unrepresentable && { unrepresentable: params.unrepresentable },
-      ...params?.override && { override: params.override },
-      ...params?.io && { io: params.io }
-    });
-  }
-  /**
-   * Process a schema to prepare it for JSON Schema generation.
-   * This must be called before emit().
-   */
-  process(schema, _params = { path: [], schemaPath: [] }) {
-    return process2(schema, this.ctx, _params);
-  }
-  /**
-   * Emit the final JSON Schema after processing.
-   * Must call process() first.
-   */
-  emit(schema, _params) {
-    if (_params) {
-      if (_params.cycles)
-        this.ctx.cycles = _params.cycles;
-      if (_params.reused)
-        this.ctx.reused = _params.reused;
-      if (_params.external)
-        this.ctx.external = _params.external;
-    }
-    extractDefs(this.ctx, schema);
-    const result = finalize(this.ctx, schema);
-    const { "~standard": _, ...plainResult } = result;
-    return plainResult;
-  }
-};
 
 // node_modules/zod/v4/core/json-schema.js
 var json_schema_exports = {};
-
-// node_modules/zod/v4/classic/schemas.js
-var schemas_exports2 = {};
-__export(schemas_exports2, {
-  ZodAny: () => ZodAny,
-  ZodArray: () => ZodArray,
-  ZodBase64: () => ZodBase64,
-  ZodBase64URL: () => ZodBase64URL,
-  ZodBigInt: () => ZodBigInt,
-  ZodBigIntFormat: () => ZodBigIntFormat,
-  ZodBoolean: () => ZodBoolean,
-  ZodCIDRv4: () => ZodCIDRv4,
-  ZodCIDRv6: () => ZodCIDRv6,
-  ZodCUID: () => ZodCUID,
-  ZodCUID2: () => ZodCUID2,
-  ZodCatch: () => ZodCatch,
-  ZodCodec: () => ZodCodec,
-  ZodCustom: () => ZodCustom,
-  ZodCustomStringFormat: () => ZodCustomStringFormat,
-  ZodDate: () => ZodDate,
-  ZodDefault: () => ZodDefault,
-  ZodDiscriminatedUnion: () => ZodDiscriminatedUnion,
-  ZodE164: () => ZodE164,
-  ZodEmail: () => ZodEmail,
-  ZodEmoji: () => ZodEmoji,
-  ZodEnum: () => ZodEnum,
-  ZodFile: () => ZodFile,
-  ZodFunction: () => ZodFunction,
-  ZodGUID: () => ZodGUID,
-  ZodIPv4: () => ZodIPv4,
-  ZodIPv6: () => ZodIPv6,
-  ZodIntersection: () => ZodIntersection,
-  ZodJWT: () => ZodJWT,
-  ZodKSUID: () => ZodKSUID,
-  ZodLazy: () => ZodLazy,
-  ZodLiteral: () => ZodLiteral,
-  ZodMAC: () => ZodMAC,
-  ZodMap: () => ZodMap,
-  ZodNaN: () => ZodNaN,
-  ZodNanoID: () => ZodNanoID,
-  ZodNever: () => ZodNever,
-  ZodNonOptional: () => ZodNonOptional,
-  ZodNull: () => ZodNull,
-  ZodNullable: () => ZodNullable,
-  ZodNumber: () => ZodNumber,
-  ZodNumberFormat: () => ZodNumberFormat,
-  ZodObject: () => ZodObject,
-  ZodOptional: () => ZodOptional,
-  ZodPipe: () => ZodPipe,
-  ZodPrefault: () => ZodPrefault,
-  ZodPromise: () => ZodPromise,
-  ZodReadonly: () => ZodReadonly,
-  ZodRecord: () => ZodRecord,
-  ZodSet: () => ZodSet,
-  ZodString: () => ZodString,
-  ZodStringFormat: () => ZodStringFormat,
-  ZodSuccess: () => ZodSuccess,
-  ZodSymbol: () => ZodSymbol,
-  ZodTemplateLiteral: () => ZodTemplateLiteral,
-  ZodTransform: () => ZodTransform,
-  ZodTuple: () => ZodTuple,
-  ZodType: () => ZodType,
-  ZodULID: () => ZodULID,
-  ZodURL: () => ZodURL,
-  ZodUUID: () => ZodUUID,
-  ZodUndefined: () => ZodUndefined,
-  ZodUnion: () => ZodUnion,
-  ZodUnknown: () => ZodUnknown,
-  ZodVoid: () => ZodVoid,
-  ZodXID: () => ZodXID,
-  ZodXor: () => ZodXor,
-  _ZodString: () => _ZodString,
-  _default: () => _default2,
-  _function: () => _function,
-  any: () => any,
-  array: () => array,
-  base64: () => base642,
-  base64url: () => base64url2,
-  bigint: () => bigint2,
-  boolean: () => boolean2,
-  catch: () => _catch2,
-  check: () => check,
-  cidrv4: () => cidrv42,
-  cidrv6: () => cidrv62,
-  codec: () => codec,
-  cuid: () => cuid3,
-  cuid2: () => cuid22,
-  custom: () => custom,
-  date: () => date3,
-  describe: () => describe2,
-  discriminatedUnion: () => discriminatedUnion,
-  e164: () => e1642,
-  email: () => email2,
-  emoji: () => emoji2,
-  enum: () => _enum2,
-  file: () => file,
-  float32: () => float32,
-  float64: () => float64,
-  function: () => _function,
-  guid: () => guid2,
-  hash: () => hash,
-  hex: () => hex2,
-  hostname: () => hostname2,
-  httpUrl: () => httpUrl,
-  instanceof: () => _instanceof,
-  int: () => int,
-  int32: () => int32,
-  int64: () => int64,
-  intersection: () => intersection,
-  ipv4: () => ipv42,
-  ipv6: () => ipv62,
-  json: () => json,
-  jwt: () => jwt,
-  keyof: () => keyof,
-  ksuid: () => ksuid2,
-  lazy: () => lazy,
-  literal: () => literal,
-  looseObject: () => looseObject,
-  looseRecord: () => looseRecord,
-  mac: () => mac2,
-  map: () => map,
-  meta: () => meta2,
-  nan: () => nan,
-  nanoid: () => nanoid2,
-  nativeEnum: () => nativeEnum,
-  never: () => never,
-  nonoptional: () => nonoptional,
-  null: () => _null3,
-  nullable: () => nullable,
-  nullish: () => nullish2,
-  number: () => number2,
-  object: () => object,
-  optional: () => optional,
-  partialRecord: () => partialRecord,
-  pipe: () => pipe,
-  prefault: () => prefault,
-  preprocess: () => preprocess,
-  promise: () => promise,
-  readonly: () => readonly,
-  record: () => record,
-  refine: () => refine,
-  set: () => set,
-  strictObject: () => strictObject,
-  string: () => string2,
-  stringFormat: () => stringFormat,
-  stringbool: () => stringbool,
-  success: () => success,
-  superRefine: () => superRefine,
-  symbol: () => symbol,
-  templateLiteral: () => templateLiteral,
-  transform: () => transform,
-  tuple: () => tuple,
-  uint32: () => uint32,
-  uint64: () => uint64,
-  ulid: () => ulid2,
-  undefined: () => _undefined3,
-  union: () => union,
-  unknown: () => unknown,
-  url: () => url,
-  uuid: () => uuid2,
-  uuidv4: () => uuidv4,
-  uuidv6: () => uuidv6,
-  uuidv7: () => uuidv7,
-  void: () => _void2,
-  xid: () => xid2,
-  xor: () => xor
-});
-
-// node_modules/zod/v4/classic/checks.js
-var checks_exports2 = {};
-__export(checks_exports2, {
-  endsWith: () => _endsWith,
-  gt: () => _gt,
-  gte: () => _gte,
-  includes: () => _includes,
-  length: () => _length,
-  lowercase: () => _lowercase,
-  lt: () => _lt,
-  lte: () => _lte,
-  maxLength: () => _maxLength,
-  maxSize: () => _maxSize,
-  mime: () => _mime,
-  minLength: () => _minLength,
-  minSize: () => _minSize,
-  multipleOf: () => _multipleOf,
-  negative: () => _negative,
-  nonnegative: () => _nonnegative,
-  nonpositive: () => _nonpositive,
-  normalize: () => _normalize,
-  overwrite: () => _overwrite,
-  positive: () => _positive,
-  property: () => _property,
-  regex: () => _regex,
-  size: () => _size,
-  slugify: () => _slugify,
-  startsWith: () => _startsWith,
-  toLowerCase: () => _toLowerCase,
-  toUpperCase: () => _toUpperCase,
-  trim: () => _trim,
-  uppercase: () => _uppercase
-});
 
 // node_modules/zod/v4/classic/iso.js
 var iso_exports = {};
@@ -34453,13 +34287,6 @@ var safeDecodeAsync2 = /* @__PURE__ */ _safeDecodeAsync(ZodRealError);
 // node_modules/zod/v4/classic/schemas.js
 var ZodType = /* @__PURE__ */ $constructor("ZodType", (inst, def) => {
   $ZodType.init(inst, def);
-  Object.assign(inst["~standard"], {
-    jsonSchema: {
-      input: createStandardJSONSchemaMethod(inst, "input"),
-      output: createStandardJSONSchemaMethod(inst, "output")
-    }
-  });
-  inst.toJSONSchema = createToJSONSchemaMethod(inst, {});
   inst.def = def;
   inst.type = def.type;
   Object.defineProperty(inst, "_def", { value: def });
@@ -34532,7 +34359,6 @@ var ZodType = /* @__PURE__ */ $constructor("ZodType", (inst, def) => {
 var _ZodString = /* @__PURE__ */ $constructor("_ZodString", (inst, def) => {
   $ZodString.init(inst, def);
   ZodType.init(inst, def);
-  inst._zod.processJSONSchema = (ctx, json2, params) => stringProcessor(inst, ctx, json2, params);
   const bag = inst._zod.bag;
   inst.format = bag.format ?? null;
   inst.minLength = bag.minimum ?? null;
@@ -34771,7 +34597,6 @@ function hash(alg, params) {
 var ZodNumber = /* @__PURE__ */ $constructor("ZodNumber", (inst, def) => {
   $ZodNumber.init(inst, def);
   ZodType.init(inst, def);
-  inst._zod.processJSONSchema = (ctx, json2, params) => numberProcessor(inst, ctx, json2, params);
   inst.gt = (value, params) => inst.check(_gt(value, params));
   inst.gte = (value, params) => inst.check(_gte(value, params));
   inst.min = (value, params) => inst.check(_gte(value, params));
@@ -34819,7 +34644,6 @@ function uint32(params) {
 var ZodBoolean = /* @__PURE__ */ $constructor("ZodBoolean", (inst, def) => {
   $ZodBoolean.init(inst, def);
   ZodType.init(inst, def);
-  inst._zod.processJSONSchema = (ctx, json2, params) => booleanProcessor(inst, ctx, json2, params);
 });
 function boolean2(params) {
   return _boolean(ZodBoolean, params);
@@ -34827,7 +34651,6 @@ function boolean2(params) {
 var ZodBigInt = /* @__PURE__ */ $constructor("ZodBigInt", (inst, def) => {
   $ZodBigInt.init(inst, def);
   ZodType.init(inst, def);
-  inst._zod.processJSONSchema = (ctx, json2, params) => bigintProcessor(inst, ctx, json2, params);
   inst.gte = (value, params) => inst.check(_gte(value, params));
   inst.min = (value, params) => inst.check(_gte(value, params));
   inst.gt = (value, params) => inst.check(_gt(value, params));
@@ -34862,7 +34685,6 @@ function uint64(params) {
 var ZodSymbol = /* @__PURE__ */ $constructor("ZodSymbol", (inst, def) => {
   $ZodSymbol.init(inst, def);
   ZodType.init(inst, def);
-  inst._zod.processJSONSchema = (ctx, json2, params) => symbolProcessor(inst, ctx, json2, params);
 });
 function symbol(params) {
   return _symbol(ZodSymbol, params);
@@ -34870,7 +34692,6 @@ function symbol(params) {
 var ZodUndefined = /* @__PURE__ */ $constructor("ZodUndefined", (inst, def) => {
   $ZodUndefined.init(inst, def);
   ZodType.init(inst, def);
-  inst._zod.processJSONSchema = (ctx, json2, params) => undefinedProcessor(inst, ctx, json2, params);
 });
 function _undefined3(params) {
   return _undefined2(ZodUndefined, params);
@@ -34878,7 +34699,6 @@ function _undefined3(params) {
 var ZodNull = /* @__PURE__ */ $constructor("ZodNull", (inst, def) => {
   $ZodNull.init(inst, def);
   ZodType.init(inst, def);
-  inst._zod.processJSONSchema = (ctx, json2, params) => nullProcessor(inst, ctx, json2, params);
 });
 function _null3(params) {
   return _null2(ZodNull, params);
@@ -34886,7 +34706,6 @@ function _null3(params) {
 var ZodAny = /* @__PURE__ */ $constructor("ZodAny", (inst, def) => {
   $ZodAny.init(inst, def);
   ZodType.init(inst, def);
-  inst._zod.processJSONSchema = (ctx, json2, params) => anyProcessor(inst, ctx, json2, params);
 });
 function any() {
   return _any(ZodAny);
@@ -34894,7 +34713,6 @@ function any() {
 var ZodUnknown = /* @__PURE__ */ $constructor("ZodUnknown", (inst, def) => {
   $ZodUnknown.init(inst, def);
   ZodType.init(inst, def);
-  inst._zod.processJSONSchema = (ctx, json2, params) => unknownProcessor(inst, ctx, json2, params);
 });
 function unknown() {
   return _unknown(ZodUnknown);
@@ -34902,7 +34720,6 @@ function unknown() {
 var ZodNever = /* @__PURE__ */ $constructor("ZodNever", (inst, def) => {
   $ZodNever.init(inst, def);
   ZodType.init(inst, def);
-  inst._zod.processJSONSchema = (ctx, json2, params) => neverProcessor(inst, ctx, json2, params);
 });
 function never(params) {
   return _never(ZodNever, params);
@@ -34910,7 +34727,6 @@ function never(params) {
 var ZodVoid = /* @__PURE__ */ $constructor("ZodVoid", (inst, def) => {
   $ZodVoid.init(inst, def);
   ZodType.init(inst, def);
-  inst._zod.processJSONSchema = (ctx, json2, params) => voidProcessor(inst, ctx, json2, params);
 });
 function _void2(params) {
   return _void(ZodVoid, params);
@@ -34918,7 +34734,6 @@ function _void2(params) {
 var ZodDate = /* @__PURE__ */ $constructor("ZodDate", (inst, def) => {
   $ZodDate.init(inst, def);
   ZodType.init(inst, def);
-  inst._zod.processJSONSchema = (ctx, json2, params) => dateProcessor(inst, ctx, json2, params);
   inst.min = (value, params) => inst.check(_gte(value, params));
   inst.max = (value, params) => inst.check(_lte(value, params));
   const c = inst._zod.bag;
@@ -34931,7 +34746,6 @@ function date3(params) {
 var ZodArray = /* @__PURE__ */ $constructor("ZodArray", (inst, def) => {
   $ZodArray.init(inst, def);
   ZodType.init(inst, def);
-  inst._zod.processJSONSchema = (ctx, json2, params) => arrayProcessor(inst, ctx, json2, params);
   inst.element = def.element;
   inst.min = (minLength, params) => inst.check(_minLength(minLength, params));
   inst.nonempty = (params) => inst.check(_minLength(1, params));
@@ -34949,7 +34763,6 @@ function keyof(schema) {
 var ZodObject = /* @__PURE__ */ $constructor("ZodObject", (inst, def) => {
   $ZodObjectJIT.init(inst, def);
   ZodType.init(inst, def);
-  inst._zod.processJSONSchema = (ctx, json2, params) => objectProcessor(inst, ctx, json2, params);
   util_exports.defineLazy(inst, "shape", () => {
     return def.shape;
   });
@@ -34998,27 +34811,12 @@ function looseObject(shape, params) {
 var ZodUnion = /* @__PURE__ */ $constructor("ZodUnion", (inst, def) => {
   $ZodUnion.init(inst, def);
   ZodType.init(inst, def);
-  inst._zod.processJSONSchema = (ctx, json2, params) => unionProcessor(inst, ctx, json2, params);
   inst.options = def.options;
 });
 function union(options, params) {
   return new ZodUnion({
     type: "union",
     options,
-    ...util_exports.normalizeParams(params)
-  });
-}
-var ZodXor = /* @__PURE__ */ $constructor("ZodXor", (inst, def) => {
-  ZodUnion.init(inst, def);
-  $ZodXor.init(inst, def);
-  inst._zod.processJSONSchema = (ctx, json2, params) => unionProcessor(inst, ctx, json2, params);
-  inst.options = def.options;
-});
-function xor(options, params) {
-  return new ZodXor({
-    type: "union",
-    options,
-    inclusive: false,
     ...util_exports.normalizeParams(params)
   });
 }
@@ -35037,7 +34835,6 @@ function discriminatedUnion(discriminator, options, params) {
 var ZodIntersection = /* @__PURE__ */ $constructor("ZodIntersection", (inst, def) => {
   $ZodIntersection.init(inst, def);
   ZodType.init(inst, def);
-  inst._zod.processJSONSchema = (ctx, json2, params) => intersectionProcessor(inst, ctx, json2, params);
 });
 function intersection(left, right) {
   return new ZodIntersection({
@@ -35049,7 +34846,6 @@ function intersection(left, right) {
 var ZodTuple = /* @__PURE__ */ $constructor("ZodTuple", (inst, def) => {
   $ZodTuple.init(inst, def);
   ZodType.init(inst, def);
-  inst._zod.processJSONSchema = (ctx, json2, params) => tupleProcessor(inst, ctx, json2, params);
   inst.rest = (rest) => inst.clone({
     ...inst._zod.def,
     rest
@@ -35069,7 +34865,6 @@ function tuple(items, _paramsOrRest, _params) {
 var ZodRecord = /* @__PURE__ */ $constructor("ZodRecord", (inst, def) => {
   $ZodRecord.init(inst, def);
   ZodType.init(inst, def);
-  inst._zod.processJSONSchema = (ctx, json2, params) => recordProcessor(inst, ctx, json2, params);
   inst.keyType = def.keyType;
   inst.valueType = def.valueType;
 });
@@ -35091,19 +34886,9 @@ function partialRecord(keyType, valueType, params) {
     ...util_exports.normalizeParams(params)
   });
 }
-function looseRecord(keyType, valueType, params) {
-  return new ZodRecord({
-    type: "record",
-    keyType,
-    valueType,
-    mode: "loose",
-    ...util_exports.normalizeParams(params)
-  });
-}
 var ZodMap = /* @__PURE__ */ $constructor("ZodMap", (inst, def) => {
   $ZodMap.init(inst, def);
   ZodType.init(inst, def);
-  inst._zod.processJSONSchema = (ctx, json2, params) => mapProcessor(inst, ctx, json2, params);
   inst.keyType = def.keyType;
   inst.valueType = def.valueType;
 });
@@ -35118,7 +34903,6 @@ function map(keyType, valueType, params) {
 var ZodSet = /* @__PURE__ */ $constructor("ZodSet", (inst, def) => {
   $ZodSet.init(inst, def);
   ZodType.init(inst, def);
-  inst._zod.processJSONSchema = (ctx, json2, params) => setProcessor(inst, ctx, json2, params);
   inst.min = (...args) => inst.check(_minSize(...args));
   inst.nonempty = (params) => inst.check(_minSize(1, params));
   inst.max = (...args) => inst.check(_maxSize(...args));
@@ -35134,7 +34918,6 @@ function set(valueType, params) {
 var ZodEnum = /* @__PURE__ */ $constructor("ZodEnum", (inst, def) => {
   $ZodEnum.init(inst, def);
   ZodType.init(inst, def);
-  inst._zod.processJSONSchema = (ctx, json2, params) => enumProcessor(inst, ctx, json2, params);
   inst.enum = def.entries;
   inst.options = Object.values(def.entries);
   const keys = new Set(Object.keys(def.entries));
@@ -35187,7 +34970,6 @@ function nativeEnum(entries, params) {
 var ZodLiteral = /* @__PURE__ */ $constructor("ZodLiteral", (inst, def) => {
   $ZodLiteral.init(inst, def);
   ZodType.init(inst, def);
-  inst._zod.processJSONSchema = (ctx, json2, params) => literalProcessor(inst, ctx, json2, params);
   inst.values = new Set(def.values);
   Object.defineProperty(inst, "value", {
     get() {
@@ -35208,7 +34990,6 @@ function literal(value, params) {
 var ZodFile = /* @__PURE__ */ $constructor("ZodFile", (inst, def) => {
   $ZodFile.init(inst, def);
   ZodType.init(inst, def);
-  inst._zod.processJSONSchema = (ctx, json2, params) => fileProcessor(inst, ctx, json2, params);
   inst.min = (size, params) => inst.check(_minSize(size, params));
   inst.max = (size, params) => inst.check(_maxSize(size, params));
   inst.mime = (types, params) => inst.check(_mime(Array.isArray(types) ? types : [types], params));
@@ -35219,7 +35000,6 @@ function file(params) {
 var ZodTransform = /* @__PURE__ */ $constructor("ZodTransform", (inst, def) => {
   $ZodTransform.init(inst, def);
   ZodType.init(inst, def);
-  inst._zod.processJSONSchema = (ctx, json2, params) => transformProcessor(inst, ctx, json2, params);
   inst._zod.parse = (payload, _ctx) => {
     if (_ctx.direction === "backward") {
       throw new $ZodEncodeError(inst.constructor.name);
@@ -35257,7 +35037,6 @@ function transform(fn) {
 var ZodOptional = /* @__PURE__ */ $constructor("ZodOptional", (inst, def) => {
   $ZodOptional.init(inst, def);
   ZodType.init(inst, def);
-  inst._zod.processJSONSchema = (ctx, json2, params) => optionalProcessor(inst, ctx, json2, params);
   inst.unwrap = () => inst._zod.def.innerType;
 });
 function optional(innerType) {
@@ -35269,7 +35048,6 @@ function optional(innerType) {
 var ZodNullable = /* @__PURE__ */ $constructor("ZodNullable", (inst, def) => {
   $ZodNullable.init(inst, def);
   ZodType.init(inst, def);
-  inst._zod.processJSONSchema = (ctx, json2, params) => nullableProcessor(inst, ctx, json2, params);
   inst.unwrap = () => inst._zod.def.innerType;
 });
 function nullable(innerType) {
@@ -35284,7 +35062,6 @@ function nullish2(innerType) {
 var ZodDefault = /* @__PURE__ */ $constructor("ZodDefault", (inst, def) => {
   $ZodDefault.init(inst, def);
   ZodType.init(inst, def);
-  inst._zod.processJSONSchema = (ctx, json2, params) => defaultProcessor(inst, ctx, json2, params);
   inst.unwrap = () => inst._zod.def.innerType;
   inst.removeDefault = inst.unwrap;
 });
@@ -35300,7 +35077,6 @@ function _default2(innerType, defaultValue) {
 var ZodPrefault = /* @__PURE__ */ $constructor("ZodPrefault", (inst, def) => {
   $ZodPrefault.init(inst, def);
   ZodType.init(inst, def);
-  inst._zod.processJSONSchema = (ctx, json2, params) => prefaultProcessor(inst, ctx, json2, params);
   inst.unwrap = () => inst._zod.def.innerType;
 });
 function prefault(innerType, defaultValue) {
@@ -35315,7 +35091,6 @@ function prefault(innerType, defaultValue) {
 var ZodNonOptional = /* @__PURE__ */ $constructor("ZodNonOptional", (inst, def) => {
   $ZodNonOptional.init(inst, def);
   ZodType.init(inst, def);
-  inst._zod.processJSONSchema = (ctx, json2, params) => nonoptionalProcessor(inst, ctx, json2, params);
   inst.unwrap = () => inst._zod.def.innerType;
 });
 function nonoptional(innerType, params) {
@@ -35328,7 +35103,6 @@ function nonoptional(innerType, params) {
 var ZodSuccess = /* @__PURE__ */ $constructor("ZodSuccess", (inst, def) => {
   $ZodSuccess.init(inst, def);
   ZodType.init(inst, def);
-  inst._zod.processJSONSchema = (ctx, json2, params) => successProcessor(inst, ctx, json2, params);
   inst.unwrap = () => inst._zod.def.innerType;
 });
 function success(innerType) {
@@ -35340,7 +35114,6 @@ function success(innerType) {
 var ZodCatch = /* @__PURE__ */ $constructor("ZodCatch", (inst, def) => {
   $ZodCatch.init(inst, def);
   ZodType.init(inst, def);
-  inst._zod.processJSONSchema = (ctx, json2, params) => catchProcessor(inst, ctx, json2, params);
   inst.unwrap = () => inst._zod.def.innerType;
   inst.removeCatch = inst.unwrap;
 });
@@ -35354,7 +35127,6 @@ function _catch2(innerType, catchValue) {
 var ZodNaN = /* @__PURE__ */ $constructor("ZodNaN", (inst, def) => {
   $ZodNaN.init(inst, def);
   ZodType.init(inst, def);
-  inst._zod.processJSONSchema = (ctx, json2, params) => nanProcessor(inst, ctx, json2, params);
 });
 function nan(params) {
   return _nan(ZodNaN, params);
@@ -35362,7 +35134,6 @@ function nan(params) {
 var ZodPipe = /* @__PURE__ */ $constructor("ZodPipe", (inst, def) => {
   $ZodPipe.init(inst, def);
   ZodType.init(inst, def);
-  inst._zod.processJSONSchema = (ctx, json2, params) => pipeProcessor(inst, ctx, json2, params);
   inst.in = def.in;
   inst.out = def.out;
 });
@@ -35390,7 +35161,6 @@ function codec(in_, out, params) {
 var ZodReadonly = /* @__PURE__ */ $constructor("ZodReadonly", (inst, def) => {
   $ZodReadonly.init(inst, def);
   ZodType.init(inst, def);
-  inst._zod.processJSONSchema = (ctx, json2, params) => readonlyProcessor(inst, ctx, json2, params);
   inst.unwrap = () => inst._zod.def.innerType;
 });
 function readonly(innerType) {
@@ -35402,7 +35172,6 @@ function readonly(innerType) {
 var ZodTemplateLiteral = /* @__PURE__ */ $constructor("ZodTemplateLiteral", (inst, def) => {
   $ZodTemplateLiteral.init(inst, def);
   ZodType.init(inst, def);
-  inst._zod.processJSONSchema = (ctx, json2, params) => templateLiteralProcessor(inst, ctx, json2, params);
 });
 function templateLiteral(parts, params) {
   return new ZodTemplateLiteral({
@@ -35414,7 +35183,6 @@ function templateLiteral(parts, params) {
 var ZodLazy = /* @__PURE__ */ $constructor("ZodLazy", (inst, def) => {
   $ZodLazy.init(inst, def);
   ZodType.init(inst, def);
-  inst._zod.processJSONSchema = (ctx, json2, params) => lazyProcessor(inst, ctx, json2, params);
   inst.unwrap = () => inst._zod.def.getter();
 });
 function lazy(getter) {
@@ -35426,7 +35194,6 @@ function lazy(getter) {
 var ZodPromise = /* @__PURE__ */ $constructor("ZodPromise", (inst, def) => {
   $ZodPromise.init(inst, def);
   ZodType.init(inst, def);
-  inst._zod.processJSONSchema = (ctx, json2, params) => promiseProcessor(inst, ctx, json2, params);
   inst.unwrap = () => inst._zod.def.innerType;
 });
 function promise(innerType) {
@@ -35438,7 +35205,6 @@ function promise(innerType) {
 var ZodFunction = /* @__PURE__ */ $constructor("ZodFunction", (inst, def) => {
   $ZodFunction.init(inst, def);
   ZodType.init(inst, def);
-  inst._zod.processJSONSchema = (ctx, json2, params) => functionProcessor(inst, ctx, json2, params);
 });
 function _function(params) {
   return new ZodFunction({
@@ -35450,7 +35216,6 @@ function _function(params) {
 var ZodCustom = /* @__PURE__ */ $constructor("ZodCustom", (inst, def) => {
   $ZodCustom.init(inst, def);
   ZodType.init(inst, def);
-  inst._zod.processJSONSchema = (ctx, json2, params) => customProcessor(inst, ctx, json2, params);
 });
 function check(fn) {
   const ch = new $ZodCheck({
@@ -35525,387 +35290,6 @@ var ZodFirstPartyTypeKind;
 /* @__PURE__ */ (function(ZodFirstPartyTypeKind2) {
 })(ZodFirstPartyTypeKind || (ZodFirstPartyTypeKind = {}));
 
-// node_modules/zod/v4/classic/from-json-schema.js
-var z = {
-  ...schemas_exports2,
-  ...checks_exports2,
-  iso: iso_exports
-};
-function detectVersion(schema, defaultTarget) {
-  const $schema = schema.$schema;
-  if ($schema === "https://json-schema.org/draft/2020-12/schema") {
-    return "draft-2020-12";
-  }
-  if ($schema === "http://json-schema.org/draft-07/schema#") {
-    return "draft-7";
-  }
-  if ($schema === "http://json-schema.org/draft-04/schema#") {
-    return "draft-4";
-  }
-  return defaultTarget ?? "draft-2020-12";
-}
-function resolveRef(ref, ctx) {
-  if (!ref.startsWith("#")) {
-    throw new Error("External $ref is not supported, only local refs (#/...) are allowed");
-  }
-  const path = ref.slice(1).split("/").filter(Boolean);
-  if (path.length === 0) {
-    return ctx.rootSchema;
-  }
-  const defsKey = ctx.version === "draft-2020-12" ? "$defs" : "definitions";
-  if (path[0] === defsKey) {
-    const key = path[1];
-    if (!key || !ctx.defs[key]) {
-      throw new Error(`Reference not found: ${ref}`);
-    }
-    return ctx.defs[key];
-  }
-  throw new Error(`Reference not found: ${ref}`);
-}
-function convertBaseSchema(schema, ctx) {
-  if (schema.not !== void 0) {
-    if (typeof schema.not === "object" && Object.keys(schema.not).length === 0) {
-      return z.never();
-    }
-    throw new Error("not is not supported in Zod (except { not: {} } for never)");
-  }
-  if (schema.unevaluatedItems !== void 0) {
-    throw new Error("unevaluatedItems is not supported");
-  }
-  if (schema.unevaluatedProperties !== void 0) {
-    throw new Error("unevaluatedProperties is not supported");
-  }
-  if (schema.if !== void 0 || schema.then !== void 0 || schema.else !== void 0) {
-    throw new Error("Conditional schemas (if/then/else) are not supported");
-  }
-  if (schema.dependentSchemas !== void 0 || schema.dependentRequired !== void 0) {
-    throw new Error("dependentSchemas and dependentRequired are not supported");
-  }
-  if (schema.$ref) {
-    const refPath = schema.$ref;
-    if (ctx.refs.has(refPath)) {
-      return ctx.refs.get(refPath);
-    }
-    if (ctx.processing.has(refPath)) {
-      return z.lazy(() => {
-        if (!ctx.refs.has(refPath)) {
-          throw new Error(`Circular reference not resolved: ${refPath}`);
-        }
-        return ctx.refs.get(refPath);
-      });
-    }
-    ctx.processing.add(refPath);
-    const resolved = resolveRef(refPath, ctx);
-    const zodSchema2 = convertSchema(resolved, ctx);
-    ctx.refs.set(refPath, zodSchema2);
-    ctx.processing.delete(refPath);
-    return zodSchema2;
-  }
-  if (schema.enum !== void 0) {
-    const enumValues = schema.enum;
-    if (ctx.version === "openapi-3.0" && schema.nullable === true && enumValues.length === 1 && enumValues[0] === null) {
-      return z.null();
-    }
-    if (enumValues.length === 0) {
-      return z.never();
-    }
-    if (enumValues.length === 1) {
-      return z.literal(enumValues[0]);
-    }
-    if (enumValues.every((v) => typeof v === "string")) {
-      return z.enum(enumValues);
-    }
-    const literalSchemas = enumValues.map((v) => z.literal(v));
-    if (literalSchemas.length < 2) {
-      return literalSchemas[0];
-    }
-    return z.union([literalSchemas[0], literalSchemas[1], ...literalSchemas.slice(2)]);
-  }
-  if (schema.const !== void 0) {
-    return z.literal(schema.const);
-  }
-  const type = schema.type;
-  if (Array.isArray(type)) {
-    const typeSchemas = type.map((t) => {
-      const typeSchema = { ...schema, type: t };
-      return convertBaseSchema(typeSchema, ctx);
-    });
-    if (typeSchemas.length === 0) {
-      return z.never();
-    }
-    if (typeSchemas.length === 1) {
-      return typeSchemas[0];
-    }
-    return z.union(typeSchemas);
-  }
-  if (!type) {
-    return z.any();
-  }
-  let zodSchema;
-  switch (type) {
-    case "string": {
-      let stringSchema = z.string();
-      if (schema.format) {
-        const format = schema.format;
-        if (format === "email") {
-          stringSchema = stringSchema.check(z.email());
-        } else if (format === "uri" || format === "uri-reference") {
-          stringSchema = stringSchema.check(z.url());
-        } else if (format === "uuid" || format === "guid") {
-          stringSchema = stringSchema.check(z.uuid());
-        } else if (format === "date-time") {
-          stringSchema = stringSchema.check(z.iso.datetime());
-        } else if (format === "date") {
-          stringSchema = stringSchema.check(z.iso.date());
-        } else if (format === "time") {
-          stringSchema = stringSchema.check(z.iso.time());
-        } else if (format === "duration") {
-          stringSchema = stringSchema.check(z.iso.duration());
-        } else if (format === "ipv4") {
-          stringSchema = stringSchema.check(z.ipv4());
-        } else if (format === "ipv6") {
-          stringSchema = stringSchema.check(z.ipv6());
-        } else if (format === "mac") {
-          stringSchema = stringSchema.check(z.mac());
-        } else if (format === "cidr") {
-          stringSchema = stringSchema.check(z.cidrv4());
-        } else if (format === "cidr-v6") {
-          stringSchema = stringSchema.check(z.cidrv6());
-        } else if (format === "base64") {
-          stringSchema = stringSchema.check(z.base64());
-        } else if (format === "base64url") {
-          stringSchema = stringSchema.check(z.base64url());
-        } else if (format === "e164") {
-          stringSchema = stringSchema.check(z.e164());
-        } else if (format === "jwt") {
-          stringSchema = stringSchema.check(z.jwt());
-        } else if (format === "emoji") {
-          stringSchema = stringSchema.check(z.emoji());
-        } else if (format === "nanoid") {
-          stringSchema = stringSchema.check(z.nanoid());
-        } else if (format === "cuid") {
-          stringSchema = stringSchema.check(z.cuid());
-        } else if (format === "cuid2") {
-          stringSchema = stringSchema.check(z.cuid2());
-        } else if (format === "ulid") {
-          stringSchema = stringSchema.check(z.ulid());
-        } else if (format === "xid") {
-          stringSchema = stringSchema.check(z.xid());
-        } else if (format === "ksuid") {
-          stringSchema = stringSchema.check(z.ksuid());
-        }
-      }
-      if (typeof schema.minLength === "number") {
-        stringSchema = stringSchema.min(schema.minLength);
-      }
-      if (typeof schema.maxLength === "number") {
-        stringSchema = stringSchema.max(schema.maxLength);
-      }
-      if (schema.pattern) {
-        stringSchema = stringSchema.regex(new RegExp(schema.pattern));
-      }
-      zodSchema = stringSchema;
-      break;
-    }
-    case "number":
-    case "integer": {
-      let numberSchema = type === "integer" ? z.number().int() : z.number();
-      if (typeof schema.minimum === "number") {
-        numberSchema = numberSchema.min(schema.minimum);
-      }
-      if (typeof schema.maximum === "number") {
-        numberSchema = numberSchema.max(schema.maximum);
-      }
-      if (typeof schema.exclusiveMinimum === "number") {
-        numberSchema = numberSchema.gt(schema.exclusiveMinimum);
-      } else if (schema.exclusiveMinimum === true && typeof schema.minimum === "number") {
-        numberSchema = numberSchema.gt(schema.minimum);
-      }
-      if (typeof schema.exclusiveMaximum === "number") {
-        numberSchema = numberSchema.lt(schema.exclusiveMaximum);
-      } else if (schema.exclusiveMaximum === true && typeof schema.maximum === "number") {
-        numberSchema = numberSchema.lt(schema.maximum);
-      }
-      if (typeof schema.multipleOf === "number") {
-        numberSchema = numberSchema.multipleOf(schema.multipleOf);
-      }
-      zodSchema = numberSchema;
-      break;
-    }
-    case "boolean": {
-      zodSchema = z.boolean();
-      break;
-    }
-    case "null": {
-      zodSchema = z.null();
-      break;
-    }
-    case "object": {
-      const shape = {};
-      const properties = schema.properties || {};
-      const requiredSet = new Set(schema.required || []);
-      for (const [key, propSchema] of Object.entries(properties)) {
-        const propZodSchema = convertSchema(propSchema, ctx);
-        shape[key] = requiredSet.has(key) ? propZodSchema : propZodSchema.optional();
-      }
-      if (schema.propertyNames) {
-        const keySchema = convertSchema(schema.propertyNames, ctx);
-        const valueSchema = schema.additionalProperties && typeof schema.additionalProperties === "object" ? convertSchema(schema.additionalProperties, ctx) : z.any();
-        if (Object.keys(shape).length === 0) {
-          zodSchema = z.record(keySchema, valueSchema);
-          break;
-        }
-        const objectSchema2 = z.object(shape).passthrough();
-        const recordSchema = z.looseRecord(keySchema, valueSchema);
-        zodSchema = z.intersection(objectSchema2, recordSchema);
-        break;
-      }
-      if (schema.patternProperties) {
-        const patternProps = schema.patternProperties;
-        const patternKeys = Object.keys(patternProps);
-        const looseRecords = [];
-        for (const pattern of patternKeys) {
-          const patternValue = convertSchema(patternProps[pattern], ctx);
-          const keySchema = z.string().regex(new RegExp(pattern));
-          looseRecords.push(z.looseRecord(keySchema, patternValue));
-        }
-        const schemasToIntersect = [];
-        if (Object.keys(shape).length > 0) {
-          schemasToIntersect.push(z.object(shape).passthrough());
-        }
-        schemasToIntersect.push(...looseRecords);
-        if (schemasToIntersect.length === 0) {
-          zodSchema = z.object({}).passthrough();
-        } else if (schemasToIntersect.length === 1) {
-          zodSchema = schemasToIntersect[0];
-        } else {
-          let result = z.intersection(schemasToIntersect[0], schemasToIntersect[1]);
-          for (let i = 2; i < schemasToIntersect.length; i++) {
-            result = z.intersection(result, schemasToIntersect[i]);
-          }
-          zodSchema = result;
-        }
-        break;
-      }
-      const objectSchema = z.object(shape);
-      if (schema.additionalProperties === false) {
-        zodSchema = objectSchema.strict();
-      } else if (typeof schema.additionalProperties === "object") {
-        zodSchema = objectSchema.catchall(convertSchema(schema.additionalProperties, ctx));
-      } else {
-        zodSchema = objectSchema.passthrough();
-      }
-      break;
-    }
-    case "array": {
-      const prefixItems = schema.prefixItems;
-      const items = schema.items;
-      if (prefixItems && Array.isArray(prefixItems)) {
-        const tupleItems = prefixItems.map((item) => convertSchema(item, ctx));
-        const rest = items && typeof items === "object" && !Array.isArray(items) ? convertSchema(items, ctx) : void 0;
-        if (rest) {
-          zodSchema = z.tuple(tupleItems).rest(rest);
-        } else {
-          zodSchema = z.tuple(tupleItems);
-        }
-        if (typeof schema.minItems === "number") {
-          zodSchema = zodSchema.check(z.minLength(schema.minItems));
-        }
-        if (typeof schema.maxItems === "number") {
-          zodSchema = zodSchema.check(z.maxLength(schema.maxItems));
-        }
-      } else if (Array.isArray(items)) {
-        const tupleItems = items.map((item) => convertSchema(item, ctx));
-        const rest = schema.additionalItems && typeof schema.additionalItems === "object" ? convertSchema(schema.additionalItems, ctx) : void 0;
-        if (rest) {
-          zodSchema = z.tuple(tupleItems).rest(rest);
-        } else {
-          zodSchema = z.tuple(tupleItems);
-        }
-        if (typeof schema.minItems === "number") {
-          zodSchema = zodSchema.check(z.minLength(schema.minItems));
-        }
-        if (typeof schema.maxItems === "number") {
-          zodSchema = zodSchema.check(z.maxLength(schema.maxItems));
-        }
-      } else if (items !== void 0) {
-        const element = convertSchema(items, ctx);
-        let arraySchema = z.array(element);
-        if (typeof schema.minItems === "number") {
-          arraySchema = arraySchema.min(schema.minItems);
-        }
-        if (typeof schema.maxItems === "number") {
-          arraySchema = arraySchema.max(schema.maxItems);
-        }
-        zodSchema = arraySchema;
-      } else {
-        zodSchema = z.array(z.any());
-      }
-      break;
-    }
-    default:
-      throw new Error(`Unsupported type: ${type}`);
-  }
-  if (schema.description) {
-    zodSchema = zodSchema.describe(schema.description);
-  }
-  if (schema.default !== void 0) {
-    zodSchema = zodSchema.default(schema.default);
-  }
-  return zodSchema;
-}
-function convertSchema(schema, ctx) {
-  if (typeof schema === "boolean") {
-    return schema ? z.any() : z.never();
-  }
-  let baseSchema = convertBaseSchema(schema, ctx);
-  const hasExplicitType = schema.type || schema.enum !== void 0 || schema.const !== void 0;
-  if (schema.anyOf && Array.isArray(schema.anyOf)) {
-    const options = schema.anyOf.map((s) => convertSchema(s, ctx));
-    const anyOfUnion = z.union(options);
-    baseSchema = hasExplicitType ? z.intersection(baseSchema, anyOfUnion) : anyOfUnion;
-  }
-  if (schema.oneOf && Array.isArray(schema.oneOf)) {
-    const options = schema.oneOf.map((s) => convertSchema(s, ctx));
-    const oneOfUnion = z.xor(options);
-    baseSchema = hasExplicitType ? z.intersection(baseSchema, oneOfUnion) : oneOfUnion;
-  }
-  if (schema.allOf && Array.isArray(schema.allOf)) {
-    if (schema.allOf.length === 0) {
-      baseSchema = hasExplicitType ? baseSchema : z.any();
-    } else {
-      let result = hasExplicitType ? baseSchema : convertSchema(schema.allOf[0], ctx);
-      const startIdx = hasExplicitType ? 0 : 1;
-      for (let i = startIdx; i < schema.allOf.length; i++) {
-        result = z.intersection(result, convertSchema(schema.allOf[i], ctx));
-      }
-      baseSchema = result;
-    }
-  }
-  if (schema.nullable === true && ctx.version === "openapi-3.0") {
-    baseSchema = z.nullable(baseSchema);
-  }
-  if (schema.readOnly === true) {
-    baseSchema = z.readonly(baseSchema);
-  }
-  return baseSchema;
-}
-function fromJSONSchema(schema, params) {
-  if (typeof schema === "boolean") {
-    return schema ? z.any() : z.never();
-  }
-  const version4 = detectVersion(schema, params?.defaultTarget);
-  const defs = schema.$defs || schema.definitions || {};
-  const ctx = {
-    version: version4,
-    defs,
-    refs: /* @__PURE__ */ new Map(),
-    processing: /* @__PURE__ */ new Set(),
-    rootSchema: schema
-  };
-  return convertSchema(schema, ctx);
-}
-
 // node_modules/zod/v4/classic/coerce.js
 var coerce_exports = {};
 __export(coerce_exports, {
@@ -35935,7 +35319,191 @@ function date4(params) {
 config(en_default());
 
 // node_modules/@lanonasis/memory-client/dist/index.esm.js
-var CoreMemoryClient2 = class {
+var import_child_process = require("child_process");
+var import_util3 = require("util");
+var MEMORY_TYPES = ["context", "project", "knowledge", "reference", "personal", "workflow"];
+var MEMORY_STATUSES = ["active", "archived", "draft", "deleted"];
+var createMemorySchema = external_exports.object({
+  title: external_exports.string().min(1).max(500),
+  content: external_exports.string().min(1).max(5e4),
+  summary: external_exports.string().max(1e3).optional(),
+  memory_type: external_exports.enum(MEMORY_TYPES).default("context"),
+  topic_id: external_exports.string().uuid().optional(),
+  project_ref: external_exports.string().max(100).optional(),
+  tags: external_exports.array(external_exports.string().min(1).max(50)).max(20).default([]),
+  metadata: external_exports.record(external_exports.string(), external_exports.unknown()).optional()
+});
+var updateMemorySchema = external_exports.object({
+  title: external_exports.string().min(1).max(500).optional(),
+  content: external_exports.string().min(1).max(5e4).optional(),
+  summary: external_exports.string().max(1e3).optional(),
+  memory_type: external_exports.enum(MEMORY_TYPES).optional(),
+  status: external_exports.enum(MEMORY_STATUSES).optional(),
+  topic_id: external_exports.string().uuid().nullable().optional(),
+  project_ref: external_exports.string().max(100).nullable().optional(),
+  tags: external_exports.array(external_exports.string().min(1).max(50)).max(20).optional(),
+  metadata: external_exports.record(external_exports.string(), external_exports.unknown()).optional()
+});
+var searchMemorySchema = external_exports.object({
+  query: external_exports.string().min(1).max(1e3),
+  memory_types: external_exports.array(external_exports.enum(MEMORY_TYPES)).optional(),
+  tags: external_exports.array(external_exports.string()).optional(),
+  topic_id: external_exports.string().uuid().optional(),
+  project_ref: external_exports.string().optional(),
+  status: external_exports.enum(MEMORY_STATUSES).default("active"),
+  limit: external_exports.number().int().min(1).max(100).default(20),
+  threshold: external_exports.number().min(0).max(1).default(0.7)
+});
+var createTopicSchema = external_exports.object({
+  name: external_exports.string().min(1).max(100),
+  description: external_exports.string().max(500).optional(),
+  color: external_exports.string().regex(/^#[0-9A-Fa-f]{6}$/).optional(),
+  icon: external_exports.string().max(50).optional(),
+  parent_topic_id: external_exports.string().uuid().optional()
+});
+external_exports.object({
+  memory_id: external_exports.string().uuid().optional(),
+  content: external_exports.string().min(1).optional(),
+  title: external_exports.string().optional(),
+  existing_tags: external_exports.array(external_exports.string()).optional(),
+  max_suggestions: external_exports.number().int().min(1).max(10).optional()
+}).refine((data) => data.memory_id || data.content, {
+  message: "Either memory_id or content is required"
+});
+external_exports.object({
+  time_range_days: external_exports.number().int().min(1).max(365).optional(),
+  include_insights: external_exports.boolean().optional(),
+  response_format: external_exports.enum(["json", "markdown"]).optional()
+});
+external_exports.object({
+  include_recommendations: external_exports.boolean().optional(),
+  detailed_breakdown: external_exports.boolean().optional()
+});
+external_exports.object({
+  memory_id: external_exports.string().uuid().optional(),
+  query: external_exports.string().min(1).optional(),
+  limit: external_exports.number().int().min(1).max(20).optional(),
+  similarity_threshold: external_exports.number().min(0).max(1).optional(),
+  exclude_ids: external_exports.array(external_exports.string().uuid()).optional()
+}).refine((data) => data.memory_id || data.query, {
+  message: "Either memory_id or query is required"
+});
+external_exports.object({
+  similarity_threshold: external_exports.number().min(0).max(1).optional(),
+  include_archived: external_exports.boolean().optional(),
+  limit: external_exports.number().int().min(1).max(50).optional()
+});
+external_exports.object({
+  memory_ids: external_exports.array(external_exports.string().uuid()).optional(),
+  topic: external_exports.string().min(1).optional(),
+  time_range_days: external_exports.number().int().min(1).max(365).optional(),
+  insight_types: external_exports.array(external_exports.enum(["themes", "connections", "gaps", "actions", "summary"])).optional(),
+  detail_level: external_exports.enum(["brief", "detailed", "comprehensive"]).optional()
+});
+var CHUNKING_STRATEGIES = ["semantic", "fixed-size", "paragraph", "sentence", "code-block"];
+var SEARCH_MODES = ["vector", "text", "hybrid"];
+var preprocessingOptionsSchema = external_exports.object({
+  chunking: external_exports.object({
+    strategy: external_exports.enum(CHUNKING_STRATEGIES).optional(),
+    maxChunkSize: external_exports.number().int().min(100).max(1e4).optional(),
+    overlap: external_exports.number().int().min(0).max(500).optional()
+  }).optional(),
+  cleanContent: external_exports.boolean().optional(),
+  extractMetadata: external_exports.boolean().optional()
+}).optional();
+var enhancedSearchSchema = external_exports.object({
+  query: external_exports.string().min(1).max(1e3),
+  type: external_exports.enum(MEMORY_TYPES).optional(),
+  threshold: external_exports.number().min(0).max(1).default(0.7),
+  limit: external_exports.number().int().min(1).max(100).default(20),
+  search_mode: external_exports.enum(SEARCH_MODES).default("hybrid"),
+  filters: external_exports.object({
+    tags: external_exports.array(external_exports.string()).optional(),
+    project_id: external_exports.string().uuid().optional(),
+    topic_id: external_exports.string().uuid().optional(),
+    date_range: external_exports.object({
+      from: external_exports.string().optional(),
+      to: external_exports.string().optional()
+    }).optional()
+  }).optional(),
+  include_chunks: external_exports.boolean().default(false)
+});
+var analyticsDateRangeSchema = external_exports.object({
+  from: external_exports.string().optional(),
+  to: external_exports.string().optional(),
+  group_by: external_exports.enum(["day", "week", "month"]).default("day")
+});
+function httpStatusToErrorCode(status) {
+  switch (status) {
+    case 400:
+      return "VALIDATION_ERROR";
+    case 401:
+      return "AUTH_ERROR";
+    case 403:
+      return "FORBIDDEN";
+    case 404:
+      return "NOT_FOUND";
+    case 408:
+      return "TIMEOUT_ERROR";
+    case 409:
+      return "CONFLICT";
+    case 429:
+      return "RATE_LIMIT_ERROR";
+    case 500:
+    case 502:
+    case 503:
+    case 504:
+      return "SERVER_ERROR";
+    default:
+      return "API_ERROR";
+  }
+}
+function createErrorResponse(message, code = "API_ERROR", statusCode, details) {
+  return {
+    code,
+    message,
+    statusCode,
+    details,
+    timestamp: (/* @__PURE__ */ new Date()).toISOString()
+  };
+}
+function createErrorFromResponse(status, statusText, body) {
+  const code = httpStatusToErrorCode(status);
+  let message = `HTTP ${status}: ${statusText}`;
+  let details = void 0;
+  if (body && typeof body === "object") {
+    const bodyObj = body;
+    if (typeof bodyObj.error === "string") {
+      message = bodyObj.error;
+    } else if (typeof bodyObj.message === "string") {
+      message = bodyObj.message;
+    }
+    if (bodyObj.details) {
+      details = bodyObj.details;
+    }
+  }
+  return createErrorResponse(message, code, status, details);
+}
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+function calculateRetryDelay(attempt, baseDelay = 1e3, backoff = "exponential", maxDelay = 3e4) {
+  let delay;
+  if (backoff === "exponential") {
+    delay = baseDelay * Math.pow(2, attempt);
+  } else {
+    delay = baseDelay * (attempt + 1);
+  }
+  const jitter = delay * 0.2 * (Math.random() * 2 - 1);
+  delay = Math.min(delay + jitter, maxDelay);
+  return Math.round(delay);
+}
+function isRetryableError(statusCode) {
+  if (!statusCode)
+    return true;
+  return statusCode >= 500 || statusCode === 429 || statusCode === 408;
+}
+var CoreMemoryClient = class {
   constructor(config2) {
     this.config = {
       timeout: 3e4,
@@ -35944,6 +35512,8 @@ var CoreMemoryClient2 = class {
     this.baseHeaders = {
       "Content-Type": "application/json",
       "User-Agent": "@lanonasis/memory-client/2.0.0",
+      "X-Project-Scope": "lanonasis-maas",
+      // Required by backend auth middleware
       ...config2.headers
     };
     if (config2.authToken) {
@@ -35975,10 +35545,13 @@ var CoreMemoryClient2 = class {
     return body;
   }
   /**
-   * Make an HTTP request to the API
+   * Make an HTTP request to the API with retry support
    */
   async request(endpoint, options = {}) {
     const startTime = Date.now();
+    const maxRetries = this.config.retry?.maxRetries ?? 3;
+    const baseDelay = this.config.retry?.retryDelay ?? 1e3;
+    const backoff = this.config.retry?.backoff ?? "exponential";
     if (this.config.onRequest) {
       try {
         this.config.onRequest(endpoint);
@@ -35988,77 +35561,110 @@ var CoreMemoryClient2 = class {
     }
     const baseUrl = this.config.apiUrl.includes("/api") ? this.config.apiUrl.replace("/api", "") : this.config.apiUrl;
     const url2 = `${baseUrl}/api/v1${endpoint}`;
-    try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), this.config.timeout);
-      const response = await fetch(url2, {
-        headers: { ...this.baseHeaders, ...options.headers },
-        signal: controller.signal,
-        ...options
-      });
-      clearTimeout(timeoutId);
-      let data;
-      const contentType = response.headers.get("content-type");
-      if (contentType && contentType.includes("application/json")) {
-        data = await response.json();
-      } else {
-        data = await response.text();
-      }
-      if (!response.ok) {
-        const error46 = {
-          message: data?.error || `HTTP ${response.status}: ${response.statusText}`,
-          statusCode: response.status,
-          code: "API_ERROR"
-        };
+    let lastError;
+    let attempt = 0;
+    while (attempt <= maxRetries) {
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), this.config.timeout);
+        const response = await fetch(url2, {
+          headers: { ...this.baseHeaders, ...options.headers },
+          signal: controller.signal,
+          ...options
+        });
+        clearTimeout(timeoutId);
+        let data;
+        const contentType = response.headers.get("content-type");
+        if (contentType && contentType.includes("application/json")) {
+          data = await response.json();
+        } else {
+          data = await response.text();
+        }
+        if (!response.ok) {
+          const error46 = createErrorFromResponse(response.status, response.statusText, data);
+          if (isRetryableError(response.status) && attempt < maxRetries) {
+            lastError = error46;
+            const delay = calculateRetryDelay(attempt, baseDelay, backoff);
+            await sleep(delay);
+            attempt++;
+            continue;
+          }
+          if (this.config.onError) {
+            try {
+              this.config.onError(error46);
+            } catch (hookError) {
+              console.warn("onError hook error:", hookError);
+            }
+          }
+          return { error: error46, meta: { duration: Date.now() - startTime, retries: attempt } };
+        }
+        if (this.config.onResponse) {
+          try {
+            const duration3 = Date.now() - startTime;
+            this.config.onResponse(endpoint, duration3);
+          } catch (error46) {
+            console.warn("onResponse hook error:", error46);
+          }
+        }
+        return { data, meta: { duration: Date.now() - startTime, retries: attempt } };
+      } catch (error46) {
+        if (error46 instanceof Error && error46.name === "AbortError") {
+          const timeoutError = createErrorResponse("Request timeout", "TIMEOUT_ERROR", 408);
+          if (attempt < maxRetries) {
+            lastError = timeoutError;
+            const delay = calculateRetryDelay(attempt, baseDelay, backoff);
+            await sleep(delay);
+            attempt++;
+            continue;
+          }
+          if (this.config.onError) {
+            try {
+              this.config.onError(timeoutError);
+            } catch (hookError) {
+              console.warn("onError hook error:", hookError);
+            }
+          }
+          return { error: timeoutError, meta: { duration: Date.now() - startTime, retries: attempt } };
+        }
+        const networkError = createErrorResponse(error46 instanceof Error ? error46.message : "Network error", "NETWORK_ERROR");
+        if (attempt < maxRetries) {
+          lastError = networkError;
+          const delay = calculateRetryDelay(attempt, baseDelay, backoff);
+          await sleep(delay);
+          attempt++;
+          continue;
+        }
         if (this.config.onError) {
           try {
-            this.config.onError(error46);
+            this.config.onError(networkError);
           } catch (hookError) {
             console.warn("onError hook error:", hookError);
           }
         }
-        return { error: error46.message };
+        return { error: networkError, meta: { duration: Date.now() - startTime, retries: attempt } };
       }
-      if (this.config.onResponse) {
-        try {
-          const duration3 = Date.now() - startTime;
-          this.config.onResponse(endpoint, duration3);
-        } catch (error46) {
-          console.warn("onResponse hook error:", error46);
-        }
-      }
-      return { data };
-    } catch (error46) {
-      if (error46 instanceof Error && error46.name === "AbortError") {
-        const timeoutError = {
-          message: "Request timeout",
-          code: "TIMEOUT_ERROR",
-          statusCode: 408
-        };
-        if (this.config.onError) {
-          try {
-            this.config.onError(timeoutError);
-          } catch (hookError) {
-            console.warn("onError hook error:", hookError);
-          }
-        }
-        return { error: "Request timeout" };
-      }
-      const networkError = {
-        message: error46 instanceof Error ? error46.message : "Network error",
-        code: "NETWORK_ERROR"
-      };
-      if (this.config.onError) {
-        try {
-          this.config.onError(networkError);
-        } catch (hookError) {
-          console.warn("onError hook error:", hookError);
-        }
-      }
+    }
+    return {
+      error: lastError ?? createErrorResponse("Max retries exceeded", "API_ERROR"),
+      meta: { duration: Date.now() - startTime, retries: attempt }
+    };
+  }
+  /**
+   * Validate input using Zod schema and return validation error if invalid
+   */
+  validateInput(schema, data) {
+    const result = schema.safeParse(data);
+    if (!result.success) {
+      const zodError = result.error;
+      const details = zodError?.issues?.map((issue2) => ({
+        field: issue2.path.map(String).join("."),
+        message: issue2.message
+      })) ?? [];
       return {
-        error: error46 instanceof Error ? error46.message : "Network error"
+        error: createErrorResponse("Validation failed", "VALIDATION_ERROR", 400, details)
       };
     }
+    return null;
   }
   /**
    * Test the API connection and authentication
@@ -36068,9 +35674,13 @@ var CoreMemoryClient2 = class {
   }
   // Memory Operations
   /**
-   * Create a new memory
+   * Create a new memory with validation
    */
   async createMemory(memory) {
+    const validationError = this.validateInput(createMemorySchema, memory);
+    if (validationError) {
+      return { error: validationError.error };
+    }
     const enrichedMemory = this.enrichWithOrgContext(memory);
     return this.request("/memory", {
       method: "POST",
@@ -36084,9 +35694,13 @@ var CoreMemoryClient2 = class {
     return this.request(`/memory/${encodeURIComponent(id)}`);
   }
   /**
-   * Update an existing memory
+   * Update an existing memory with validation
    */
   async updateMemory(id, updates) {
+    const validationError = this.validateInput(updateMemorySchema, updates);
+    if (validationError) {
+      return { error: validationError.error };
+    }
     return this.request(`/memory/${encodeURIComponent(id)}`, {
       method: "PUT",
       body: JSON.stringify(updates)
@@ -36119,9 +35733,13 @@ var CoreMemoryClient2 = class {
     return this.request(endpoint);
   }
   /**
-   * Search memories using semantic search
+   * Search memories using semantic search with validation
    */
   async searchMemories(request) {
+    const validationError = this.validateInput(searchMemorySchema, request);
+    if (validationError) {
+      return { error: validationError.error };
+    }
     const enrichedRequest = this.enrichWithOrgContext(request);
     return this.request("/memory/search", {
       method: "POST",
@@ -36140,9 +35758,13 @@ var CoreMemoryClient2 = class {
   }
   // Topic Operations
   /**
-   * Create a new topic
+   * Create a new topic with validation
    */
   async createTopic(topic) {
+    const validationError = this.validateInput(createTopicSchema, topic);
+    if (validationError) {
+      return { error: validationError.error };
+    }
     const enrichedTopic = this.enrichWithOrgContext(topic);
     return this.request("/topics", {
       method: "POST",
@@ -36184,6 +35806,179 @@ var CoreMemoryClient2 = class {
   async getMemoryStats() {
     return this.request("/memory/stats");
   }
+  // ========================================
+  // Intelligence Features (v2.0)
+  // ========================================
+  /**
+   * Create a memory with preprocessing options (chunking, intelligence extraction)
+   *
+   * @example
+   * ```typescript
+   * const result = await client.createMemoryWithPreprocessing({
+   *   title: 'Auth System Docs',
+   *   content: 'Long content...',
+   *   memory_type: 'knowledge',
+   *   preprocessing: {
+   *     chunking: { strategy: 'semantic', maxChunkSize: 1000 },
+   *     extractMetadata: true
+   *   }
+   * });
+   * ```
+   */
+  async createMemoryWithPreprocessing(memory) {
+    const validationError = this.validateInput(createMemorySchema, memory);
+    if (validationError) {
+      return { error: validationError.error };
+    }
+    const enrichedMemory = this.enrichWithOrgContext(memory);
+    return this.request("/memory", {
+      method: "POST",
+      body: JSON.stringify(enrichedMemory)
+    });
+  }
+  /**
+   * Update a memory with re-chunking and embedding regeneration
+   *
+   * @example
+   * ```typescript
+   * const result = await client.updateMemoryWithPreprocessing('mem_123', {
+   *   content: 'Updated content...',
+   *   rechunk: true,
+   *   regenerate_embedding: true
+   * });
+   * ```
+   */
+  async updateMemoryWithPreprocessing(id, updates) {
+    const validationError = this.validateInput(updateMemorySchema, updates);
+    if (validationError) {
+      return { error: validationError.error };
+    }
+    return this.request(`/memory/${encodeURIComponent(id)}`, {
+      method: "PUT",
+      body: JSON.stringify(updates)
+    });
+  }
+  /**
+   * Enhanced semantic search with hybrid mode (vector + text)
+   *
+   * @example
+   * ```typescript
+   * const result = await client.enhancedSearch({
+   *   query: 'authentication flow',
+   *   search_mode: 'hybrid',
+   *   filters: { tags: ['auth'], project_id: 'proj_123' },
+   *   include_chunks: true
+   * });
+   * ```
+   */
+  async enhancedSearch(request) {
+    const validationError = this.validateInput(enhancedSearchSchema, request);
+    if (validationError) {
+      return { error: validationError.error };
+    }
+    const enrichedRequest = this.enrichWithOrgContext(request);
+    return this.request("/memory/search", {
+      method: "POST",
+      body: JSON.stringify(enrichedRequest)
+    });
+  }
+  // ========================================
+  // Analytics Operations
+  // ========================================
+  /**
+   * Get search analytics data
+   *
+   * @example
+   * ```typescript
+   * const analytics = await client.getSearchAnalytics({
+   *   from: '2025-01-01',
+   *   to: '2025-12-31',
+   *   group_by: 'day'
+   * });
+   * ```
+   */
+  async getSearchAnalytics(options = {}) {
+    const validationError = this.validateInput(analyticsDateRangeSchema, options);
+    if (validationError) {
+      return { error: validationError.error };
+    }
+    const params = new URLSearchParams();
+    if (options.from)
+      params.append("from", options.from);
+    if (options.to)
+      params.append("to", options.to);
+    if (options.group_by)
+      params.append("group_by", options.group_by);
+    const queryString = params.toString();
+    const endpoint = queryString ? `/analytics/search?${queryString}` : "/analytics/search";
+    return this.request(endpoint);
+  }
+  /**
+   * Get memory access patterns
+   *
+   * @example
+   * ```typescript
+   * const patterns = await client.getAccessPatterns({
+   *   from: '2025-01-01',
+   *   to: '2025-12-31'
+   * });
+   * console.log(patterns.data?.most_accessed);
+   * ```
+   */
+  async getAccessPatterns(options = {}) {
+    const params = new URLSearchParams();
+    if (options.from)
+      params.append("from", options.from);
+    if (options.to)
+      params.append("to", options.to);
+    const queryString = params.toString();
+    const endpoint = queryString ? `/analytics/access?${queryString}` : "/analytics/access";
+    return this.request(endpoint);
+  }
+  /**
+   * Get extended memory statistics with storage and activity metrics
+   *
+   * @example
+   * ```typescript
+   * const stats = await client.getExtendedStats();
+   * console.log(`Total chunks: ${stats.data?.storage.total_chunks}`);
+   * console.log(`Created today: ${stats.data?.activity.created_today}`);
+   * ```
+   */
+  async getExtendedStats() {
+    return this.request("/analytics/stats");
+  }
+  /**
+   * Get topic with its memories
+   *
+   * @example
+   * ```typescript
+   * const topic = await client.getTopicWithMemories('topic_123');
+   * console.log(topic.data?.memories);
+   * ```
+   */
+  async getTopicWithMemories(topicId, options = {}) {
+    const params = new URLSearchParams();
+    if (options.limit)
+      params.append("limit", String(options.limit));
+    if (options.offset)
+      params.append("offset", String(options.offset));
+    const queryString = params.toString();
+    const endpoint = queryString ? `/topics/${encodeURIComponent(topicId)}/memories?${queryString}` : `/topics/${encodeURIComponent(topicId)}/memories`;
+    return this.request(endpoint);
+  }
+  /**
+   * Get topics in hierarchical structure
+   *
+   * @example
+   * ```typescript
+   * const topics = await client.getTopicsHierarchy();
+   * // Returns nested topic tree with children
+   * ```
+   */
+  async getTopicsHierarchy() {
+    return this.request("/topics?include_hierarchy=true");
+  }
   // Utility Methods
   /**
    * Update authentication token
@@ -36223,50 +36018,11 @@ var CoreMemoryClient2 = class {
     return safeConfig;
   }
 };
-function createMemoryClient2(config2) {
-  return new CoreMemoryClient2(config2);
+function createMemoryClient(config2) {
+  return new CoreMemoryClient(config2);
 }
-var MEMORY_TYPES2 = ["context", "project", "knowledge", "reference", "personal", "workflow"];
-var MEMORY_STATUSES2 = ["active", "archived", "draft", "deleted"];
-var createMemorySchema2 = external_exports.object({
-  title: external_exports.string().min(1).max(500),
-  content: external_exports.string().min(1).max(5e4),
-  summary: external_exports.string().max(1e3).optional(),
-  memory_type: external_exports.enum(MEMORY_TYPES2).default("context"),
-  topic_id: external_exports.string().uuid().optional(),
-  project_ref: external_exports.string().max(100).optional(),
-  tags: external_exports.array(external_exports.string().min(1).max(50)).max(20).default([]),
-  metadata: external_exports.record(external_exports.string(), external_exports.unknown()).optional()
-});
-var updateMemorySchema2 = external_exports.object({
-  title: external_exports.string().min(1).max(500).optional(),
-  content: external_exports.string().min(1).max(5e4).optional(),
-  summary: external_exports.string().max(1e3).optional(),
-  memory_type: external_exports.enum(MEMORY_TYPES2).optional(),
-  status: external_exports.enum(MEMORY_STATUSES2).optional(),
-  topic_id: external_exports.string().uuid().nullable().optional(),
-  project_ref: external_exports.string().max(100).nullable().optional(),
-  tags: external_exports.array(external_exports.string().min(1).max(50)).max(20).optional(),
-  metadata: external_exports.record(external_exports.string(), external_exports.unknown()).optional()
-});
-var searchMemorySchema2 = external_exports.object({
-  query: external_exports.string().min(1).max(1e3),
-  memory_types: external_exports.array(external_exports.enum(MEMORY_TYPES2)).optional(),
-  tags: external_exports.array(external_exports.string()).optional(),
-  topic_id: external_exports.string().uuid().optional(),
-  project_ref: external_exports.string().optional(),
-  status: external_exports.enum(MEMORY_STATUSES2).default("active"),
-  limit: external_exports.number().int().min(1).max(100).default(20),
-  threshold: external_exports.number().min(0).max(1).default(0.7)
-});
-var createTopicSchema2 = external_exports.object({
-  name: external_exports.string().min(1).max(100),
-  description: external_exports.string().max(500).optional(),
-  color: external_exports.string().regex(/^#[0-9A-Fa-f]{6}$/).optional(),
-  icon: external_exports.string().max(50).optional(),
-  parent_topic_id: external_exports.string().uuid().optional()
-});
-var isNode2 = typeof globalThis !== "undefined" && "process" in globalThis && globalThis.process?.versions?.node;
+var isNode = typeof globalThis !== "undefined" && "process" in globalThis && globalThis.process?.versions?.node;
+var execAsync = (0, import_util3.promisify)(import_child_process.exec);
 
 // src/panels/MemorySidebarProvider.ts
 var MemorySidebarProvider = class {
@@ -36286,7 +36042,7 @@ var MemorySidebarProvider = class {
   resolveWebviewView(webviewView, _context, _token) {
     console.log("[Lanonasis] MemorySidebarProvider.resolveWebviewView called");
     try {
-      const activationChannel = vscode5.window.createOutputChannel("Lanonasis Activation");
+      const activationChannel = vscode4.window.createOutputChannel("Lanonasis Activation");
       activationChannel.appendLine("[Lanonasis] MemorySidebarProvider.resolveWebviewView called");
     } catch {
     }
@@ -36295,9 +36051,9 @@ var MemorySidebarProvider = class {
       webviewView.webview.options = {
         enableScripts: true,
         localResourceRoots: [
-          vscode5.Uri.joinPath(this._extensionUri, "media"),
-          vscode5.Uri.joinPath(this._extensionUri, "out"),
-          vscode5.Uri.joinPath(this._extensionUri, "images")
+          vscode4.Uri.joinPath(this._extensionUri, "media"),
+          vscode4.Uri.joinPath(this._extensionUri, "out"),
+          vscode4.Uri.joinPath(this._extensionUri, "images")
         ]
       };
       webviewView.webview.html = this._getHtmlForWebview(webviewView.webview);
@@ -36305,7 +36061,7 @@ var MemorySidebarProvider = class {
         try {
           switch (data.type) {
             case "authenticate":
-              await vscode5.commands.executeCommand("lanonasis.authenticate", data.mode);
+              await vscode4.commands.executeCommand("lanonasis.authenticate", data.mode);
               break;
             case "searchMemories":
               await this.handleSearch(data.query);
@@ -36329,19 +36085,19 @@ var MemorySidebarProvider = class {
               await this.handleCreateFromWebview(data.payload);
               break;
             case "openMemory":
-              await vscode5.commands.executeCommand("lanonasis.openMemory", data.memory);
+              await vscode4.commands.executeCommand("lanonasis.openMemory", data.memory);
               break;
             case "refresh":
               await this.refresh(true);
               break;
             case "showSettings":
-              await vscode5.commands.executeCommand("workbench.action.openSettings", "lanonasis");
+              await vscode4.commands.executeCommand("workbench.action.openSettings", "lanonasis");
               break;
             case "getApiKey":
-              await vscode5.env.openExternal(vscode5.Uri.parse("https://api.lanonasis.com"));
+              await vscode4.env.openExternal(vscode4.Uri.parse("https://api.lanonasis.com"));
               break;
             case "openCommandPalette":
-              await vscode5.commands.executeCommand("workbench.action.quickOpen", ">Lanonasis: Authenticate");
+              await vscode4.commands.executeCommand("workbench.action.quickOpen", ">Lanonasis: Authenticate");
               break;
           }
         } catch (error46) {
@@ -36383,7 +36139,7 @@ var MemorySidebarProvider = class {
       }, 300);
     } catch (error46) {
       console.error("[Lanonasis] Fatal error in resolveWebviewView:", error46);
-      vscode5.window.showErrorMessage(`Lanonasis extension failed to load: ${error46 instanceof Error ? error46.message : String(error46)}`);
+      vscode4.window.showErrorMessage(`Lanonasis extension failed to load: ${error46 instanceof Error ? error46.message : String(error46)}`);
     }
   }
   async refresh(forceRefresh = false) {
@@ -36393,7 +36149,7 @@ var MemorySidebarProvider = class {
         const now = Date.now();
         const useCache = !forceRefresh && this._cachedMemories.length > 0 && now - this._cacheTimestamp < this.CACHE_DURATION;
         if (useCache) {
-          const enhancedInfo2 = this.memoryService instanceof EnhancedMemoryService ? this.memoryService.getCapabilities() : null;
+          const enhancedInfo2 = isEnhancedMemoryService(this.memoryService) ? this.memoryService.getCapabilities() : null;
           this.sendStateUpdate({
             authenticated,
             memories: this._cachedMemories,
@@ -36420,7 +36176,7 @@ var MemorySidebarProvider = class {
           return;
         }
         const memories = await this.memoryService.listMemories(50);
-        const enhancedInfo = this.memoryService instanceof EnhancedMemoryService ? this.memoryService.getCapabilities() : null;
+        const enhancedInfo = isEnhancedMemoryService(this.memoryService) ? this.memoryService.getCapabilities() : null;
         this._cachedMemories = memories;
         this._cacheTimestamp = Date.now();
         this.sendStateUpdate({
@@ -36448,7 +36204,7 @@ var MemorySidebarProvider = class {
             type: "error",
             message: `Failed to refresh: ${errorMsg}. Showing cached data.`
           });
-          const enhancedInfo = this.memoryService instanceof EnhancedMemoryService ? this.memoryService.getCapabilities() : null;
+          const enhancedInfo = isEnhancedMemoryService(this.memoryService) ? this.memoryService.getCapabilities() : null;
           this.sendStateUpdate({
             authenticated: true,
             memories: this._cachedMemories,
@@ -36548,7 +36304,7 @@ var MemorySidebarProvider = class {
       return;
     }
     try {
-      const validated = createMemorySchema2.parse(payload);
+      const validated = createMemorySchema.parse(payload);
       await this.memoryService.createMemory(validated);
       this._view.webview.postMessage({
         type: "memoryCreated",
@@ -36572,7 +36328,7 @@ var MemorySidebarProvider = class {
       return;
     }
     try {
-      const validated = updateMemorySchema2.parse(payload);
+      const validated = updateMemorySchema.parse(payload);
       const sanitized = {
         ...validated,
         topic_id: validated.topic_id === null ? void 0 : validated.topic_id,
@@ -36669,8 +36425,8 @@ var MemorySidebarProvider = class {
     }
   }
   _getHtmlForWebview(webview) {
-    const styleUri = webview.asWebviewUri(vscode5.Uri.joinPath(this._extensionUri, "media", "sidebar.css"));
-    const scriptUri = webview.asWebviewUri(vscode5.Uri.joinPath(this._extensionUri, "media", "sidebar.js"));
+    const styleUri = webview.asWebviewUri(vscode4.Uri.joinPath(this._extensionUri, "media", "sidebar.css"));
+    const scriptUri = webview.asWebviewUri(vscode4.Uri.joinPath(this._extensionUri, "media", "sidebar.js"));
     const nonce = getNonce();
     return `<!DOCTYPE html>
         <html lang="en">
@@ -36703,13 +36459,15 @@ function getNonce() {
 }
 
 // src/panels/EnhancedSidebarProvider.ts
-var vscode6 = __toESM(require("vscode"));
+var vscode5 = __toESM(require("vscode"));
 
 // src/bridges/PrototypeUIBridge.ts
 var PrototypeUIBridge = class {
   constructor(memoryService, cacheBridge) {
     this.memoryService = memoryService;
     this.cacheBridge = cacheBridge;
+    this.searchCache = /* @__PURE__ */ new Map();
+    this.searchCacheTtlMs = 5 * 60 * 1e3;
   }
   // Map memory types to icon types
   getIconType(type) {
@@ -36733,7 +36491,8 @@ var PrototypeUIBridge = class {
       date: new Date(memory.created_at),
       tags: memory.tags,
       content: memory.content,
-      iconType: this.getIconType(memory.memory_type)
+      iconType: this.getIconType(memory.memory_type),
+      status: memory.status
     };
   }
   // Transform search results to prototype format
@@ -36744,11 +36503,51 @@ var PrototypeUIBridge = class {
       similarityScore: result.similarity_score
     }));
   }
+  normalizeSearchQuery(query) {
+    return query.trim().toLowerCase();
+  }
+  getCachedSearch(query) {
+    const key = this.normalizeSearchQuery(query);
+    const cached2 = this.searchCache.get(key);
+    if (!cached2) return null;
+    if (Date.now() - cached2.timestamp > this.searchCacheTtlMs) {
+      this.searchCache.delete(key);
+      return null;
+    }
+    return cached2.results;
+  }
+  setSearchCache(query, results) {
+    const key = this.normalizeSearchQuery(query);
+    this.searchCache.set(key, { timestamp: Date.now(), results });
+    if (this.searchCache.size > 20) {
+      const oldestKey = this.searchCache.keys().next().value;
+      if (oldestKey) {
+        this.searchCache.delete(oldestKey);
+      }
+    }
+  }
+  clearSearchCache() {
+    this.searchCache.clear();
+  }
+  sortBySimilarity(results) {
+    return [...results].sort((a, b) => {
+      const aScore = typeof a.similarityScore === "number" ? a.similarityScore : -1;
+      const bScore = typeof b.similarityScore === "number" ? b.similarityScore : -1;
+      return bScore - aScore;
+    });
+  }
   // Search memories with prototype interface
   async searchMemories(query) {
     try {
+      const cached2 = this.getCachedSearch(query);
+      if (cached2) {
+        return cached2;
+      }
       const results = this.cacheBridge ? await this.cacheBridge.searchMemories(query) : await this.memoryService.searchMemories(query);
-      return this.transformSearchResults(results);
+      const transformed = this.transformSearchResults(results);
+      const sorted = this.sortBySimilarity(transformed);
+      this.setSearchCache(query, sorted);
+      return sorted;
     } catch (error46) {
       console.error("[PrototypeUIBridge] Search failed:", error46);
       throw new Error(`Search failed: ${error46 instanceof Error ? error46.message : String(error46)}`);
@@ -36761,6 +36560,7 @@ var PrototypeUIBridge = class {
       if (this.cacheBridge) {
         await this.cacheBridge.upsert(result);
       }
+      this.clearSearchCache();
       return this.transformToPrototypeFormat(result);
     } catch (error46) {
       console.error("[PrototypeUIBridge] Create memory failed:", error46);
@@ -36798,11 +36598,30 @@ var PrototypeUIBridge = class {
   }
   // Update memory (placeholder - not implemented in base service)
   async updateMemory(_id, _updates) {
-    throw new Error("Update memory not yet implemented in enhanced UI");
+    try {
+      const updated = await this.memoryService.updateMemory(_id, _updates);
+      if (this.cacheBridge) {
+        await this.cacheBridge.upsert(updated);
+      }
+      this.clearSearchCache();
+      return this.transformToPrototypeFormat(updated);
+    } catch (error46) {
+      console.error("[PrototypeUIBridge] Update memory failed:", error46);
+      throw new Error(`Update memory failed: ${error46 instanceof Error ? error46.message : String(error46)}`);
+    }
   }
   // Delete memory (placeholder - not implemented in base service)
   async deleteMemory(_id) {
-    throw new Error("Delete memory not yet implemented in enhanced UI");
+    try {
+      await this.memoryService.deleteMemory(_id);
+      if (this.cacheBridge) {
+        await this.cacheBridge.remove(_id);
+      }
+      this.clearSearchCache();
+    } catch (error46) {
+      console.error("[PrototypeUIBridge] Delete memory failed:", error46);
+      throw new Error(`Delete memory failed: ${error46 instanceof Error ? error46.message : String(error46)}`);
+    }
   }
   // Check authentication status
   async isAuthenticated() {
@@ -36817,11 +36636,14 @@ var PrototypeUIBridge = class {
 
 // src/panels/EnhancedSidebarProvider.ts
 var EnhancedSidebarProvider = class {
-  constructor(_extensionUri, memoryService, apiKeyService, cacheBridge, onboardingService) {
+  constructor(_extensionUri, memoryService, apiKeyService, cacheBridge, onboardingService, offlineService, offlineQueue) {
     this._extensionUri = _extensionUri;
     this.memoryService = memoryService;
+    this.offlineService = offlineService;
+    this.offlineQueue = offlineQueue;
     this._bridge = new PrototypeUIBridge(memoryService, cacheBridge);
     this._apiKeyService = apiKeyService;
+    this.cacheBridge = cacheBridge;
     this.onboardingService = onboardingService;
   }
   static {
@@ -36834,9 +36656,9 @@ var EnhancedSidebarProvider = class {
       webviewView.webview.options = {
         enableScripts: true,
         localResourceRoots: [
-          vscode6.Uri.joinPath(this._extensionUri, "media"),
-          vscode6.Uri.joinPath(this._extensionUri, "out"),
-          vscode6.Uri.joinPath(this._extensionUri, "images")
+          vscode5.Uri.joinPath(this._extensionUri, "media"),
+          vscode5.Uri.joinPath(this._extensionUri, "out"),
+          vscode5.Uri.joinPath(this._extensionUri, "images")
         ]
       };
       webviewView.webview.html = this._getReactHtmlForWebview(webviewView.webview);
@@ -36886,6 +36708,12 @@ var EnhancedSidebarProvider = class {
         case "searchMemories":
           await this.handleSearch(data.data);
           break;
+        case "updateMemory":
+          await this.handleUpdateMemory(data.data);
+          break;
+        case "deleteMemory":
+          await this.handleDeleteMemory(data.data);
+          break;
         case "chatQuery":
           await this.handleChatQuery(data.data);
           break;
@@ -36896,7 +36724,7 @@ var EnhancedSidebarProvider = class {
           await this.handleCopyToClipboard(data.data);
           break;
         case "executeCommand":
-          await vscode6.commands.executeCommand(data.data);
+          await vscode5.commands.executeCommand(data.data);
           break;
         case "completeOnboardingStep":
           await this.handleCompleteOnboardingStep(data.data);
@@ -36926,10 +36754,19 @@ var EnhancedSidebarProvider = class {
           await this.handleStoreApiKey();
           break;
         case "manageApiKeys":
-          await vscode6.commands.executeCommand("lanonasis.manageApiKeys");
+          await vscode5.commands.executeCommand("lanonasis.manageApiKeys");
           break;
         case "openSettings":
-          await vscode6.commands.executeCommand("workbench.action.openSettings", "lanonasis");
+          await vscode5.commands.executeCommand("workbench.action.openSettings", "lanonasis");
+          break;
+        case "getSidebarPreferences":
+          await this.sendSidebarPreferences();
+          break;
+        case "updateSidebarPreferences":
+          await this.handleUpdateSidebarPreferences(data.data);
+          break;
+        case "getConnectionStatus":
+          await this.sendConnectionStatus();
           break;
         case "captureClipboard":
           await this.handleCaptureClipboard();
@@ -36990,7 +36827,7 @@ var EnhancedSidebarProvider = class {
   }
   async handleLogout() {
     try {
-      await vscode6.commands.executeCommand("lanonasis.logout");
+      await vscode5.commands.executeCommand("lanonasis.logout");
       await this.sendAuthState();
     } catch (error46) {
       this._view?.webview.postMessage({
@@ -37001,15 +36838,27 @@ var EnhancedSidebarProvider = class {
   }
   async handleAuthentication(mode) {
     try {
-      await vscode6.commands.executeCommand("lanonasis.authenticate", mode);
+      this._view?.webview.postMessage({
+        type: "authLoading",
+        data: true
+      });
+      await vscode5.commands.executeCommand("lanonasis.authenticate", mode);
       setTimeout(async () => {
         await this.sendAuthState();
         await this.sendMemories();
+        this._view?.webview.postMessage({
+          type: "authLoading",
+          data: false
+        });
       }, 1e3);
     } catch (error46) {
       this._view?.webview.postMessage({
         type: "error",
         data: "Authentication failed: " + (error46 instanceof Error ? error46.message : String(error46))
+      });
+      this._view?.webview.postMessage({
+        type: "authLoading",
+        data: false
       });
     }
   }
@@ -37176,7 +37025,7 @@ ${attachedContext}
   }
   async handleCreateApiKey(_keyData) {
     try {
-      await vscode6.commands.executeCommand("lanonasis.createApiKey");
+      await vscode5.commands.executeCommand("lanonasis.createApiKey");
       await this.handleGetApiKeys();
       this._view?.webview.postMessage({
         type: "apiKeyCreated",
@@ -37194,7 +37043,7 @@ ${attachedContext}
       if (this._apiKeyService && keyId) {
         await this._apiKeyService.deleteApiKey(keyId);
       } else {
-        await vscode6.commands.executeCommand("lanonasis.refreshApiKeys");
+        await vscode5.commands.executeCommand("lanonasis.refreshApiKeys");
       }
       await this.handleGetApiKeys();
       this._view?.webview.postMessage({
@@ -37210,7 +37059,7 @@ ${attachedContext}
   }
   async handleStoreApiKey() {
     try {
-      await vscode6.commands.executeCommand("lanonasis.authenticate", "apikey");
+      await vscode5.commands.executeCommand("lanonasis.authenticate", "apikey");
       await this.sendAuthState();
     } catch (error46) {
       this._view?.webview.postMessage({
@@ -37221,7 +37070,7 @@ ${attachedContext}
   }
   async handleCaptureClipboard() {
     try {
-      const clipboardContent = await vscode6.env.clipboard.readText();
+      const clipboardContent = await vscode5.env.clipboard.readText();
       if (!clipboardContent.trim()) {
         this._view?.webview.postMessage({
           type: "clipboardError",
@@ -37229,7 +37078,7 @@ ${attachedContext}
         });
         return;
       }
-      const title = await vscode6.window.showInputBox({
+      const title = await vscode5.window.showInputBox({
         prompt: "Title for this memory",
         placeHolder: "Enter a title...",
         value: clipboardContent.substring(0, 50).replace(/\n/g, " ")
@@ -37245,7 +37094,7 @@ ${attachedContext}
           type: "memoryCaptured",
           data: memory
         });
-        vscode6.window.showInformationMessage("\u{1F4DD} Memory captured from clipboard!");
+        vscode5.window.showInformationMessage("\u{1F4DD} Memory captured from clipboard!");
         await this.sendMemories();
       }
     } catch (error46) {
@@ -37257,7 +37106,7 @@ ${attachedContext}
   }
   async handleGetClipboardContent() {
     try {
-      const clipboardContent = await vscode6.env.clipboard.readText();
+      const clipboardContent = await vscode5.env.clipboard.readText();
       this._view?.webview.postMessage({
         type: "clipboardContent",
         data: clipboardContent
@@ -37271,21 +37120,21 @@ ${attachedContext}
   }
   async handlePasteFromClipboard() {
     try {
-      const clipboardContent = await vscode6.env.clipboard.readText();
+      const clipboardContent = await vscode5.env.clipboard.readText();
       if (!clipboardContent || !clipboardContent.trim()) {
-        vscode6.window.showWarningMessage("Clipboard is empty");
+        vscode5.window.showWarningMessage("Clipboard is empty");
         return;
       }
       this._view?.webview.postMessage({
         type: "clipboardContent",
         data: clipboardContent
       });
-      vscode6.window.showInformationMessage(
+      vscode5.window.showInformationMessage(
         `Clipboard content ready (${clipboardContent.length} chars)`,
         "Create Memory"
       ).then((action) => {
         if (action === "Create Memory") {
-          vscode6.commands.executeCommand("lanonasis.captureClipboard");
+          vscode5.commands.executeCommand("lanonasis.captureClipboard");
         }
       });
     } catch (error46) {
@@ -37298,15 +37147,15 @@ ${attachedContext}
   async handleCopyToClipboard(text) {
     try {
       if (!text) {
-        vscode6.window.showWarningMessage("Nothing to copy");
+        vscode5.window.showWarningMessage("Nothing to copy");
         return;
       }
-      await vscode6.env.clipboard.writeText(text);
+      await vscode5.env.clipboard.writeText(text);
       this._view?.webview.postMessage({
         type: "copySuccess",
         data: true
       });
-      vscode6.window.setStatusBarMessage("\u{1F4CB} Copied to clipboard", 2e3);
+      vscode5.window.setStatusBarMessage("\u{1F4CB} Copied to clipboard", 2e3);
     } catch (error46) {
       this._view?.webview.postMessage({
         type: "error",
@@ -37317,13 +37166,13 @@ ${attachedContext}
   async handleSaveAsMemory(data) {
     try {
       const defaultTitle = data.content.substring(0, 50).replace(/\n/g, " ").trim();
-      const title = await vscode6.window.showInputBox({
+      const title = await vscode5.window.showInputBox({
         prompt: "Title for this memory",
         placeHolder: "Enter a title...",
         value: data.title || defaultTitle
       });
       if (!title) return;
-      const memoryType = await vscode6.window.showQuickPick(
+      const memoryType = await vscode5.window.showQuickPick(
         ["context", "knowledge", "reference", "project", "personal", "workflow"],
         {
           placeHolder: "Select memory type",
@@ -37341,7 +37190,7 @@ ${attachedContext}
         type: "memorySaved",
         data: memory
       });
-      vscode6.window.showInformationMessage(`\u{1F4BE} Saved as memory: "${title}"`);
+      vscode5.window.showInformationMessage(`\u{1F4BE} Saved as memory: "${title}"`);
       await this.sendMemories();
       await this.updateOnboardingStep("create_memory");
     } catch (error46) {
@@ -37391,6 +37240,88 @@ ${attachedContext}
       });
     }
   }
+  async handleUpdateMemory(payload) {
+    try {
+      const { id, updates } = payload;
+      if (!id) {
+        throw new Error("Missing memory id");
+      }
+      const updated = await this._bridge.updateMemory(id, updates);
+      this._view?.webview.postMessage({
+        type: "memoryUpdated",
+        data: updated
+      });
+      await this.sendMemories();
+    } catch (error46) {
+      this._view?.webview.postMessage({
+        type: "error",
+        data: "Failed to update memory: " + (error46 instanceof Error ? error46.message : String(error46))
+      });
+    }
+  }
+  async handleDeleteMemory(memoryId) {
+    try {
+      if (!memoryId) {
+        throw new Error("Missing memory id");
+      }
+      await this._bridge.deleteMemory(memoryId);
+      this._view?.webview.postMessage({
+        type: "memoryDeleted",
+        data: { id: memoryId }
+      });
+      await this.sendMemories();
+    } catch (error46) {
+      this._view?.webview.postMessage({
+        type: "error",
+        data: "Failed to delete memory: " + (error46 instanceof Error ? error46.message : String(error46))
+      });
+    }
+  }
+  async sendSidebarPreferences() {
+    const config2 = vscode5.workspace.getConfiguration("lanonasis");
+    const typeOrder = config2.get("sidebarTypeOrder", []);
+    const hiddenTypes = config2.get("sidebarHiddenTypes", []);
+    const theme = config2.get("sidebarTheme", "default");
+    this._view?.webview.postMessage({
+      type: "sidebarPreferences",
+      data: { typeOrder, hiddenTypes, theme }
+    });
+  }
+  async handleUpdateSidebarPreferences(preferences) {
+    const config2 = vscode5.workspace.getConfiguration("lanonasis");
+    if (preferences.typeOrder) {
+      await config2.update("sidebarTypeOrder", preferences.typeOrder, vscode5.ConfigurationTarget.Global);
+    }
+    if (preferences.hiddenTypes) {
+      await config2.update("sidebarHiddenTypes", preferences.hiddenTypes, vscode5.ConfigurationTarget.Global);
+    }
+    if (preferences.theme) {
+      await config2.update("sidebarTheme", preferences.theme, vscode5.ConfigurationTarget.Global);
+    }
+    await this.sendSidebarPreferences();
+  }
+  async sendConnectionStatus() {
+    const capabilities = this.isEnhancedService(this.memoryService) ? this.memoryService.getCapabilities() : null;
+    const cacheStatus = this.cacheBridge?.getStatus() ?? null;
+    const authenticated = capabilities?.authenticated ?? this.memoryService.isAuthenticated();
+    const connectionMode = capabilities?.cliAvailable ? "cli" : "http";
+    const offlineStatus = this.offlineService?.getStatus() ?? null;
+    const queueStatus = this.offlineQueue?.getStatus() ?? null;
+    this._view?.webview.postMessage({
+      type: "connectionStatus",
+      data: {
+        authenticated,
+        connectionMode,
+        capabilities,
+        cacheStatus,
+        offline: offlineStatus ? !offlineStatus.online : void 0,
+        queueStatus
+      }
+    });
+  }
+  isEnhancedService(service) {
+    return typeof service.getCapabilities === "function";
+  }
   async sendMemories() {
     this._view?.webview.postMessage({
       type: "loading",
@@ -37421,6 +37352,7 @@ ${attachedContext}
         type: "loading",
         data: false
       });
+      await this.sendConnectionStatus();
     }
   }
   async handleSearch(query) {
@@ -37454,6 +37386,7 @@ ${attachedContext}
         type: "loading",
         data: false
       });
+      await this.sendConnectionStatus();
     }
   }
   async sendInitialData() {
@@ -37461,6 +37394,8 @@ ${attachedContext}
     try {
       await this.sendAuthState();
       await this.sendOnboardingState();
+      await this.sendSidebarPreferences();
+      await this.sendConnectionStatus();
       await this.sendMemories();
       console.log("[EnhancedSidebarProvider] Initial data sent successfully");
     } catch (error46) {
@@ -37485,8 +37420,8 @@ ${attachedContext}
     }
   }
   _getReactHtmlForWebview(webview) {
-    const reactScriptUri = webview.asWebviewUri(vscode6.Uri.joinPath(this._extensionUri, "media", "sidebar-react.js"));
-    const styleUri = webview.asWebviewUri(vscode6.Uri.joinPath(this._extensionUri, "media", "react-styles.css"));
+    const reactScriptUri = webview.asWebviewUri(vscode5.Uri.joinPath(this._extensionUri, "media", "sidebar-react.js"));
+    const styleUri = webview.asWebviewUri(vscode5.Uri.joinPath(this._extensionUri, "media", "react-styles.css"));
     const nonce = this.getNonce();
     return `<!DOCTYPE html>
         <html lang="en">
@@ -37526,14 +37461,14 @@ ${attachedContext}
 };
 
 // src/services/MemoryService.ts
-var vscode7 = __toESM(require("vscode"));
+var vscode6 = __toESM(require("vscode"));
 var MemoryService = class {
   constructor(secureApiKeyService) {
     this.client = null;
     this.initializePromise = null;
     this.authenticated = false;
     this.secureApiKeyService = secureApiKeyService;
-    this.config = vscode7.workspace.getConfiguration("lanonasis");
+    this.config = vscode6.workspace.getConfiguration("lanonasis");
     void this.ensureClient();
   }
   async resolveApiKey() {
@@ -37582,7 +37517,7 @@ var MemoryService = class {
         apiKeyPrefix: apiKey ? apiKey.substring(0, 8) + "..." : null,
         apiUrl: effectiveUrl
       });
-      this.client = createMemoryClient2({
+      this.client = createMemoryClient({
         apiUrl: effectiveUrl,
         authToken: authToken || void 0,
         apiKey: apiKey || void 0,
@@ -37621,7 +37556,7 @@ var MemoryService = class {
     const effectiveUrl = useGateway ? gatewayUrl : apiUrl;
     let testClient = null;
     if (apiKey && apiKey.trim().length > 0) {
-      testClient = createMemoryClient2({
+      testClient = createMemoryClient({
         apiUrl: effectiveUrl,
         apiKey,
         timeout: 1e4
@@ -37753,7 +37688,7 @@ var MemoryService = class {
     return response.data;
   }
   async refreshClient() {
-    this.config = vscode7.workspace.getConfiguration("lanonasis");
+    this.config = vscode6.workspace.getConfiguration("lanonasis");
     this.client = null;
     this.authenticated = false;
     await this.ensureClient();
@@ -37761,6 +37696,448 @@ var MemoryService = class {
   isAuthError(message) {
     const normalized = message.toLowerCase();
     return normalized.includes("authentication required") || normalized.includes("unauthorized") || normalized.includes("401") || normalized.includes("auth token") || normalized.includes("bearer");
+  }
+};
+
+// src/services/EnhancedMemoryService.ts
+var vscode7 = __toESM(require("vscode"));
+function getErrorMessage(error46, fallback) {
+  if (!error46) return fallback;
+  if (typeof error46 === "string") return error46;
+  return error46.message || fallback;
+}
+var cachedMemoryClientModule;
+var attemptedMemoryClientLoad = false;
+function getMemoryClientModule() {
+  if (!attemptedMemoryClientLoad) {
+    attemptedMemoryClientLoad = true;
+    try {
+      cachedMemoryClientModule = require_dist();
+    } catch (error46) {
+      console.warn("[EnhancedMemoryService] @lanonasis/memory-client not available. Falling back to basic service.", error46);
+      cachedMemoryClientModule = void 0;
+    }
+  }
+  return cachedMemoryClientModule;
+}
+var EnhancedMemoryService = class _EnhancedMemoryService {
+  constructor(secureApiKeyService) {
+    this.client = null;
+    this.connectionCapabilities = null;
+    const sdkModule = getMemoryClientModule();
+    if (!sdkModule) {
+      throw new Error("@lanonasis/memory-client module not available");
+    }
+    this.sdk = sdkModule;
+    this.secureApiKeyService = secureApiKeyService;
+    this.config = vscode7.workspace.getConfiguration("lanonasis");
+    this.showPerformanceFeedback = this.config.get("showPerformanceFeedback", false);
+    this.statusBarItem = vscode7.window.createStatusBarItem(
+      vscode7.StatusBarAlignment.Right,
+      100
+    );
+    this.statusBarItem.command = "lanonasis.showConnectionInfo";
+    this.initializeClient();
+  }
+  async initializeClient() {
+    const { CoreMemoryClient: CoreMemoryClient3 } = this.sdk;
+    const credential = await this.secureApiKeyService.getStoredCredentials();
+    if (!credential) {
+      this.client = null;
+      this.updateStatusBar(false, "No API Key");
+      return;
+    }
+    try {
+      const clientConfig = this.buildClientConfigFromCredential(credential);
+      const apiUrl = this.config.get("apiUrl", "https://api.lanonasis.com");
+      const useGateway = this.config.get("useGateway", true);
+      clientConfig.apiUrl = useGateway ? this.config.get("gatewayUrl", "https://api.lanonasis.com") : apiUrl;
+      const verbose = this.config.get("verboseLogging", false);
+      if (verbose && false) {
+        verboseLoggingWarningShown = true;
+        console.info(
+          "[EnhancedMemoryService] Note: Verbose logging is enabled. Disable via Settings > Lanonasis > Verbose Logging for production use."
+        );
+      }
+      this.client = new CoreMemoryClient3(clientConfig);
+      this.connectionCapabilities = await this.detectCapabilities();
+      this.updateStatusBar(true, this.getConnectionStatus());
+    } catch (error46) {
+      console.warn("Enhanced Memory Service initialization failed:", error46);
+      this.client = null;
+      this.updateStatusBar(false, "Initialization Failed");
+      throw error46;
+    }
+  }
+  async detectCapabilities() {
+    if (!this.client) {
+      return {
+        authenticated: false,
+        connectionMode: "http"
+      };
+    }
+    try {
+      const healthResult = await this.client.healthCheck();
+      return {
+        authenticated: healthResult.error === void 0,
+        connectionMode: "http"
+      };
+    } catch {
+      return {
+        authenticated: false,
+        connectionMode: "http"
+      };
+    }
+  }
+  getConnectionStatus() {
+    if (!this.connectionCapabilities) return "Unknown";
+    return this.connectionCapabilities.authenticated ? "HTTP API" : "Disconnected";
+  }
+  updateStatusBar(connected, status) {
+    if (connected) {
+      this.statusBarItem.text = `$(database) ${status}`;
+      this.statusBarItem.backgroundColor = void 0;
+      this.statusBarItem.tooltip = `Lanonasis Memory: Connected via ${status}`;
+    } else {
+      this.statusBarItem.text = `$(alert) ${status}`;
+      this.statusBarItem.backgroundColor = new vscode7.ThemeColor("statusBarItem.errorBackground");
+      this.statusBarItem.tooltip = `Lanonasis Memory: ${status}`;
+    }
+    this.statusBarItem.show();
+  }
+  async refreshClient() {
+    this.config = vscode7.workspace.getConfiguration("lanonasis");
+    await this.initializeClient();
+  }
+  async refreshConfig() {
+    await this.refreshClient();
+  }
+  isAuthenticated() {
+    return this.client !== null;
+  }
+  getCapabilities() {
+    if (!this.connectionCapabilities) return null;
+    return {
+      cliAvailable: false,
+      mcpSupport: false,
+      authenticated: this.connectionCapabilities.authenticated,
+      goldenContract: false
+    };
+  }
+  async testConnection(apiKey) {
+    const { CoreMemoryClient: CoreMemoryClient3 } = this.sdk;
+    let testClient = this.client;
+    if (apiKey) {
+      const config2 = this.buildClientConfigFromCredential({ type: "apiKey", token: apiKey });
+      testClient = new CoreMemoryClient3(config2);
+    }
+    if (!testClient) {
+      const credential = await this.secureApiKeyService.getStoredCredentials();
+      if (!credential) {
+        throw new Error("No API key configured");
+      }
+      const config2 = this.buildClientConfigFromCredential(credential);
+      testClient = new CoreMemoryClient3(config2);
+    }
+    const testRequest = this.toSDKSearchRequest({
+      query: "connection test",
+      limit: 1,
+      status: "active",
+      threshold: 0.1
+    });
+    const result = await testClient.searchMemories(testRequest);
+    if (result.error) {
+      throw new Error(getErrorMessage(result.error, "Connection test failed"));
+    }
+    if (!apiKey) {
+      this.connectionCapabilities = await this.detectCapabilities();
+      this.updateStatusBar(true, this.getConnectionStatus());
+    }
+  }
+  async createMemory(memory) {
+    if (!this.client) {
+      throw new Error("Not authenticated. Please configure your API key.");
+    }
+    const sdkMemory = this.toSDKCreateRequest(memory);
+    const result = await this.client.createMemory(sdkMemory);
+    if (result.error || !result.data) {
+      throw new Error(getErrorMessage(result.error, "Failed to create memory"));
+    }
+    this.showOperationFeedback("create", result);
+    return this.convertSDKMemoryEntry(result.data);
+  }
+  async updateMemory(id, memory) {
+    if (!this.client) {
+      throw new Error("Not authenticated. Please configure your API key.");
+    }
+    const sdkMemory = this.toSDKUpdateRequest(memory);
+    const result = await this.client.updateMemory(id, sdkMemory);
+    if (result.error || !result.data) {
+      throw new Error(getErrorMessage(result.error, "Failed to update memory"));
+    }
+    this.showOperationFeedback("update", result);
+    return this.convertSDKMemoryEntry(result.data);
+  }
+  async searchMemories(query, options = {}) {
+    if (!this.client) {
+      throw new Error("Not authenticated. Please configure your API key.");
+    }
+    const searchRequest = {
+      query,
+      limit: 20,
+      threshold: 0.7,
+      status: "active",
+      ...options
+    };
+    const sdkSearchRequest = this.toSDKSearchRequest(searchRequest);
+    const result = await this.client.searchMemories(sdkSearchRequest);
+    if (result.error || !result.data) {
+      throw new Error(getErrorMessage(result.error, "Search failed"));
+    }
+    if (this.config.get("verboseLogging", false)) {
+      this.showOperationFeedback("search", result);
+    }
+    return this.convertSDKSearchResults(result.data.results);
+  }
+  async getMemory(id) {
+    if (!this.client) {
+      throw new Error("Not authenticated. Please configure your API key.");
+    }
+    const result = await this.client.getMemory(id);
+    if (result.error || !result.data) {
+      throw new Error(getErrorMessage(result.error, "Memory not found"));
+    }
+    return this.convertSDKMemoryEntry(result.data);
+  }
+  async listMemories(limit = 50) {
+    if (!this.client) {
+      throw new Error("Not authenticated. Please configure your API key.");
+    }
+    if (typeof limit !== "number" || limit < 0) {
+      throw new Error("limit must be a non-negative number");
+    }
+    const validatedLimit = Math.min(Math.max(1, Math.floor(limit)), 1e3);
+    const result = await this.client.listMemories({
+      limit: validatedLimit,
+      sort: "updated_at",
+      order: "desc"
+    });
+    if (result.error || !result.data) {
+      const message = getErrorMessage(result.error, "Failed to fetch memories");
+      if (this.isAuthError(message)) {
+        await this.refreshClient();
+        if (!this.client) {
+          throw new Error(message);
+        }
+        const retry = await this.client.listMemories({
+          limit: validatedLimit,
+          sort: "updated_at",
+          order: "desc"
+        });
+        if (retry.error || !retry.data) {
+          throw new Error(getErrorMessage(retry.error, message));
+        }
+        return retry.data.data.map((entry) => this.convertSDKMemoryEntry(entry));
+      }
+      throw new Error(message);
+    }
+    return result.data.data.map((entry) => this.convertSDKMemoryEntry(entry));
+  }
+  async deleteMemory(id) {
+    if (!this.client) {
+      throw new Error("Not authenticated. Please configure your API key.");
+    }
+    const result = await this.client.deleteMemory(id);
+    if (result.error) {
+      throw new Error(getErrorMessage(result.error, "Failed to delete memory"));
+    }
+    this.showOperationFeedback("delete", result);
+  }
+  async getMemoryStats() {
+    if (!this.client) {
+      throw new Error("Not authenticated. Please configure your API key.");
+    }
+    const result = await this.client.getMemoryStats();
+    if (result.error || !result.data) {
+      throw new Error(getErrorMessage(result.error, "Failed to fetch stats"));
+    }
+    return this.convertSDKUserMemoryStats(result.data);
+  }
+  showOperationFeedback(operation, result) {
+    if (!this.showPerformanceFeedback) return;
+    const source = result.source === "cli" ? result.mcpUsed ? "CLI+MCP" : "CLI" : "API";
+    const message = `${operation} completed via ${source}`;
+    vscode7.window.setStatusBarMessage(
+      `$(check) ${message}`,
+      2e3
+    );
+  }
+  async showConnectionInfo() {
+    const caps = this.connectionCapabilities;
+    if (!caps) {
+      vscode7.window.showInformationMessage("Connection status: Unknown");
+      return;
+    }
+    const details = [
+      `Connection Mode: ${caps.connectionMode.toUpperCase()}`,
+      `Authenticated: ${caps.authenticated ? "\u2705" : "\u274C"}`
+    ];
+    const message = `Lanonasis Memory Connection Status:
+
+${details.join("\n")}`;
+    if (caps.authenticated) {
+      vscode7.window.showInformationMessage(
+        `${message}
+
+Connected via HTTP API.`
+      );
+    } else {
+      vscode7.window.showWarningMessage(
+        `${message}
+
+Please authenticate to access memory features.`
+      );
+    }
+  }
+  toSDKCreateRequest(memory) {
+    const { memory_type, ...rest } = memory;
+    return {
+      ...rest,
+      memory_type: this.mapMemoryType(memory_type)
+    };
+  }
+  toSDKUpdateRequest(memory) {
+    const { memory_type, ...rest } = memory;
+    const result = { ...rest };
+    if (memory_type !== void 0) {
+      result.memory_type = this.mapMemoryType(memory_type);
+    }
+    return result;
+  }
+  toSDKSearchRequest(request) {
+    const { memory_types, ...rest } = request;
+    const sdkTypes = memory_types?.map((type) => this.mapMemoryType(type));
+    const sdkRequest = {
+      ...rest,
+      ...sdkTypes ? { memory_types: sdkTypes } : {}
+    };
+    return sdkRequest;
+  }
+  mapMemoryType(vscodeType) {
+    const typeMap = {
+      knowledge: "knowledge",
+      project: "project",
+      context: "context",
+      reference: "reference",
+      personal: "personal",
+      workflow: "workflow"
+    };
+    return typeMap[vscodeType] ?? "context";
+  }
+  mapMemoryTypeFromSDK(sdkType) {
+    const typeMap = {
+      context: "context",
+      project: "project",
+      knowledge: "knowledge",
+      reference: "reference",
+      personal: "personal",
+      workflow: "workflow"
+    };
+    return typeMap[sdkType] ?? "context";
+  }
+  convertSDKMemoryEntry(sdkEntry) {
+    return {
+      ...sdkEntry,
+      memory_type: this.mapMemoryTypeFromSDK(sdkEntry.memory_type)
+    };
+  }
+  buildClientConfigFromCredential(credential) {
+    const vscodeConfig = vscode7.workspace.getConfiguration("lanonasis");
+    const apiUrl = vscodeConfig.get("apiUrl", "https://api.lanonasis.com");
+    const config2 = {
+      apiUrl,
+      apiKey: credential.type === "apiKey" ? credential.token : void 0,
+      timeout: 3e4,
+      retry: {
+        maxRetries: 3,
+        retryDelay: 1e3,
+        backoff: "exponential"
+      },
+      headers: {
+        "X-Client-Type": "vscode-extension",
+        "X-Client-Version": "2.0.5",
+        "X-Project-Scope": "lanonasis-maas"
+        // Required by backend auth middleware
+      }
+    };
+    if (credential.type === "oauth") {
+      config2.apiKey = void 0;
+      config2.authToken = credential.token;
+      try {
+        const parts = credential.token.split(".");
+        if (parts.length >= 2) {
+          const payload = JSON.parse(Buffer.from(parts[1], "base64").toString());
+          if (payload.sub || payload.user_id) {
+            config2.userId = payload.sub || payload.user_id;
+          }
+        }
+      } catch {
+      }
+    }
+    const organizationId = vscodeConfig.get("organizationId");
+    if (organizationId) {
+      config2.headers = {
+        ...config2.headers,
+        "X-Organization-ID": organizationId
+      };
+      config2.organizationId = organizationId;
+    }
+    return config2;
+  }
+  convertSDKSearchResults(sdkResults) {
+    return sdkResults.map((result) => ({
+      ...result,
+      memory_type: this.mapMemoryTypeFromSDK(result.memory_type)
+    }));
+  }
+  isAuthError(message) {
+    const normalized = message.toLowerCase();
+    return normalized.includes("authentication required") || normalized.includes("unauthorized") || normalized.includes("401") || normalized.includes("auth token") || normalized.includes("bearer");
+  }
+  convertSDKUserMemoryStats(stats) {
+    const initial = {
+      knowledge: 0,
+      project: 0,
+      context: 0,
+      reference: 0,
+      personal: 0,
+      workflow: 0
+    };
+    const memoriesByType = { ...initial };
+    for (const [key, value] of Object.entries(stats.memories_by_type)) {
+      const mappedKey = this.mapMemoryTypeFromSDK(key);
+      memoriesByType[mappedKey] = value;
+    }
+    return {
+      ...stats,
+      memories_by_type: memoriesByType
+    };
+  }
+  dispose() {
+    this.statusBarItem.dispose();
+  }
+  // Migration helper for existing MemoryService users
+  static async migrateFromBasicService(secureApiKeyService) {
+    const enhanced = new _EnhancedMemoryService(secureApiKeyService);
+    vscode7.window.showInformationMessage(
+      "Upgraded to Enhanced Memory Service!",
+      "Learn More"
+    ).then((selection) => {
+      if (selection === "Learn More") {
+        vscode7.env.openExternal(vscode7.Uri.parse("https://docs.lanonasis.com/sdk"));
+      }
+    });
+    return enhanced;
   }
 };
 
@@ -37773,6 +38150,7 @@ var MemoryCache = class {
   constructor(context, output) {
     this.context = context;
     this.output = output;
+    this.maxSize = 50;
     this.memories = [];
     this.lastSyncAt = null;
     this.isRefreshing = false;
@@ -37784,6 +38162,7 @@ var MemoryCache = class {
       const lastSync = this.context.globalState.get(CACHE_KEYS.LAST_SYNC, null);
       this.memories = cached2;
       this.lastSyncAt = lastSync;
+      this.trimToLimit();
       this.output.appendLine(`[MemoryCache] Loaded ${this.memories.length} cached memories`);
     } catch (err) {
       this.output.appendLine(`[MemoryCache] Load error: ${err}`);
@@ -37804,8 +38183,11 @@ var MemoryCache = class {
       count: this.memories.length
     };
   }
-  getMemories() {
-    return [...this.memories];
+  getMemories(limit = this.maxSize) {
+    return [...this.memories].slice(0, limit);
+  }
+  getMemory(id) {
+    return this.memories.find((memory) => memory.id === id);
   }
   setRefreshing(refreshing) {
     this.isRefreshing = refreshing;
@@ -37820,6 +38202,7 @@ var MemoryCache = class {
       ...memory,
       _cachedAt: Date.now()
     }));
+    this.trimToLimit();
     this.lastSyncAt = Date.now();
     await this.saveToStorage();
   }
@@ -37830,6 +38213,17 @@ var MemoryCache = class {
     } else {
       this.memories.unshift({ ...memory, _cachedAt: Date.now() });
     }
+    this.trimToLimit();
+    await this.saveToStorage();
+  }
+  async replace(tempId, memory) {
+    const index = this.memories.findIndex((item) => item.id === tempId);
+    if (index >= 0) {
+      this.memories[index] = { ...memory, _cachedAt: Date.now() };
+    } else {
+      this.memories.unshift({ ...memory, _cachedAt: Date.now() });
+    }
+    this.trimToLimit();
     await this.saveToStorage();
   }
   async remove(id) {
@@ -37873,6 +38267,10 @@ var MemoryCache = class {
       return { memory, score };
     });
     return scored.filter((item) => item.score > 0).sort((a, b) => b.score - a.score).slice(0, 10).map((item) => item.memory);
+  }
+  trimToLimit() {
+    if (this.memories.length <= this.maxSize) return;
+    this.memories = [...this.memories].sort((a, b) => (b._cachedAt || 0) - (a._cachedAt || 0)).slice(0, this.maxSize);
   }
 };
 
@@ -38122,7 +38520,7 @@ var ApiKeyService = class {
 };
 
 // src/extension.ts
-var import_ide_extension_core = __toESM(require_dist());
+var import_ide_extension_core = __toESM(require_dist2());
 
 // src/utils/diagnostics.ts
 var vscode9 = __toESM(require("vscode"));
@@ -38346,7 +38744,7 @@ async function checkNetworkConnectivity(memoryService, outputChannel) {
 async function checkConnectionMode(memoryService, outputChannel) {
   outputChannel.appendLine("\n[6/7] Checking Connection Mode...");
   try {
-    if (memoryService instanceof EnhancedMemoryService) {
+    if (isEnhancedMemoryService(memoryService)) {
       const capabilities = memoryService.getCapabilities();
       if (capabilities) {
         outputChannel.appendLine(`  \u2713 Enhanced Memory Service detected`);
@@ -38479,374 +38877,20 @@ function formatDiagnosticResults(health) {
   return output;
 }
 
-// src/chat/MemoryChatParticipant.ts
-var vscode10 = __toESM(require("vscode"));
-var CHAT_PARTICIPANT_ID = "lanonasis-memory.memory-assistant";
-var SLASH_COMMANDS = [
-  { name: "recall", description: "Search and recall memories semantically" },
-  { name: "save", description: "Save current context or selection as a memory" },
-  { name: "list", description: "List recent memories" },
-  { name: "context", description: "Get relevant context for current file/project" },
-  { name: "refine", description: "Refine a prompt using your memories as context" }
-];
-function registerMemoryChatParticipant(context, memoryService) {
-  const participant = vscode10.chat.createChatParticipant(
-    CHAT_PARTICIPANT_ID,
-    createChatRequestHandler(memoryService)
-  );
-  participant.iconPath = vscode10.Uri.joinPath(context.extensionUri, "images", "icon.png");
-  participant.onDidReceiveFeedback((feedback) => {
-    console.log("[MemoryChatParticipant] Received feedback:", feedback.kind);
-  });
-  context.subscriptions.push(participant);
-  console.log("[MemoryChatParticipant] @lanonasis chat participant registered");
-  return participant;
-}
-function createChatRequestHandler(memoryService) {
-  return async (request, context, stream, token) => {
-    const { prompt, command } = request;
-    try {
-      if (command) {
-        return await handleSlashCommand(command, prompt, memoryService, stream, token);
-      }
-      return await handleSemanticQuery(prompt, memoryService, stream, context, token);
-    } catch (error46) {
-      stream.markdown(`\u274C **Error:** ${error46 instanceof Error ? error46.message : "An unexpected error occurred"}`);
-      return { errorDetails: { message: error46 instanceof Error ? error46.message : "Unknown error" } };
-    }
-  };
-}
-async function handleSlashCommand(command, prompt, memoryService, stream, token) {
-  switch (command) {
-    case "recall":
-      return await handleRecallCommand(prompt, memoryService, stream, token);
-    case "save":
-      return await handleSaveCommand(prompt, stream);
-    case "list":
-      return await handleListCommand(memoryService, stream, token);
-    case "context":
-      return await handleContextCommand(prompt, memoryService, stream, token);
-    case "refine":
-      return await handleRefineCommand(prompt, memoryService, stream, token);
-    default:
-      stream.markdown(`Unknown command: \`/${command}\`. Available commands: ${SLASH_COMMANDS.map((c) => `/${c.name}`).join(", ")}`);
-      return {};
-  }
-}
-async function handleRecallCommand(query, memoryService, stream, token) {
-  if (!query.trim()) {
-    stream.markdown("Please provide a search query. Example: `@lanonasis /recall how to deploy to production`");
-    return {};
-  }
-  stream.progress("Searching memories...");
-  const results = await memoryService.searchMemories(query, { limit: 5 });
-  if (token.isCancellationRequested) {
-    return { errorDetails: { message: "Search cancelled" } };
-  }
-  if (results.length === 0) {
-    stream.markdown(`No memories found for "${query}". Try a different search term or create new memories.`);
-    stream.button({
-      command: "lanonasis.createMemoryFromFile",
-      title: "\u{1F4DD} Create Memory"
-    });
-    return {};
-  }
-  stream.markdown(`## \u{1F9E0} Found ${results.length} relevant memories
-
-`);
-  results.forEach((result, index) => {
-    stream.markdown(`### ${index + 1}. ${result.title}
-`);
-    stream.markdown(`${result.content.substring(0, 300)}${result.content.length > 300 ? "..." : ""}
-
-`);
-    if (result.tags && result.tags.length > 0) {
-      stream.markdown(`*Tags: ${result.tags.join(", ")}*
-
-`);
-    }
-    stream.markdown("---\n\n");
-  });
-  stream.button({
-    command: "lanonasis.searchMemory",
-    title: "\u{1F50D} Search More"
-  });
-  return {
-    metadata: {
-      command: "recall",
-      resultCount: results.length
-    }
-  };
-}
-async function handleSaveCommand(title, stream) {
-  const editor = vscode10.window.activeTextEditor;
-  if (editor && !editor.selection.isEmpty) {
-    stream.markdown("\u{1F4BE} Saving selected text as a memory...\n\n");
-    stream.button({
-      command: "lanonasis.createMemory",
-      title: "\u{1F4DD} Create from Selection"
-    });
-  } else {
-    stream.markdown("To save a memory:\n\n");
-    stream.markdown("1. **Select text** in the editor and run `@lanonasis /save`\n");
-    stream.markdown("2. Use **Quick Capture** with `\u2318\u21E7S` / `Ctrl+Shift+S`\n");
-    stream.markdown("3. Or click below to create from clipboard:\n\n");
-    stream.button({
-      command: "lanonasis.captureClipboard",
-      title: "\u{1F4CB} Capture Clipboard"
-    });
-  }
-  if (title.trim()) {
-    stream.markdown(`
-*Suggested title: "${title}"*`);
-  }
-  return {};
-}
-async function handleListCommand(memoryService, stream, token) {
-  stream.progress("Loading memories...");
-  const memories = await memoryService.listMemories(10);
-  if (token.isCancellationRequested) {
-    return { errorDetails: { message: "List cancelled" } };
-  }
-  if (!memories || memories.length === 0) {
-    stream.markdown("\u{1F4ED} No memories found. Start building your memory bank!\n\n");
-    stream.button({
-      command: "lanonasis.createMemoryFromFile",
-      title: "\u{1F4DD} Create First Memory"
-    });
-    return {};
-  }
-  stream.markdown(`## \u{1F4DA} Recent Memories (${memories.length})
-
-`);
-  memories.forEach((memory, index) => {
-    const typeEmoji = getTypeEmoji(memory.memory_type);
-    stream.markdown(`${index + 1}. ${typeEmoji} **${memory.title}** - _${memory.memory_type}_
-`);
-  });
-  stream.markdown("\n");
-  stream.button({
-    command: "lanonasis.searchMemory",
-    title: "\u{1F50D} Search Memories"
-  });
-  return {
-    metadata: {
-      command: "list",
-      count: memories.length
-    }
-  };
-}
-async function handleContextCommand(additionalQuery, memoryService, stream, token) {
-  const editor = vscode10.window.activeTextEditor;
-  const fileName = editor?.document.fileName || "";
-  const fileExtension = fileName.split(".").pop() || "";
-  const workspaceName = vscode10.workspace.name || "";
-  const contextTerms = [];
-  if (workspaceName) contextTerms.push(workspaceName);
-  if (fileExtension) contextTerms.push(fileExtension);
-  if (additionalQuery) contextTerms.push(additionalQuery);
-  const query = contextTerms.join(" ") || "development context";
-  stream.progress(`Finding relevant context for ${fileName ? `"${fileName.split("/").pop()}"` : "your workspace"}...`);
-  const results = await memoryService.searchMemories(query, { limit: 5 });
-  if (token.isCancellationRequested) {
-    return { errorDetails: { message: "Context search cancelled" } };
-  }
-  stream.markdown(`## \u{1F4D1} Relevant Context
-
-`);
-  if (results.length === 0) {
-    stream.markdown(`No relevant memories found for the current context.
-
-`);
-    stream.markdown(`*Search terms: ${query}*
-
-`);
-  } else {
-    stream.markdown(`Found ${results.length} relevant memories:
-
-`);
-    results.forEach((result, index) => {
-      stream.markdown(`### ${index + 1}. ${result.title}
-`);
-      stream.markdown(`${result.content.substring(0, 200)}...
-
-`);
-    });
-  }
-  stream.markdown(`
-\u{1F4A1} *Tip: Use \`@lanonasis /save\` to save important context for later.*`);
-  return {
-    metadata: {
-      command: "context",
-      query,
-      resultCount: results.length
-    }
-  };
-}
-async function handleSemanticQuery(prompt, memoryService, stream, context, token) {
-  if (!prompt.trim()) {
-    stream.markdown("\u{1F44B} **Welcome to LanOnasis Memory!**\n\n");
-    stream.markdown("I can help you manage your knowledge and context. Try:\n\n");
-    stream.markdown("- `@lanonasis /recall <query>` - Search memories\n");
-    stream.markdown("- `@lanonasis /save` - Save current selection\n");
-    stream.markdown("- `@lanonasis /list` - View recent memories\n");
-    stream.markdown("- `@lanonasis /context` - Get context for current file\n\n");
-    stream.markdown("Or just ask me anything about your stored knowledge!\n");
-    return {};
-  }
-  stream.progress("Searching your memory bank...");
-  const results = await memoryService.searchMemories(prompt, { limit: 5 });
-  if (token.isCancellationRequested) {
-    return { errorDetails: { message: "Cancelled" } };
-  }
-  if (results.length === 0) {
-    stream.markdown(`I couldn't find any memories related to "${prompt}".
-
-`);
-    stream.markdown(`Would you like to:
-`);
-    stream.button({
-      command: "lanonasis.createMemory",
-      title: "\u{1F4DD} Create Memory"
-    });
-    stream.button({
-      command: "lanonasis.searchMemory",
-      title: "\u{1F50D} Try Different Search"
-    });
-    return {};
-  }
-  stream.markdown(`## \u{1F9E0} Based on your memories:
-
-`);
-  const topResult = results[0];
-  stream.markdown(`**Most relevant:** ${topResult.title}
-
-`);
-  stream.markdown(`${topResult.content}
-
-`);
-  if (results.length > 1) {
-    stream.markdown(`---
-
-**Related memories:**
-`);
-    results.slice(1).forEach((result, index) => {
-      stream.markdown(`${index + 2}. ${result.title}
-`);
-    });
-  }
-  const refined = await maybeCallRefineEndpoint(prompt, results);
-  if (refined) {
-    stream.markdown(`
-### \u2728 Refined Prompt Suggestion
-\`\`\`
-${refined}
-\`\`\`
-`);
-  }
-  return {
-    metadata: {
-      query: prompt,
-      resultCount: results.length,
-      topMemory: topResult.id
-    }
-  };
-}
-function getTypeEmoji(type) {
-  const emojiMap = {
-    context: "\u{1F4AD}",
-    knowledge: "\u{1F4DA}",
-    project: "\u{1F4C1}",
-    reference: "\u{1F517}",
-    personal: "\u{1F464}",
-    workflow: "\u2699\uFE0F",
-    conversation: "\u{1F4AC}"
-  };
-  return emojiMap[type] || "\u{1F4DD}";
-}
-async function handleRefineCommand(prompt, memoryService, stream, token) {
-  if (!prompt.trim()) {
-    stream.markdown("Paste a prompt to refine. Example: `@lanonasis /refine Generate a deployment checklist`");
-    return {};
-  }
-  stream.progress("Retrieving context for refinement...");
-  const results = await memoryService.searchMemories(prompt, { limit: 5 });
-  if (token.isCancellationRequested) return { errorDetails: { message: "Refine cancelled" } };
-  const refined = await maybeCallRefineEndpoint(prompt, results);
-  stream.markdown("### \u2728 Refined Prompt\n");
-  stream.markdown("```\n" + refined + "\n```");
-  if (results.length) {
-    stream.markdown("\n#### Context used\n");
-    results.forEach((r, idx) => {
-      stream.markdown(`${idx + 1}. ${r.title}${r.tags?.length ? ` \u2014 tags: ${r.tags.join(", ")}` : ""}`);
-    });
-  }
-  return {
-    metadata: {
-      command: "refine",
-      resultCount: results.length
-    }
-  };
-}
-function buildRefinedPrompt(prompt, results) {
-  const top = results.slice(0, 3).map((r) => `- ${r.title}${r.tags?.length ? ` (tags: ${r.tags.join(", ")})` : ""}`).join("\n");
-  const contextBlock = top ? `Context:
-${top}
-
-` : "";
-  return `${contextBlock}Task: ${prompt}
-
-Please use the above context, be concise, and include any relevant IDs, tags, or steps.`;
-}
-async function maybeCallRefineEndpoint(prompt, results) {
-  const refinedLocal = buildRefinedPrompt(prompt, results);
-  const config2 = vscode10.workspace.getConfiguration("lanonasis");
-  const endpoint = config2.get("refineEndpoint");
-  const apiKey = config2.get("refineApiKey");
-  if (!endpoint || !apiKey) {
-    return refinedLocal;
-  }
-  try {
-    const payload = {
-      prompt,
-      context: results.slice(0, 5).map((r) => ({
-        title: r.title,
-        tags: r.tags,
-        snippet: r.content?.substring(0, 500) || ""
-      }))
-    };
-    const resp = await fetch(endpoint, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${apiKey}`
-      },
-      body: JSON.stringify(payload)
-    });
-    if (!resp.ok) {
-      return refinedLocal;
-    }
-    const data = await resp.json();
-    const refined = data?.refinedPrompt || data?.refined_prompt || data?.prompt;
-    return typeof refined === "string" && refined.trim().length > 0 ? refined : refinedLocal;
-  } catch (err) {
-    console.warn("[lanonasis] refine endpoint failed, falling back to local prompt builder", err);
-    return refinedLocal;
-  }
-}
-
 // src/services/MCPDiscoveryService.ts
-var vscode11 = __toESM(require("vscode"));
+var vscode10 = __toESM(require("vscode"));
 var DEFAULT_MCP_PORTS = [3001, 3002, 3e3];
 var DEFAULT_MCP_HOST = "localhost";
 var DISCOVERY_TIMEOUT_MS = 2e3;
 var MCPDiscoveryService = class {
   constructor(outputChannel) {
     this.discoveredServer = null;
-    this.config = vscode11.workspace.getConfiguration("lanonasis");
-    this.outputChannel = outputChannel || vscode11.window.createOutputChannel("Lanonasis MCP");
-    this.statusBarItem = vscode11.window.createStatusBarItem(
-      vscode11.StatusBarAlignment.Right,
+    this.lastDiscoveryAt = null;
+    this.discoveryCacheTtlMs = 60 * 1e3;
+    this.config = vscode10.workspace.getConfiguration("lanonasis");
+    this.outputChannel = outputChannel || vscode10.window.createOutputChannel("Lanonasis MCP");
+    this.statusBarItem = vscode10.window.createStatusBarItem(
+      vscode10.StatusBarAlignment.Right,
       99
     );
     this.statusBarItem.command = "lanonasis.showMCPStatus";
@@ -38855,12 +38899,18 @@ var MCPDiscoveryService = class {
    * Auto-discover MCP server using multiple strategies
    */
   async discover() {
+    this.config = vscode10.workspace.getConfiguration("lanonasis");
     const enableAutoDiscover = this.config.get("mcpAutoDiscover", true);
     const enableMCP = this.config.get("enableMCP", true);
     if (!enableMCP) {
       this.log("MCP disabled in configuration");
       this.updateStatusBar(null);
       return null;
+    }
+    if (this.lastDiscoveryAt && Date.now() - this.lastDiscoveryAt < this.discoveryCacheTtlMs) {
+      this.log("Using cached MCP discovery result");
+      this.updateStatusBar(this.discoveredServer);
+      return this.discoveredServer;
     }
     const configuredUrl = this.config.get("mcpServerUrl", "");
     if (configuredUrl) {
@@ -38869,6 +38919,7 @@ var MCPDiscoveryService = class {
       if (server) {
         this.discoveredServer = server;
         this.updateStatusBar(server);
+        this.lastDiscoveryAt = Date.now();
         return server;
       }
     }
@@ -38879,6 +38930,7 @@ var MCPDiscoveryService = class {
       if (server) {
         this.discoveredServer = server;
         this.updateStatusBar(server);
+        this.lastDiscoveryAt = Date.now();
         return server;
       }
     }
@@ -38891,7 +38943,7 @@ var MCPDiscoveryService = class {
         if (server) {
           this.discoveredServer = server;
           this.updateStatusBar(server);
-          vscode11.window.showInformationMessage(
+          vscode10.window.showInformationMessage(
             `MCP server discovered at ${url2}`,
             "Show Details"
           ).then((selection) => {
@@ -38899,12 +38951,14 @@ var MCPDiscoveryService = class {
               this.showServerDetails();
             }
           });
+          this.lastDiscoveryAt = Date.now();
           return server;
         }
       }
     }
     this.log("No MCP server found");
     this.updateStatusBar(null);
+    this.lastDiscoveryAt = Date.now();
     return null;
   }
   /**
@@ -39042,7 +39096,7 @@ var MCPDiscoveryService = class {
   async showServerDetails() {
     const server = this.discoveredServer;
     if (!server) {
-      vscode11.window.showWarningMessage("No MCP server currently connected");
+      vscode10.window.showWarningMessage("No MCP server currently connected");
       return;
     }
     const capabilities = Object.entries(server.capabilities).filter(([, enabled]) => enabled).map(([name]) => name).join(", ");
@@ -39073,19 +39127,19 @@ var MCPDiscoveryService = class {
         description: "Clear discovered server"
       }
     ];
-    const selected = await vscode11.window.showQuickPick(items, {
+    const selected = await vscode10.window.showQuickPick(items, {
       title: "MCP Server Details",
       placeHolder: "Select an action"
     });
     if (selected?.label.includes("Refresh")) {
       await this.refresh();
-      vscode11.window.showInformationMessage(
+      vscode10.window.showInformationMessage(
         this.discoveredServer ? "MCP server refreshed" : "MCP server disconnected"
       );
     } else if (selected?.label.includes("Disconnect")) {
       this.discoveredServer = null;
       this.updateStatusBar(null);
-      vscode11.window.showInformationMessage("MCP server disconnected");
+      vscode10.window.showInformationMessage("MCP server disconnected");
     }
   }
   updateStatusBar(server) {
@@ -39095,7 +39149,7 @@ var MCPDiscoveryService = class {
       this.statusBarItem.tooltip = `MCP Server: ${server.url}
 Version: ${server.version}
 Status: ${server.isHealthy ? "Healthy" : "Degraded"}`;
-      this.statusBarItem.backgroundColor = server.isHealthy ? void 0 : new vscode11.ThemeColor("statusBarItem.warningBackground");
+      this.statusBarItem.backgroundColor = server.isHealthy ? void 0 : new vscode10.ThemeColor("statusBarItem.warningBackground");
       this.statusBarItem.show();
     } else {
       this.statusBarItem.hide();
@@ -39116,27 +39170,33 @@ async function createMCPDiscoveryService(outputChannel) {
 }
 
 // src/bridges/MemoryCacheBridge.ts
+var vscode11 = __toESM(require("vscode"));
 var MemoryCacheBridge = class {
   constructor(cache, memoryService, output) {
     this.cache = cache;
     this.memoryService = memoryService;
     this.output = output;
+    this.cacheTtlMs = 5 * 60 * 1e3;
   }
   getStatus() {
     return this.cache.getStatus();
   }
   async getMemories(options = {}) {
     const { force = false, limit = 50 } = options;
-    const cached2 = this.cache.getMemories();
-    if (!force && cached2.length > 0) {
+    const cached2 = this.cache.getMemories(limit);
+    const status = this.cache.getStatus();
+    const isFresh = status.lastSyncAt ? Date.now() - status.lastSyncAt < this.cacheTtlMs : false;
+    if (!force && cached2.length > 0 && isFresh) {
       return cached2;
     }
     return this.refreshFromService(limit, cached2);
   }
   async searchMemories(query) {
+    const start = Date.now();
     try {
       const results = await this.memoryService.searchMemories(query);
       await this.cache.updateFromApi(this.stripSearchScores(results));
+      this.logPerformance("search", start, `results=${results.length}`);
       return results;
     } catch (error46) {
       const fallback = this.cache.searchLocal(query).map((memory) => ({
@@ -39144,6 +39204,7 @@ var MemoryCacheBridge = class {
         similarity_score: 0.1
       }));
       this.output.appendLine(`[MemoryCacheBridge] Search failed, using local cache: ${error46}`);
+      this.logPerformance("search", start, "fallback=cache");
       return fallback;
     }
   }
@@ -39154,10 +39215,12 @@ var MemoryCacheBridge = class {
     await this.cache.remove(id);
   }
   async refreshFromService(limit = 50, fallback = []) {
+    const start = Date.now();
     this.cache.setRefreshing(true);
     try {
       const memories = await this.memoryService.listMemories(limit);
       await this.cache.updateFromApi(memories);
+      this.logPerformance("list", start, `count=${memories.length}`);
       return memories;
     } catch (error46) {
       const errorMessage = error46 instanceof Error ? error46.message : String(error46);
@@ -39167,13 +39230,15 @@ var MemoryCacheBridge = class {
           await this.memoryService.refreshClient();
           const memories = await this.memoryService.listMemories(limit);
           await this.cache.updateFromApi(memories);
+          this.logPerformance("list", start, `count=${memories.length},retry=1`);
           return memories;
         } catch (retryError) {
           this.output.appendLine(`[MemoryCacheBridge] Retry after auth refresh failed: ${retryError}`);
         }
       }
       this.output.appendLine(`[MemoryCacheBridge] Refresh failed, using cache: ${error46}`);
-      return fallback.length > 0 ? fallback : this.cache.getMemories();
+      this.logPerformance("list", start, "fallback=cache");
+      return fallback.length > 0 ? fallback : this.cache.getMemories(limit);
     } finally {
       this.cache.setRefreshing(false);
     }
@@ -39184,6 +39249,16 @@ var MemoryCacheBridge = class {
   }
   stripSearchScores(results) {
     return results.map(({ similarity_score: _similarityScore, ...rest }) => rest);
+  }
+  shouldLogPerformance() {
+    const config2 = vscode11.workspace.getConfiguration("lanonasis");
+    return config2.get("showPerformanceFeedback", false) || config2.get("verboseLogging", false);
+  }
+  logPerformance(label, start, detail) {
+    if (!this.shouldLogPerformance()) return;
+    const duration3 = Date.now() - start;
+    const suffix = detail ? ` (${detail})` : "";
+    this.output.appendLine(`[Performance] ${label} ${duration3}ms${suffix}`);
   }
 };
 
@@ -39287,13 +39362,606 @@ var OnboardingService = class {
   }
 };
 
+// src/services/OfflineService.ts
+var vscode12 = __toESM(require("vscode"));
+var OfflineService = class {
+  constructor(output, options) {
+    this.output = output;
+    this.options = options;
+    this.status = { online: true, lastChecked: null };
+    this.emitter = new vscode12.EventEmitter();
+    this.onDidChangeStatus = this.emitter.event;
+    this.heartbeatIntervalMs = options.heartbeatIntervalMs ?? 3e4;
+    this.heartbeatTimeoutMs = options.heartbeatTimeoutMs ?? 4e3;
+    this.statusBarItem = vscode12.window.createStatusBarItem(
+      vscode12.StatusBarAlignment.Right,
+      98
+    );
+    this.updateStatusBar();
+  }
+  start() {
+    void this.checkNow();
+    this.intervalId = setInterval(() => {
+      void this.checkNow();
+    }, this.heartbeatIntervalMs);
+  }
+  isOnline() {
+    return this.status.online;
+  }
+  getStatus() {
+    return { ...this.status };
+  }
+  async checkNow() {
+    const healthUrl = this.options.getHealthUrl();
+    if (!healthUrl) {
+      this.updateStatus(true);
+      return;
+    }
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), this.heartbeatTimeoutMs);
+    try {
+      const response = await fetch(healthUrl, {
+        method: "GET",
+        headers: {
+          "Accept": "application/json",
+          "X-Client-Type": "vscode-extension"
+        },
+        signal: controller.signal
+      });
+      clearTimeout(timeoutId);
+      if (response.ok) {
+        this.updateStatus(true);
+      } else {
+        this.updateStatus(false, `Health check ${response.status}`);
+      }
+    } catch (error46) {
+      clearTimeout(timeoutId);
+      const message = error46 instanceof Error ? error46.message : String(error46);
+      this.updateStatus(false, message);
+    }
+  }
+  updateStatus(online, error46) {
+    const changed = this.status.online !== online;
+    this.status = {
+      online,
+      lastChecked: Date.now(),
+      lastError: online ? void 0 : error46
+    };
+    if (changed) {
+      const detail = error46 ? ` (${error46})` : "";
+      this.output.appendLine(`[OfflineService] ${online ? "Online" : "Offline"}${detail}`);
+      this.emitter.fire(this.getStatus());
+    }
+    this.updateStatusBar();
+  }
+  updateStatusBar() {
+    if (this.status.online) {
+      this.statusBarItem.hide();
+      return;
+    }
+    this.statusBarItem.text = "$(cloud-off) Offline";
+    this.statusBarItem.tooltip = this.status.lastError ? `Lanonasis Memory: Offline (${this.status.lastError})` : "Lanonasis Memory: Offline";
+    this.statusBarItem.backgroundColor = new vscode12.ThemeColor("statusBarItem.warningBackground");
+    this.statusBarItem.show();
+  }
+  dispose() {
+    if (this.intervalId) {
+      clearInterval(this.intervalId);
+    }
+    this.statusBarItem.dispose();
+    this.emitter.dispose();
+  }
+};
+
+// src/services/OfflineQueueService.ts
+var vscode13 = __toESM(require("vscode"));
+var import_crypto = require("crypto");
+
+// src/utils/extensionErrors.ts
+function getErrorMessage2(error46) {
+  if (!error46) return "Unknown error";
+  if (typeof error46 === "string") return error46;
+  if (error46 instanceof Error) return error46.message;
+  return String(error46);
+}
+function getErrorCode(error46) {
+  if (!error46 || typeof error46 !== "object") return void 0;
+  const maybeCode = error46.code ?? error46.statusCode;
+  if (maybeCode === void 0 || maybeCode === null) return void 0;
+  return String(maybeCode);
+}
+function classifyError(error46) {
+  const message = getErrorMessage2(error46);
+  const normalized = message.toLowerCase();
+  const code = getErrorCode(error46);
+  if (/conflict|409/.test(normalized)) {
+    return {
+      category: "conflict",
+      severity: "warning",
+      message: "Sync conflict detected. Review the conflicting changes in the sync logs, then manually merge your local and remote edits or discard the pending offline operation.",
+      details: message,
+      actions: ["View Logs"],
+      retryable: false,
+      code
+    };
+  }
+  if (/validation|invalid|bad request|400/.test(normalized)) {
+    return {
+      category: "validation",
+      severity: "warning",
+      message: `Invalid input: ${message}`,
+      details: message,
+      actions: ["Review Input"],
+      retryable: false,
+      code
+    };
+  }
+  if (/auth|401|403|unauthorized|forbidden/.test(normalized)) {
+    return {
+      category: "auth",
+      severity: "error",
+      message: "Authentication failed. Please re-authenticate or update your API key.",
+      details: message,
+      actions: ["Re-authenticate", "Clear API Key"],
+      retryable: true,
+      code
+    };
+  }
+  if (/rate limit|429/.test(normalized)) {
+    return {
+      category: "rate_limit",
+      severity: "warning",
+      message: "Rate limit exceeded. Please wait before retrying.",
+      details: message,
+      actions: ["Wait and Retry"],
+      retryable: true,
+      code
+    };
+  }
+  if (/timeout|etimedout/.test(normalized)) {
+    return {
+      category: "network",
+      severity: "warning",
+      message: "Request timed out. Please check your connection and retry.",
+      details: message,
+      actions: ["Retry", "Check Connection"],
+      retryable: true,
+      code
+    };
+  }
+  if (/network|econnrefused|enotfound|fetch/.test(normalized)) {
+    return {
+      category: "network",
+      severity: "warning",
+      message: "Unable to reach Lanonasis servers. Check your internet connection, firewall settings, or proxy configuration.",
+      details: message,
+      actions: ["Retry", "Check Network Settings"],
+      retryable: true,
+      code
+    };
+  }
+  if (/not found|404/.test(normalized)) {
+    return {
+      category: "not_found",
+      severity: "warning",
+      message: "Requested resource was not found.",
+      details: message,
+      actions: ["Check Settings"],
+      retryable: false,
+      code
+    };
+  }
+  if (/500|502|503|504|server error/.test(normalized)) {
+    return {
+      category: "server",
+      severity: "error",
+      message: "Lanonasis servers are experiencing issues. Please retry later.",
+      details: message,
+      actions: ["Retry", "View Status"],
+      retryable: true,
+      code
+    };
+  }
+  return {
+    category: "unknown",
+    severity: "error",
+    message: `Operation failed: ${message}`,
+    details: message,
+    actions: ["View Logs"],
+    retryable: false,
+    code
+  };
+}
+function isNetworkError(error46) {
+  return classifyError(error46).category === "network";
+}
+function isAuthError(error46) {
+  return classifyError(error46).category === "auth";
+}
+
+// src/utils/errorLogger.ts
+var LOG_STORAGE_KEY = "lanonasis.errorLogs";
+var MAX_LOG_ENTRIES = 200;
+async function logExtensionError(context, output, error46, contextLabel) {
+  const classified = classifyError(error46);
+  const details = classified.details ? redactSensitive(classified.details) : void 0;
+  const stack = error46 instanceof Error && error46.stack ? redactSensitive(error46.stack) : void 0;
+  const entry = {
+    timestamp: (/* @__PURE__ */ new Date()).toISOString(),
+    severity: classified.severity,
+    category: classified.category,
+    message: redactSensitive(classified.message),
+    details,
+    context: contextLabel,
+    stack,
+    code: classified.code
+  };
+  output.appendLine(`[${entry.severity.toUpperCase()}] [${entry.category}] ${entry.message}${contextLabel ? ` (${contextLabel})` : ""}`);
+  if (details) {
+    output.appendLine(`[Details] ${details}`);
+  }
+  if (stack) {
+    output.appendLine(`[Stack] ${stack}`);
+  }
+  try {
+    const existing = context.globalState.get(LOG_STORAGE_KEY, []);
+    const next = [...existing, entry].slice(-MAX_LOG_ENTRIES);
+    await context.globalState.update(LOG_STORAGE_KEY, next);
+  } catch {
+  }
+  return classified;
+}
+function getErrorLogs(context) {
+  return context.globalState.get(LOG_STORAGE_KEY, []);
+}
+function formatErrorLogs(logs, limit = 25) {
+  const entries = logs.slice(-limit);
+  if (entries.length === 0) return "No recent error logs.";
+  return entries.map((entry) => {
+    const parts = [
+      `[${entry.timestamp}] ${entry.severity.toUpperCase()} ${entry.category}: ${entry.message}`,
+      entry.context ? `Context: ${entry.context}` : void 0,
+      entry.details ? `Details: ${entry.details}` : void 0
+    ].filter(Boolean);
+    return parts.join("\n");
+  }).join("\n\n");
+}
+function redactSensitive(value) {
+  let redacted = value;
+  redacted = redacted.replace(/Bearer\s+[A-Za-z0-9._+/=-]+/gi, "Bearer [REDACTED]");
+  redacted = redacted.replace(/(api[_-]?key|token)=([A-Za-z0-9._-]+)/gi, "$1=[REDACTED]");
+  redacted = redacted.replace(/(X-API-Key:\s*)([A-Za-z0-9._-]+)/gi, "$1[REDACTED]");
+  return redacted;
+}
+
+// src/services/OfflineQueueService.ts
+var QUEUE_STORAGE_KEY = "lanonasis.offline.queue";
+var OfflineQueueService = class {
+  constructor(context, output, memoryService, memoryCache) {
+    this.context = context;
+    this.output = output;
+    this.memoryService = memoryService;
+    this.memoryCache = memoryCache;
+    this.queue = [];
+    this.syncing = false;
+    this.emitter = new vscode13.EventEmitter();
+    this.onDidChangeStatus = this.emitter.event;
+    this.loadQueue();
+  }
+  getStatus() {
+    return {
+      pending: this.queue.length,
+      syncing: this.syncing,
+      lastError: this.lastError,
+      lastSyncAt: this.lastSyncAt
+    };
+  }
+  enqueueCreate(payload) {
+    const tempId = this.generateTempId();
+    this.queue.push({
+      id: this.generateOperationId(),
+      type: "create",
+      tempId,
+      payload,
+      createdAt: Date.now(),
+      attempts: 0
+    });
+    this.saveQueue();
+    return tempId;
+  }
+  enqueueUpdate(id, updates) {
+    this.queue.push({
+      id: this.generateOperationId(),
+      type: "update",
+      payload: { id, updates },
+      createdAt: Date.now(),
+      attempts: 0
+    });
+    this.saveQueue();
+  }
+  enqueueDelete(id) {
+    this.queue.push({
+      id: this.generateOperationId(),
+      type: "delete",
+      payload: { id },
+      createdAt: Date.now(),
+      attempts: 0
+    });
+    this.saveQueue();
+  }
+  async sync() {
+    if (this.syncing || this.queue.length === 0) {
+      return;
+    }
+    this.syncing = true;
+    this.emitStatus();
+    this.clearRetry();
+    try {
+      while (this.queue.length > 0) {
+        const current = this.queue[0];
+        if (!current) break;
+        if (current.type === "create") {
+          const created = await this.memoryService.createMemory(current.payload);
+          await this.handleCreateResult(current, created);
+          this.queue.shift();
+        } else if (current.type === "update") {
+          const targetId = current.payload.id;
+          const updated = await this.memoryService.updateMemory(targetId, current.payload.updates);
+          await this.memoryCache.upsert(updated);
+          this.queue.shift();
+        } else {
+          const targetId = current.payload.id;
+          await this.memoryService.deleteMemory(targetId);
+          await this.memoryCache.remove(targetId);
+          this.queue.shift();
+        }
+        this.lastError = void 0;
+        this.lastSyncAt = Date.now();
+        await this.saveQueue();
+      }
+    } catch (error46) {
+      const message = error46 instanceof Error ? error46.message : String(error46);
+      const current = this.queue[0];
+      if (current) {
+        current.attempts += 1;
+        current.lastError = message;
+      }
+      this.lastError = message;
+      await this.saveQueue();
+      const classified = await logExtensionError(this.context, this.output, error46, "offline-queue-sync");
+      if (classified.category === "conflict") {
+        this.output.appendLine(`[OfflineQueue] ${classified.message} Details: ${message}`);
+        vscode13.window.showWarningMessage(classified.message);
+      } else {
+        this.scheduleRetry(current?.attempts ?? 1);
+      }
+    } finally {
+      this.syncing = false;
+      this.emitStatus();
+    }
+  }
+  async clear() {
+    this.queue = [];
+    this.lastError = void 0;
+    this.lastSyncAt = void 0;
+    await this.saveQueue();
+  }
+  async handleCreateResult(operation, created) {
+    await this.memoryCache.replace(operation.tempId, created);
+    for (const op of this.queue) {
+      if (op.type === "update" && op.payload.id === operation.tempId) {
+        op.payload.id = created.id;
+      }
+      if (op.type === "delete" && op.payload.id === operation.tempId) {
+        op.payload.id = created.id;
+      }
+    }
+  }
+  scheduleRetry(attempts) {
+    const delay = Math.min(3e4, 1e3 * Math.pow(2, Math.max(attempts - 1, 0)));
+    this.retryTimer = setTimeout(() => {
+      void this.sync();
+    }, delay);
+    this.output.appendLine(`[OfflineQueue] Sync failed. Retrying in ${delay}ms`);
+  }
+  clearRetry() {
+    if (this.retryTimer) {
+      clearTimeout(this.retryTimer);
+      this.retryTimer = void 0;
+    }
+  }
+  loadQueue() {
+    try {
+      const stored = this.context.globalState.get(QUEUE_STORAGE_KEY, []);
+      this.queue = Array.isArray(stored) ? stored : [];
+    } catch (error46) {
+      this.output.appendLine(`[OfflineQueue] Failed to load queue: ${error46 instanceof Error ? error46.message : String(error46)}`);
+      this.queue = [];
+    } finally {
+      this.emitStatus();
+    }
+  }
+  async saveQueue() {
+    try {
+      await this.context.globalState.update(QUEUE_STORAGE_KEY, this.queue);
+    } catch (error46) {
+      this.output.appendLine(`[OfflineQueue] Failed to save queue: ${error46 instanceof Error ? error46.message : String(error46)}`);
+    } finally {
+      this.emitStatus();
+    }
+  }
+  emitStatus() {
+    this.emitter.fire(this.getStatus());
+  }
+  generateTempId() {
+    return this.generateId("offline");
+  }
+  generateOperationId() {
+    return this.generateId("op");
+  }
+  generateId(prefix) {
+    const unique = typeof import_crypto.randomUUID === "function" ? (0, import_crypto.randomUUID)() : (0, import_crypto.randomBytes)(16).toString("hex");
+    return `${prefix}-${unique}`;
+  }
+  dispose() {
+    this.clearRetry();
+    this.emitter.dispose();
+  }
+};
+
+// src/services/OfflineMemoryService.ts
+var OfflineMemoryService = class {
+  constructor(base, offline, queue, cache) {
+    this.base = base;
+    this.offline = offline;
+    this.queue = queue;
+    this.cache = cache;
+  }
+  isAuthenticated() {
+    return this.base.isAuthenticated();
+  }
+  async testConnection(apiKey) {
+    return this.base.testConnection(apiKey);
+  }
+  async createMemory(memory) {
+    if (!this.offline.isOnline()) {
+      const tempId = this.queue.enqueueCreate(memory);
+      return this.buildOfflineEntry(memory, tempId);
+    }
+    try {
+      return await this.withAuthRetry(() => this.base.createMemory(memory));
+    } catch (error46) {
+      if (isNetworkError(error46)) {
+        const tempId = this.queue.enqueueCreate(memory);
+        return this.buildOfflineEntry(memory, tempId);
+      }
+      throw error46;
+    }
+  }
+  async updateMemory(id, memory) {
+    if (!this.offline.isOnline()) {
+      this.queue.enqueueUpdate(id, memory);
+      return this.buildOfflineUpdate(id, memory);
+    }
+    try {
+      return await this.withAuthRetry(() => this.base.updateMemory(id, memory));
+    } catch (error46) {
+      if (isNetworkError(error46)) {
+        this.queue.enqueueUpdate(id, memory);
+        return this.buildOfflineUpdate(id, memory);
+      }
+      throw error46;
+    }
+  }
+  async searchMemories(query, options = {}) {
+    return this.base.searchMemories(query, options);
+  }
+  async getMemory(id) {
+    return this.base.getMemory(id);
+  }
+  async listMemories(limit = 50) {
+    return this.base.listMemories(limit);
+  }
+  async deleteMemory(id) {
+    if (!this.offline.isOnline()) {
+      this.queue.enqueueDelete(id);
+      return;
+    }
+    try {
+      await this.withAuthRetry(() => this.base.deleteMemory(id));
+    } catch (error46) {
+      if (isNetworkError(error46)) {
+        this.queue.enqueueDelete(id);
+        return;
+      }
+      throw error46;
+    }
+  }
+  async getMemoryStats() {
+    return this.base.getMemoryStats();
+  }
+  async refreshClient() {
+    return this.base.refreshClient();
+  }
+  getCapabilities() {
+    return isEnhancedMemoryService(this.base) ? this.base.getCapabilities() : null;
+  }
+  async showConnectionInfo() {
+    if (isEnhancedMemoryService(this.base)) {
+      await this.base.showConnectionInfo();
+    }
+  }
+  dispose() {
+    if (isEnhancedMemoryService(this.base)) {
+      this.base.dispose();
+    }
+    this.offline.dispose();
+    this.queue.dispose();
+  }
+  buildOfflineEntry(request, tempId) {
+    const timestamp = (/* @__PURE__ */ new Date()).toISOString();
+    const memoryType = request.memory_type || "context";
+    return {
+      id: tempId,
+      title: request.title,
+      content: request.content,
+      summary: request.summary,
+      memory_type: memoryType,
+      status: "draft",
+      access_count: 0,
+      user_id: "offline",
+      tags: request.tags ?? [],
+      metadata: { ...request.metadata, offline_pending: true },
+      created_at: timestamp,
+      updated_at: timestamp
+    };
+  }
+  buildOfflineUpdate(id, updates) {
+    const existing = this.cache.getMemory(id);
+    const timestamp = (/* @__PURE__ */ new Date()).toISOString();
+    const memoryType = updates.memory_type || existing?.memory_type || "context";
+    return {
+      id,
+      title: updates.title ?? existing?.title ?? "Untitled Memory",
+      content: updates.content ?? existing?.content ?? "",
+      summary: updates.summary ?? existing?.summary,
+      memory_type: memoryType,
+      status: existing?.status ?? "draft",
+      access_count: existing?.access_count ?? 0,
+      user_id: existing?.user_id ?? "offline",
+      tags: updates.tags ?? existing?.tags ?? [],
+      metadata: {
+        ...existing?.metadata ?? {},
+        ...updates.metadata ?? {},
+        offline_pending: true
+      },
+      created_at: existing?.created_at ?? timestamp,
+      updated_at: timestamp
+    };
+  }
+  async withAuthRetry(operation) {
+    try {
+      return await operation();
+    } catch (error46) {
+      if (isAuthError(error46)) {
+        await this.base.refreshClient();
+        return operation();
+      }
+      throw error46;
+    }
+  }
+};
+
 // src/extension.ts
+var MAX_GITHUB_ISSUE_BODY_LENGTH = 6e3;
+var ALLOWED_PROTOCOLS = /* @__PURE__ */ new Set(["http:", "https:", "wss:", "ws:"]);
 async function activate(context) {
   console.log("Lanonasis Memory Extension is now active");
-  const outputChannel = vscode12.window.createOutputChannel("Lanonasis");
+  const activationStart = Date.now();
+  const outputChannel = vscode15.window.createOutputChannel("Lanonasis");
   const onboardingService = new OnboardingService(context.globalState);
   let mcpDiscoveryService = null;
-  const config2 = vscode12.workspace.getConfiguration("lanonasis");
+  const config2 = vscode15.workspace.getConfiguration("lanonasis");
   const enableMCP = config2.get("enableMCP", true);
   const mcpAutoDiscover = config2.get("mcpAutoDiscover", true);
   if (enableMCP && mcpAutoDiscover) {
@@ -39308,29 +39976,45 @@ async function activate(context) {
     }
   }
   const adapter = (0, import_ide_extension_core.createVSCodeAdapter)(
-    { context, outputChannel, vscode: vscode12 },
+    { context, outputChannel, vscode: vscode15 },
     {
       ideName: "VSCode",
       extensionName: "lanonasis-memory",
       extensionDisplayName: "LanOnasis Memory Assistant",
       commandPrefix: "lanonasis",
-      userAgent: `VSCode/${vscode12.version} LanOnasis-Memory/2.0.9`
+      userAgent: `VSCode/${vscode15.version} LanOnasis-Memory/2.0.9`
     }
   );
   const secureApiKeyService = new import_ide_extension_core.SecureApiKeyService(adapter);
   await secureApiKeyService.initialize();
-  let memoryService;
+  const resolveHealthUrl = () => {
+    const config3 = vscode15.workspace.getConfiguration("lanonasis");
+    const apiUrl = config3.get("apiUrl", "https://api.lanonasis.com");
+    const gatewayUrl = config3.get("gatewayUrl", "https://api.lanonasis.com");
+    const useGateway = config3.get("useGateway", false);
+    let baseUrl = (useGateway ? gatewayUrl : apiUrl).trim();
+    baseUrl = baseUrl.replace(/\/+$/, "").replace(/\/api\/v1$/i, "").replace(/\/api$/i, "");
+    return baseUrl ? `${baseUrl}/health` : "";
+  };
+  let baseMemoryService;
   try {
-    memoryService = new EnhancedMemoryService(secureApiKeyService);
+    baseMemoryService = new EnhancedMemoryService(secureApiKeyService);
     console.log("Using Enhanced Memory Service with CLI integration");
   } catch (error46) {
     console.warn("Enhanced Memory Service not available, using basic service:", error46);
-    memoryService = new MemoryService(secureApiKeyService);
+    baseMemoryService = new MemoryService(secureApiKeyService);
   }
   const apiKeyService = new ApiKeyService(secureApiKeyService);
   const memoryCache = new MemoryCache(context, outputChannel);
+  const offlineService = new OfflineService(outputChannel, { getHealthUrl: resolveHealthUrl });
+  const offlineQueue = new OfflineQueueService(context, outputChannel, baseMemoryService, memoryCache);
+  const memoryService = new OfflineMemoryService(baseMemoryService, offlineService, offlineQueue, memoryCache);
   const memoryCacheBridge = new MemoryCacheBridge(memoryCache, memoryService, outputChannel);
-  const configuration = vscode12.workspace.getConfiguration("lanonasis");
+  offlineService.start();
+  if (offlineService.isOnline()) {
+    void offlineQueue.sync();
+  }
+  const configuration = vscode15.workspace.getConfiguration("lanonasis");
   const useEnhancedUI = configuration.get("useEnhancedUI", false);
   let sidebarProvider;
   if (useEnhancedUI) {
@@ -39339,10 +40023,12 @@ async function activate(context) {
       memoryService,
       apiKeyService,
       memoryCacheBridge,
-      onboardingService
+      onboardingService,
+      offlineService,
+      offlineQueue
     );
     context.subscriptions.push(
-      vscode12.window.registerWebviewViewProvider(
+      vscode15.window.registerWebviewViewProvider(
         EnhancedSidebarProvider.viewType,
         sidebarProvider
       )
@@ -39351,7 +40037,7 @@ async function activate(context) {
   } else {
     sidebarProvider = new MemorySidebarProvider(context.extensionUri, memoryService);
     context.subscriptions.push(
-      vscode12.window.registerWebviewViewProvider(
+      vscode15.window.registerWebviewViewProvider(
         MemorySidebarProvider.viewType,
         sidebarProvider
       )
@@ -39360,6 +40046,21 @@ async function activate(context) {
   }
   const memoryTreeProvider = new MemoryTreeProvider(memoryService);
   const apiKeyTreeProvider = new ApiKeyTreeProvider(apiKeyService);
+  const handleOfflineStatus = (status) => {
+    if (status.online) {
+      void offlineQueue.sync();
+    }
+  };
+  context.subscriptions.push(offlineService.onDidChangeStatus(handleOfflineStatus));
+  if (sidebarProvider instanceof EnhancedSidebarProvider) {
+    const sendStatusUpdate = () => {
+      void sidebarProvider.sendConnectionStatus();
+    };
+    context.subscriptions.push(
+      offlineService.onDidChangeStatus(sendStatusUpdate),
+      offlineQueue.onDidChangeStatus(sendStatusUpdate)
+    );
+  }
   const notifyOnboardingStep = async (step) => {
     try {
       await onboardingService.markStepComplete(step);
@@ -39371,18 +40072,19 @@ async function activate(context) {
     }
   };
   context.subscriptions.push(
-    vscode12.window.registerTreeDataProvider("lanonasisMemories", memoryTreeProvider),
-    vscode12.window.registerTreeDataProvider("lanonasisApiKeys", apiKeyTreeProvider)
+    vscode15.window.registerTreeDataProvider("lanonasisMemories", memoryTreeProvider),
+    vscode15.window.registerTreeDataProvider("lanonasisApiKeys", apiKeyTreeProvider)
   );
   try {
-    registerMemoryChatParticipant(context, memoryService);
+    const { registerMemoryChatParticipant: registerMemoryChatParticipant2 } = await Promise.resolve().then(() => (init_MemoryChatParticipant(), MemoryChatParticipant_exports));
+    registerMemoryChatParticipant2(context, memoryService);
     console.log("[Lanonasis] Chat Participant @lanonasis registered for Copilot Chat");
   } catch (error46) {
     console.log("[Lanonasis] Chat Participant not available (requires GitHub Copilot)", error46);
   }
   const completionProvider = new MemoryCompletionProvider(memoryService);
   context.subscriptions.push(
-    vscode12.languages.registerCompletionItemProvider(
+    vscode15.languages.registerCompletionItemProvider(
       { scheme: "file" },
       completionProvider,
       "@",
@@ -39390,13 +40092,13 @@ async function activate(context) {
       "//"
     )
   );
-  await vscode12.commands.executeCommand("setContext", "lanonasis.enabled", true);
-  await vscode12.commands.executeCommand(
+  await vscode15.commands.executeCommand("setContext", "lanonasis.enabled", true);
+  await vscode15.commands.executeCommand(
     "setContext",
     "lanonasis.enableApiKeyManagement",
     configuration.get("enableApiKeyManagement", true)
   );
-  await vscode12.commands.executeCommand("setContext", "lanonasis.authenticated", false);
+  await vscode15.commands.executeCommand("setContext", "lanonasis.authenticated", false);
   memoryTreeProvider.setAuthenticated(false);
   apiKeyTreeProvider.setAuthenticated(false);
   const refreshServices = async () => {
@@ -39412,23 +40114,23 @@ async function activate(context) {
     }
   };
   const applyAuthenticationState = async (authenticated) => {
-    await vscode12.commands.executeCommand("setContext", "lanonasis.authenticated", authenticated);
+    await vscode15.commands.executeCommand("setContext", "lanonasis.authenticated", authenticated);
     memoryTreeProvider.setAuthenticated(authenticated);
     apiKeyTreeProvider.setAuthenticated(authenticated);
     await sidebarProvider.refresh();
   };
   const announceEnhancedCapabilities = () => {
-    if (!(memoryService instanceof EnhancedMemoryService)) {
+    if (!isEnhancedMemoryService(memoryService)) {
       return;
     }
     const capabilities = memoryService.getCapabilities();
     if (capabilities?.cliAvailable && capabilities.goldenContract) {
-      vscode12.window.showInformationMessage(
+      vscode15.window.showInformationMessage(
         "\u{1F680} Lanonasis Memory: CLI v1.5.2+ detected! Enhanced performance active.",
         "Show Details"
       ).then((selection) => {
         if (selection === "Show Details") {
-          vscode12.commands.executeCommand("lanonasis.showConnectionInfo");
+          vscode15.commands.executeCommand("lanonasis.showConnectionInfo");
         }
       });
     }
@@ -39448,7 +40150,7 @@ async function activate(context) {
     await memoryCache.clear();
     await applyAuthenticationState(false);
   };
-  const authenticateCommand = vscode12.commands.registerCommand("lanonasis.authenticate", async (mode) => {
+  const authenticateCommand = vscode15.commands.registerCommand("lanonasis.authenticate", async (mode) => {
     try {
       let apiKey = null;
       if (mode === "oauth") {
@@ -39460,118 +40162,127 @@ async function activate(context) {
       }
       if (apiKey) {
         await handleAuthenticationSuccess();
-        vscode12.window.showInformationMessage("\u2705 Successfully authenticated with Lanonasis Memory");
+        vscode15.window.showInformationMessage("\u2705 Successfully authenticated with Lanonasis Memory");
       }
     } catch (error46) {
       const message = error46 instanceof Error ? error46.message : String(error46);
-      vscode12.window.showErrorMessage(`Authentication failed: ${message}`);
+      vscode15.window.showErrorMessage(`Authentication failed: ${message}`);
       outputChannel.appendLine(`[Auth] Error: ${message}`);
     }
   });
   const promptForAuthenticationIfMissing = async () => {
-    const selection = await vscode12.window.showInformationMessage(
+    const selection = await vscode15.window.showInformationMessage(
       "Lanonasis Memory: No authentication configured. Choose how you would like to connect.",
       "Connect in Browser",
       "Enter API Key",
       "Maybe Later"
     );
     if (selection === "Connect in Browser") {
-      vscode12.commands.executeCommand("lanonasis.authenticate", "oauth");
+      vscode15.commands.executeCommand("lanonasis.authenticate", "oauth");
     } else if (selection === "Enter API Key") {
-      vscode12.commands.executeCommand("lanonasis.authenticate", "apikey");
+      vscode15.commands.executeCommand("lanonasis.authenticate", "apikey");
     }
   };
   const commands4 = [
     authenticateCommand,
-    vscode12.commands.registerCommand("lanonasis.searchMemory", async () => {
+    vscode15.commands.registerCommand("lanonasis.searchMemory", async () => {
       await searchMemories(memoryService, notifyOnboardingStep);
     }),
-    vscode12.commands.registerCommand("lanonasis.createMemory", async () => {
+    vscode15.commands.registerCommand("lanonasis.createMemory", async () => {
       await createMemoryFromSelection(memoryService, notifyOnboardingStep);
     }),
-    vscode12.commands.registerCommand("lanonasis.createMemoryFromFile", async () => {
+    vscode15.commands.registerCommand("lanonasis.createMemoryFromFile", async () => {
       await createMemoryFromFile(memoryService, notifyOnboardingStep);
     }),
-    vscode12.commands.registerCommand("lanonasis.createSampleMemory", async () => {
+    vscode15.commands.registerCommand("lanonasis.createSampleMemory", async () => {
       await createSampleMemory(memoryService, notifyOnboardingStep);
     }),
     // Universal capture commands
-    vscode12.commands.registerCommand("lanonasis.captureContext", async () => {
+    vscode15.commands.registerCommand("lanonasis.captureContext", async () => {
       await captureContextToMemory(memoryService, notifyOnboardingStep);
     }),
-    vscode12.commands.registerCommand("lanonasis.captureClipboard", async () => {
+    vscode15.commands.registerCommand("lanonasis.captureClipboard", async () => {
       await captureClipboardToMemory(memoryService, notifyOnboardingStep);
     }),
     // Note: lanonasis.authenticate is registered earlier (line 125) to prevent timing issues
-    vscode12.commands.registerCommand("lanonasis.refreshMemories", async () => {
+    vscode15.commands.registerCommand("lanonasis.refreshMemories", async () => {
       memoryTreeProvider.refresh();
       await sidebarProvider.refresh();
     }),
-    vscode12.commands.registerCommand("lanonasis.openMemory", (memory) => {
+    vscode15.commands.registerCommand("lanonasis.syncOfflineQueue", async () => {
+      const status = offlineQueue.getStatus();
+      if (status.pending === 0) {
+        vscode15.window.showInformationMessage("No pending offline operations to sync.");
+        return;
+      }
+      await offlineQueue.sync();
+      await sidebarProvider.refresh();
+    }),
+    vscode15.commands.registerCommand("lanonasis.openMemory", (memory) => {
       openMemoryInEditor(memory);
     }),
-    vscode12.commands.registerCommand("lanonasis.switchMode", async () => {
+    vscode15.commands.registerCommand("lanonasis.switchMode", async () => {
       await switchConnectionMode(memoryService, apiKeyService);
       memoryTreeProvider.refresh();
       await sidebarProvider.refresh();
     }),
-    vscode12.commands.registerCommand("lanonasis.manageApiKeys", async () => {
+    vscode15.commands.registerCommand("lanonasis.manageApiKeys", async () => {
       await manageApiKeys(apiKeyService);
     }),
-    vscode12.commands.registerCommand("lanonasis.createProject", async () => {
+    vscode15.commands.registerCommand("lanonasis.createProject", async () => {
       await createProject(apiKeyService, apiKeyTreeProvider);
     }),
-    vscode12.commands.registerCommand("lanonasis.viewProjects", async () => {
+    vscode15.commands.registerCommand("lanonasis.viewProjects", async () => {
       await viewProjects(apiKeyService);
     }),
-    vscode12.commands.registerCommand("lanonasis.refreshApiKeys", async () => {
+    vscode15.commands.registerCommand("lanonasis.refreshApiKeys", async () => {
       apiKeyTreeProvider.refresh(true);
     }),
     // Context menu commands for API Keys tree
-    vscode12.commands.registerCommand("lanonasis.viewProjectDetails", async (item) => {
+    vscode15.commands.registerCommand("lanonasis.viewProjectDetails", async (item) => {
       if (item && item.project) {
         await showProjectDetails(item.project, apiKeyService);
       }
     }),
-    vscode12.commands.registerCommand("lanonasis.viewApiKeyDetails", async (item) => {
+    vscode15.commands.registerCommand("lanonasis.viewApiKeyDetails", async (item) => {
       if (item && item.apiKey) {
         await showApiKeyDetails(item.apiKey);
       }
     }),
-    vscode12.commands.registerCommand("lanonasis.createApiKey", async (item) => {
+    vscode15.commands.registerCommand("lanonasis.createApiKey", async (item) => {
       if (item && item.project) {
         await createApiKeyForProject(item.project, apiKeyService, apiKeyTreeProvider);
       } else {
         await createApiKey(apiKeyService, apiKeyTreeProvider);
       }
     }),
-    vscode12.commands.registerCommand("lanonasis.rotateApiKey", async (item) => {
+    vscode15.commands.registerCommand("lanonasis.rotateApiKey", async (item) => {
       if (item && item.apiKey) {
         await rotateApiKey(item.apiKey, apiKeyService, apiKeyTreeProvider);
       }
     }),
-    vscode12.commands.registerCommand("lanonasis.deleteApiKey", async (item) => {
+    vscode15.commands.registerCommand("lanonasis.deleteApiKey", async (item) => {
       if (item && item.apiKey) {
         await deleteApiKey(item.apiKey, apiKeyService, apiKeyTreeProvider);
       }
     }),
-    vscode12.commands.registerCommand("lanonasis.deleteProject", async (item) => {
+    vscode15.commands.registerCommand("lanonasis.deleteProject", async (item) => {
       if (item && item.project) {
         await deleteProject(item.project, apiKeyService, apiKeyTreeProvider);
       }
     }),
-    vscode12.commands.registerCommand("lanonasis.showConnectionInfo", async () => {
-      if (memoryService instanceof EnhancedMemoryService) {
+    vscode15.commands.registerCommand("lanonasis.showConnectionInfo", async () => {
+      if (isEnhancedMemoryService(memoryService)) {
         await memoryService.showConnectionInfo();
       } else {
-        vscode12.window.showInformationMessage("Connection info available in Enhanced Memory Service. Upgrade to CLI integration for more details.");
+        vscode15.window.showInformationMessage("Connection info available in Enhanced Memory Service. Upgrade to CLI integration for more details.");
       }
     }),
-    vscode12.commands.registerCommand("lanonasis.showMCPStatus", async () => {
+    vscode15.commands.registerCommand("lanonasis.showMCPStatus", async () => {
       if (mcpDiscoveryService) {
         await mcpDiscoveryService.showServerDetails();
       } else {
-        const action = await vscode12.window.showInformationMessage(
+        const action = await vscode15.window.showInformationMessage(
           "MCP auto-discovery is disabled or no server found.",
           "Run Discovery",
           "Configure"
@@ -39582,92 +40293,92 @@ async function activate(context) {
             mcpDiscoveryService = newService;
             await newService.showServerDetails();
           } else {
-            vscode12.window.showWarningMessage("No MCP server found. Start the CLI MCP server or configure a custom URL.");
+            vscode15.window.showWarningMessage("No MCP server found. Start the CLI MCP server or configure a custom URL.");
           }
         } else if (action === "Configure") {
-          vscode12.commands.executeCommand("workbench.action.openSettings", "lanonasis.mcp");
+          vscode15.commands.executeCommand("workbench.action.openSettings", "lanonasis.mcp");
         }
       }
     }),
-    vscode12.commands.registerCommand("lanonasis.configureApiKey", async (mode) => {
-      await vscode12.commands.executeCommand("lanonasis.authenticate", mode);
+    vscode15.commands.registerCommand("lanonasis.configureApiKey", async (mode) => {
+      await vscode15.commands.executeCommand("lanonasis.authenticate", mode);
     }),
-    vscode12.commands.registerCommand("lanonasis.clearApiKey", async () => {
+    vscode15.commands.registerCommand("lanonasis.clearApiKey", async () => {
       try {
         const hasApiKey = await secureApiKeyService.hasApiKey();
         if (!hasApiKey) {
-          vscode12.window.showInformationMessage("No API key is currently configured.");
+          vscode15.window.showInformationMessage("No API key is currently configured.");
           return;
         }
-        const confirmed = await vscode12.window.showWarningMessage(
+        const confirmed = await vscode15.window.showWarningMessage(
           "Are you sure you want to clear your API key? This will require re-authentication.",
           { modal: true },
           "Clear API Key"
         );
         if (confirmed === "Clear API Key") {
           await secureApiKeyService.deleteApiKey();
-          vscode12.window.showInformationMessage("API key cleared successfully.");
+          vscode15.window.showInformationMessage("API key cleared successfully.");
           outputChannel.appendLine("[ClearApiKey] API key removed from secure storage");
           await handleAuthenticationCleared();
           await promptForAuthenticationIfMissing();
         }
       } catch (error46) {
         const message = error46 instanceof Error ? error46.message : String(error46);
-        vscode12.window.showErrorMessage(`Failed to clear API key: ${message}`);
+        vscode15.window.showErrorMessage(`Failed to clear API key: ${message}`);
         outputChannel.appendLine(`[ClearApiKey] Error: ${message}`);
       }
     }),
-    vscode12.commands.registerCommand("lanonasis.checkApiKeyStatus", async () => {
+    vscode15.commands.registerCommand("lanonasis.checkApiKeyStatus", async () => {
       try {
         const hasApiKey = await secureApiKeyService.hasApiKey();
         const status = hasApiKey ? "\u2705 Configured and stored securely" : "\u274C Not configured";
         if (hasApiKey) {
-          vscode12.window.showInformationMessage(
+          vscode15.window.showInformationMessage(
             `API Key Status: ${status}`,
             "Test Connection",
             "View Security Info"
           ).then(async (selection) => {
             if (selection === "Test Connection") {
-              vscode12.commands.executeCommand("lanonasis.testConnection");
+              vscode15.commands.executeCommand("lanonasis.testConnection");
             } else if (selection === "View Security Info") {
-              vscode12.env.openExternal(vscode12.Uri.parse("https://docs.lanonasis.com/security/api-keys"));
+              vscode15.env.openExternal(vscode15.Uri.parse("https://docs.lanonasis.com/security/api-keys"));
             }
           });
         } else {
-          vscode12.window.showInformationMessage(
+          vscode15.window.showInformationMessage(
             `API Key Status: ${status}`,
             "Connect in Browser",
             "Enter API Key"
           ).then((selection) => {
             if (selection === "Connect in Browser") {
-              vscode12.commands.executeCommand("lanonasis.authenticate", "oauth");
+              vscode15.commands.executeCommand("lanonasis.authenticate", "oauth");
             } else if (selection === "Enter API Key") {
-              vscode12.commands.executeCommand("lanonasis.authenticate", "apikey");
+              vscode15.commands.executeCommand("lanonasis.authenticate", "apikey");
             }
           });
         }
       } catch (error46) {
         const message = error46 instanceof Error ? error46.message : String(error46);
-        vscode12.window.showErrorMessage(`Failed to check API key status: ${message}`);
+        vscode15.window.showErrorMessage(`Failed to check API key status: ${message}`);
         outputChannel.appendLine(`[CheckApiKeyStatus] Error: ${message}`);
       }
     }),
-    vscode12.commands.registerCommand("lanonasis.testConnection", async () => {
+    vscode15.commands.registerCommand("lanonasis.testConnection", async () => {
       try {
         const hasApiKey = await secureApiKeyService.hasApiKey();
         if (!hasApiKey) {
-          vscode12.window.showWarningMessage("\u274C No API key configured.");
+          vscode15.window.showWarningMessage("\u274C No API key configured.");
           return;
         }
         await memoryService.testConnection();
-        vscode12.window.showInformationMessage("\u2705 Connection test successful!");
+        vscode15.window.showInformationMessage("\u2705 Connection test successful!");
       } catch (error46) {
         const message = error46 instanceof Error ? error46.message : String(error46);
-        vscode12.window.showErrorMessage(`Connection test failed: ${message}`);
+        vscode15.window.showErrorMessage(`Connection test failed: ${message}`);
         outputChannel.appendLine(`[TestConnection] Error: ${message}`);
       }
     }),
-    vscode12.commands.registerCommand("lanonasis.runDiagnostics", async () => {
+    vscode15.commands.registerCommand("lanonasis.runDiagnostics", async () => {
       try {
         outputChannel.show();
         outputChannel.appendLine("Running comprehensive diagnostics...\n");
@@ -39678,11 +40389,11 @@ async function activate(context) {
           outputChannel
         );
         const report = formatDiagnosticResults(health);
-        const doc = await vscode12.workspace.openTextDocument({
+        const doc = await vscode15.workspace.openTextDocument({
           content: report,
           language: "markdown"
         });
-        await vscode12.window.showTextDocument(doc);
+        await vscode15.window.showTextDocument(doc);
         const statusEmoji = {
           healthy: "\u2705",
           degraded: "\u26A0\uFE0F",
@@ -39690,47 +40401,65 @@ async function activate(context) {
         };
         const message = `${statusEmoji[health.overall]} System Health: ${health.overall.toUpperCase()}`;
         if (health.overall === "healthy") {
-          vscode12.window.showInformationMessage(message, "View Report").then((action) => {
+          vscode15.window.showInformationMessage(message, "View Report").then((action) => {
             if (action === "View Report") {
               outputChannel.show();
             }
           });
         } else if (health.overall === "degraded") {
-          vscode12.window.showWarningMessage(message, "View Report", "Fix Issues").then((action) => {
+          vscode15.window.showWarningMessage(message, "View Report", "Fix Issues").then((action) => {
             if (action === "View Report") {
               outputChannel.show();
             }
           });
         } else {
-          vscode12.window.showErrorMessage(message, "View Report", "Get Help").then((action) => {
+          vscode15.window.showErrorMessage(message, "View Report", "Get Help").then((action) => {
             if (action === "View Report") {
               outputChannel.show();
             } else if (action === "Get Help") {
-              vscode12.env.openExternal(vscode12.Uri.parse("https://docs.lanonasis.com/troubleshooting"));
+              vscode15.env.openExternal(vscode15.Uri.parse("https://docs.lanonasis.com/troubleshooting"));
             }
           });
         }
       } catch (error46) {
         const message = error46 instanceof Error ? error46.message : String(error46);
-        vscode12.window.showErrorMessage(`Diagnostics failed: ${message}`);
+        vscode15.window.showErrorMessage(`Diagnostics failed: ${message}`);
         outputChannel.appendLine(`[Diagnostics] Fatal error: ${message}`);
       }
     }),
-    vscode12.commands.registerCommand("lanonasis.showLogs", () => {
+    vscode15.commands.registerCommand("lanonasis.autoFixIssues", async () => {
+      await runAutoFix(
+        context,
+        outputChannel,
+        secureApiKeyService,
+        memoryService,
+        memoryCache,
+        offlineQueue
+      );
+    }),
+    vscode15.commands.registerCommand("lanonasis.reportIssue", async () => {
+      await reportIssue(
+        context,
+        secureApiKeyService,
+        memoryService,
+        outputChannel
+      );
+    }),
+    vscode15.commands.registerCommand("lanonasis.showLogs", () => {
       outputChannel.show();
     }),
-    vscode12.commands.registerCommand("lanonasis.logout", async () => {
+    vscode15.commands.registerCommand("lanonasis.logout", async () => {
       try {
         await secureApiKeyService.deleteApiKey();
       } catch (error46) {
         outputChannel.appendLine(`[Logout] Failed to clear stored credentials: ${error46 instanceof Error ? error46.message : String(error46)}`);
       } finally {
         await handleAuthenticationCleared();
-        vscode12.window.showInformationMessage("Signed out of Lanonasis Memory.");
+        vscode15.window.showInformationMessage("Signed out of Lanonasis Memory.");
       }
     }),
-    vscode12.commands.registerCommand("lanonasis.quickCapture", async () => {
-      const editor = vscode12.window.activeTextEditor;
+    vscode15.commands.registerCommand("lanonasis.quickCapture", async () => {
+      const editor = vscode15.window.activeTextEditor;
       if (editor && !editor.selection.isEmpty) {
         await captureContextToMemory(memoryService, notifyOnboardingStep);
       } else {
@@ -39739,9 +40468,7 @@ async function activate(context) {
     })
   ];
   context.subscriptions.push(...commands4);
-  if (memoryService instanceof EnhancedMemoryService) {
-    context.subscriptions.push(memoryService);
-  }
+  context.subscriptions.push(memoryService);
   if (mcpDiscoveryService) {
     context.subscriptions.push(mcpDiscoveryService);
   }
@@ -39761,16 +40488,187 @@ async function activate(context) {
   if (!useEnhancedUI && !hasStoredKey && !isFirstTime && !legacyFirstTime) {
     await promptForAuthenticationIfMissing();
   }
+  const perfConfig = vscode15.workspace.getConfiguration("lanonasis");
+  if (perfConfig.get("showPerformanceFeedback", false) || perfConfig.get("verboseLogging", false)) {
+    outputChannel.appendLine(`[Performance] Activation ${Date.now() - activationStart}ms`);
+  }
+}
+async function runAutoFix(context, outputChannel, secureApiKeyService, memoryService, memoryCache, offlineQueue) {
+  const options = [
+    {
+      id: "refresh-auth",
+      label: "Refresh authentication tokens",
+      detail: "Revalidate credentials and refresh access tokens."
+    },
+    {
+      id: "clear-cache",
+      label: "Clear local cache",
+      detail: "Clear cached memories and queued offline operations."
+    },
+    {
+      id: "reset-settings",
+      label: "Reset invalid settings",
+      detail: "Revert invalid URLs to defaults."
+    },
+    {
+      id: "suggest-cli",
+      label: "Suggest CLI installation",
+      detail: "Open CLI setup guidance."
+    }
+  ];
+  const selection = await vscode15.window.showQuickPick(options, {
+    title: "Lanonasis Auto-Fix",
+    canPickMany: true,
+    placeHolder: "Choose fixes to apply"
+  });
+  if (!selection || selection.length === 0) {
+    return;
+  }
+  const results = [];
+  await vscode15.window.withProgress(
+    {
+      location: vscode15.ProgressLocation.Notification,
+      title: "Running auto-fix...",
+      cancellable: false
+    },
+    async () => {
+      for (const item of selection) {
+        try {
+          if (item.id === "refresh-auth") {
+            await secureApiKeyService.getStoredCredentials();
+            await memoryService.refreshClient();
+            results.push("Refreshed authentication.");
+          } else if (item.id === "clear-cache") {
+            await memoryCache.clear();
+            await offlineQueue.clear();
+            results.push("Cleared local cache.");
+          } else if (item.id === "reset-settings") {
+            const resetCount = await resetInvalidSettings();
+            results.push(resetCount > 0 ? `Reset ${resetCount} invalid setting(s).` : "Settings already valid.");
+          } else if (item.id === "suggest-cli") {
+            const action = await vscode15.window.showInformationMessage(
+              "Install the Lanonasis CLI to enable richer IDE integration.",
+              "Open Docs"
+            );
+            if (action === "Open Docs") {
+              await vscode15.env.openExternal(vscode15.Uri.parse("https://docs.lanonasis.com"));
+            }
+            results.push("CLI guidance shown.");
+          }
+        } catch (error46) {
+          const summary = error46 instanceof Error ? error46.message : String(error46);
+          results.push(`${item.label} failed: ${summary}`);
+          await logExtensionError(context, outputChannel, error46, `auto-fix:${item.id}`);
+        }
+      }
+    }
+  );
+  if (results.length > 0) {
+    vscode15.window.showInformationMessage(results.join(" "));
+  }
+}
+async function resetInvalidSettings() {
+  const config2 = vscode15.workspace.getConfiguration("lanonasis");
+  const defaults = [
+    { key: "apiUrl", fallback: "https://api.lanonasis.com" },
+    { key: "gatewayUrl", fallback: "https://api.lanonasis.com" },
+    { key: "authUrl", fallback: "https://auth.lanonasis.com" },
+    { key: "websocketUrl", fallback: "wss://mcp.lanonasis.com/ws" }
+  ];
+  let resetCount = 0;
+  for (const { key, fallback } of defaults) {
+    const value = config2.get(key, fallback);
+    if (!isValidUrl(value)) {
+      await config2.update(key, fallback, vscode15.ConfigurationTarget.Global);
+      resetCount += 1;
+    }
+  }
+  return resetCount;
+}
+function isValidUrl(value) {
+  const trimmed = value.trim();
+  if (!trimmed) return false;
+  try {
+    const hasScheme = /^[a-z][a-z0-9+.-]*:\/\//i.test(trimmed);
+    const candidate = hasScheme ? trimmed : `http://${trimmed}`;
+    const parsed = new URL(candidate);
+    return ALLOWED_PROTOCOLS.has(parsed.protocol) && Boolean(parsed.hostname);
+  } catch {
+    return false;
+  }
+}
+async function reportIssue(context, secureApiKeyService, memoryService, outputChannel) {
+  try {
+    const includeDiagnostics = await vscode15.window.showQuickPick(
+      ["Include diagnostics (recommended)", "Skip diagnostics"],
+      { title: "Report Issue" }
+    );
+    let diagnosticReport = "Diagnostics skipped by user.";
+    if (includeDiagnostics === "Include diagnostics (recommended)") {
+      const health = await runDiagnostics(
+        context,
+        secureApiKeyService,
+        memoryService,
+        outputChannel
+      );
+      diagnosticReport = formatDiagnosticResults(health);
+    }
+    const logs = formatErrorLogs(getErrorLogs(context), 20);
+    const extensionVersion = context.extension.packageJSON.version;
+    const environmentInfo = `Version: ${extensionVersion ?? "unknown"}
+OS: ${process.platform}
+VSCode: ${vscode15.version}`;
+    const body = [
+      "## Summary",
+      "Describe the issue here.",
+      "",
+      "## Environment",
+      "```",
+      environmentInfo,
+      "```",
+      "",
+      "## Diagnostics",
+      "```",
+      diagnosticReport,
+      "```",
+      "",
+      "## Recent Errors",
+      "```",
+      logs,
+      "```"
+    ].join("\n");
+    const doc = await vscode15.workspace.openTextDocument({
+      content: body,
+      language: "markdown"
+    });
+    await vscode15.window.showTextDocument(doc, { preview: true });
+    const action = await vscode15.window.showInformationMessage(
+      "Review the issue report. Open GitHub issue?",
+      "Open Issue",
+      "Cancel"
+    );
+    if (action !== "Open Issue") {
+      return;
+    }
+    const truncatedBody = doc.getText().slice(0, MAX_GITHUB_ISSUE_BODY_LENGTH);
+    const issueUrl = `https://github.com/lanonasis/lanonasis-maas/issues/new?title=${encodeURIComponent("[vscode] ")}&body=${encodeURIComponent(truncatedBody)}`;
+    await vscode15.env.openExternal(vscode15.Uri.parse(issueUrl));
+  } catch (error46) {
+    const message = error46 instanceof Error ? error46.message : String(error46);
+    outputChannel.appendLine(`[ReportIssue] Failed to open issue: ${message}`);
+    vscode15.window.showErrorMessage(`Failed to open issue report: ${message}`);
+    await logExtensionError(context, outputChannel, error46, "report-issue");
+  }
 }
 async function searchMemories(memoryService, notifyOnboardingStep) {
-  const query = await vscode12.window.showInputBox({
+  const query = await vscode15.window.showInputBox({
     prompt: "Search memories",
     placeHolder: "Enter search query..."
   });
   if (!query) return;
   try {
-    vscode12.window.withProgress({
-      location: vscode12.ProgressLocation.Notification,
+    vscode15.window.withProgress({
+      location: vscode15.ProgressLocation.Notification,
       title: "Searching memories...",
       cancellable: false
     }, async () => {
@@ -39781,12 +40679,12 @@ async function searchMemories(memoryService, notifyOnboardingStep) {
       await notifyOnboardingStep("search");
     }
   } catch (error46) {
-    vscode12.window.showErrorMessage(`Search failed: ${error46 instanceof Error ? error46.message : "Unknown error"}`);
+    vscode15.window.showErrorMessage(`Search failed: ${error46 instanceof Error ? error46.message : "Unknown error"}`);
   }
 }
 async function showSearchResults(results, query) {
   if (results.length === 0) {
-    vscode12.window.showInformationMessage(`No memories found for "${query}"`);
+    vscode15.window.showInformationMessage(`No memories found for "${query}"`);
     return;
   }
   const items = results.map((memory) => ({
@@ -39795,7 +40693,7 @@ async function showSearchResults(results, query) {
     detail: `${memory.content.substring(0, 100)}${memory.content.length > 100 ? "..." : ""}`,
     memory
   }));
-  const selected = await vscode12.window.showQuickPick(items, {
+  const selected = await vscode15.window.showQuickPick(items, {
     placeHolder: `Found ${results.length} memories for "${query}"`
   });
   if (selected) {
@@ -39803,24 +40701,24 @@ async function showSearchResults(results, query) {
   }
 }
 async function createMemoryFromSelection(memoryService, notifyOnboardingStep) {
-  const editor = vscode12.window.activeTextEditor;
+  const editor = vscode15.window.activeTextEditor;
   if (!editor || editor.selection.isEmpty) {
-    vscode12.window.showWarningMessage("Please select some text to create a memory");
+    vscode15.window.showWarningMessage("Please select some text to create a memory");
     return;
   }
   const selectedText = editor.document.getText(editor.selection);
   const fileName = editor.document.fileName;
   const lineNumber = editor.selection.start.line + 1;
-  const title = await vscode12.window.showInputBox({
+  const title = await vscode15.window.showInputBox({
     prompt: "Memory title",
     value: `Code from ${fileName}:${lineNumber}`
   });
   if (!title) return;
-  const config2 = vscode12.workspace.getConfiguration("lanonasis");
+  const config2 = vscode15.workspace.getConfiguration("lanonasis");
   const defaultType = config2.get("defaultMemoryType", "context");
   try {
-    await vscode12.window.withProgress({
-      location: vscode12.ProgressLocation.Notification,
+    await vscode15.window.withProgress({
+      location: vscode15.ProgressLocation.Notification,
       title: "Creating memory...",
       cancellable: false
     }, async () => {
@@ -39836,33 +40734,33 @@ async function createMemoryFromSelection(memoryService, notifyOnboardingStep) {
         }
       });
     });
-    vscode12.window.showInformationMessage(`Memory "${title}" created successfully`);
-    vscode12.commands.executeCommand("lanonasis.refreshMemories");
+    vscode15.window.showInformationMessage(`Memory "${title}" created successfully`);
+    vscode15.commands.executeCommand("lanonasis.refreshMemories");
     if (notifyOnboardingStep) {
       await notifyOnboardingStep("create_memory");
     }
   } catch (error46) {
-    vscode12.window.showErrorMessage(`Failed to create memory: ${error46 instanceof Error ? error46.message : "Unknown error"}`);
+    vscode15.window.showErrorMessage(`Failed to create memory: ${error46 instanceof Error ? error46.message : "Unknown error"}`);
   }
 }
 async function createMemoryFromFile(memoryService, notifyOnboardingStep) {
-  const editor = vscode12.window.activeTextEditor;
+  const editor = vscode15.window.activeTextEditor;
   if (!editor) {
-    vscode12.window.showWarningMessage("No active editor");
+    vscode15.window.showWarningMessage("No active editor");
     return;
   }
   const content = editor.document.getText();
   const fileName = editor.document.fileName;
-  const title = await vscode12.window.showInputBox({
+  const title = await vscode15.window.showInputBox({
     prompt: "Memory title",
     value: `File: ${fileName.split("/").pop()}`
   });
   if (!title) return;
-  const config2 = vscode12.workspace.getConfiguration("lanonasis");
+  const config2 = vscode15.workspace.getConfiguration("lanonasis");
   const defaultType = config2.get("defaultMemoryType", "context");
   try {
-    await vscode12.window.withProgress({
-      location: vscode12.ProgressLocation.Notification,
+    await vscode15.window.withProgress({
+      location: vscode15.ProgressLocation.Notification,
       title: "Creating memory from file...",
       cancellable: false
     }, async () => {
@@ -39878,13 +40776,13 @@ async function createMemoryFromFile(memoryService, notifyOnboardingStep) {
         }
       });
     });
-    vscode12.window.showInformationMessage(`Memory "${title}" created from file`);
-    vscode12.commands.executeCommand("lanonasis.refreshMemories");
+    vscode15.window.showInformationMessage(`Memory "${title}" created from file`);
+    vscode15.commands.executeCommand("lanonasis.refreshMemories");
     if (notifyOnboardingStep) {
       await notifyOnboardingStep("create_memory");
     }
   } catch (error46) {
-    vscode12.window.showErrorMessage(`Failed to create memory: ${error46 instanceof Error ? error46.message : "Unknown error"}`);
+    vscode15.window.showErrorMessage(`Failed to create memory: ${error46 instanceof Error ? error46.message : "Unknown error"}`);
   }
 }
 async function createSampleMemory(memoryService, notifyOnboardingStep) {
@@ -39900,8 +40798,8 @@ async function createSampleMemory(memoryService, notifyOnboardingStep) {
     "- Tag memories to keep related ideas together"
   ].join("\n");
   try {
-    await vscode12.window.withProgress({
-      location: vscode12.ProgressLocation.Notification,
+    await vscode15.window.withProgress({
+      location: vscode15.ProgressLocation.Notification,
       title: "Creating sample memory...",
       cancellable: false
     }, async () => {
@@ -39916,13 +40814,13 @@ async function createSampleMemory(memoryService, notifyOnboardingStep) {
         }
       });
     });
-    vscode12.window.showInformationMessage("Sample memory created. Try searching for it next.");
-    vscode12.commands.executeCommand("lanonasis.refreshMemories");
+    vscode15.window.showInformationMessage("Sample memory created. Try searching for it next.");
+    vscode15.commands.executeCommand("lanonasis.refreshMemories");
     if (notifyOnboardingStep) {
       await notifyOnboardingStep("create_memory");
     }
   } catch (error46) {
-    vscode12.window.showErrorMessage(`Failed to create sample memory: ${error46 instanceof Error ? error46.message : "Unknown error"}`);
+    vscode15.window.showErrorMessage(`Failed to create sample memory: ${error46 instanceof Error ? error46.message : "Unknown error"}`);
   }
 }
 function openMemoryInEditor(memory) {
@@ -39934,18 +40832,18 @@ function openMemoryInEditor(memory) {
 ---
 
 ${memory.content}`;
-  vscode12.workspace.openTextDocument({
+  vscode15.workspace.openTextDocument({
     content,
     language: "markdown"
   }).then((doc) => {
-    vscode12.window.showTextDocument(doc);
+    vscode15.window.showTextDocument(doc);
   });
 }
 function showWelcomeMessage() {
   const message = `\u{1F389} Welcome to Lanonasis Memory Assistant!
 
 Your AI-powered memory management system is ready. Let's get you started!`;
-  vscode12.window.showInformationMessage(
+  vscode15.window.showInformationMessage(
     message,
     "Connect in Browser",
     "Enter API Key",
@@ -39953,11 +40851,11 @@ Your AI-powered memory management system is ready. Let's get you started!`;
     "Learn More"
   ).then((selection) => {
     if (selection === "Connect in Browser") {
-      vscode12.commands.executeCommand("lanonasis.authenticate", "oauth");
+      vscode15.commands.executeCommand("lanonasis.authenticate", "oauth");
     } else if (selection === "Enter API Key") {
-      vscode12.commands.executeCommand("lanonasis.authenticate", "apikey");
+      vscode15.commands.executeCommand("lanonasis.authenticate", "apikey");
     } else if (selection === "Get API Key") {
-      vscode12.env.openExternal(vscode12.Uri.parse("https://api.lanonasis.com"));
+      vscode15.env.openExternal(vscode15.Uri.parse("https://docs.lanonasis.com/api-keys"));
     } else if (selection === "Learn More") {
       showOnboardingGuide();
     }
@@ -40105,15 +41003,15 @@ Happy memory management! \u{1F9E0}\u2728
 - Create from Selection: \`Ctrl+Shift+Alt+M\` / \`Cmd+Shift+Alt+M\`
 - Manage API Keys: \`Ctrl+Shift+K\` / \`Cmd+Shift+K\`
 `;
-  vscode12.workspace.openTextDocument({
+  vscode15.workspace.openTextDocument({
     content: guide,
     language: "markdown"
   }).then((doc) => {
-    vscode12.window.showTextDocument(doc);
+    vscode15.window.showTextDocument(doc);
   });
 }
 async function switchConnectionMode(memoryService, apiKeyService) {
-  const config2 = vscode12.workspace.getConfiguration("lanonasis");
+  const config2 = vscode15.workspace.getConfiguration("lanonasis");
   const currentUseGateway = config2.get("useGateway", true);
   const options = [
     {
@@ -40129,23 +41027,23 @@ async function switchConnectionMode(memoryService, apiKeyService) {
       value: false
     }
   ];
-  const selected = await vscode12.window.showQuickPick(options, {
+  const selected = await vscode15.window.showQuickPick(options, {
     placeHolder: "Choose connection mode",
     ignoreFocusOut: true
   });
   if (!selected) return;
   try {
-    await config2.update("useGateway", selected.value, vscode12.ConfigurationTarget.Global);
+    await config2.update("useGateway", selected.value, vscode15.ConfigurationTarget.Global);
     await memoryService.refreshClient();
     apiKeyService.refreshConfig();
     const modeName = selected.value ? "Gateway" : "Direct API";
-    vscode12.window.showInformationMessage(`Switched to ${modeName} mode. Testing connection...`);
+    vscode15.window.showInformationMessage(`Switched to ${modeName} mode. Testing connection...`);
     await memoryService.testConnection();
-    vscode12.window.showInformationMessage(`\u2705 ${modeName} mode active and connected`);
-    vscode12.commands.executeCommand("lanonasis.refreshMemories");
+    vscode15.window.showInformationMessage(`\u2705 ${modeName} mode active and connected`);
+    vscode15.commands.executeCommand("lanonasis.refreshMemories");
   } catch (error46) {
-    vscode12.window.showErrorMessage(`Failed to switch mode: ${error46 instanceof Error ? error46.message : "Unknown error"}`);
-    await config2.update("useGateway", currentUseGateway, vscode12.ConfigurationTarget.Global);
+    vscode15.window.showErrorMessage(`Failed to switch mode: ${error46 instanceof Error ? error46.message : "Unknown error"}`);
+    await config2.update("useGateway", currentUseGateway, vscode15.ConfigurationTarget.Global);
     await memoryService.refreshClient();
     apiKeyService.refreshConfig();
   }
@@ -40173,7 +41071,7 @@ async function manageApiKeys(apiKeyService) {
       command: "refresh"
     }
   ];
-  const selected = await vscode12.window.showQuickPick(quickPickItems, {
+  const selected = await vscode15.window.showQuickPick(quickPickItems, {
     placeHolder: "Choose an API key management action"
   });
   if (!selected) return;
@@ -40188,20 +41086,20 @@ async function manageApiKeys(apiKeyService) {
       await viewProjects(apiKeyService);
       break;
     case "refresh":
-      vscode12.commands.executeCommand("lanonasis.refreshApiKeys");
+      vscode15.commands.executeCommand("lanonasis.refreshApiKeys");
       break;
   }
 }
 async function viewApiKeys(apiKeyService) {
   try {
-    vscode12.window.withProgress({
-      location: vscode12.ProgressLocation.Notification,
+    vscode15.window.withProgress({
+      location: vscode15.ProgressLocation.Notification,
       title: "Loading API keys...",
       cancellable: false
     }, async () => {
       const apiKeys = await apiKeyService.getApiKeys();
       if (apiKeys.length === 0) {
-        vscode12.window.showInformationMessage("No API keys found. Create your first API key to get started.");
+        vscode15.window.showInformationMessage("No API keys found. Create your first API key to get started.");
         return;
       }
       const items = apiKeys.map((key) => ({
@@ -40210,7 +41108,7 @@ async function viewApiKeys(apiKeyService) {
         detail: `Project: ${key.projectId} | Created: ${new Date(key.createdAt).toLocaleDateString()}`,
         apiKey: key
       }));
-      const selected = await vscode12.window.showQuickPick(items, {
+      const selected = await vscode15.window.showQuickPick(items, {
         placeHolder: `Select an API key (${apiKeys.length} found)`
       });
       if (selected) {
@@ -40218,14 +41116,14 @@ async function viewApiKeys(apiKeyService) {
       }
     });
   } catch (error46) {
-    vscode12.window.showErrorMessage(`Failed to load API keys: ${error46 instanceof Error ? error46.message : "Unknown error"}`);
+    vscode15.window.showErrorMessage(`Failed to load API keys: ${error46 instanceof Error ? error46.message : "Unknown error"}`);
   }
 }
 async function createApiKey(apiKeyService, _apiKeyTreeProvider) {
   try {
     const projects = await apiKeyService.getProjects();
     if (projects.length === 0) {
-      const createProjectResponse = await vscode12.window.showInformationMessage(
+      const createProjectResponse = await vscode15.window.showInformationMessage(
         "No projects found. You need to create a project first.",
         "Create Project",
         "Cancel"
@@ -40240,16 +41138,16 @@ async function createApiKey(apiKeyService, _apiKeyTreeProvider) {
       description: p.description || "No description",
       project: p
     }));
-    const selectedProject = await vscode12.window.showQuickPick(projectItems, {
+    const selectedProject = await vscode15.window.showQuickPick(projectItems, {
       placeHolder: "Select a project for the API key"
     });
     if (!selectedProject) return;
-    const name = await vscode12.window.showInputBox({
+    const name = await vscode15.window.showInputBox({
       prompt: "API Key Name",
       placeHolder: "Enter a name for your API key"
     });
     if (!name) return;
-    const value = await vscode12.window.showInputBox({
+    const value = await vscode15.window.showInputBox({
       prompt: "API Key Value",
       placeHolder: "Enter the API key value",
       password: true
@@ -40264,23 +41162,23 @@ async function createApiKey(apiKeyService, _apiKeyTreeProvider) {
       { label: "Webhook Secret", value: "webhook_secret" },
       { label: "Encryption Key", value: "encryption_key" }
     ];
-    const selectedKeyType = await vscode12.window.showQuickPick(keyTypes, {
+    const selectedKeyType = await vscode15.window.showQuickPick(keyTypes, {
       placeHolder: "Select key type"
     });
     if (!selectedKeyType) return;
-    const config2 = vscode12.workspace.getConfiguration("lanonasis");
+    const config2 = vscode15.workspace.getConfiguration("lanonasis");
     const defaultEnv = config2.get("defaultEnvironment", "development");
     const environments = [
       { label: "Development", value: "development", picked: defaultEnv === "development" },
       { label: "Staging", value: "staging", picked: defaultEnv === "staging" },
       { label: "Production", value: "production", picked: defaultEnv === "production" }
     ];
-    const selectedEnvironment = await vscode12.window.showQuickPick(environments, {
+    const selectedEnvironment = await vscode15.window.showQuickPick(environments, {
       placeHolder: "Select environment"
     });
     if (!selectedEnvironment) return;
-    await vscode12.window.withProgress({
-      location: vscode12.ProgressLocation.Notification,
+    await vscode15.window.withProgress({
+      location: vscode15.ProgressLocation.Notification,
       title: "Creating API key...",
       cancellable: false
     }, async () => {
@@ -40293,36 +41191,36 @@ async function createApiKey(apiKeyService, _apiKeyTreeProvider) {
         projectId: selectedProject.project.id
       });
     });
-    vscode12.window.showInformationMessage(`API key "${name}" created successfully`);
-    vscode12.commands.executeCommand("lanonasis.refreshApiKeys");
+    vscode15.window.showInformationMessage(`API key "${name}" created successfully`);
+    vscode15.commands.executeCommand("lanonasis.refreshApiKeys");
   } catch (error46) {
-    vscode12.window.showErrorMessage(`Failed to create API key: ${error46 instanceof Error ? error46.message : "Unknown error"}`);
+    vscode15.window.showErrorMessage(`Failed to create API key: ${error46 instanceof Error ? error46.message : "Unknown error"}`);
   }
 }
 async function createProject(apiKeyService, apiKeyTreeProvider) {
   try {
-    const name = await vscode12.window.showInputBox({
+    const name = await vscode15.window.showInputBox({
       prompt: "Project Name",
       placeHolder: "Enter a name for your project"
     });
     if (!name) return;
-    const description = await vscode12.window.showInputBox({
+    const description = await vscode15.window.showInputBox({
       prompt: "Project Description (optional)",
       placeHolder: "Enter a description for your project"
     });
-    const config2 = vscode12.workspace.getConfiguration("lanonasis");
+    const config2 = vscode15.workspace.getConfiguration("lanonasis");
     let organizationId = config2.get("organizationId");
     if (!organizationId) {
-      const orgId = await vscode12.window.showInputBox({
+      const orgId = await vscode15.window.showInputBox({
         prompt: "Organization ID",
         placeHolder: "Enter your organization ID"
       });
       if (!orgId) return;
-      await config2.update("organizationId", orgId, vscode12.ConfigurationTarget.Global);
+      await config2.update("organizationId", orgId, vscode15.ConfigurationTarget.Global);
       organizationId = orgId;
     }
-    await vscode12.window.withProgress({
-      location: vscode12.ProgressLocation.Notification,
+    await vscode15.window.withProgress({
+      location: vscode15.ProgressLocation.Notification,
       title: "Creating project...",
       cancellable: false
     }, async () => {
@@ -40335,22 +41233,22 @@ async function createProject(apiKeyService, apiKeyTreeProvider) {
         await apiKeyTreeProvider.addProject(project);
       }
     });
-    vscode12.window.showInformationMessage(`Project "${name}" created successfully`);
-    vscode12.commands.executeCommand("lanonasis.refreshApiKeys");
+    vscode15.window.showInformationMessage(`Project "${name}" created successfully`);
+    vscode15.commands.executeCommand("lanonasis.refreshApiKeys");
   } catch (error46) {
-    vscode12.window.showErrorMessage(`Failed to create project: ${error46 instanceof Error ? error46.message : "Unknown error"}`);
+    vscode15.window.showErrorMessage(`Failed to create project: ${error46 instanceof Error ? error46.message : "Unknown error"}`);
   }
 }
 async function viewProjects(apiKeyService) {
   try {
-    vscode12.window.withProgress({
-      location: vscode12.ProgressLocation.Notification,
+    vscode15.window.withProgress({
+      location: vscode15.ProgressLocation.Notification,
       title: "Loading projects...",
       cancellable: false
     }, async () => {
       const projects = await apiKeyService.getProjects();
       if (projects.length === 0) {
-        const createProjectResponse = await vscode12.window.showInformationMessage(
+        const createProjectResponse = await vscode15.window.showInformationMessage(
           "No projects found. Create your first project to get started.",
           "Create Project",
           "Cancel"
@@ -40366,7 +41264,7 @@ async function viewProjects(apiKeyService) {
         detail: `Organization: ${project.organizationId} | Created: ${new Date(project.createdAt).toLocaleDateString()}`,
         project
       }));
-      const selected = await vscode12.window.showQuickPick(items, {
+      const selected = await vscode15.window.showQuickPick(items, {
         placeHolder: `Select a project (${projects.length} found)`
       });
       if (selected) {
@@ -40374,7 +41272,7 @@ async function viewProjects(apiKeyService) {
       }
     });
   } catch (error46) {
-    vscode12.window.showErrorMessage(`Failed to load projects: ${error46 instanceof Error ? error46.message : "Unknown error"}`);
+    vscode15.window.showErrorMessage(`Failed to load projects: ${error46 instanceof Error ? error46.message : "Unknown error"}`);
   }
 }
 async function showApiKeyDetails(apiKey) {
@@ -40394,11 +41292,11 @@ ${apiKey.tags.length > 0 ? apiKey.tags.map((tag) => `- ${tag}`).join("\n") : "No
 \`\`\`json
 ${JSON.stringify(apiKey.metadata, null, 2)}
 \`\`\``;
-  vscode12.workspace.openTextDocument({
+  vscode15.workspace.openTextDocument({
     content,
     language: "markdown"
   }).then((doc) => {
-    vscode12.window.showTextDocument(doc);
+    vscode15.window.showTextDocument(doc);
   });
 }
 async function showProjectDetails(project, apiKeyService) {
@@ -40418,24 +41316,24 @@ ${apiKeys.length > 0 ? apiKeys.map((key) => `- **${key.name}** (${key.keyType}, 
 \`\`\`json
 ${JSON.stringify(project.settings, null, 2)}
 \`\`\``;
-    vscode12.workspace.openTextDocument({
+    vscode15.workspace.openTextDocument({
       content,
       language: "markdown"
     }).then((doc) => {
-      vscode12.window.showTextDocument(doc);
+      vscode15.window.showTextDocument(doc);
     });
   } catch (error46) {
-    vscode12.window.showErrorMessage(`Failed to load project details: ${error46 instanceof Error ? error46.message : "Unknown error"}`);
+    vscode15.window.showErrorMessage(`Failed to load project details: ${error46 instanceof Error ? error46.message : "Unknown error"}`);
   }
 }
 async function createApiKeyForProject(project, apiKeyService, apiKeyTreeProvider) {
   try {
-    const name = await vscode12.window.showInputBox({
+    const name = await vscode15.window.showInputBox({
       prompt: "API Key Name",
       placeHolder: "Enter a name for your API key"
     });
     if (!name) return;
-    const value = await vscode12.window.showInputBox({
+    const value = await vscode15.window.showInputBox({
       prompt: "API Key Value",
       placeHolder: "Enter the API key value",
       password: true
@@ -40450,7 +41348,7 @@ async function createApiKeyForProject(project, apiKeyService, apiKeyTreeProvider
       { label: "Webhook Secret", value: "webhook_secret" },
       { label: "Encryption Key", value: "encryption_key" }
     ];
-    const selectedKeyType = await vscode12.window.showQuickPick(keyTypes, {
+    const selectedKeyType = await vscode15.window.showQuickPick(keyTypes, {
       placeHolder: "Select key type"
     });
     if (!selectedKeyType) return;
@@ -40459,7 +41357,7 @@ async function createApiKeyForProject(project, apiKeyService, apiKeyTreeProvider
       { label: "Staging", description: "For staging/testing" },
       { label: "Production", description: "For production use" }
     ];
-    const selectedEnv = await vscode12.window.showQuickPick(environments, {
+    const selectedEnv = await vscode15.window.showQuickPick(environments, {
       placeHolder: "Select environment"
     });
     if (!selectedEnv) return;
@@ -40470,7 +41368,7 @@ async function createApiKeyForProject(project, apiKeyService, apiKeyTreeProvider
       { label: "Admin", description: "Administrators only" },
       { label: "Enterprise", description: "Enterprise level access" }
     ];
-    const selectedAccess = await vscode12.window.showQuickPick(accessLevels, {
+    const selectedAccess = await vscode15.window.showQuickPick(accessLevels, {
       placeHolder: "Select access level"
     });
     if (!selectedAccess) return;
@@ -40482,114 +41380,114 @@ async function createApiKeyForProject(project, apiKeyService, apiKeyTreeProvider
       accessLevel: selectedAccess.label.toLowerCase(),
       projectId: project.id
     };
-    await vscode12.window.withProgress({
-      location: vscode12.ProgressLocation.Notification,
+    await vscode15.window.withProgress({
+      location: vscode15.ProgressLocation.Notification,
       title: "Creating API key...",
       cancellable: false
     }, async () => {
       const apiKey = await apiKeyService.createApiKey(request);
-      vscode12.window.showInformationMessage(`API key "${apiKey.name}" created successfully!`);
+      vscode15.window.showInformationMessage(`API key "${apiKey.name}" created successfully!`);
       if (apiKeyTreeProvider) {
         await apiKeyTreeProvider.addApiKey(project.id, apiKey);
       }
     });
   } catch (error46) {
-    vscode12.window.showErrorMessage(`Failed to create API key: ${error46 instanceof Error ? error46.message : "Unknown error"}`);
+    vscode15.window.showErrorMessage(`Failed to create API key: ${error46 instanceof Error ? error46.message : "Unknown error"}`);
   }
 }
 async function rotateApiKey(apiKey, apiKeyService, apiKeyTreeProvider) {
   try {
-    const confirmed = await vscode12.window.showWarningMessage(
+    const confirmed = await vscode15.window.showWarningMessage(
       `Are you sure you want to rotate API key "${apiKey.name}"? The old key will be invalidated.`,
       { modal: true },
       "Rotate Key"
     );
     if (confirmed !== "Rotate Key") return;
-    await vscode12.window.withProgress({
-      location: vscode12.ProgressLocation.Notification,
+    await vscode15.window.withProgress({
+      location: vscode15.ProgressLocation.Notification,
       title: "Rotating API key...",
       cancellable: false
     }, async () => {
       const rotated = await apiKeyService.rotateApiKey(apiKey.id);
-      vscode12.window.showInformationMessage(`API key "${rotated.name}" rotated successfully!`);
+      vscode15.window.showInformationMessage(`API key "${rotated.name}" rotated successfully!`);
       if (apiKeyTreeProvider) {
         await apiKeyTreeProvider.updateApiKey(apiKey.projectId, rotated);
       }
     });
   } catch (error46) {
-    vscode12.window.showErrorMessage(`Failed to rotate API key: ${error46 instanceof Error ? error46.message : "Unknown error"}`);
+    vscode15.window.showErrorMessage(`Failed to rotate API key: ${error46 instanceof Error ? error46.message : "Unknown error"}`);
   }
 }
 async function deleteApiKey(apiKey, apiKeyService, apiKeyTreeProvider) {
   try {
-    const confirmed = await vscode12.window.showWarningMessage(
+    const confirmed = await vscode15.window.showWarningMessage(
       `Are you sure you want to delete API key "${apiKey.name}"? This action cannot be undone.`,
       { modal: true },
       "Delete"
     );
     if (confirmed !== "Delete") return;
-    await vscode12.window.withProgress({
-      location: vscode12.ProgressLocation.Notification,
+    await vscode15.window.withProgress({
+      location: vscode15.ProgressLocation.Notification,
       title: "Deleting API key...",
       cancellable: false
     }, async () => {
       await apiKeyService.deleteApiKey(apiKey.id);
-      vscode12.window.showInformationMessage(`API key "${apiKey.name}" deleted successfully.`);
+      vscode15.window.showInformationMessage(`API key "${apiKey.name}" deleted successfully.`);
       if (apiKeyTreeProvider) {
         await apiKeyTreeProvider.removeApiKey(apiKey.projectId, apiKey.id);
       }
     });
   } catch (error46) {
-    vscode12.window.showErrorMessage(`Failed to delete API key: ${error46 instanceof Error ? error46.message : "Unknown error"}`);
+    vscode15.window.showErrorMessage(`Failed to delete API key: ${error46 instanceof Error ? error46.message : "Unknown error"}`);
   }
 }
 async function deleteProject(project, apiKeyService, apiKeyTreeProvider) {
   try {
-    const confirmed = await vscode12.window.showWarningMessage(
+    const confirmed = await vscode15.window.showWarningMessage(
       `Are you sure you want to delete project "${project.name}"? All API keys in this project will also be deleted. This action cannot be undone.`,
       { modal: true },
       "Delete"
     );
     if (confirmed !== "Delete") return;
-    await vscode12.window.withProgress({
-      location: vscode12.ProgressLocation.Notification,
+    await vscode15.window.withProgress({
+      location: vscode15.ProgressLocation.Notification,
       title: "Deleting project...",
       cancellable: false
     }, async () => {
       await apiKeyService.deleteProject(project.id);
-      vscode12.window.showInformationMessage(`Project "${project.name}" deleted successfully.`);
+      vscode15.window.showInformationMessage(`Project "${project.name}" deleted successfully.`);
       if (apiKeyTreeProvider) {
         await apiKeyTreeProvider.removeProject(project.id);
       }
     });
   } catch (error46) {
-    vscode12.window.showErrorMessage(`Failed to delete project: ${error46 instanceof Error ? error46.message : "Unknown error"}`);
+    vscode15.window.showErrorMessage(`Failed to delete project: ${error46 instanceof Error ? error46.message : "Unknown error"}`);
   }
 }
 async function captureContextToMemory(memoryService, notifyOnboardingStep) {
   try {
     let content;
     let source = "selection";
-    const editor = vscode12.window.activeTextEditor;
+    const editor = vscode15.window.activeTextEditor;
     if (editor && !editor.selection.isEmpty) {
       content = editor.document.getText(editor.selection);
       source = "editor";
     } else {
-      content = await vscode12.env.clipboard.readText();
+      content = await vscode15.env.clipboard.readText();
       source = "clipboard";
     }
     if (!content || !content.trim()) {
-      vscode12.window.showWarningMessage("No content to capture. Select text or copy something to clipboard first.");
+      vscode15.window.showWarningMessage("No content to capture. Select text or copy something to clipboard first.");
       return;
     }
     const defaultTitle = content.substring(0, 50).replace(/\n/g, " ").trim();
-    const title = await vscode12.window.showInputBox({
+    const title = await vscode15.window.showInputBox({
       prompt: "Title for this memory",
       placeHolder: "Enter a title...",
       value: defaultTitle
     });
     if (!title) return;
-    const memoryType = await vscode12.window.showQuickPick(
+    const memoryType = await vscode15.window.showQuickPick(
       ["context", "knowledge", "reference", "project", "personal", "workflow"],
       {
         placeHolder: "Select memory type",
@@ -40597,8 +41495,8 @@ async function captureContextToMemory(memoryService, notifyOnboardingStep) {
       }
     );
     if (!memoryType) return;
-    await vscode12.window.withProgress({
-      location: vscode12.ProgressLocation.Notification,
+    await vscode15.window.withProgress({
+      location: vscode15.ProgressLocation.Notification,
       title: "Creating memory...",
       cancellable: false
     }, async () => {
@@ -40614,24 +41512,24 @@ async function captureContextToMemory(memoryService, notifyOnboardingStep) {
         }
       });
     });
-    vscode12.window.showInformationMessage(`\u{1F4DD} Memory captured: "${title}"`);
-    vscode12.commands.executeCommand("lanonasis.refreshMemories");
+    vscode15.window.showInformationMessage(`\u{1F4DD} Memory captured: "${title}"`);
+    vscode15.commands.executeCommand("lanonasis.refreshMemories");
     if (notifyOnboardingStep) {
       await notifyOnboardingStep("create_memory");
     }
   } catch (error46) {
-    vscode12.window.showErrorMessage(`Failed to capture context: ${error46 instanceof Error ? error46.message : "Unknown error"}`);
+    vscode15.window.showErrorMessage(`Failed to capture context: ${error46 instanceof Error ? error46.message : "Unknown error"}`);
   }
 }
 async function captureClipboardToMemory(memoryService, notifyOnboardingStep) {
   try {
-    const clipboardContent = await vscode12.env.clipboard.readText();
+    const clipboardContent = await vscode15.env.clipboard.readText();
     if (!clipboardContent || !clipboardContent.trim()) {
-      vscode12.window.showWarningMessage("Clipboard is empty. Copy some content first.");
+      vscode15.window.showWarningMessage("Clipboard is empty. Copy some content first.");
       return;
     }
     const defaultTitle = clipboardContent.substring(0, 50).replace(/\n/g, " ").trim();
-    const title = await vscode12.window.showInputBox({
+    const title = await vscode15.window.showInputBox({
       prompt: "Title for this memory",
       placeHolder: "Enter a title...",
       value: defaultTitle
@@ -40643,12 +41541,12 @@ async function captureClipboardToMemory(memoryService, notifyOnboardingStep) {
       { label: "\u{1F517} Reference", description: "Quick reference snippet", value: "reference" },
       { label: "\u{1F4C1} Project", description: "Project-specific note", value: "project" }
     ];
-    const selectedType = await vscode12.window.showQuickPick(typeItems, {
+    const selectedType = await vscode15.window.showQuickPick(typeItems, {
       placeHolder: "Select memory type"
     });
     if (!selectedType) return;
-    await vscode12.window.withProgress({
-      location: vscode12.ProgressLocation.Notification,
+    await vscode15.window.withProgress({
+      location: vscode15.ProgressLocation.Notification,
       title: "Capturing from clipboard...",
       cancellable: false
     }, async () => {
@@ -40663,13 +41561,13 @@ async function captureClipboardToMemory(memoryService, notifyOnboardingStep) {
         }
       });
     });
-    vscode12.window.showInformationMessage(`\u{1F4CB} Clipboard captured: "${title}"`);
-    vscode12.commands.executeCommand("lanonasis.refreshMemories");
+    vscode15.window.showInformationMessage(`\u{1F4CB} Clipboard captured: "${title}"`);
+    vscode15.commands.executeCommand("lanonasis.refreshMemories");
     if (notifyOnboardingStep) {
       await notifyOnboardingStep("create_memory");
     }
   } catch (error46) {
-    vscode12.window.showErrorMessage(`Failed to capture clipboard: ${error46 instanceof Error ? error46.message : "Unknown error"}`);
+    vscode15.window.showErrorMessage(`Failed to capture clipboard: ${error46 instanceof Error ? error46.message : "Unknown error"}`);
   }
 }
 function deactivate() {

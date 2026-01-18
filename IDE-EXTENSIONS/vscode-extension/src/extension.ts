@@ -7,6 +7,7 @@ import { EnhancedSidebarProvider } from './panels/EnhancedSidebarProvider';
 import { MemoryService } from './services/MemoryService';
 import { EnhancedMemoryService } from './services/EnhancedMemoryService';
 import type { IMemoryService } from './services/IMemoryService';
+import { isEnhancedMemoryService } from './services/IMemoryService';
 import { MemoryCache } from './services/MemoryCache';
 import { ApiKeyService } from './services/ApiKeyService';
 import type { ApiKey, Project, CreateApiKeyRequest } from './services/ApiKeyService';
@@ -18,6 +19,14 @@ import { runDiagnostics, formatDiagnosticResults } from './utils/diagnostics';
 import { MCPDiscoveryService, createMCPDiscoveryService } from './services/MCPDiscoveryService';
 import { MemoryCacheBridge } from './bridges/MemoryCacheBridge';
 import { OnboardingService, OnboardingStepId } from './services/OnboardingService';
+import { OfflineService } from './services/OfflineService';
+import { OfflineQueueService } from './services/OfflineQueueService';
+import { OfflineMemoryService } from './services/OfflineMemoryService';
+import { formatErrorLogs, getErrorLogs, logExtensionError } from './utils/errorLogger';
+
+// Keep GitHub issue URLs within common browser/OS limits when embedding logs.
+const MAX_GITHUB_ISSUE_BODY_LENGTH = 6000;
+const ALLOWED_PROTOCOLS = new Set(['http:', 'https:', 'wss:', 'ws:']);
 
 export async function activate(context: vscode.ExtensionContext) {
     console.log('Lanonasis Memory Extension is now active');
@@ -59,18 +68,36 @@ export async function activate(context: vscode.ExtensionContext) {
     const secureApiKeyService = new SecureApiKeyService(adapter);
     await secureApiKeyService.initialize();
 
-    let memoryService: IMemoryService;
+    const resolveHealthUrl = () => {
+        const config = vscode.workspace.getConfiguration('lanonasis');
+        const apiUrl = config.get<string>('apiUrl', 'https://api.lanonasis.com');
+        const gatewayUrl = config.get<string>('gatewayUrl', 'https://api.lanonasis.com');
+        const useGateway = config.get<boolean>('useGateway', false);
+        let baseUrl = (useGateway ? gatewayUrl : apiUrl).trim();
+        baseUrl = baseUrl.replace(/\/+$/, '').replace(/\/api\/v1$/i, '').replace(/\/api$/i, '');
+        return baseUrl ? `${baseUrl}/health` : '';
+    };
+
+    let baseMemoryService: IMemoryService;
 
     try {
-        memoryService = new EnhancedMemoryService(secureApiKeyService);
+        baseMemoryService = new EnhancedMemoryService(secureApiKeyService);
         console.log('Using Enhanced Memory Service with CLI integration');
     } catch (error) {
         console.warn('Enhanced Memory Service not available, using basic service:', error);
-        memoryService = new MemoryService(secureApiKeyService);
+        baseMemoryService = new MemoryService(secureApiKeyService);
     }
     const apiKeyService = new ApiKeyService(secureApiKeyService);
     const memoryCache = new MemoryCache(context, outputChannel);
+    const offlineService = new OfflineService(outputChannel, { getHealthUrl: resolveHealthUrl });
+    const offlineQueue = new OfflineQueueService(context, outputChannel, baseMemoryService, memoryCache);
+    const memoryService: IMemoryService = new OfflineMemoryService(baseMemoryService, offlineService, offlineQueue, memoryCache);
     const memoryCacheBridge = new MemoryCacheBridge(memoryCache, memoryService, outputChannel);
+
+    offlineService.start();
+    if (offlineService.isOnline()) {
+        void offlineQueue.sync();
+    }
 
     const configuration = vscode.workspace.getConfiguration('lanonasis');
     const useEnhancedUI = configuration.get<boolean>('useEnhancedUI', false);
@@ -84,7 +111,9 @@ export async function activate(context: vscode.ExtensionContext) {
             memoryService,
             apiKeyService,
             memoryCacheBridge,
-            onboardingService
+            onboardingService,
+            offlineService,
+            offlineQueue
         );
         context.subscriptions.push(
             vscode.window.registerWebviewViewProvider(
@@ -106,6 +135,24 @@ export async function activate(context: vscode.ExtensionContext) {
 
     const memoryTreeProvider = new MemoryTreeProvider(memoryService);
     const apiKeyTreeProvider = new ApiKeyTreeProvider(apiKeyService);
+
+    const handleOfflineStatus = (status: { online: boolean }) => {
+        if (status.online) {
+            void offlineQueue.sync();
+        }
+    };
+
+    context.subscriptions.push(offlineService.onDidChangeStatus(handleOfflineStatus));
+
+    if (sidebarProvider instanceof EnhancedSidebarProvider) {
+        const sendStatusUpdate = () => {
+            void sidebarProvider.sendConnectionStatus();
+        };
+        context.subscriptions.push(
+            offlineService.onDidChangeStatus(sendStatusUpdate),
+            offlineQueue.onDidChangeStatus(sendStatusUpdate)
+        );
+    }
 
     const notifyOnboardingStep = async (step: OnboardingStepId) => {
         try {
@@ -175,7 +222,7 @@ export async function activate(context: vscode.ExtensionContext) {
     };
 
     const announceEnhancedCapabilities = () => {
-        if (!(memoryService instanceof EnhancedMemoryService)) {
+        if (!isEnhancedMemoryService(memoryService)) {
             return;
         }
 
@@ -282,6 +329,16 @@ export async function activate(context: vscode.ExtensionContext) {
             await sidebarProvider.refresh();
         }),
 
+        vscode.commands.registerCommand('lanonasis.syncOfflineQueue', async () => {
+            const status = offlineQueue.getStatus();
+            if (status.pending === 0) {
+                vscode.window.showInformationMessage('No pending offline operations to sync.');
+                return;
+            }
+            await offlineQueue.sync();
+            await sidebarProvider.refresh();
+        }),
+
         vscode.commands.registerCommand('lanonasis.openMemory', (memory: MemoryEntry) => {
             openMemoryInEditor(memory);
         }),
@@ -348,7 +405,7 @@ export async function activate(context: vscode.ExtensionContext) {
         }),
 
         vscode.commands.registerCommand('lanonasis.showConnectionInfo', async () => {
-            if (memoryService instanceof EnhancedMemoryService) {
+            if (isEnhancedMemoryService(memoryService)) {
                 await memoryService.showConnectionInfo();
             } else {
                 vscode.window.showInformationMessage('Connection info available in Enhanced Memory Service. Upgrade to CLI integration for more details.');
@@ -523,6 +580,26 @@ export async function activate(context: vscode.ExtensionContext) {
             }
         }),
 
+        vscode.commands.registerCommand('lanonasis.autoFixIssues', async () => {
+            await runAutoFix(
+                context,
+                outputChannel,
+                secureApiKeyService,
+                memoryService,
+                memoryCache,
+                offlineQueue
+            );
+        }),
+
+        vscode.commands.registerCommand('lanonasis.reportIssue', async () => {
+            await reportIssue(
+                context,
+                secureApiKeyService,
+                memoryService,
+                outputChannel
+            );
+        }),
+
         vscode.commands.registerCommand('lanonasis.showLogs', () => {
             outputChannel.show();
         }),
@@ -550,10 +627,7 @@ export async function activate(context: vscode.ExtensionContext) {
     ];
 
     context.subscriptions.push(...commands);
-
-    if (memoryService instanceof EnhancedMemoryService) {
-        context.subscriptions.push(memoryService);
-    }
+    context.subscriptions.push(memoryService as vscode.Disposable);
 
     // Register MCP discovery service for disposal
     if (mcpDiscoveryService) {
@@ -579,6 +653,212 @@ export async function activate(context: vscode.ExtensionContext) {
 
     if (!useEnhancedUI && !hasStoredKey && !isFirstTime && !legacyFirstTime) {
         await promptForAuthenticationIfMissing();
+    }
+
+    const perfConfig = vscode.workspace.getConfiguration('lanonasis');
+    if (
+        perfConfig.get<boolean>('showPerformanceFeedback', false)
+        || perfConfig.get<boolean>('verboseLogging', false)
+    ) {
+        outputChannel.appendLine(`[Performance] Activation ${Date.now() - activationStart}ms`);
+    }
+}
+
+async function runAutoFix(
+    context: vscode.ExtensionContext,
+    outputChannel: vscode.OutputChannel,
+    secureApiKeyService: SecureApiKeyService,
+    memoryService: IMemoryService,
+    memoryCache: MemoryCache,
+    offlineQueue: OfflineQueueService
+): Promise<void> {
+    const options = [
+        {
+            id: 'refresh-auth',
+            label: 'Refresh authentication tokens',
+            detail: 'Revalidate credentials and refresh access tokens.'
+        },
+        {
+            id: 'clear-cache',
+            label: 'Clear local cache',
+            detail: 'Clear cached memories and queued offline operations.'
+        },
+        {
+            id: 'reset-settings',
+            label: 'Reset invalid settings',
+            detail: 'Revert invalid URLs to defaults.'
+        },
+        {
+            id: 'suggest-cli',
+            label: 'Suggest CLI installation',
+            detail: 'Open CLI setup guidance.'
+        }
+    ];
+
+    const selection = await vscode.window.showQuickPick(options, {
+        title: 'Lanonasis Auto-Fix',
+        canPickMany: true,
+        placeHolder: 'Choose fixes to apply'
+    });
+
+    if (!selection || selection.length === 0) {
+        return;
+    }
+
+    const results: string[] = [];
+
+    await vscode.window.withProgress(
+        {
+            location: vscode.ProgressLocation.Notification,
+            title: 'Running auto-fix...',
+            cancellable: false
+        },
+        async () => {
+            for (const item of selection) {
+                try {
+                    if (item.id === 'refresh-auth') {
+                        await secureApiKeyService.getStoredCredentials();
+                        await memoryService.refreshClient();
+                        results.push('Refreshed authentication.');
+                    } else if (item.id === 'clear-cache') {
+                        await memoryCache.clear();
+                        await offlineQueue.clear();
+                        results.push('Cleared local cache.');
+                    } else if (item.id === 'reset-settings') {
+                        const resetCount = await resetInvalidSettings();
+                        results.push(resetCount > 0
+                            ? `Reset ${resetCount} invalid setting(s).`
+                            : 'Settings already valid.');
+                    } else if (item.id === 'suggest-cli') {
+                        const action = await vscode.window.showInformationMessage(
+                            'Install the Lanonasis CLI to enable richer IDE integration.',
+                            'Open Docs'
+                        );
+                        if (action === 'Open Docs') {
+                            await vscode.env.openExternal(vscode.Uri.parse('https://docs.lanonasis.com'));
+                        }
+                        results.push('CLI guidance shown.');
+                    }
+                } catch (error) {
+                    const summary = error instanceof Error ? error.message : String(error);
+                    results.push(`${item.label} failed: ${summary}`);
+                    await logExtensionError(context, outputChannel, error, `auto-fix:${item.id}`);
+                }
+            }
+        }
+    );
+
+    if (results.length > 0) {
+        vscode.window.showInformationMessage(results.join(' '));
+    }
+}
+
+async function resetInvalidSettings(): Promise<number> {
+    const config = vscode.workspace.getConfiguration('lanonasis');
+    const defaults: Array<{ key: string; fallback: string }> = [
+        { key: 'apiUrl', fallback: 'https://api.lanonasis.com' },
+        { key: 'gatewayUrl', fallback: 'https://api.lanonasis.com' },
+        { key: 'authUrl', fallback: 'https://auth.lanonasis.com' },
+        { key: 'websocketUrl', fallback: 'wss://mcp.lanonasis.com/ws' }
+    ];
+
+    let resetCount = 0;
+    for (const { key, fallback } of defaults) {
+        const value = config.get<string>(key, fallback);
+        if (!isValidUrl(value)) {
+            await config.update(key, fallback, vscode.ConfigurationTarget.Global);
+            resetCount += 1;
+        }
+    }
+
+    return resetCount;
+}
+
+function isValidUrl(value: string): boolean {
+    const trimmed = value.trim();
+    if (!trimmed) return false;
+
+    try {
+        const hasScheme = /^[a-z][a-z0-9+.-]*:\/\//i.test(trimmed);
+        const candidate = hasScheme ? trimmed : `http://${trimmed}`;
+        const parsed = new URL(candidate);
+        return ALLOWED_PROTOCOLS.has(parsed.protocol) && Boolean(parsed.hostname);
+    } catch {
+        return false;
+    }
+}
+
+async function reportIssue(
+    context: vscode.ExtensionContext,
+    secureApiKeyService: SecureApiKeyService,
+    memoryService: IMemoryService,
+    outputChannel: vscode.OutputChannel
+): Promise<void> {
+    try {
+        const includeDiagnostics = await vscode.window.showQuickPick(
+            ['Include diagnostics (recommended)', 'Skip diagnostics'],
+            { title: 'Report Issue' }
+        );
+
+        let diagnosticReport = 'Diagnostics skipped by user.';
+        if (includeDiagnostics === 'Include diagnostics (recommended)') {
+            const health = await runDiagnostics(
+                context,
+                secureApiKeyService,
+                memoryService,
+                outputChannel
+            );
+            diagnosticReport = formatDiagnosticResults(health);
+        }
+
+        const logs = formatErrorLogs(getErrorLogs(context), 20);
+        const extensionVersion = context.extension.packageJSON.version as string | undefined;
+        const environmentInfo = `Version: ${extensionVersion ?? 'unknown'}\nOS: ${process.platform}\nVSCode: ${vscode.version}`;
+
+        const body = [
+            '## Summary',
+            'Describe the issue here.',
+            '',
+            '## Environment',
+            '```',
+            environmentInfo,
+            '```',
+            '',
+            '## Diagnostics',
+            '```',
+            diagnosticReport,
+            '```',
+            '',
+            '## Recent Errors',
+            '```',
+            logs,
+            '```'
+        ].join('\n');
+
+        const doc = await vscode.workspace.openTextDocument({
+            content: body,
+            language: 'markdown'
+        });
+        await vscode.window.showTextDocument(doc, { preview: true });
+
+        const action = await vscode.window.showInformationMessage(
+            'Review the issue report. Open GitHub issue?',
+            'Open Issue',
+            'Cancel'
+        );
+
+        if (action !== 'Open Issue') {
+            return;
+        }
+
+        const truncatedBody = doc.getText().slice(0, MAX_GITHUB_ISSUE_BODY_LENGTH);
+        const issueUrl = `https://github.com/lanonasis/lanonasis-maas/issues/new?title=${encodeURIComponent('[vscode] ')}&body=${encodeURIComponent(truncatedBody)}`;
+        await vscode.env.openExternal(vscode.Uri.parse(issueUrl));
+    } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        outputChannel.appendLine(`[ReportIssue] Failed to open issue: ${message}`);
+        vscode.window.showErrorMessage(`Failed to open issue report: ${message}`);
+        await logExtensionError(context, outputChannel, error, 'report-issue');
     }
 }
 
@@ -1556,15 +1836,6 @@ async function deleteProject(project: Project, apiKeyService: ApiKeyService, api
         });
     } catch (error) {
         vscode.window.showErrorMessage(`Failed to delete project: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    }
-}
-
-    const perfConfig = vscode.workspace.getConfiguration('lanonasis');
-    if (
-        perfConfig.get<boolean>('showPerformanceFeedback', false)
-        || perfConfig.get<boolean>('verboseLogging', false)
-    ) {
-        outputChannel.appendLine(`[Performance] Activation ${Date.now() - activationStart}ms`);
     }
 }
 
