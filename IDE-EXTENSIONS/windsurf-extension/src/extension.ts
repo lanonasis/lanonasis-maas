@@ -25,7 +25,7 @@ export async function activate(context: vscode.ExtensionContext) {
             extensionName: 'lanonasis-memory-windsurf',
             extensionDisplayName: 'LanOnasis Memory Assistant',
             commandPrefix: 'lanonasis',
-            userAgent: `Windsurf/${vscode.version} LanOnasis/${extensionVersion}`
+            userAgent: `Windsurf/${vscode.version} LanOnasis-Memory/${extensionVersion}`
         }
     );
 
@@ -88,6 +88,23 @@ export async function activate(context: vscode.ExtensionContext) {
 
         vscode.commands.registerCommand('lanonasis.createMemoryFromWorkspace', async () => {
             await createMemoryFromWorkspace(memoryService, authService);
+        }),
+
+        vscode.commands.registerCommand('lanonasis.captureContext', async () => {
+            await captureContextToMemory(memoryService, authService);
+        }),
+
+        vscode.commands.registerCommand('lanonasis.captureClipboard', async () => {
+            await captureClipboardToMemory(memoryService, authService);
+        }),
+
+        vscode.commands.registerCommand('lanonasis.quickCapture', async () => {
+            const editor = vscode.window.activeTextEditor;
+            if (editor && !editor.selection.isEmpty) {
+                await captureContextToMemory(memoryService, authService);
+            } else {
+                await captureClipboardToMemory(memoryService, authService);
+            }
         }),
 
         vscode.commands.registerCommand('lanonasis.authenticate', async () => {
@@ -412,6 +429,131 @@ Path: ${workspaceFolder.uri.fsPath}`;
         vscode.commands.executeCommand('lanonasis.refreshMemories');
     } catch (error) {
         handleError('Failed to create workspace memory', error);
+    }
+}
+
+async function captureContextToMemory(memoryService: MemoryService, authService: AuthenticationService) {
+    if (!await ensureAuthenticated(authService)) return;
+
+    try {
+        let content: string | undefined;
+        let source = 'selection';
+        const editor = vscode.window.activeTextEditor;
+
+        if (editor && !editor.selection.isEmpty) {
+            content = editor.document.getText(editor.selection);
+            source = 'editor';
+        } else {
+            content = await vscode.env.clipboard.readText();
+            source = 'clipboard';
+        }
+
+        if (!content || !content.trim()) {
+            vscode.window.showWarningMessage('No content to capture. Select text or copy something to clipboard first.');
+            return;
+        }
+
+        const defaultTitle = content.substring(0, 50).replace(/\s+/g, ' ').trim();
+        const title = await vscode.window.showInputBox({
+            prompt: 'Title for this memory',
+            placeHolder: 'Enter a title...',
+            value: defaultTitle
+        });
+
+        if (!title) return;
+
+        const memoryType = await vscode.window.showQuickPick(
+            ['context', 'knowledge', 'reference', 'project', 'personal', 'workflow'],
+            {
+                placeHolder: 'Select memory type',
+                title: 'Memory Type',
+                ignoreFocusOut: true
+            }
+        ) as MemoryType | undefined;
+
+        if (!memoryType) return;
+
+        await vscode.window.withProgress({
+            location: vscode.ProgressLocation.Notification,
+            title: 'Creating memory...',
+            cancellable: false
+        }, async () => {
+            await memoryService.createMemory({
+                title,
+                content,
+                memory_type: memoryType,
+                tags: ['windsurf', 'captured', source],
+                metadata: {
+                    source,
+                    capturedAt: new Date().toISOString(),
+                    editor: editor?.document.fileName,
+                    language: editor?.document.languageId
+                }
+            });
+        });
+
+        vscode.window.showInformationMessage(`Memory "${title}" captured`);
+        vscode.commands.executeCommand('lanonasis.refreshMemories');
+    } catch (error) {
+        handleError('Failed to capture context', error);
+    }
+}
+
+async function captureClipboardToMemory(memoryService: MemoryService, authService: AuthenticationService) {
+    if (!await ensureAuthenticated(authService)) return;
+
+    try {
+        const clipboardContent = await vscode.env.clipboard.readText();
+
+        if (!clipboardContent || !clipboardContent.trim()) {
+            vscode.window.showWarningMessage('Clipboard is empty. Copy some content first.');
+            return;
+        }
+
+        const defaultTitle = clipboardContent.substring(0, 50).replace(/\s+/g, ' ').trim();
+        const title = await vscode.window.showInputBox({
+            prompt: 'Title for this memory',
+            placeHolder: 'Enter a title...',
+            value: defaultTitle
+        });
+
+        if (!title) return;
+
+        const typeItems = [
+            { label: 'Context', description: 'General contextual information', value: 'context' as MemoryType },
+            { label: 'Knowledge', description: 'Learning or reference material', value: 'knowledge' as MemoryType },
+            { label: 'Reference', description: 'Quick reference snippet', value: 'reference' as MemoryType },
+            { label: 'Project', description: 'Project-specific note', value: 'project' as MemoryType }
+        ];
+
+        const selectedType = await vscode.window.showQuickPick(typeItems, {
+            placeHolder: 'Select memory type',
+            ignoreFocusOut: true
+        });
+
+        if (!selectedType) return;
+
+        await vscode.window.withProgress({
+            location: vscode.ProgressLocation.Notification,
+            title: 'Capturing from clipboard...',
+            cancellable: false
+        }, async () => {
+            await memoryService.createMemory({
+                title,
+                content: clipboardContent,
+                memory_type: selectedType.value,
+                tags: ['windsurf', 'clipboard', 'captured'],
+                metadata: {
+                    source: 'clipboard',
+                    capturedAt: new Date().toISOString()
+                }
+            });
+        });
+
+        vscode.window.showInformationMessage(`Clipboard captured as "${title}"`);
+        vscode.commands.executeCommand('lanonasis.refreshMemories');
+    } catch (error) {
+        handleError('Failed to capture clipboard', error);
     }
 }
 

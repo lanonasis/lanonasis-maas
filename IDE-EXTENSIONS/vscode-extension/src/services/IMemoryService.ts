@@ -1,4 +1,4 @@
-import { CreateMemoryRequest, SearchMemoryRequest, MemoryEntry, MemorySearchResult, UserMemoryStats } from '../types/memory-aligned';
+import { CreateMemoryRequest, SearchMemoryRequest, MemoryEntry, MemorySearchResult, UserMemoryStats } from '@lanonasis/memory-client';
 import type { TransportType } from './transports/ITransport';
 
 export interface MemoryServiceCapabilities {

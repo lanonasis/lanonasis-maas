@@ -49,6 +49,8 @@ async function buildExtension() {
     outfile: 'out/extension.js',
     external: [
       'vscode', // VS Code API is provided by the host
+      'keytar', // Native module for secure storage (Windsurf adapter)
+      'electron', // Electron APIs (Cursor adapter)
     ],
     // Resolve path aliases from tsconfig
     alias: {

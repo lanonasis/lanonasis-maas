@@ -604,7 +604,7 @@ export class EnhancedSidebarProvider implements vscode.WebviewViewProvider {
             const createMemoryData = {
                 title: (memoryData.title as string) || 'New Memory',
                 content: (memoryData.content as string) || '',
-                memory_type: (memoryData.memory_type as 'context' | 'knowledge' | 'project' | 'reference' | 'personal' | 'workflow' | 'conversation') || 'context',
+                memory_type: (memoryData.memory_type as 'context' | 'knowledge' | 'project' | 'reference' | 'personal' | 'workflow') || 'context',
                 tags: Array.isArray(memoryData.tags) ? (memoryData.tags as string[]) : [],
                 summary: memoryData.summary as string | undefined,
                 topic_id: memoryData.topic_id as string | undefined,

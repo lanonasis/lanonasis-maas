@@ -188,7 +188,7 @@ export class MemoryService {
         const headers = {
             'Content-Type': 'application/json',
             'Authorization': authHeader,
-            'User-Agent': 'Lanonasis-Cursor-Extension/1.0.0',
+            'User-Agent': 'Windsurf LanOnasis-Memory/1.4.5',
             ...options.headers
         };
 

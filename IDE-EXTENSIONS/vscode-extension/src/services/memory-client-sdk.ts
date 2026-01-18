@@ -12,7 +12,7 @@ import {
   CreateTopicRequest,
   MemorySearchResult,
   UserMemoryStats
-} from '../types/memory-aligned';
+} from '@lanonasis/memory-client';
 
 export interface MaaSClientConfig {
   apiUrl: string;

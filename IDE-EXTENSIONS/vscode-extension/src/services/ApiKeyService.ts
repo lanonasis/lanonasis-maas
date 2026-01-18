@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { SecureApiKeyService, StoredCredential } from './SecureApiKeyService';
+import { SecureApiKeyService, StoredCredential } from '@lanonasis/ide-extension-core';
 
 export interface ApiKey {
     id: string;
