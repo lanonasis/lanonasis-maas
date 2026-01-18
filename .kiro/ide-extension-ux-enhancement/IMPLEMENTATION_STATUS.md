@@ -5,7 +5,7 @@
 This document tracks the implementation progress of the IDE Extension UX Enhancement project as defined in `tasks.md`. The project aims to create a unified, accessible, and performant user experience across all Lanonasis IDE extensions (VSCode, Cursor, Windsurf).
 
 **Last Updated**: 2026-01-18
-**Status**: Phase 3 In Progress
+**Status**: Phases 3-6 In Progress
 
 ---
 
@@ -198,6 +198,31 @@ Built into `SecureApiKeyService`:
 #### In Progress
 - ⚡ **Tutorial video placeholders** added to welcome screen (Task 3.6, pending recorded videos)
 
+---
+
+### Phase 4: Modern Sidebar Interface ⚡ IN PROGRESS
+
+#### Completed Work
+- ✅ **Memory cards upgraded** with edit/delete/copy actions, expand/collapse, type badges, and metadata (Task 4.3)
+- ✅ **Empty states redesigned** with guidance and CTAs for no memories, no results, and filter misses (Task 4.4)
+- ✅ **Status indicators** for auth, transport mode, sync, and offline states (Task 4.5)
+- ✅ **Sidebar customization** dialog for reorder/hide/type sections and accent themes, persisted to settings (Task 4.6)
+- ✅ **Search UI enhancements** with type/tag filters, relevance score, and highlighting (Task 4.2)
+
+#### Remaining
+- ⚡ **Sidebar provider redesign** to shared core + virtual scrolling (Task 4.0)
+- ⚡ **Accessibility pass** for keyboard navigation and contrast validation (Task 4.1)
+
+---
+
+### Phase 6: Unified Search Experience ⚡ IN PROGRESS
+
+#### Completed Work
+- ✅ **Search standardization** with similarity sorting and 5-minute cache TTL (Task 6.0)
+- ✅ **Advanced filters** (type, tag autocomplete, status, date range) (Task 6.1)
+- ✅ **Highlighting + snippets** for title/content with relevance badges (Task 6.2)
+- ✅ **Search suggestions + saved searches** with history chips (Tasks 6.3-6.4)
+
 **Location**:
 - `apps/lanonasis-maas/IDE-EXTENSIONS/vscode-extension/src/services/OnboardingService.ts`
 - `apps/lanonasis-maas/IDE-EXTENSIONS/vscode-extension/src/hooks/useOnboarding.tsx`
@@ -208,6 +233,20 @@ Built into `SecureApiKeyService`:
 
 #### Remaining Tasks for Phase 3:
 - [ ] **Task 3.6**: Onboarding tutorial videos
+
+---
+
+### Phase 4: Modern Sidebar Interface ⚡ IN PROGRESS
+
+#### In Progress
+- ⚡ **Accessibility pass**: added keyboard focus + screen-reader labels for key controls
+- ⚡ **Search UI enhancements**: type/tag filters, match highlighting, relevance scores (date filter pending)
+
+**Location**:
+- `apps/lanonasis-maas/IDE-EXTENSIONS/vscode-extension/src/components/IDEPanel.tsx`
+- `apps/lanonasis-maas/IDE-EXTENSIONS/vscode-extension/src/components/MemoryCard.tsx`
+- `apps/lanonasis-maas/IDE-EXTENSIONS/vscode-extension/src/components/ChatInterface.tsx`
+- `apps/lanonasis-maas/IDE-EXTENSIONS/vscode-extension/src/components/SearchBar.tsx`
 
 ---
 

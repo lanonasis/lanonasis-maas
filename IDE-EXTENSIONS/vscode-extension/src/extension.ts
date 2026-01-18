@@ -15,7 +15,6 @@ import { MemoryType, MemoryEntry, MemorySearchResult } from '@lanonasis/memory-c
 // Unused error recovery utils - available for future use
 // import { withRetry, showErrorWithRecovery, withProgressAndRetry } from './utils/errorRecovery';
 import { runDiagnostics, formatDiagnosticResults } from './utils/diagnostics';
-import { registerMemoryChatParticipant } from './chat/MemoryChatParticipant';
 import { MCPDiscoveryService, createMCPDiscoveryService } from './services/MCPDiscoveryService';
 import { MemoryCacheBridge } from './bridges/MemoryCacheBridge';
 import { OnboardingService, OnboardingStepId } from './services/OnboardingService';
@@ -23,6 +22,7 @@ import { OnboardingService, OnboardingStepId } from './services/OnboardingServic
 export async function activate(context: vscode.ExtensionContext) {
     console.log('Lanonasis Memory Extension is now active');
 
+    const activationStart = Date.now();
     const outputChannel = vscode.window.createOutputChannel('Lanonasis');
     const onboardingService = new OnboardingService(context.globalState);
 
@@ -125,6 +125,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
     // Register @lanonasis Chat Participant for GitHub Copilot Chat integration
     try {
+        const { registerMemoryChatParticipant } = await import('./chat/MemoryChatParticipant');
         registerMemoryChatParticipant(context, memoryService);
         console.log('[Lanonasis] Chat Participant @lanonasis registered for Copilot Chat');
     } catch (error) {
@@ -1555,6 +1556,15 @@ async function deleteProject(project: Project, apiKeyService: ApiKeyService, api
         });
     } catch (error) {
         vscode.window.showErrorMessage(`Failed to delete project: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+}
+
+    const perfConfig = vscode.workspace.getConfiguration('lanonasis');
+    if (
+        perfConfig.get<boolean>('showPerformanceFeedback', false)
+        || perfConfig.get<boolean>('verboseLogging', false)
+    ) {
+        outputChannel.appendLine(`[Performance] Activation ${Date.now() - activationStart}ms`);
     }
 }
 

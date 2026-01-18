@@ -6,7 +6,7 @@ This implementation plan breaks down the IDE Extension UX Enhancement project in
 
 All tasks reference specific requirements from the requirements document and follow the design specifications. Tasks marked with `*` are optional and can be skipped to focus on core functionality first.
 
-**Status snapshot (2026-01-18):** Phase 1 ✅ complete; Phase 2 ⚡ in progress (auth UI polish + auth tests remaining); Phase 3 ⚡ started; Phases 4-17 not started.
+**Status snapshot (2026-01-18):** Phase 1 ✅ complete; Phase 2 ⚡ in progress (auth UI polish + auth tests remaining); Phase 3 ⚡ in progress; Phase 4 ⚡ in progress (4.3-4.6 complete); Phase 6 ⚡ in progress (6.0-6.4 complete); Phases 5, 7-17 not started.
 
 ---
 
@@ -165,35 +165,35 @@ All tasks reference specific requirements from the requirements document and fol
   - Ensure 4.5:1 contrast ratio for all text
   - _Requirements: 8.1, 8.2, 8.3_
 
-- [ ] 4.2 Implement search UI
+- [x] 4.2 Implement search UI
   - Add search input with debouncing (300ms)
   - Show search results with relevance scores
   - Highlight matching text in results
   - Add advanced filter UI (type, date, tags)
   - _Requirements: 6.1, 6.2, 6.4, 6.8_
 
-- [ ] 4.3 Create memory item components
+- [x] 4.3 Create memory item components
   - Design memory card with title, type, preview
   - Add hover actions (edit, delete, copy)
   - Implement expand/collapse for content
   - Show metadata (created date, tags)
   - _Requirements: 3.3, 3.4_
 
-- [ ] 4.4 Add empty states
+- [x] 4.4 Add empty states
   - Design empty state for no memories
   - Add empty state for no search results
   - Include helpful guidance and next steps
   - Add "Create Memory" call-to-action
   - _Requirements: 4.2, 6.5_
 
-- [ ] 4.5 Implement status indicators
+- [x] 4.5 Implement status indicators
   - Show authentication status
   - Display CLI/API mode indicator
   - Add offline mode indicator
   - Show sync status for pending operations
   - _Requirements: 7.5, 13.1, 13.4_
 
-- [ ] 4.6 Add sidebar customization options
+- [x] 4.6 Add sidebar customization options
   - Allow users to reorder memory type sections
   - Add option to hide/show sections
   - Implement custom color themes
@@ -250,35 +250,35 @@ All tasks reference specific requirements from the requirements document and fol
 
 ## Phase 6: Unified Search Experience
 
-- [ ] 6. Standardize search implementation
+- [x] 6. Standardize search implementation
   - Extract search logic to shared core
   - Use consistent threshold (0.7) across IDEs
   - Implement standardized sorting by similarity
   - Add search result caching (5 minutes)
   - _Requirements: 6.1, 6.2, 6.4, 6.8_
 
-- [ ] 6.1 Implement advanced search filters
+- [x] 6.1 Implement advanced search filters
   - Add memory type filter dropdown
   - Add date range picker
   - Add tag filter with autocomplete
   - Add status filter (active/archived)
   - _Requirements: 6.4_
 
-- [ ] 6.2 Add search result highlighting
+- [x] 6.2 Add search result highlighting
   - Highlight matching terms in title
   - Highlight matching terms in content
   - Show relevance score as percentage
   - Add snippet preview with context
   - _Requirements: 6.2, 6.3_
 
-- [ ] 6.3 Implement search suggestions
+- [x] 6.3 Implement search suggestions
   - Show recent searches
   - Suggest similar queries on no results
   - Offer to create memory from query
   - Show popular searches (if telemetry enabled)
   - _Requirements: 6.5_
 
-- [ ] 6.4 Add saved searches
+- [x] 6.4 Add saved searches
   - Allow users to save search queries
   - Implement quick access to saved searches
   - Support search query sharing
