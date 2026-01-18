@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import type { IMemoryService } from '../services/IMemoryService';
-import { MemoryEntry, MemoryType } from '../types/memory-aligned';
+import { MemoryEntry, MemoryType } from '@lanonasis/memory-client';
 
 export class MemoryTreeItem extends vscode.TreeItem {
     constructor(
@@ -26,8 +26,6 @@ export class MemoryTreeItem extends vscode.TreeItem {
 
     private getIconForMemoryType(type: MemoryType): vscode.ThemeIcon {
         switch (type) {
-            case 'conversation':
-                return new vscode.ThemeIcon('comment-discussion');
             case 'knowledge':
                 return new vscode.ThemeIcon('book');
             case 'project':
@@ -150,7 +148,7 @@ export class MemoryTreeProvider implements vscode.TreeDataProvider<MemoryTreeIte
     }
 
     private getMemoryTypeGroups(): MemoryTypeTreeItem[] {
-        const memoryTypes: MemoryType[] = ['conversation', 'knowledge', 'project', 'context', 'reference'];
+        const memoryTypes: MemoryType[] = ['knowledge', 'project', 'context', 'reference', 'personal', 'workflow'];
         const groups: MemoryTypeTreeItem[] = [];
 
         for (const type of memoryTypes) {

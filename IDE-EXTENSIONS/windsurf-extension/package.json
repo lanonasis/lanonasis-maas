@@ -36,6 +36,9 @@
     "onStartupFinished",
     "onCommand:lanonasis.searchMemory",
     "onCommand:lanonasis.createMemory",
+    "onCommand:lanonasis.captureContext",
+    "onCommand:lanonasis.captureClipboard",
+    "onCommand:lanonasis.quickCapture",
     "onCommand:lanonasis.authenticate",
     "onView:lanonasisMemories"
   ],
@@ -65,6 +68,24 @@
         "title": "Create Memory from Workspace Context",
         "category": "LanOnasis",
         "icon": "$(folder-library)"
+      },
+      {
+        "command": "lanonasis.captureContext",
+        "title": "Capture to Memory",
+        "category": "LanOnasis",
+        "icon": "$(save)"
+      },
+      {
+        "command": "lanonasis.captureClipboard",
+        "title": "Capture Clipboard to Memory",
+        "category": "LanOnasis",
+        "icon": "$(clippy)"
+      },
+      {
+        "command": "lanonasis.quickCapture",
+        "title": "Quick Capture (Selection or Clipboard)",
+        "category": "LanOnasis",
+        "icon": "$(zap)"
       },
       {
         "command": "lanonasis.authenticate",
@@ -126,6 +147,23 @@
         "key": "ctrl+shift+alt+m",
         "mac": "cmd+shift+alt+m",
         "when": "editorHasSelection"
+      },
+      {
+        "command": "lanonasis.captureContext",
+        "key": "ctrl+shift+c",
+        "mac": "cmd+shift+c",
+        "when": "editorHasSelection || terminalFocus || panelFocus"
+      },
+      {
+        "command": "lanonasis.captureClipboard",
+        "key": "ctrl+alt+v",
+        "mac": "cmd+alt+v"
+      },
+      {
+        "command": "lanonasis.quickCapture",
+        "key": "ctrl+shift+s",
+        "mac": "cmd+shift+s",
+        "when": "!editorTextFocus || editorHasSelection"
       },
       {
         "command": "lanonasis.aiAssist",
@@ -201,28 +239,28 @@
       "properties": {
         "lanonasis.apiUrl": {
           "type": "string",
-          "default": "https://mcp.lanonasis.com",
-          "description": "Lanonasis Memory Service API URL"
+          "default": "https://api.lanonasis.com",
+          "markdownDescription": "Lanonasis Memory Service API URL. Change only if using a custom deployment."
         },
         "lanonasis.gatewayUrl": {
           "type": "string",
-          "default": "https://mcp.lanonasis.com",
-          "description": "Onasis Gateway URL (if using gateway mode)"
+          "default": "https://api.lanonasis.com",
+          "markdownDescription": "Onasis Gateway URL for centralized API management. Recommended for most users."
         },
         "lanonasis.authUrl": {
           "type": "string",
           "default": "https://auth.lanonasis.com",
-          "description": "Lanonasis Authentication Service URL"
+          "markdownDescription": "OAuth authentication server URL. Only change if using a custom authentication deployment."
         },
         "lanonasis.useGateway": {
           "type": "boolean",
           "default": false,
-          "description": "Use Onasis Gateway for centralized API management. Default is direct REST API connection."
+          "markdownDescription": "Use Onasis Gateway for centralized API management. Default is direct REST API connection."
         },
         "lanonasis.useAutoAuth": {
           "type": "boolean",
           "default": true,
-          "description": "Enable automatic OAuth2 authentication with browser redirect"
+          "markdownDescription": "Enable automatic OAuth2 authentication with browser redirect"
         },
         "lanonasis.defaultMemoryType": {
           "type": "string",
@@ -235,14 +273,14 @@
             "workflow"
           ],
           "default": "context",
-          "description": "Default memory type for new memories"
+          "markdownDescription": "Default memory type for new memories"
         },
         "lanonasis.searchLimit": {
           "type": "number",
           "default": 10,
           "minimum": 1,
           "maximum": 50,
-          "description": "Maximum number of search results to show"
+          "markdownDescription": "Maximum number of search results to show"
         },
         "lanonasis.enableAutoCompletion": {
           "type": "boolean",

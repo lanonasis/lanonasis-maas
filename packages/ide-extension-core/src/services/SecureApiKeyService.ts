@@ -34,6 +34,7 @@ import {
  */
 export class SecureApiKeyService implements ISecureAuthService {
   private static readonly API_KEY_KEY = 'lanonasis.apiKey';
+  private static readonly API_KEY_RAW_KEY = 'lanonasis.apiKey.raw';
   private static readonly AUTH_TOKEN_KEY = 'lanonasis.authToken';
   private static readonly REFRESH_TOKEN_KEY = 'lanonasis.refreshToken';
   private static readonly CREDENTIAL_TYPE_KEY = 'lanonasis.credentialType';
@@ -81,6 +82,11 @@ export class SecureApiKeyService implements ISecureAuthService {
    */
   async getApiKey(): Promise<string | null> {
     try {
+      const rawKey = await this.adapter.secureStorage.get(SecureApiKeyService.API_KEY_RAW_KEY);
+      if (rawKey) {
+        return rawKey;
+      }
+
       const apiKey = await this.adapter.secureStorage.get(SecureApiKeyService.API_KEY_KEY);
       if (!apiKey) {
         return null;
@@ -97,16 +103,31 @@ export class SecureApiKeyService implements ISecureAuthService {
         return apiKey;
       }
 
-      // Only hash regular API keys
-      const normalized = isSha256Hash(apiKey) ? apiKey.toLowerCase() : ensureApiKeyHash(apiKey);
+      if (isSha256Hash(apiKey)) {
+        const choice = await this.adapter.notification.showWarning(
+          'Your stored API key needs to be re-entered to finish authentication.',
+          'Re-enter API Key',
+          'Cancel'
+        );
 
-      // Persist migration from legacy plaintext to hashed form for API keys only
-      if (normalized !== apiKey) {
-        await this.adapter.secureStorage.store(SecureApiKeyService.API_KEY_KEY, normalized);
+        if (choice === 'Re-enter API Key') {
+          const newKey = await this.promptForApiKeyEntry();
+          if (newKey) {
+            return newKey;
+          }
+        }
+
+        return null;
       }
 
-      this.log('Retrieved API key hash from secure storage');
-      return normalized;
+      // Legacy plaintext API key stored in API_KEY_KEY - migrate to raw storage
+      await this.adapter.secureStorage.store(SecureApiKeyService.API_KEY_RAW_KEY, apiKey);
+      await this.adapter.secureStorage.store(
+        SecureApiKeyService.API_KEY_KEY,
+        ensureApiKeyHash(apiKey)
+      );
+      this.log('Migrated plaintext API key to raw storage');
+      return apiKey;
     } catch (error) {
       this.logError('Failed to retrieve API key from secure storage', error);
       return null;
@@ -132,6 +153,7 @@ export class SecureApiKeyService implements ISecureAuthService {
   async storeApiKey(apiKey: string, type: CredentialType = 'apiKey'): Promise<void> {
     // CRITICAL: Do not hash OAuth tokens! Only hash regular API keys
     const tokenToStore = type === 'oauth' ? apiKey : ensureApiKeyHash(apiKey);
+    await this.adapter.secureStorage.store(SecureApiKeyService.API_KEY_RAW_KEY, apiKey);
     await this.adapter.secureStorage.store(SecureApiKeyService.API_KEY_KEY, tokenToStore);
     await this.adapter.secureStorage.store(SecureApiKeyService.CREDENTIAL_TYPE_KEY, type);
     this.log(`Stored ${type} credential securely`);
@@ -419,6 +441,7 @@ export class SecureApiKeyService implements ISecureAuthService {
    */
   async clearCredentials(): Promise<void> {
     await this.adapter.secureStorage.delete(SecureApiKeyService.API_KEY_KEY);
+    await this.adapter.secureStorage.delete(SecureApiKeyService.API_KEY_RAW_KEY);
     await this.adapter.secureStorage.delete(SecureApiKeyService.AUTH_TOKEN_KEY);
     await this.adapter.secureStorage.delete(SecureApiKeyService.REFRESH_TOKEN_KEY);
     await this.adapter.secureStorage.delete(SecureApiKeyService.CREDENTIAL_TYPE_KEY);

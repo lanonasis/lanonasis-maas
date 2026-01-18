@@ -1,14 +1,21 @@
 import * as vscode from 'vscode';
+import { SecureApiKeyService, StoredCredential } from '@lanonasis/ide-extension-core';
 import type {
   CoreMemoryClient as CoreMemoryClientType,
   CoreMemoryClientConfig,
   PaginatedResponse,
+  CreateMemoryRequest,
   CreateMemoryRequest as SDKCreateMemoryRequest,
   UpdateMemoryRequest as SDKUpdateMemoryRequest,
+  SearchMemoryRequest,
   SearchMemoryRequest as SDKSearchMemoryRequest,
+  MemoryEntry,
   MemoryEntry as SDKMemoryEntry,
+  MemorySearchResult,
   MemorySearchResult as SDKMemorySearchResult,
+  UserMemoryStats,
   UserMemoryStats as SDKUserMemoryStats,
+  MemoryType,
   ApiResponse,
 } from '@lanonasis/memory-client';
 
@@ -22,8 +29,6 @@ function getErrorMessage(error: ApiErrorResponse | string | undefined, fallback:
   if (typeof error === 'string') return error;
   return error.message || fallback;
 }
-import { SecureApiKeyService, StoredCredential } from './SecureApiKeyService';
-import { CreateMemoryRequest, SearchMemoryRequest, MemoryEntry, MemorySearchResult, MemoryType, UserMemoryStats } from '../types/memory-aligned';
 import { IEnhancedMemoryService, MemoryServiceCapabilities } from './IMemoryService';
 
 // Type aliases for backwards compatibility with legacy code
@@ -476,7 +481,6 @@ export class EnhancedMemoryService implements IEnhancedMemoryService {
 
   private mapMemoryType(vscodeType: MemoryType): SDKMemoryType {
     const typeMap: Record<MemoryType, SDKMemoryType> = {
-      conversation: 'context',
       knowledge: 'knowledge',
       project: 'project',
       context: 'context',
@@ -495,8 +499,7 @@ export class EnhancedMemoryService implements IEnhancedMemoryService {
       knowledge: 'knowledge',
       reference: 'reference',
       personal: 'personal',
-      workflow: 'workflow',
-      conversation: 'conversation'
+      workflow: 'workflow'
     };
 
     return typeMap[sdkType] ?? 'context';
@@ -580,7 +583,6 @@ export class EnhancedMemoryService implements IEnhancedMemoryService {
 
   private convertSDKUserMemoryStats(stats: SDKUserMemoryStats): UserMemoryStats {
     const initial: Record<MemoryType, number> = {
-      conversation: 0,
       knowledge: 0,
       project: 0,
       context: 0,
