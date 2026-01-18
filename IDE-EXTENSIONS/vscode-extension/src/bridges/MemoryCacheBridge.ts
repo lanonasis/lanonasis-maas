@@ -89,6 +89,6 @@ export class MemoryCacheBridge {
     }
 
     private stripSearchScores(results: MemorySearchResult[]): MemoryEntry[] {
-        return results.map(({ similarity_score, ...rest }) => rest);
+        return results.map(({ similarity_score: _similarityScore, ...rest }) => rest);
     }
 }

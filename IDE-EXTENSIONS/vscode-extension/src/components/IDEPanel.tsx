@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import {
   Search,
   Plus,
@@ -11,6 +11,7 @@ import {
   Key,
   AlertCircle,
   Lightbulb,
+  Sparkles,
   X,
   Paperclip,
   Clipboard,
@@ -30,11 +31,14 @@ import { Collapsible, CollapsibleContent } from '@/components/ui/collapsible';
 import { cn } from '../utils/cn';
 import { useAuth } from '../hooks/useAuth';
 import { useMemories } from '../hooks/useMemories';
+import { useOnboarding } from '../hooks/useOnboarding';
 import { MemoryCard } from './MemoryCard';
 import { SearchBar } from './SearchBar';
 import { ChatInterface } from './ChatInterface';
 import { ApiKeyManager } from './ApiKeyManager';
 import { WelcomeView } from './WelcomeView';
+import { OnboardingPanel } from './OnboardingPanel';
+import { GuidedTourOverlay, type GuidedTourStep } from './GuidedTourOverlay';
 import type { Memory } from '../shared/types';
 
 // Chat message type for history
@@ -131,6 +135,13 @@ const getInitials = (value?: string | null) => {
 export const IDEPanel = () => {
   const { isAuthenticated, isLoading: authLoading, user, login, logout } = useAuth();
   const {
+    status: onboardingStatus,
+    isLoading: onboardingLoading,
+    completeStep,
+    skipOnboarding,
+    resetOnboarding,
+  } = useOnboarding();
+  const {
     searchQuery,
     setSearchQuery,
     filteredMemories,
@@ -151,11 +162,14 @@ export const IDEPanel = () => {
   const [isAssistantOpen, setIsAssistantOpen] = useState(true);
   const [isMemoriesOpen, setIsMemoriesOpen] = useState(true);
   const [clipboardContent, setClipboardContent] = useState<string | null>(null);
+  const [tourOpen, setTourOpen] = useState(false);
 
   const userDisplayName = user?.name || user?.email || null;
   const userSubLabel = user?.name && user?.email ? user.email : null;
+  const showOnboarding = Boolean(onboardingStatus?.shouldShow);
 
   const chatScrollRef = useRef<HTMLDivElement>(null);
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
 
   // Auto-scroll chat to bottom
   useEffect(() => {
@@ -207,6 +221,50 @@ export const IDEPanel = () => {
   const handleQuickCapture = useCallback(() => {
     postMessage('executeCommand', 'lanonasis.quickCapture');
   }, [postMessage]);
+
+  const handleCreateSampleMemory = useCallback(() => {
+    postMessage('executeCommand', 'lanonasis.createSampleMemory');
+  }, [postMessage]);
+
+  const handleSearchCommand = useCallback(() => {
+    postMessage('executeCommand', 'lanonasis.searchMemory');
+  }, [postMessage]);
+
+  const startGuidedTour = useCallback(() => {
+    setTourOpen(true);
+  }, []);
+
+  const tourSteps = useMemo<GuidedTourStep[]>(() => ([
+    {
+      id: 'sidebar',
+      title: 'Your memory sidebar',
+      description: 'Everything you capture and recall lives in this panel.',
+      selector: '[data-tour="sidebar-header"]'
+    },
+    {
+      id: 'search',
+      title: 'Search memories',
+      description: 'Type a question or keyword to pull matching context fast.',
+      selector: '[data-tour="search"]'
+    },
+    {
+      id: 'memories',
+      title: 'Organized memory list',
+      description: 'Browse by type and attach memories to chat.',
+      selector: '[data-tour="memories"]'
+    },
+    {
+      id: 'chat',
+      title: 'Chat with context',
+      description: 'Ask follow-ups and attach memories for better responses.',
+      selector: '[data-tour="chat"]'
+    },
+    {
+      id: 'commands',
+      title: 'Command palette + tree view',
+      description: 'Use Cmd/Ctrl+Shift+P to run Lanonasis commands. Enable tree view in settings for a compact list.',
+    }
+  ]), []);
 
   const attachClipboardContent = useCallback(() => {
     if (!clipboardContent) return;
@@ -264,9 +322,15 @@ export const IDEPanel = () => {
   return (
     <div className="flex h-screen w-full bg-[var(--vscode-sideBar-background)] text-[var(--vscode-sideBar-foreground)] font-sans overflow-hidden justify-center select-none">
       {/* Sidebar Container */}
-      <div className="w-full max-w-[400px] h-full flex flex-col bg-[var(--vscode-sideBar-background)] relative">
+      <div
+        className="w-full max-w-[400px] h-full flex flex-col bg-[var(--vscode-sideBar-background)] relative"
+        data-tour="sidebar"
+      >
         {/* Top Header */}
-        <div className="flex items-center justify-between px-4 py-2.5 bg-[var(--vscode-sideBar-background)]">
+        <div
+          className="flex items-center justify-between px-4 py-2.5 bg-[var(--vscode-sideBar-background)]"
+          data-tour="sidebar-header"
+        >
           {userDisplayName ? (
             <div className="flex items-center gap-2">
               <div className="h-6 w-6 rounded-full bg-[var(--vscode-badge-background)]/30 text-[10px] font-semibold text-[var(--vscode-editor-foreground)] flex items-center justify-center">
@@ -334,6 +398,14 @@ export const IDEPanel = () => {
                     <LogOut className="mr-2 h-3.5 w-3.5 opacity-70" />
                     <span>Log out</span>
                   </DropdownMenuItem>
+                  <DropdownMenuSeparator className="bg-[var(--vscode-panel-border)] my-1" />
+                  <DropdownMenuItem
+                    className="text-[13px] hover:bg-[var(--vscode-menu-selectionBackground)] hover:text-[var(--vscode-menu-selectionForeground)] cursor-pointer rounded-sm px-2 py-1.5"
+                    onClick={resetOnboarding}
+                  >
+                    <Sparkles className="mr-2 h-3.5 w-3.5 opacity-70" />
+                    <span>Restart onboarding</span>
+                  </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : (
@@ -350,8 +422,20 @@ export const IDEPanel = () => {
           </div>
         </div>
 
-        <ScrollArea className="flex-1">
+        <ScrollArea className="flex-1" ref={scrollAreaRef}>
           <div className="flex flex-col min-h-full">
+            {!onboardingLoading && onboardingStatus && showOnboarding && (
+              <OnboardingPanel
+                status={onboardingStatus}
+                isAuthenticated={isAuthenticated}
+                isAuthLoading={authLoading}
+                onLogin={login}
+                onCreateSampleMemory={handleCreateSampleMemory}
+                onSearchMemories={handleSearchCommand}
+                onStartTour={startGuidedTour}
+                onSkip={skipOnboarding}
+              />
+            )}
             {/* Memory Assistant Section - Now with chat history */}
             <Collapsible open={isAssistantOpen} onOpenChange={setIsAssistantOpen}>
               <div
@@ -594,7 +678,7 @@ export const IDEPanel = () => {
 
                     {/* Memory list */}
                     {!memoriesLoading && !error && (
-                      <div className="space-y-0.5">
+                      <div className="space-y-0.5" data-tour="memories">
                         {filteredMemories.length === 0 ? (
                           <div className="p-4 text-center text-[13px] text-[var(--vscode-descriptionForeground)]">
                             {searchQuery
@@ -614,8 +698,8 @@ export const IDEPanel = () => {
                       </div>
                     )}
                   </div>
-                ) : (
-                  <WelcomeView onLogin={login} />
+                ) : showOnboarding ? null : (
+                  <WelcomeView onLogin={login} isLoading={authLoading} />
                 )}
               </CollapsibleContent>
             </Collapsible>
@@ -694,19 +778,31 @@ export const IDEPanel = () => {
         )}
 
         {/* Bottom Chat Interface */}
-        <ChatInterface
-          value={chatInput}
-          onChange={setChatInput}
-          onSend={handleChatSend}
-          isAuthenticated={isAuthenticated}
-          isLoading={isChatLoading}
-          attachedCount={attachedMemories.length}
-          onPaste={handlePasteToMemory}
-        />
+        <div data-tour="chat">
+          <ChatInterface
+            value={chatInput}
+            onChange={setChatInput}
+            onSend={handleChatSend}
+            isAuthenticated={isAuthenticated}
+            isLoading={isChatLoading}
+            attachedCount={attachedMemories.length}
+            onPaste={handlePasteToMemory}
+          />
+        </div>
 
         {/* API Key Manager Modal */}
         <ApiKeyManager isOpen={showApiKeys} onClose={() => setShowApiKeys(false)} />
       </div>
+      <GuidedTourOverlay
+        open={tourOpen}
+        steps={tourSteps}
+        scrollContainerRef={scrollAreaRef}
+        onClose={() => setTourOpen(false)}
+        onComplete={() => {
+          setTourOpen(false);
+          completeStep('tour');
+        }}
+      />
     </div>
   );
 };
