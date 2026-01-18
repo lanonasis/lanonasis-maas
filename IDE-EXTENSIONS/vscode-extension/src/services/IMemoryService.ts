@@ -40,3 +40,7 @@ export interface IEnhancedMemoryService extends IMemoryService {
   showConnectionInfo(): Promise<void>;
   dispose(): void;
 }
+
+export function isEnhancedMemoryService(service: IMemoryService): service is IEnhancedMemoryService {
+  return typeof (service as IEnhancedMemoryService).getCapabilities === 'function';
+}

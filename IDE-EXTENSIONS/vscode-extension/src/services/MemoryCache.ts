@@ -65,6 +65,10 @@ export class MemoryCache {
         return [...this.memories].slice(0, limit);
     }
 
+    public getMemory(id: string): MemoryEntry | undefined {
+        return this.memories.find((memory) => memory.id === id);
+    }
+
     public setRefreshing(refreshing: boolean): void {
         this.isRefreshing = refreshing;
     }
@@ -87,6 +91,17 @@ export class MemoryCache {
 
     public async upsert(memory: MemoryEntry): Promise<void> {
         const index = this.memories.findIndex((item) => item.id === memory.id);
+        if (index >= 0) {
+            this.memories[index] = { ...memory, _cachedAt: Date.now() };
+        } else {
+            this.memories.unshift({ ...memory, _cachedAt: Date.now() });
+        }
+        this.trimToLimit();
+        await this.saveToStorage();
+    }
+
+    public async replace(tempId: string, memory: MemoryEntry): Promise<void> {
+        const index = this.memories.findIndex((item) => item.id === tempId);
         if (index >= 0) {
             this.memories[index] = { ...memory, _cachedAt: Date.now() };
         } else {

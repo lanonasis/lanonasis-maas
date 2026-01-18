@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { classifyError } from './extensionErrors';
 
 /**
  * Error recovery utilities for robust network operations
@@ -120,60 +121,10 @@ export async function withProgressAndRetry<T>(
  * Creates user-friendly error messages with recovery suggestions
  */
 export function getUserFriendlyErrorMessage(error: unknown): { message: string; actions?: string[] } {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-
-    // Network errors
-    if (/network|ECONNREFUSED|ENOTFOUND/i.test(errorMessage)) {
-        return {
-            message: 'Unable to connect to Lanonasis servers. Please check your internet connection.',
-            actions: ['Retry', 'Check Settings', 'View Docs']
-        };
-    }
-
-    // Timeout errors
-    if (/timeout|ETIMEDOUT/i.test(errorMessage)) {
-        return {
-            message: 'Request timed out. The server might be slow or unreachable.',
-            actions: ['Retry', 'Check Connection']
-        };
-    }
-
-    // Authentication errors
-    if (/auth|401|403|unauthorized|forbidden/i.test(errorMessage)) {
-        return {
-            message: 'Authentication failed. Please check your API key or re-authenticate.',
-            actions: ['Re-authenticate', 'Clear API Key', 'Get New Key']
-        };
-    }
-
-    // Rate limiting
-    if (/rate limit|429/i.test(errorMessage)) {
-        return {
-            message: 'Rate limit exceeded. Please wait a moment before trying again.',
-            actions: ['Wait and Retry']
-        };
-    }
-
-    // Server errors
-    if (/500|502|503|504|server error/i.test(errorMessage)) {
-        return {
-            message: 'Lanonasis servers are experiencing issues. Please try again later.',
-            actions: ['Retry', 'Check Status Page']
-        };
-    }
-
-    // API key invalid
-    if (/invalid.*key|key.*invalid/i.test(errorMessage)) {
-        return {
-            message: 'Your API key appears to be invalid. Please update your authentication.',
-            actions: ['Re-authenticate', 'Get New Key']
-        };
-    }
-
-    // Generic error
+    const classified = classifyError(error);
     return {
-        message: `Operation failed: ${errorMessage}`,
-        actions: ['Retry', 'View Logs']
+        message: classified.message,
+        actions: classified.actions
     };
 }
 
