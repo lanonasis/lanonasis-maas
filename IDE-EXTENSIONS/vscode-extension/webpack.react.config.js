@@ -51,6 +51,7 @@ module.exports = {
     usedExports: true,
     sideEffects: true,
     moduleIds: 'deterministic',
-    concatenateModules: true
+    // Avoid scope-hoisting issues that can trigger TDZ errors in webview bundles.
+    concatenateModules: false
   }
 };
