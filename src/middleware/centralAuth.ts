@@ -5,7 +5,6 @@ import {
   getSSOUserFromRequest,
   getSessionTokenFromRequest,
   hasSSOfromRequest,
-  COOKIE_NAMES,
 } from '@lanonasis/shared-auth/server';
 
 // Use centralized type definitions
