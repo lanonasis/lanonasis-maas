@@ -5,7 +5,7 @@ import {
   getSSOUserFromRequest,
   getSessionTokenFromRequest,
   hasSSOfromRequest,
-} from '@lanonasis/shared-auth/server';
+} from '@lanonasis/oauth-client/server';
 
 // Use centralized type definitions
 import '@/types/express-auth';
