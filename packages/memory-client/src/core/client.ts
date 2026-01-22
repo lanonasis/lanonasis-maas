@@ -384,7 +384,7 @@ export class CoreMemoryClient {
     }
 
     const enrichedMemory = this.enrichWithOrgContext(memory as Record<string, unknown>);
-    return this.request<MemoryEntry>('/memory', {
+    return this.request<MemoryEntry>('/memories', {
       method: 'POST',
       body: JSON.stringify(enrichedMemory)
     });
@@ -394,7 +394,7 @@ export class CoreMemoryClient {
    * Get a memory by ID
    */
   async getMemory(id: string): Promise<ApiResponse<MemoryEntry>> {
-    return this.request<MemoryEntry>(`/memory/${encodeURIComponent(id)}`);
+    return this.request<MemoryEntry>(`/memories/${encodeURIComponent(id)}`);
   }
 
   /**
@@ -407,7 +407,7 @@ export class CoreMemoryClient {
       return { error: validationError.error };
     }
 
-    return this.request<MemoryEntry>(`/memory/${encodeURIComponent(id)}`, {
+    return this.request<MemoryEntry>(`/memories/${encodeURIComponent(id)}`, {
       method: 'PUT',
       body: JSON.stringify(updates)
     });
@@ -417,7 +417,7 @@ export class CoreMemoryClient {
    * Delete a memory
    */
   async deleteMemory(id: string): Promise<ApiResponse<void>> {
-    return this.request<void>(`/memory/${encodeURIComponent(id)}`, {
+    return this.request<void>(`/memories/${encodeURIComponent(id)}`, {
       method: 'DELETE'
     });
   }
@@ -449,7 +449,7 @@ export class CoreMemoryClient {
     });
 
     const queryString = params.toString();
-    const endpoint = queryString ? `/memory?${queryString}` : '/memory';
+    const endpoint = queryString ? `/memories?${queryString}` : '/memories';
 
     return this.request<PaginatedResponse<MemoryEntry>>(endpoint);
   }
@@ -470,7 +470,7 @@ export class CoreMemoryClient {
     }
 
     const enrichedRequest = this.enrichWithOrgContext(request as Record<string, unknown>);
-    return this.request('/memory/search', {
+    return this.request('/memories/search', {
       method: 'POST',
       body: JSON.stringify(enrichedRequest)
     });
@@ -484,7 +484,7 @@ export class CoreMemoryClient {
     failed_ids: string[];
   }>> {
     const enrichedRequest = this.enrichWithOrgContext({ memory_ids: memoryIds });
-    return this.request('/memory/bulk/delete', {
+    return this.request('/memories/bulk/delete', {
       method: 'POST',
       body: JSON.stringify(enrichedRequest)
     });
@@ -546,7 +546,7 @@ export class CoreMemoryClient {
    * Get user memory statistics
    */
   async getMemoryStats(): Promise<ApiResponse<UserMemoryStats>> {
-    return this.request<UserMemoryStats>('/memory/stats');
+    return this.request<UserMemoryStats>('/memories/stats');
   }
 
   // ========================================
@@ -579,7 +579,7 @@ export class CoreMemoryClient {
     }
 
     const enrichedMemory = this.enrichWithOrgContext(memory as unknown as Record<string, unknown>);
-    return this.request<MemoryEntry>('/memory', {
+    return this.request<MemoryEntry>('/memories', {
       method: 'POST',
       body: JSON.stringify(enrichedMemory)
     });
@@ -606,7 +606,7 @@ export class CoreMemoryClient {
       return { error: validationError.error };
     }
 
-    return this.request<MemoryEntry>(`/memory/${encodeURIComponent(id)}`, {
+    return this.request<MemoryEntry>(`/memories/${encodeURIComponent(id)}`, {
       method: 'PUT',
       body: JSON.stringify(updates)
     });

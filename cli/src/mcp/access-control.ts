@@ -263,7 +263,7 @@ export class MemoryAccessControl {
 
       const axios = (await import('axios')).default;
 
-      const response = await axios.get(`${apiUrl}/api/v1/memory/${memoryId}`, {
+      const response = await axios.get(`${apiUrl}/api/v1/memories/${memoryId}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -284,7 +284,7 @@ export class MemoryAccessControl {
 
       const axios = (await import('axios')).default;
 
-      const response = await axios.get(`${apiUrl}/api/v1/memory?user_id=${userId}`, {
+      const response = await axios.get(`${apiUrl}/api/v1/memories?user_id=${userId}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
