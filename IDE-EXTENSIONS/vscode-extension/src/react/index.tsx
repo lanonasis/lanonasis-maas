@@ -1,6 +1,5 @@
-import React from 'react';
+import React, { Suspense, lazy } from 'react';
 import { createRoot } from 'react-dom/client';
-import App from './App';
 
 // Global VS Code API access
 declare global {
@@ -19,6 +18,40 @@ declare global {
     setState: (state: unknown) => void;
   };
 }
+
+const App = lazy(() => import('./App'));
+
+const ErrorBoundary = ({ children }: { children: React.ReactNode }) => {
+  const [error, setError] = React.useState<Error | null>(null);
+
+  React.useEffect(() => {
+    const handleError = (event: ErrorEvent) => {
+      setError(event.error);
+      console.error('[React Error]', event.error);
+      window.vscode?.postMessage({ type: 'reactError', error: event.error.message });
+    };
+
+    window.addEventListener('error', handleError);
+    return () => window.removeEventListener('error', handleError);
+  }, []);
+
+  if (error) {
+    return (
+      <div className="p-4 text-red-500">
+        <h2>Something went wrong</h2>
+        <p>{error.message}</p>
+        <button 
+          onClick={() => window.location.reload()} 
+          className="mt-2 px-4 py-2 bg-blue-500 text-white rounded"
+        >
+          Reload UI
+        </button>
+      </div>
+    );
+  }
+
+  return <>{children}</>;
+};
 
 // Initialize React app when DOM is ready
 const initReactApp = () => {
@@ -45,7 +78,13 @@ const initReactApp = () => {
   const container = document.getElementById('root');
   if (container) {
     const root = createRoot(container);
-    root.render(<App />);
+    root.render(
+      <ErrorBoundary>
+        <Suspense fallback={<div>Loading...</div>}>
+          <App />
+        </Suspense>
+      </ErrorBoundary>
+    );
   }
 };
 

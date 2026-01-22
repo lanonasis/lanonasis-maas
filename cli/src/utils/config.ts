@@ -863,11 +863,50 @@ export class CLIConfig {
         return true;
       }
 
-      // For vendor keys, we trust that they were validated during setVendorKey()
-      // and rely on the lastValidated timestamp. For additional security,
-      // the server should revoke keys that are invalid.
-      this.authCheckCache = { isValid: true, timestamp: Date.now() };
-      return true;
+      // Vendor key not recently validated - verify with server
+      try {
+        await this.discoverServices();
+        const authBase = this.config.discoveredServices?.auth_base || 'https://auth.lanonasis.com';
+
+        // Ping auth health with vendor key to verify it's still valid
+        await this.pingAuthHealth(
+          axios,
+          authBase,
+          {
+            'X-API-Key': vendorKey,
+            'X-Auth-Method': 'vendor_key',
+            'X-Project-Scope': 'lanonasis-maas'
+          },
+          { timeout: 5000, proxy: false }
+        );
+
+        // Update last validated timestamp on success
+        this.config.lastValidated = new Date().toISOString();
+        await this.save().catch(() => {}); // Don't fail auth check if save fails
+
+        this.authCheckCache = { isValid: true, timestamp: Date.now() };
+        return true;
+      } catch (error) {
+        // Server validation failed - check for grace period (7 days offline)
+        const gracePeriod = 7 * 24 * 60 * 60 * 1000;
+        const withinGracePeriod = lastValidated &&
+          (Date.now() - new Date(lastValidated).getTime()) < gracePeriod;
+
+        if (withinGracePeriod) {
+          if (process.env.CLI_VERBOSE === 'true') {
+            console.warn('⚠️  Unable to validate vendor key with server, using cached validation');
+          }
+          this.authCheckCache = { isValid: true, timestamp: Date.now() };
+          return true;
+        }
+
+        // Grace period expired - require server validation
+        if (process.env.CLI_VERBOSE === 'true') {
+          console.warn('⚠️  Vendor key validation failed and grace period expired');
+        }
+        this.authCheckCache = { isValid: false, timestamp: Date.now() };
+        return false;
+      }
     }
 
     // Handle token-based authentication

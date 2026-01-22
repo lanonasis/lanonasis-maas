@@ -426,7 +426,7 @@ export class EnhancedMemoryService {
 
   // Fallback methods using direct OAuth API (original Cursor implementation)
   private async createMemoryViaAPI(request: CreateMemoryRequest): Promise<MemoryEntry> {
-    const response = await this.makeAuthenticatedRequest('/api/v1/memory', {
+    const response = await this.makeAuthenticatedRequest('/api/v1/memories', {
       method: 'POST',
       body: JSON.stringify(request)
     });
@@ -440,7 +440,7 @@ export class EnhancedMemoryService {
   }
 
   private async updateMemoryViaAPI(id: string, request: UpdateMemoryRequest): Promise<MemoryEntry> {
-    const response = await this.makeAuthenticatedRequest(`/api/v1/memory/${id}`, {
+    const response = await this.makeAuthenticatedRequest(`/api/v1/memories/${id}`, {
       method: 'PUT',
       body: JSON.stringify(request)
     });
@@ -454,7 +454,7 @@ export class EnhancedMemoryService {
   }
 
   private async deleteMemoryViaAPI(id: string): Promise<void> {
-    const response = await this.makeAuthenticatedRequest(`/api/v1/memory/${id}`, {
+    const response = await this.makeAuthenticatedRequest(`/api/v1/memories/${id}`, {
       method: 'DELETE'
     });
 
@@ -465,7 +465,7 @@ export class EnhancedMemoryService {
   }
 
   private async getMemoryViaAPI(id: string): Promise<MemoryEntry> {
-    const response = await this.makeAuthenticatedRequest(`/api/v1/memory/${id}`);
+    const response = await this.makeAuthenticatedRequest(`/api/v1/memories/${id}`);
 
     if (!response.ok) {
       if (response.status === 404) {
@@ -479,7 +479,7 @@ export class EnhancedMemoryService {
   }
 
   private async searchMemoriesViaAPI(request: SearchMemoryRequest): Promise<MemorySearchResult[]> {
-    const response = await this.makeAuthenticatedRequest('/api/v1/memory/search', {
+    const response = await this.makeAuthenticatedRequest('/api/v1/memories/search', {
       method: 'POST',
       body: JSON.stringify(request)
     });
@@ -518,7 +518,7 @@ export class EnhancedMemoryService {
     if (options.sort) params.set('sort', options.sort);
     if (options.order) params.set('order', options.order);
 
-    const url = `/api/v1/memory${params.toString() ? '?' + params.toString() : ''}`;
+    const url = `/api/v1/memories${params.toString() ? '?' + params.toString() : ''}`;
     const response = await this.makeAuthenticatedRequest(url);
 
     if (!response.ok) {
@@ -530,7 +530,7 @@ export class EnhancedMemoryService {
   }
 
   private async getMemoryStatsViaAPI(): Promise<MemoryStats> {
-    const response = await this.makeAuthenticatedRequest('/api/v1/memory/admin/stats');
+    const response = await this.makeAuthenticatedRequest('/api/v1/memories/admin/stats');
 
     if (!response.ok) {
       const error = await response.text();

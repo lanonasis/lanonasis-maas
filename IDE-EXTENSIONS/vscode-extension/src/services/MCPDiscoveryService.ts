@@ -211,8 +211,8 @@ export class MCPDiscoveryService {
     };
 
     const endpoints = [
-      { path: '/api/v1/memory', capability: 'memories' as const },
-      { path: '/api/v1/memory/search', capability: 'search' as const },
+      { path: '/api/v1/memories', capability: 'memories' as const },
+      { path: '/api/v1/memories/search', capability: 'search' as const },
       { path: '/api/v1/api-keys', capability: 'apiKeys' as const },
       { path: '/api/v1/projects', capability: 'projects' as const },
     ];

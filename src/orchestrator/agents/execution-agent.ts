@@ -99,7 +99,7 @@ export class ExecutionAgent extends BaseAgent {
 
       switch (type) {
         case 'create':
-          endpoint = '/api/v1/memory';
+          endpoint = '/api/v1/memories';
           method = 'POST';
           body = {
             title: payload.title || 'Untitled Memory',
@@ -111,7 +111,7 @@ export class ExecutionAgent extends BaseAgent {
           break;
 
         case 'search':
-          endpoint = '/api/v1/memory/search';
+          endpoint = '/api/v1/memories/search';
           method = 'POST';
           body = {
             query: payload.query || '',
@@ -126,7 +126,7 @@ export class ExecutionAgent extends BaseAgent {
           if (!payload.id) {
             throw new Error('Memory ID required for update operation');
           }
-          endpoint = `/api/v1/memory/${payload.id}`;
+          endpoint = `/api/v1/memories/${payload.id}`;
           method = 'PUT';
           const updateBody: Record<string, unknown> = {};
           if (payload.title) updateBody.title = payload.title;
@@ -142,7 +142,7 @@ export class ExecutionAgent extends BaseAgent {
           if (!payload.id) {
             throw new Error('Memory ID required for delete operation');
           }
-          endpoint = `/api/v1/memory/${payload.id}`;
+          endpoint = `/api/v1/memories/${payload.id}`;
           method = 'DELETE';
           break;
 
@@ -153,7 +153,7 @@ export class ExecutionAgent extends BaseAgent {
           if (payload.tags && Array.isArray(payload.tags)) {
             queryParams.append('tags', (payload.tags as string[]).join(','));
           }
-          endpoint = `/api/v1/memory${queryParams.toString() ? '?' + queryParams.toString() : ''}`;
+          endpoint = `/api/v1/memories${queryParams.toString() ? '?' + queryParams.toString() : ''}`;
           method = 'GET';
           break;
         }
