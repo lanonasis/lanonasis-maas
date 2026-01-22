@@ -52,13 +52,14 @@ async function buildExtension() {
       'keytar', // Native module for secure storage (Windsurf adapter)
       'electron', // Electron APIs (Cursor adapter)
     ],
-    // Resolve path aliases from tsconfig
+    // Resolve path aliases from tsconfig and local packages
     alias: {
       '@': path.resolve(__dirname, 'src'),
       '@/components': path.resolve(__dirname, 'src/components'),
       '@/services': path.resolve(__dirname, 'src/services'),
       '@/utils': path.resolve(__dirname, 'src/utils'),
       '@/shared': path.resolve(__dirname, 'src/shared'),
+      '@lanonasis/ide-extension-core': path.resolve(__dirname, '../../packages/ide-extension-core/dist'),
     },
     logLevel: 'info',
     plugins: [esbuildProblemMatcherPlugin],

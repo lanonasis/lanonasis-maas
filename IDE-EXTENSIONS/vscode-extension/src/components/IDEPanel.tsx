@@ -224,6 +224,9 @@ export const IDEPanel = () => {
   const [pendingDelete, setPendingDelete] = useState<Memory | null>(null);
   const [isOnline, setIsOnline] = useState(() => navigator.onLine);
 
+  // Define trimmedQuery early to avoid TDZ issues in useMemo dependencies
+  const trimmedQuery = searchQuery.trim();
+
   const userDisplayName = user?.name || user?.email || null;
   const userSubLabel = user?.name && user?.email ? user.email : null;
   const showOnboarding = Boolean(onboardingStatus?.shouldShow);
@@ -371,6 +374,35 @@ export const IDEPanel = () => {
   const handleCancelDelete = useCallback(() => {
     setPendingDelete(null);
   }, []);
+
+  // Callbacks moved before virtualItems useMemo to prevent TDZ errors
+  const toggleTypeSection = useCallback((type: string) => {
+    setCollapsedTypes((prev) => ({
+      ...prev,
+      [type]: !prev[type],
+    }));
+  }, []);
+
+  const handleAttachMemory = useCallback(
+    (memory: Memory) => {
+      attachMemory(memory);
+    },
+    [attachMemory],
+  );
+
+  const handleCopyMemory = useCallback(
+    (memory: Memory) => {
+      postMessage('copyToClipboard', memory.content);
+    },
+    [postMessage],
+  );
+
+  const handleEditMemory = useCallback(
+    (memory: Memory, updates: MemoryUpdateInput) => {
+      postMessage('updateMemory', { id: memory.id, updates });
+    },
+    [postMessage],
+  );
 
   useEffect(() => {
     const query = searchQuery.trim();
@@ -655,13 +687,6 @@ export const IDEPanel = () => {
     visibleTypes,
   ]);
 
-  const toggleTypeSection = useCallback((type: string) => {
-    setCollapsedTypes((prev) => ({
-      ...prev,
-      [type]: !prev[type],
-    }));
-  }, []);
-
   const moveType = useCallback((type: string, direction: 'up' | 'down') => {
     const order = [...customizeTypes];
     const index = order.indexOf(type);
@@ -750,7 +775,6 @@ export const IDEPanel = () => {
     ? isOnline
     : !connectionStatus.offline;
 
-  const trimmedQuery = searchQuery.trim();
   const canSaveSearch = trimmedQuery.length >= 2;
   const isSavedSearch = canSaveSearch && savedSearches.includes(trimmedQuery);
 
@@ -799,29 +823,6 @@ export const IDEPanel = () => {
     window.addEventListener('message', handleMessage);
     return () => window.removeEventListener('message', handleMessage);
   }, [addChatMessage, postMessage]);
-
-  // Handle attaching memory to chat context
-  const handleAttachMemory = useCallback(
-    (memory: Memory) => {
-      attachMemory(memory);
-    },
-    [attachMemory],
-  );
-
-  // Copy memory content to clipboard
-  const handleCopyMemory = useCallback(
-    (memory: Memory) => {
-      postMessage('copyToClipboard', memory.content);
-    },
-    [postMessage],
-  );
-
-  const handleEditMemory = useCallback(
-    (memory: Memory, updates: MemoryUpdateInput) => {
-      postMessage('updateMemory', { id: memory.id, updates });
-    },
-    [postMessage],
-  );
 
   const handleCreateFromSearch = useCallback(() => {
     if (!trimmedQuery) return;

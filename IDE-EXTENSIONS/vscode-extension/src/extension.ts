@@ -262,7 +262,7 @@ export async function activate(context: vscode.ExtensionContext) {
             let apiKey: string | null = null;
 
             if (mode === 'oauth') {
-                apiKey = await secureApiKeyService.authenticateWithOAuthFlow();
+                apiKey = await secureApiKeyService.authenticateWithOAuth();
             } else if (mode === 'apikey') {
                 apiKey = await secureApiKeyService.promptForApiKeyEntry();
             } else {
