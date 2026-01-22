@@ -50,14 +50,26 @@ export class MemoryService implements IMemoryService {
         if (this.secureApiKeyService) {
             try {
                 const credential = await this.secureApiKeyService.getStoredCredentials();
+                console.log('[MemoryService] getStoredCredentials result:', {
+                    hasCredential: !!credential,
+                    type: credential?.type,
+                    tokenLength: credential?.token?.length,
+                    tokenPrefix: credential?.token?.substring(0, 12)
+                });
                 if (credential?.type === 'oauth') {
                     authToken = credential.token;
+                    console.log('[MemoryService] Using OAuth token');
                 } else if (credential?.type === 'apiKey') {
                     apiKey = credential.token;
+                    console.log('[MemoryService] Using API key');
+                } else if (credential) {
+                    console.warn('[MemoryService] Unknown credential type:', credential.type);
                 }
             } catch (error) {
                 console.warn('[MemoryService] Failed to read stored credentials', error);
             }
+        } else {
+            console.warn('[MemoryService] No secureApiKeyService available');
         }
 
         if (!authToken && !apiKey) {

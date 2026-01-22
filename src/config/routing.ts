@@ -38,10 +38,10 @@ export const routingConfig: RoutingConfig = {
     'transcribe': '/api/transcribe',
     
     // Memory operations - can be direct or through router
-    'memory-search': '/api/v1/memory/search',
-    'memory-create': '/api/v1/memory',
-    'memory-update': '/api/v1/memory',
-    'memory-delete': '/api/v1/memory',
+    'memory-search': '/api/v1/memories/search',
+    'memory-create': '/api/v1/memories',
+    'memory-update': '/api/v1/memories',
+    'memory-delete': '/api/v1/memories',
     
     // MCP tools through unified router
     'mcp': '/api/mcp-handler'

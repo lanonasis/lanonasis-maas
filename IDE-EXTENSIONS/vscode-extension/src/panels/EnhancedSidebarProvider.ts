@@ -991,6 +991,16 @@ export class EnhancedSidebarProvider implements vscode.WebviewViewProvider {
                     window.vscode = vscode;
                 })();
             </script>
+            <script nonce="${nonce}">
+                window.addEventListener('error', (event) => {
+                    console.error('Uncaught error:', event.error);
+                    window.vscode.postMessage({
+                        type: 'reactError',
+                        error: event.error.message,
+                        stack: event.error.stack
+                    });
+                });
+            </script>
             <script nonce="${nonce}" src="${reactScriptUri}"></script>
         </body>
         </html>`;

@@ -149,7 +149,7 @@ export function enforceJSONForAIClients(req: AIClientRequest, res: Response, nex
             documentation: '/docs',
             health: '/api/v1/health',
             authentication: '/api/v1/auth',
-            memory: '/api/v1/memory',
+            memory: '/api/v1/memories',
             apiKeys: '/api/v1/api-keys',
             mcp: '/api/v1/mcp'
           },

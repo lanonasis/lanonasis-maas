@@ -211,12 +211,36 @@ async function checkAuthentication(
     outputChannel.appendLine('\n[4/7] Checking Authentication...');
 
     try {
+        // Check for stored credentials with type information
+        const credentials = await secureApiKeyService.getStoredCredentials();
+
+        if (credentials) {
+            outputChannel.appendLine(`  ✓ Credential type: ${credentials.type.toUpperCase()}`);
+            outputChannel.appendLine(`  ✓ Token length: ${credentials.token.length} characters`);
+            outputChannel.appendLine(`  ✓ Token prefix: ${credentials.token.substring(0, 12)}...`);
+
+            // Check if it looks like a JWT (OAuth token)
+            const isJwt = credentials.token.split('.').length === 3;
+            outputChannel.appendLine(`  ✓ Token format: ${isJwt ? 'JWT (OAuth)' : 'API Key'}`);
+
+            if (credentials.type === 'oauth') {
+                outputChannel.appendLine('  ✓ OAuth authentication detected');
+            } else {
+                outputChannel.appendLine('  ✓ API Key authentication detected');
+            }
+
+            return {
+                category: 'Authentication',
+                status: 'success',
+                message: `Authenticated with ${credentials.type === 'oauth' ? 'OAuth token' : 'API key'}`
+            };
+        }
+
+        // Fallback: Check legacy API key
         const hasApiKey = await secureApiKeyService.hasApiKey();
-
         if (hasApiKey) {
-            outputChannel.appendLine('  ✓ API key is stored securely');
+            outputChannel.appendLine('  ⚠ API key exists but getStoredCredentials returned null');
 
-            // Try to retrieve it to verify it's accessible
             try {
                 const apiKey = await secureApiKeyService.getApiKey();
                 if (apiKey && apiKey.length > 0) {
@@ -225,35 +249,23 @@ async function checkAuthentication(
 
                     return {
                         category: 'Authentication',
-                        status: 'success',
-                        message: 'Authenticated with valid API key'
-                    };
-                } else {
-                    return {
-                        category: 'Authentication',
                         status: 'warning',
-                        message: 'API key exists but appears empty',
-                        action: 'Re-authenticate'
+                        message: 'API key exists but credential type unknown',
+                        action: 'Re-authenticate for best results'
                     };
                 }
             } catch (error) {
-                return {
-                    category: 'Authentication',
-                    status: 'warning',
-                    message: 'API key exists but could not be retrieved',
-                    details: error instanceof Error ? error.message : String(error),
-                    action: 'Re-authenticate'
-                };
+                outputChannel.appendLine(`  ✗ Error retrieving API key: ${error instanceof Error ? error.message : String(error)}`);
             }
-        } else {
-            outputChannel.appendLine('  ℹ No API key configured');
-            return {
-                category: 'Authentication',
-                status: 'info',
-                message: 'Not authenticated',
-                action: 'Authenticate'
-            };
         }
+
+        outputChannel.appendLine('  ℹ No credentials found');
+        return {
+            category: 'Authentication',
+            status: 'info',
+            message: 'Not authenticated',
+            action: 'Authenticate'
+        };
     } catch (error) {
         outputChannel.appendLine(`  ✗ Error: ${error instanceof Error ? error.message : String(error)}`);
         return {

@@ -116,7 +116,7 @@ router.get('/', (req, res) => {
 router.get('/health', async (req: Request, res: Response): Promise<void> => {
   const healthChecks = await Promise.allSettled([
     // Memory service health
-    checkServiceHealth('memory', '/api/v1/memory/health'),
+    checkServiceHealth('memory', '/api/v1/memories/health'),
     // MCP service health  
     checkServiceHealth('mcp', '/api/v1/mcp/health'),
     // Auth service health
