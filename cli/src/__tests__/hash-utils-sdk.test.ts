@@ -2,24 +2,25 @@
  * Hash Utils Test Suite - Security SDK Version
  *
  * Tests the @lanonasis/security-sdk hash-utils implementation.
- * This tests the local packages/security-sdk (correct exports).
+ * This tests the installed @lanonasis/security-sdk npm package.
  *
  * Run both test files to ensure compatibility:
- *   bun test hash-utils.test.ts hash-utils-sdk.test.ts
+ *   npm test hash-utils.test.ts hash-utils-sdk.test.ts
  *
  * @note This is for API key hashing (SHA-256), NOT JWT storage.
  */
 
 import crypto from 'crypto';
 
-// Import from packages/security-sdk (local workspace)
-// This uses the CORRECT version with proper exports
-// Path: cli/src/__tests__ -> (5 up) -> packages/security-sdk/dist
+// Import from installed @lanonasis/security-sdk package
 import {
   hashApiKey,
   isSha256Hash,
   ensureApiKeyHash,
-} from '../../../../../packages/security-sdk/dist/hash-utils.js';
+} from '@lanonasis/security-sdk/hash-utils';
+
+// Import CLI's local copy for comparison
+import * as cliHashUtils from '../utils/hash-utils.js';
 
 describe('Security SDK Hash Utils - Core Functions', () => {
   const TEST_API_KEY = 'lano_test_key_abc123xyz';
@@ -160,9 +161,6 @@ describe('Security SDK Hash Utils - API Key Formats', () => {
 });
 
 describe('Security SDK - Cross-Implementation Compatibility', () => {
-  // Import CLI's local copy for comparison
-  const cliHashUtils = require('../utils/hash-utils.js');
-
   it('should produce same hash as CLI local implementation', () => {
     const testKeys = ['key1', 'lano_test', 'vx_vendor_key'];
 

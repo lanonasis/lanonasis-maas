@@ -2,7 +2,9 @@ export default {
   preset: 'ts-jest/presets/default-esm',
   extensionsToTreatAsEsm: ['.ts'],
   moduleNameMapper: {
-    '^(\\.{1,2}/.*)\\.js$': '$1'
+    '^(\\.{1,2}/.*)\\.js$': '$1',
+    // Map @lanonasis/security-sdk subpath exports for Jest
+    '^@lanonasis/security-sdk/hash-utils$': '<rootDir>/node_modules/@lanonasis/security-sdk/dist/hash-utils.js'
   },
   testEnvironment: 'node',
   testMatch: [

@@ -407,7 +407,15 @@ export class LanonasisMCPServer {
                             text: `Authentication Error: ${error instanceof Error ? error.message : 'Authentication failed'}`
                         }
                     ],
-                    isError: true
+                    isError: true,
+                    task: {
+                        taskId: `${clientId}-${Date.now()}`,
+                        status: 'failed',
+                        ttl: null,
+                        createdAt: new Date().toISOString(),
+                        lastUpdatedAt: new Date().toISOString(),
+                        statusMessage: 'Authentication failed'
+                    }
                 };
             }
             this.updateConnectionActivity(clientId);
@@ -419,7 +427,14 @@ export class LanonasisMCPServer {
                             type: 'text',
                             text: JSON.stringify(result, null, 2)
                         }
-                    ]
+                    ],
+                    task: {
+                        taskId: `${clientId}-${Date.now()}`,
+                        status: 'completed',
+                        ttl: null,
+                        createdAt: new Date().toISOString(),
+                        lastUpdatedAt: new Date().toISOString()
+                    }
                 };
             }
             catch (error) {
@@ -430,7 +445,15 @@ export class LanonasisMCPServer {
                             text: `Error: ${error instanceof Error ? error.message : 'Unknown error'}`
                         }
                     ],
-                    isError: true
+                    isError: true,
+                    task: {
+                        taskId: `${clientId}-${Date.now()}`,
+                        status: 'failed',
+                        ttl: null,
+                        createdAt: new Date().toISOString(),
+                        lastUpdatedAt: new Date().toISOString(),
+                        statusMessage: error instanceof Error ? error.message : 'Unknown error'
+                    }
                 };
             }
         });
