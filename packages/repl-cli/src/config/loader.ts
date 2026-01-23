@@ -19,6 +19,25 @@ const DEFAULT_CONFIG: ReplConfig = {
   openaiModel: process.env.OPENAI_MODEL || DEFAULT_OPENAI_MODEL,
   historyFile: HISTORY_FILE,
   maxHistorySize: DEFAULT_MAX_HISTORY_SIZE,
+  // User profile defaults
+  userProfile: {
+    name: process.env.USER_NAME || process.env.USER,
+  },
+  // User preferences defaults
+  userPreferences: {
+    theme: 'dark',
+    defaultMemoryType: 'context',
+    autoSave: true,
+    verboseMode: false
+  },
+  // L0/LZero configuration
+  l0: {
+    enabled: true,
+    enableCampaigns: true,
+    enableTrends: true,
+    enableContentCreation: true
+  },
+  // Legacy userContext (for backwards compatibility)
   userContext: process.env.USER_NAME || process.env.USER ? {
     name: process.env.USER_NAME || process.env.USER
   } : undefined
@@ -46,6 +65,9 @@ export async function loadConfig(overrides: Partial<ReplConfig>): Promise<ReplCo
     writeFileSync(CONFIG_FILE, JSON.stringify(DEFAULT_CONFIG, null, 2));
   }
   
-  // Apply overrides from command line
-  return { ...config, ...overrides };
+  // Apply overrides from command line (filter out undefined values)
+  const filteredOverrides = Object.fromEntries(
+    Object.entries(overrides).filter(([_, v]) => v !== undefined)
+  );
+  return { ...config, ...filteredOverrides };
 }

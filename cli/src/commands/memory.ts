@@ -109,9 +109,9 @@ export function memoryCommands(program: Command): void {
               validate: (input: string) => input.length > 0 || 'Title is required'
             },
             {
-              type: 'editor',
+              type: 'input',
               name: 'content',
-              message: 'Memory content:',
+              message: 'Memory content (or use -c flag for multi-line):',
               default: content,
               validate: (input: string) => input.length > 0 || 'Content is required'
             },

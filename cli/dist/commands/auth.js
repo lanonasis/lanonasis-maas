@@ -707,7 +707,7 @@ async function handleOAuthFlow(config) {
         await config.setToken(tokens.access_token);
         await config.set('refresh_token', tokens.refresh_token);
         await config.set('token_expires_at', Date.now() + (tokens.expires_in * 1000));
-        await config.set('authMethod', 'oauth2');
+        await config.set('authMethod', 'oauth');
         // The OAuth access token from auth-gateway works as the API token for all services
         // Store it as the vendor key equivalent for MCP and API access
         spinner.text = 'Configuring unified access...';

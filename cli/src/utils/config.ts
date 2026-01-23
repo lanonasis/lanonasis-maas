@@ -654,7 +654,11 @@ export class CLIConfig {
 
     // Store a reference marker in config (not the actual key)
     this.config.vendorKey = 'stored_in_api_key_storage';
-    this.config.authMethod = 'vendor_key';
+    // Only set authMethod to 'vendor_key' if not already set to OAuth
+    // This prevents overwriting OAuth auth method when storing the token for MCP access
+    if (!this.config.authMethod || !['oauth', 'oauth2', 'jwt'].includes(this.config.authMethod)) {
+      this.config.authMethod = 'vendor_key';
+    }
     this.config.lastValidated = new Date().toISOString();
     await this.resetFailureCount(); // Reset failure count on successful auth
     await this.save();
