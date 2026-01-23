@@ -101,13 +101,21 @@ export class ReplEngine {
     const welcomeMessage = this.buildWelcomeMessage();
     console.log(chalk.green(welcomeMessage));
     console.log(chalk.cyan('━'.repeat(50)));
-    console.log(chalk.gray(`Mode: ${this.context.mode} | API: ${this.config.apiUrl}`));
+    console.log(chalk.gray(`Mode: ${this.context.mode} | API: ${this.config.apiUrl || 'https://api.lanonasis.com'}`));
     console.log(chalk.gray(`Natural Language: ${this.nlMode ? chalk.green('ON') : chalk.yellow('OFF')}`));
-    if (this.config.openaiModel) {
-      console.log(chalk.gray(`AI Model: ${this.config.openaiModel}`));
+    // Show L0/LZero status
+    const l0Enabled = this.config.l0?.enabled !== false;
+    console.log(chalk.gray(`LZero Orchestrator: ${l0Enabled ? chalk.green('ACTIVE') : chalk.yellow('OFF')}`));
+    if (this.config.openaiApiKey) {
+      console.log(chalk.gray(`AI Model: ${this.config.openaiModel || 'gpt-4-turbo-preview'}`));
+    } else {
+      console.log(chalk.yellow(`⚠️  No OpenAI key - using LZero pattern matching`));
     }
-    if (!this.config.openaiApiKey) {
-      console.log(chalk.yellow(`⚠️  No OpenAI key - using basic pattern matching mode`));
+    // Show user profile if available
+    const userName = this.config.userProfile?.name || this.config.userContext?.name;
+    const userEmail = this.config.userProfile?.email;
+    if (userEmail) {
+      console.log(chalk.gray(`User: ${userName || 'Unknown'} (${userEmail})`));
     }
     console.log(chalk.cyan('━'.repeat(50)));
     console.log(chalk.white('\n💡 You can interact naturally or use commands:'));

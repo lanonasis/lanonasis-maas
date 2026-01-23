@@ -101,9 +101,13 @@ export class NaturalLanguageOrchestrator {
       });
 
       if (preferencesSearch.data?.results && preferencesSearch.data.results.length > 0) {
-        this.cachedUserPreferences = preferencesSearch.data.results.map((r: any) =>
-          `[${r.title}]: ${r.content.substring(0, 200)}`
-        );
+        this.cachedUserPreferences = preferencesSearch.data.results
+          .filter((r: any) => r && r.title && r.content)
+          .map((r: any) => {
+            const content = r.content || '';
+            const title = r.title || 'Untitled';
+            return `[${title}]: ${content.substring(0, 200)}`;
+          });
 
         // Update the system prompt with user context
         this.updateSystemPromptWithContext();
@@ -143,9 +147,13 @@ export class NaturalLanguageOrchestrator {
       });
 
       if (result.data?.results && result.data.results.length > 0) {
-        return result.data.results.map((r: any) =>
-          `📌 ${r.title}: ${r.content.substring(0, 150)}${r.content.length > 150 ? '...' : ''}`
-        );
+        return result.data.results
+          .filter((r: any) => r && r.title && r.content) // Filter out invalid results
+          .map((r: any) => {
+            const content = r.content || '';
+            const title = r.title || 'Untitled';
+            return `📌 ${title}: ${content.substring(0, 150)}${content.length > 150 ? '...' : ''}`;
+          });
       }
     } catch (error) {
       // Silently fail - context fetching is optional

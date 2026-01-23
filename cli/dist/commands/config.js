@@ -391,8 +391,9 @@ export function configCommands(program) {
         else {
             console.log(chalk.green('   ✓ Authentication credentials found'));
             // Validate auth method consistency
-            if (vendorKey && authMethod !== 'vendor_key') {
-                console.log(chalk.yellow('   ⚠ Auth method mismatch (has vendor key but method is not vendor_key)'));
+            // Note: OAuth users can have vendorKey stored (for MCP access) while authMethod is 'oauth'
+            if (vendorKey && authMethod !== 'vendor_key' && authMethod !== 'oauth') {
+                console.log(chalk.yellow('   ⚠ Auth method mismatch (has vendor key but method is not vendor_key or oauth)'));
                 validation.issues.push('Auth method mismatch');
                 if (options.repair) {
                     config.set('authMethod', 'vendor_key');

@@ -177,6 +177,7 @@ export function mcpCommands(program: Command) {
       const client = getMCPClient();
       await client.disconnect();
       console.log(chalk.green('✓ Disconnected from MCP server'));
+      process.exit(0);
     });
 
   // Status command
@@ -194,6 +195,7 @@ export function mcpCommands(program: Command) {
 
       let healthLabel = chalk.gray('Unknown');
       let healthDetails: string | undefined;
+      let isServiceReachable = false;
 
       try {
         const axios = (await import('axios')).default;
@@ -224,12 +226,15 @@ export function mcpCommands(program: Command) {
         const ok = response.status === 200 && (!overallStatus || overallStatus === 'healthy');
 
         if (ok) {
-          healthLabel = chalk.green('Reachable');
+          healthLabel = chalk.green('Healthy');
+          isServiceReachable = true;
         } else {
           healthLabel = chalk.yellow('Degraded');
+          isServiceReachable = true; // Service is reachable but degraded
         }
       } catch (error: unknown) {
         healthLabel = chalk.red('Unreachable');
+        isServiceReachable = false;
         if (error instanceof Error) {
           healthDetails = error.message;
         } else if (error !== null && error !== undefined) {
@@ -239,7 +244,14 @@ export function mcpCommands(program: Command) {
 
       console.log(chalk.cyan('\n📊 MCP Connection Status'));
       console.log(chalk.cyan('========================'));
-      console.log(`Status: ${status.connected ? chalk.green('Connected') : chalk.red('Disconnected')}`);
+
+      // Show status based on service reachability, not in-memory connection state
+      // The CLI isn't a persistent daemon - "connected" means the service is available
+      if (isServiceReachable) {
+        console.log(`Status: ${chalk.green('Ready')} (service reachable)`);
+      } else {
+        console.log(`Status: ${chalk.red('Unavailable')} (service unreachable)`);
+      }
 
       // Display mode with proper labels
       let modeDisplay: string;
@@ -264,7 +276,8 @@ export function mcpCommands(program: Command) {
         console.log(chalk.gray(`Health details: ${healthDetails}`));
       }
 
-      if (status.connected) {
+      // Show features when service is reachable
+      if (isServiceReachable) {
         if (status.mode === 'remote') {
           console.log(`\n${chalk.cyan('Features:')}`);
           console.log('• Real-time updates via SSE');
@@ -276,7 +289,11 @@ export function mcpCommands(program: Command) {
           console.log('• Authenticated WebSocket connection');
           console.log('• Production-ready MCP server');
         }
+        console.log(chalk.green('\n✓ MCP tools are available. Run "lanonasis mcp tools" to see them.'));
+      } else {
+        console.log(chalk.yellow('\n⚠ MCP service is not reachable. Run "lanonasis mcp diagnose" for troubleshooting.'));
       }
+      process.exit(0);
     });
 
   // List tools command
@@ -494,6 +511,7 @@ export function mcpCommands(program: Command) {
         console.log('  --prefer-local     : Use local stdio mode (development only)');
         console.log('  --auto             : Auto-detect based on configuration (default)');
       }
+      process.exit(0);
     });
 
   // Start MCP server for external clients
@@ -870,5 +888,6 @@ export function mcpCommands(program: Command) {
         console.log(chalk.gray('   • Verify your network allows outbound HTTPS connections'));
         console.log(chalk.gray('   • Contact support if issues persist'));
       }
+      process.exit(0);
     });
 }

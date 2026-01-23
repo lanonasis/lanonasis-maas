@@ -31,9 +31,9 @@ export function memoryCommands(program) {
                         validate: (input) => input.length > 0 || 'Title is required'
                     },
                     {
-                        type: 'editor',
+                        type: 'input',
                         name: 'content',
-                        message: 'Memory content:',
+                        message: 'Memory content (or use -c flag for multi-line):',
                         default: content,
                         validate: (input) => input.length > 0 || 'Content is required'
                     },
