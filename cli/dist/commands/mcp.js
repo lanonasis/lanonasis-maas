@@ -169,6 +169,7 @@ export function mcpCommands(program) {
         const client = getMCPClient();
         await client.disconnect();
         console.log(chalk.green('✓ Disconnected from MCP server'));
+        process.exit(0);
     });
     // Status command
     mcp.command('status')
@@ -183,6 +184,7 @@ export function mcpCommands(program) {
         await config.init();
         let healthLabel = chalk.gray('Unknown');
         let healthDetails;
+        let isServiceReachable = false;
         try {
             const axios = (await import('axios')).default;
             // Derive MCP health URL from discovered REST base (e.g. https://mcp.lanonasis.com/api/v1 -> https://mcp.lanonasis.com/health)
@@ -207,14 +209,17 @@ export function mcpCommands(program) {
             const overallStatus = String(response.data?.status ?? '').toLowerCase();
             const ok = response.status === 200 && (!overallStatus || overallStatus === 'healthy');
             if (ok) {
-                healthLabel = chalk.green('Reachable');
+                healthLabel = chalk.green('Healthy');
+                isServiceReachable = true;
             }
             else {
                 healthLabel = chalk.yellow('Degraded');
+                isServiceReachable = true; // Service is reachable but degraded
             }
         }
         catch (error) {
             healthLabel = chalk.red('Unreachable');
+            isServiceReachable = false;
             if (error instanceof Error) {
                 healthDetails = error.message;
             }
@@ -224,7 +229,14 @@ export function mcpCommands(program) {
         }
         console.log(chalk.cyan('\n📊 MCP Connection Status'));
         console.log(chalk.cyan('========================'));
-        console.log(`Status: ${status.connected ? chalk.green('Connected') : chalk.red('Disconnected')}`);
+        // Show status based on service reachability, not in-memory connection state
+        // The CLI isn't a persistent daemon - "connected" means the service is available
+        if (isServiceReachable) {
+            console.log(`Status: ${chalk.green('Ready')} (service reachable)`);
+        }
+        else {
+            console.log(`Status: ${chalk.red('Unavailable')} (service unreachable)`);
+        }
         // Display mode with proper labels
         let modeDisplay;
         switch (status.mode) {
@@ -246,7 +258,8 @@ export function mcpCommands(program) {
         if (healthDetails && process.env.CLI_VERBOSE === 'true') {
             console.log(chalk.gray(`Health details: ${healthDetails}`));
         }
-        if (status.connected) {
+        // Show features when service is reachable
+        if (isServiceReachable) {
             if (status.mode === 'remote') {
                 console.log(`\n${chalk.cyan('Features:')}`);
                 console.log('• Real-time updates via SSE');
@@ -259,7 +272,12 @@ export function mcpCommands(program) {
                 console.log('• Authenticated WebSocket connection');
                 console.log('• Production-ready MCP server');
             }
+            console.log(chalk.green('\n✓ MCP tools are available. Run "lanonasis mcp tools" to see them.'));
         }
+        else {
+            console.log(chalk.yellow('\n⚠ MCP service is not reachable. Run "lanonasis mcp diagnose" for troubleshooting.'));
+        }
+        process.exit(0);
     });
     // List tools command
     mcp.command('tools')
@@ -456,6 +474,7 @@ export function mcpCommands(program) {
             console.log('  --prefer-local     : Use local stdio mode (development only)');
             console.log('  --auto             : Auto-detect based on configuration (default)');
         }
+        process.exit(0);
     });
     // Start MCP server for external clients
     mcp.command('start')
@@ -790,5 +809,6 @@ export function mcpCommands(program) {
             console.log(chalk.gray('   • Verify your network allows outbound HTTPS connections'));
             console.log(chalk.gray('   • Contact support if issues persist'));
         }
+        process.exit(0);
     });
 }
