@@ -5,11 +5,7 @@
  */
 
 import { readFileSync, writeFileSync, existsSync, mkdirSync, unlinkSync } from 'fs';
-import { join } from 'path';
-import { homedir } from 'os';
-
-const CONFIG_DIR = join(homedir(), '.lanonasis');
-const CREDENTIALS_FILE = join(CONFIG_DIR, 'credentials.json');
+import { CONFIG_DIR, CREDENTIALS_FILE } from '../config/constants.js';
 
 export interface StoredCredentials {
   access_token: string;

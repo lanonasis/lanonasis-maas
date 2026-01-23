@@ -15,6 +15,8 @@ export class ReplEngine {
   private systemCommands: SystemCommands;
   private orchestrator: NaturalLanguageOrchestrator;
   private nlMode: boolean = true; // Natural language mode enabled by default
+  private sigintHandler?: () => void; // Track SIGINT handler for cleanup
+  private errorHandlersInstalled: boolean = false; // Track global error handlers
 
   constructor(private config: ReplConfig) {
     this.rl = readline.createInterface({
@@ -88,10 +90,13 @@ export class ReplEngine {
   
   async start() {
     this.running = true;
-    
+
+    // Install global error handlers to prevent crashes (only once)
+    this.installGlobalErrorHandlers();
+
     // Fetch user context if available
     await this.fetchUserContext();
-    
+
     // Personalized welcome
     const welcomeMessage = this.buildWelcomeMessage();
     console.log(chalk.green(welcomeMessage));
@@ -100,6 +105,9 @@ export class ReplEngine {
     console.log(chalk.gray(`Natural Language: ${this.nlMode ? chalk.green('ON') : chalk.yellow('OFF')}`));
     if (this.config.openaiModel) {
       console.log(chalk.gray(`AI Model: ${this.config.openaiModel}`));
+    }
+    if (!this.config.openaiApiKey) {
+      console.log(chalk.yellow(`⚠️  No OpenAI key - using basic pattern matching mode`));
     }
     console.log(chalk.cyan('━'.repeat(50)));
     console.log(chalk.white('\n💡 You can interact naturally or use commands:'));
@@ -110,23 +118,71 @@ export class ReplEngine {
     console.log(chalk.gray('   • Type "help" for all commands\n'));
 
     this.rl.prompt();
-    
+
+    // Wrap readline handler with proper error handling to prevent crashes
     this.rl.on('line', async (line) => {
-      await this.handleCommand(line.trim());
+      try {
+        await this.handleCommand(line.trim());
+      } catch (error) {
+        // Catch any unhandled errors and keep the REPL alive
+        console.error(chalk.red('\n⚠️  Unexpected error:'), error instanceof Error ? error.message : String(error));
+        console.log(chalk.gray('The REPL is still running. Try again or type "help" for assistance.\n'));
+      }
       if (this.running) this.rl.prompt();
     });
-    
+
     this.rl.on('close', () => {
-      console.log(chalk.yellow('\n👋 Goodbye!'));
-      process.exit(0);
+      // Only exit if intentionally closed, not from errors
+      if (this.running) {
+        console.log(chalk.yellow('\n👋 Goodbye!'));
+        process.exit(0);
+      }
     });
-    
-    // Handle Ctrl+C gracefully
-    process.on('SIGINT', () => {
+
+    // Handle input errors gracefully (e.g., pipe closed)
+    this.rl.on('error', (err) => {
+      console.error(chalk.red('\n⚠️  Input error:'), err.message);
+      if (this.running) {
+        console.log(chalk.gray('Attempting to continue...\n'));
+        this.rl.prompt();
+      }
+    });
+
+    // Handle Ctrl+C gracefully - remove any existing handler first to prevent memory leaks
+    if (this.sigintHandler) {
+      process.removeListener('SIGINT', this.sigintHandler);
+    }
+    this.sigintHandler = () => {
       console.log(chalk.yellow('\n👋 Goodbye!'));
       this.stop();
       process.exit(0);
+    };
+    process.on('SIGINT', this.sigintHandler);
+  }
+
+  /**
+   * Install global error handlers to prevent the REPL from crashing
+   * on unhandled exceptions or promise rejections
+   */
+  private installGlobalErrorHandlers() {
+    if (this.errorHandlersInstalled) return;
+
+    // Handle uncaught exceptions without crashing
+    process.on('uncaughtException', (error) => {
+      console.error(chalk.red('\n⚠️  Uncaught exception:'), error.message);
+      console.log(chalk.gray('The REPL recovered from an error. You can continue.\n'));
+      if (this.running) this.rl.prompt();
     });
+
+    // Handle unhandled promise rejections without crashing
+    process.on('unhandledRejection', (reason) => {
+      const message = reason instanceof Error ? reason.message : String(reason);
+      console.error(chalk.red('\n⚠️  Unhandled promise rejection:'), message);
+      console.log(chalk.gray('The REPL recovered from an error. You can continue.\n'));
+      if (this.running) this.rl.prompt();
+    });
+
+    this.errorHandlersInstalled = true;
   }
   
   private async handleCommand(input: string) {
@@ -153,9 +209,21 @@ export class ReplEngine {
   }
 
   private async handleNaturalLanguage(input: string) {
+    let response;
     try {
-      const response = await this.orchestrator.processNaturalLanguage(input);
+      response = await this.orchestrator.processNaturalLanguage(input);
+    } catch (error) {
+      // If orchestrator fails completely, provide a helpful fallback
+      console.error(chalk.red('\n⚠️  Could not process your request:'), error instanceof Error ? error.message : String(error));
+      console.log(chalk.cyan('\n💡 LZero: ') + chalk.white("I'm having trouble connecting to my brain right now. Let me try to help anyway..."));
+      console.log(chalk.gray('\nYou can try:'));
+      console.log(chalk.gray('  • Using direct commands: create, search, list, get, delete'));
+      console.log(chalk.gray('  • Checking your network connection'));
+      console.log(chalk.gray('  • Running "status" to check configuration\n'));
+      return;
+    }
 
+    try {
       // Display main answer first
       const mainAnswer = response.mainAnswer || response.response;
       if (mainAnswer) {
@@ -295,7 +363,9 @@ export class ReplEngine {
         });
       }
     } catch (error) {
-      console.error(chalk.red('Error processing request:'), error instanceof Error ? error.message : String(error));
+      // Catch action execution errors but keep REPL alive
+      console.error(chalk.red('\n⚠️  Error executing action:'), error instanceof Error ? error.message : String(error));
+      console.log(chalk.cyan('💡 LZero: ') + chalk.gray("Something went wrong, but I'm still here! Try rephrasing or use a direct command.\n"));
     }
   }
 
@@ -315,15 +385,12 @@ export class ReplEngine {
   }
 
   private async fetchUserContext() {
-    // Try to fetch user context from memory service
-    // This is a placeholder - actual implementation would query the API
-    // For now, we'll check if there's any user info in memories
+    // Initialize orchestrator context - this loads user preferences from memories
+    // This makes the assistant context-aware, knowing the user's stored information
     try {
-      // Could implement: search for user profile memory, project memories, etc.
-      // For now, we'll leave it as a hook for future implementation
-      // The config can be populated from environment or config file
+      await this.orchestrator.initializeContext();
     } catch (error) {
-      // Silently fail - user context is optional
+      // Silently fail - context loading is optional but enhances the experience
     }
   }
 
@@ -369,5 +436,14 @@ export class ReplEngine {
   stop() {
     this.running = false;
     this.rl.close();
+
+    // Clean up SIGINT handler to prevent memory leaks
+    if (this.sigintHandler) {
+      process.removeListener('SIGINT', this.sigintHandler);
+      this.sigintHandler = undefined;
+    }
+
+    // Clear conversation history on stop (user is logging out/exiting)
+    this.orchestrator.clearHistory();
   }
 }

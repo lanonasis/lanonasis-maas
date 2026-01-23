@@ -69,9 +69,19 @@ export class MemoryCommands {
       console.log(chalk.yellow('Error: Title and content are required'));
       return;
     }
-    
+
     const [title, ...contentParts] = filteredArgs;
     const content = contentParts.join(' ');
+
+    // Validate title and content are not empty/whitespace
+    if (!title.trim()) {
+      console.log(chalk.yellow('Error: Title cannot be empty'));
+      return;
+    }
+    if (!content.trim()) {
+      console.log(chalk.yellow('Error: Content cannot be empty'));
+      return;
+    }
     
     const spinner = ora('Creating memory...').start();
     try {
@@ -105,23 +115,23 @@ export class MemoryCommands {
     const spinner = ora('Searching...').start();
     try {
       const client = this.getClient(context);
-      const result = await client.searchMemories({ 
+      const result = await client.searchMemories({
         query,
         status: 'active',
         limit: 20,
         threshold: 0.7
       });
-      spinner.stop();
-      
+
       if (result.error) {
-        console.log(chalk.red(`Error: ${result.error}`));
+        spinner.fail(chalk.red(`Search failed: ${result.error}`));
         return;
       }
-      
+
       const results = (result.data?.results || []) as MemorySearchResult[];
       if (results.length === 0) {
-        console.log(chalk.gray('No results found'));
+        spinner.succeed(chalk.gray('No results found'));
       } else {
+        spinner.succeed(chalk.green(`Found ${results.length} result(s)`));
         results.forEach((r: MemorySearchResult, i: number) => {
           console.log(chalk.cyan(`[${i + 1}] ${r.title}`));
           console.log(chalk.gray(`    ${r.content.substring(0, 80)}...`));
@@ -129,7 +139,7 @@ export class MemoryCommands {
       }
       context.lastResult = results;
     } catch (error) {
-      spinner.fail(chalk.red(`Failed: ${error instanceof Error ? error.message : String(error)}`));
+      spinner.fail(chalk.red(`Search failed: ${error instanceof Error ? error.message : String(error)}`));
     }
   }
   
@@ -140,24 +150,24 @@ export class MemoryCommands {
     try {
       const client = this.getClient(context);
       const result = await client.listMemories({ limit });
-      spinner.stop();
-      
+
       if (result.error) {
-        console.log(chalk.red(`Error: ${result.error}`));
+        spinner.fail(chalk.red(`List failed: ${result.error}`));
         return;
       }
-      
+
       const items = (result.data?.data || []) as MemoryEntry[];
       if (items.length > 0) {
+        spinner.succeed(chalk.green(`Showing ${items.length} memories`));
         items.forEach((r: MemoryEntry, i: number) => {
           console.log(chalk.cyan(`[${i + 1}] ${r.title} (${r.id})`));
         });
         context.lastResult = items;
       } else {
-        console.log(chalk.gray('No memories found'));
+        spinner.succeed(chalk.gray('No memories found'));
       }
     } catch (error) {
-      spinner.fail(chalk.red(`Failed: ${error instanceof Error ? error.message : String(error)}`));
+      spinner.fail(chalk.red(`List failed: ${error instanceof Error ? error.message : String(error)}`));
     }
   }
   
@@ -172,21 +182,23 @@ export class MemoryCommands {
     try {
       const client = this.getClient(context);
       const result = await client.getMemory(id);
-      spinner.stop();
-      
+
       if (result.error) {
-        console.log(chalk.red(`Error: ${result.error}`));
+        spinner.fail(chalk.red(`Get failed: ${result.error}`));
         return;
       }
-      
+
       if (result.data) {
+        spinner.succeed(chalk.green(`Memory found`));
         console.log(chalk.cyan(`Title: ${result.data.title}`));
         console.log(chalk.gray(`ID: ${result.data.id}`));
         console.log(chalk.white(`\n${result.data.content}`));
         context.lastResult = result.data;
+      } else {
+        spinner.fail(chalk.yellow(`Memory not found: ${id}`));
       }
     } catch (error) {
-      spinner.fail(chalk.red(`Failed: ${error instanceof Error ? error.message : String(error)}`));
+      spinner.fail(chalk.red(`Get failed: ${error instanceof Error ? error.message : String(error)}`));
     }
   }
   
