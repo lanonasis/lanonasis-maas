@@ -99,40 +99,40 @@ export class APIClient {
         });
         return response.data;
     }
-    // Memory operations - aligned with existing schema
-    // All memory endpoints use /api/v1/memory path
+    // Memory operations - aligned with REST API canonical endpoints
+    // All memory endpoints use /api/v1/memories path (plural, per REST conventions)
     async createMemory(data) {
-        const response = await this.client.post('/api/v1/memory', data);
+        const response = await this.client.post('/api/v1/memories', data);
         return response.data;
     }
     async getMemories(params = {}) {
-        const response = await this.client.get('/api/v1/memory', { params });
+        const response = await this.client.get('/api/v1/memories', { params });
         return response.data;
     }
     async getMemory(id) {
-        const response = await this.client.get(`/api/v1/memory/${id}`);
+        const response = await this.client.get(`/api/v1/memories/${id}`);
         return response.data;
     }
     async updateMemory(id, data) {
-        const response = await this.client.put(`/api/v1/memory/${id}`, data);
+        const response = await this.client.put(`/api/v1/memories/${id}`, data);
         return response.data;
     }
     async deleteMemory(id) {
-        await this.client.delete(`/api/v1/memory/${id}`);
+        await this.client.delete(`/api/v1/memories/${id}`);
     }
     async searchMemories(query, options = {}) {
-        const response = await this.client.post('/api/v1/memory/search', {
+        const response = await this.client.post('/api/v1/memories/search', {
             query,
             ...options
         });
         return response.data;
     }
     async getMemoryStats() {
-        const response = await this.client.get('/api/v1/memory/stats');
+        const response = await this.client.get('/api/v1/memories/stats');
         return response.data;
     }
     async bulkDeleteMemories(memoryIds) {
-        const response = await this.client.post('/api/v1/memory/bulk/delete', {
+        const response = await this.client.post('/api/v1/memories/bulk/delete', {
             memory_ids: memoryIds
         });
         return response.data;
