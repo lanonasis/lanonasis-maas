@@ -2,6 +2,14 @@ import { MemoryClient, createMemoryClient } from '@lanonasis/memory-client';
 import chalk from 'chalk';
 import ora from 'ora';
 
+// VortexAI L0 Integration - Universal Work Orchestrator
+import {
+  L0Orchestrator,
+  createPluginManager,
+  configureMemoryPlugin,
+  type L0Response
+} from 'vortexai-l0';
+
 export interface OrchestratorConfig {
   apiUrl: string;
   authToken?: string;
@@ -40,6 +48,11 @@ export class NaturalLanguageOrchestrator {
   private openaiApiKey?: string;
   private model: string;
   private userContext?: OrchestratorConfig['userContext'];
+  private cachedUserPreferences: string[] = []; // Cached user preferences/profile info
+  private contextInitialized: boolean = false;
+
+  // VortexAI L0 - Universal Work Orchestrator for broader capabilities
+  private l0Orchestrator: L0Orchestrator;
 
   constructor(config: OrchestratorConfig) {
     this.client = createMemoryClient({
@@ -47,6 +60,18 @@ export class NaturalLanguageOrchestrator {
       authToken: config.authToken,
       timeout: 30000
     });
+
+    // Configure L0's memory plugin with the same credentials
+    configureMemoryPlugin({
+      apiUrl: config.apiUrl,
+      authToken: config.authToken,
+      timeout: 30000
+    });
+
+    // Initialize L0 with all plugins including memory services
+    this.l0Orchestrator = new L0Orchestrator(
+      createPluginManager({ includeBuiltins: true, includeMemoryServices: true })
+    );
 
     this.openaiApiKey = config.openaiApiKey || process.env.OPENAI_API_KEY=REDACTED_OPENAI_API_KEY
     this.model = config.model || process.env.OPENAI_MODEL || 'gpt-4-turbo-preview';
@@ -57,6 +82,75 @@ export class NaturalLanguageOrchestrator {
       role: 'system',
       content: this.buildSystemPrompt(config.userContext)
     });
+  }
+
+  /**
+   * Initialize context by loading user preferences and profile from memories
+   * This should be called at startup to make the assistant context-aware
+   */
+  async initializeContext(): Promise<void> {
+    if (this.contextInitialized) return;
+
+    try {
+      // Search for user preferences and profile information
+      const preferencesSearch = await this.client.searchMemories({
+        query: 'user preferences settings profile configuration style',
+        status: 'active',
+        limit: 5,
+        threshold: 0.6
+      });
+
+      if (preferencesSearch.data?.results && preferencesSearch.data.results.length > 0) {
+        this.cachedUserPreferences = preferencesSearch.data.results.map((r: any) =>
+          `[${r.title}]: ${r.content.substring(0, 200)}`
+        );
+
+        // Update the system prompt with user context
+        this.updateSystemPromptWithContext();
+      }
+
+      this.contextInitialized = true;
+    } catch (error) {
+      // Silently fail - context loading is optional
+      this.contextInitialized = true;
+    }
+  }
+
+  /**
+   * Update the system prompt with loaded user context
+   */
+  private updateSystemPromptWithContext(): void {
+    if (this.cachedUserPreferences.length === 0) return;
+
+    const contextBlock = `\n\n--- USER CONTEXT (from their memories) ---\n${this.cachedUserPreferences.join('\n')}\n---\n\nUse this context to personalize your responses. Reference the user's stored preferences, projects, and knowledge when relevant.`;
+
+    // Append context to the system prompt
+    if (this.conversationHistory.length > 0 && this.conversationHistory[0].role === 'system') {
+      this.conversationHistory[0].content += contextBlock;
+    }
+  }
+
+  /**
+   * Fetch relevant context for a specific query from user's memories
+   */
+  async fetchRelevantContext(query: string, limit: number = 3): Promise<string[]> {
+    try {
+      const result = await this.client.searchMemories({
+        query,
+        status: 'active',
+        limit,
+        threshold: 0.65
+      });
+
+      if (result.data?.results && result.data.results.length > 0) {
+        return result.data.results.map((r: any) =>
+          `📌 ${r.title}: ${r.content.substring(0, 150)}${r.content.length > 150 ? '...' : ''}`
+        );
+      }
+    } catch (error) {
+      // Silently fail - context fetching is optional
+    }
+    return [];
   }
 
   private buildSystemPrompt(userContext?: OrchestratorConfig['userContext']): string {
@@ -119,22 +213,40 @@ Remember: You are LZero - be helpful, conversational, and make the experience fe
   }
 
   async processNaturalLanguage(input: string): Promise<OrchestratorResponse> {
-    // Add user message to history
+    // Ensure context is initialized (runs once)
+    if (!this.contextInitialized) {
+      await this.initializeContext();
+    }
+
+    // Proactively fetch relevant context from user's memories for this query
+    // This makes the assistant "context-aware" - it knows what the user has stored
+    const relevantContext = await this.fetchRelevantContext(input, 3);
+
+    // Add user message to history, optionally with context
+    const userMessage = relevantContext.length > 0
+      ? `${input}\n\n[Relevant context from your memories:\n${relevantContext.join('\n')}]`
+      : input;
+
     this.conversationHistory.push({
       role: 'user',
-      content: input
+      content: userMessage
     });
+
+    // If no OpenAI key, fall back to pattern matching with context awareness
+    if (!this.openaiApiKey) {
+      const response = await this.fallbackProcessor(input, relevantContext);
+      // Add to history for context continuity
+      this.conversationHistory.push({
+        role: 'assistant',
+        content: response.response
+      });
+      return response;
+    }
 
     // Use OpenAI to understand intent and generate response
     const spinner = ora('Processing...').start();
 
     try {
-      // If no OpenAI key, fall back to basic pattern matching
-      if (!this.openaiApiKey) {
-        spinner.stop();
-        return await this.fallbackProcessor(input);
-      }
-
       const response = await this.callOpenAI();
       spinner.stop();
 
@@ -144,11 +256,40 @@ Remember: You are LZero - be helpful, conversational, and make the experience fe
         content: response.response
       });
 
+      // Include fetched context in the response for display
+      if (relevantContext.length > 0 && !response.action) {
+        response.additionalContext = relevantContext.map((ctx, i) => ({
+          title: `Related Memory ${i + 1}`,
+          content: ctx.replace(/^📌\s*/, ''),
+          relevance: 85 - (i * 10) // Decreasing relevance
+        }));
+      }
+
       return response;
     } catch (error) {
-      spinner.fail('Error processing request');
-      // Fall back to basic processing
-      return await this.fallbackProcessor(input);
+      // Always stop spinner in error cases
+      spinner.stop();
+
+      // Log the actual error for debugging
+      const errorMessage = error instanceof Error ? error.message : String(error);
+
+      // Check for specific error types to provide better feedback
+      if (errorMessage.includes('401') || errorMessage.includes('Unauthorized')) {
+        console.log(chalk.yellow('\n⚠️  OpenAI API key may be invalid or expired.'));
+      } else if (errorMessage.includes('429') || errorMessage.includes('rate limit')) {
+        console.log(chalk.yellow('\n⚠️  Rate limited. Please wait a moment.'));
+      } else if (errorMessage.includes('timeout') || errorMessage.includes('ECONNREFUSED') || errorMessage.includes('network')) {
+        console.log(chalk.yellow('\n⚠️  Network issue connecting to OpenAI.'));
+      }
+
+      // Fall back to basic processing with personality and context
+      console.log(chalk.gray('Falling back to pattern matching...\n'));
+      const response = await this.fallbackProcessor(input, relevantContext);
+      this.conversationHistory.push({
+        role: 'assistant',
+        content: response.response
+      });
+      return response;
     }
   }
 
@@ -334,19 +475,55 @@ Remember: You are LZero - be helpful, conversational, and make the experience fe
     return responses[functionName] || 'Processing...';
   }
 
-  private async fallbackProcessor(input: string): Promise<OrchestratorResponse> {
-    const lowerInput = input.toLowerCase();
+  private async fallbackProcessor(input: string, relevantContext: string[] = []): Promise<OrchestratorResponse> {
+    const lowerInput = input.toLowerCase().trim();
+    const userName = this.userContext?.name;
+    const greeting = userName ? `${userName}` : 'there';
 
-    // Pattern matching for common intents
-    if (lowerInput.includes('remember') || lowerInput.includes('save') || lowerInput.includes('store')) {
-      // Extract content after "remember" or similar keywords
-      const content = input.replace(/^(remember|save|store)\s+/i, '');
+    // If we have relevant context and the user seems to be asking a question, reference it
+    if (relevantContext.length > 0 && (lowerInput.includes('?') || lowerInput.startsWith('what') || lowerInput.startsWith('how') || lowerInput.startsWith('where') || lowerInput.startsWith('when') || lowerInput.startsWith('why'))) {
+      const contextSummary = relevantContext.slice(0, 2).join('\n  ');
       return {
-        response: "I'll save that for you.",
+        response: `Based on what I found in your memories, ${greeting}:\n\n  ${contextSummary}\n\nWould you like me to search for more details?`,
+        mainAnswer: `Based on what I found in your memories:\n\n  ${contextSummary}`,
+        additionalContext: relevantContext.map((ctx, i) => ({
+          title: `Memory ${i + 1}`,
+          content: ctx.replace(/^📌\s*/, ''),
+          relevance: 90 - (i * 10)
+        }))
+      };
+    }
+
+    // Greeting patterns - LZero should respond conversationally
+    if (this.isGreeting(lowerInput)) {
+      const greetings = [
+        `Hey ${greeting}! 👋 I'm LZero, your memory assistant. What can I help you with today?`,
+        `Hello ${greeting}! Great to see you. Ready to help you manage your knowledge!`,
+        `Hi ${greeting}! 🧠 What's on your mind? I can remember things, search your knowledge, or help refine your prompts.`,
+      ];
+      return {
+        response: greetings[Math.floor(Math.random() * greetings.length)],
+        mainAnswer: greetings[Math.floor(Math.random() * greetings.length)]
+      };
+    }
+
+    // Pattern matching for common intents with personality
+    if (lowerInput.includes('remember') || lowerInput.includes('save') || lowerInput.includes('store') || lowerInput.includes('note')) {
+      // Extract content after keywords
+      const content = input.replace(/^(remember|save|store|note|keep|record)\s+(that\s+)?/i, '');
+      if (!content.trim()) {
+        return {
+          response: `Sure ${greeting}, I can remember that for you! What would you like me to save?`,
+          mainAnswer: `Sure ${greeting}, I can remember that for you! What would you like me to save?`
+        };
+      }
+      return {
+        response: `Got it, ${greeting}! 📝 I'll save that for you right now...`,
+        mainAnswer: `Got it, ${greeting}! 📝 I'll save that for you right now...`,
         action: {
           type: 'create',
           params: {
-            title: content.substring(0, 50),
+            title: content.substring(0, 50) + (content.length > 50 ? '...' : ''),
             content: content,
             memory_type: 'context'
           }
@@ -354,11 +531,18 @@ Remember: You are LZero - be helpful, conversational, and make the experience fe
       };
     }
 
-    if (lowerInput.includes('search') || lowerInput.includes('find') || lowerInput.includes('what do i know about')) {
+    if (lowerInput.includes('search') || lowerInput.includes('find') || lowerInput.includes('what do i know') || lowerInput.includes('look for') || lowerInput.includes('where is')) {
       // Extract search query
-      const query = input.replace(/^(search|find|what do i know about)\s+/i, '');
+      const query = input.replace(/^(search|find|look for|where is|what do i know about)\s+/i, '').replace(/\?$/, '');
+      if (!query.trim()) {
+        return {
+          response: `What would you like me to search for, ${greeting}? Just tell me what you're looking for!`,
+          mainAnswer: `What would you like me to search for, ${greeting}? Just tell me what you're looking for!`
+        };
+      }
       return {
-        response: "Searching your memories...",
+        response: `🔍 Let me search your memories for "${query}"...`,
+        mainAnswer: `🔍 Let me search your memories for "${query}"...`,
         action: {
           type: 'search',
           params: {
@@ -369,9 +553,10 @@ Remember: You are LZero - be helpful, conversational, and make the experience fe
       };
     }
 
-    if (lowerInput.includes('list') || lowerInput.includes('show me') || lowerInput.includes('my memories')) {
+    if (lowerInput.includes('list') || lowerInput.includes('show me') || lowerInput.includes('my memories') || lowerInput.includes('what have i saved') || lowerInput.includes('what do i have')) {
       return {
-        response: "Here are your recent memories:",
+        response: `📚 Here's what I've got saved for you, ${greeting}:`,
+        mainAnswer: `📚 Here's what I've got saved for you, ${greeting}:`,
         action: {
           type: 'list',
           params: {
@@ -382,81 +567,191 @@ Remember: You are LZero - be helpful, conversational, and make the experience fe
     }
 
     if (lowerInput.includes('delete') || lowerInput.includes('remove') || lowerInput.includes('forget')) {
-      // This requires a memory ID, so we'll ask for clarification
+      // Check if there's an ID provided
+      const idMatch = input.match(/[a-f0-9-]{36}/i);
+      if (idMatch) {
+        return {
+          response: `🗑️ Removing that memory for you...`,
+          mainAnswer: `🗑️ Removing that memory for you...`,
+          action: {
+            type: 'delete',
+            params: { id: idMatch[0] }
+          }
+        };
+      }
       return {
-        response: "To delete a memory, please provide the memory ID. You can find it by listing your memories first."
+        response: `I can help you forget something, ${greeting}! To delete a memory, I need its ID.\n\n💡 Tip: Run "list" or say "show my memories" to see IDs, then tell me which one to remove.`,
+        mainAnswer: `I can help you forget something, ${greeting}! To delete a memory, I need its ID.\n\n💡 Tip: Run "list" or say "show my memories" to see IDs, then tell me which one to remove.`
       };
     }
 
-    // Default response for unrecognized input
-    return {
-      response: `I'm not sure how to help with that. I can help you:
-- Save information: "remember that..."
-- Find information: "search for..."
-- List memories: "show my memories"
-- Get help: "help" or "?"
+    // Help patterns
+    if (lowerInput.includes('help') || lowerInput === '?' || lowerInput.includes('what can you do')) {
+      return {
+        response: `Hey ${greeting}! 🌪️ I'm LZero, your universal work orchestrator. Here's what I can do:
 
-You can also use direct commands like: create, search, list, get, delete`
+✨ **Memory & Knowledge**
+   "Remember that API key is xyz123"
+   "What do I know about TypeScript?"
+   "Show my memories"
+
+🎯 **Campaigns & Marketing**
+   "Create a viral TikTok campaign"
+   "Plan a product launch campaign"
+
+📝 **Content Creation**
+   "Create content strategy"
+   "Plan my content calendar"
+
+📈 **Analytics & Trends**
+   "Analyze trending hashtags"
+   "Show me current trends"
+
+🛠️ **Development**
+   "Debug this issue"
+   "Plan testing strategy"
+
+💡 **Pro Tips:**
+   • Just talk naturally - I understand intent!
+   • Powered by VortexAI L0 for universal orchestration
+   • Your memories make me context-aware`,
+        mainAnswer: `I'm LZero, your universal work orchestrator!`
+      };
+    }
+
+    // Route to VortexAI L0 for broader orchestration (campaigns, content, trends, etc.)
+    try {
+      const l0Response = await this.l0Orchestrator.query(input);
+
+      // If L0 handled it with a meaningful response (not general fallback), use it
+      if (l0Response && l0Response.type !== 'help' && l0Response.message) {
+        return this.convertL0Response(l0Response, greeting);
+      }
+    } catch (error) {
+      // L0 failed, continue to conversational fallback
+    }
+
+    // Conversational responses for truly unknown input
+    const conversationalResponses = [
+      `Hmm, I'm not quite sure what you mean, ${greeting}. Could you rephrase that?\n\n💡 I can help you: save information, search memories, orchestrate campaigns, or analyze trends.`,
+      `I want to help, ${greeting}, but I'm not sure how to handle that request.\n\nTry saying things like:\n• "Remember that..."\n• "Search for..."\n• "Create a viral campaign"`,
+      `That's interesting, ${greeting}! But I'm not sure how to act on it.\n\n🤔 Did you want me to save this as a memory? Just say "remember that" followed by what you want to save.`,
+    ];
+
+    return {
+      response: conversationalResponses[Math.floor(Math.random() * conversationalResponses.length)],
+      mainAnswer: conversationalResponses[Math.floor(Math.random() * conversationalResponses.length)]
     };
+  }
+
+  /**
+   * Convert L0 response to orchestrator response format
+   */
+  private convertL0Response(l0Response: L0Response, greeting: string): OrchestratorResponse {
+    let formattedResponse = l0Response.message;
+
+    // Add workflow steps if present
+    if (l0Response.workflow && l0Response.workflow.length > 0) {
+      formattedResponse += '\n\n📋 **Workflow:**\n' + l0Response.workflow.map(step => `  ${step}`).join('\n');
+    }
+
+    // Add agents if present
+    if (l0Response.agents && l0Response.agents.length > 0) {
+      formattedResponse += '\n\n🤖 **Agents:**\n' + l0Response.agents.map(agent => `  • ${agent}`).join('\n');
+    }
+
+    return {
+      response: formattedResponse,
+      mainAnswer: l0Response.message,
+      additionalContext: l0Response.related?.map((item, i) => ({
+        title: `Related ${i + 1}`,
+        content: item,
+        relevance: 80 - (i * 10)
+      }))
+    };
+  }
+
+  /**
+   * Check if input is a greeting
+   */
+  private isGreeting(input: string): boolean {
+    const greetings = ['hi', 'hello', 'hey', 'greetings', 'good morning', 'good afternoon', 'good evening', 'howdy', "what's up", 'yo', 'sup'];
+    return greetings.some(g => input === g || input.startsWith(g + ' ') || input.startsWith(g + ',') || input.startsWith(g + '!'));
   }
 
   async executeAction(action: OrchestratorResponse['action']): Promise<any> {
     if (!action) return null;
 
-    switch (action.type) {
-      case 'create':
-        return await this.client.createMemory({
-          title: action.params.title || '',
-          content: action.params.content || '',
-          memory_type: (action.params.memory_type || 'context') as 'context' | 'project' | 'knowledge' | 'reference' | 'personal' | 'workflow',
-          tags: action.params.tags || []
-        });
+    try {
+      switch (action.type) {
+        case 'create':
+          return await this.client.createMemory({
+            title: action.params.title || '',
+            content: action.params.content || '',
+            memory_type: (action.params.memory_type || 'context') as 'context' | 'project' | 'knowledge' | 'reference' | 'personal' | 'workflow',
+            tags: action.params.tags || []
+          });
 
-      case 'search':
-        const searchResult = await this.client.searchMemories({
-          query: action.params.query || '',
-          status: 'active',
-          limit: action.params.limit || 10,
-          threshold: action.params.threshold || 0.7
-        });
-        
-        // Enhance search results with structured response
-        if (searchResult.data?.results && searchResult.data.results.length > 0) {
-          const results = searchResult.data.results;
-          const mainResult = results[0]; // Most relevant result
-          const additionalResults = results.slice(1); // Other relevant results
-          
-          return {
-            ...searchResult,
-            enhanced: {
-              mainResult,
-              additionalResults: additionalResults.map((r: any) => ({
-                title: r.title,
-                content: r.content.substring(0, 200),
-                relevance: r.similarity ? r.similarity * 100 : undefined
-              }))
-            }
-          };
-        }
-        return searchResult;
+        case 'search':
+          const searchResult = await this.client.searchMemories({
+            query: action.params.query || '',
+            status: 'active',
+            limit: action.params.limit || 10,
+            threshold: action.params.threshold || 0.7
+          });
 
-      case 'list':
-        return await this.client.listMemories({
-          limit: action.params.limit || 10
-        });
+          // Enhance search results with structured response
+          if (searchResult.data?.results && searchResult.data.results.length > 0) {
+            const results = searchResult.data.results;
+            const mainResult = results[0]; // Most relevant result
+            const additionalResults = results.slice(1); // Other relevant results
 
-      case 'get':
-        return await this.client.getMemory(action.params.id);
+            return {
+              ...searchResult,
+              enhanced: {
+                mainResult,
+                additionalResults: additionalResults.map((r: any) => ({
+                  title: r.title,
+                  content: r.content.substring(0, 200),
+                  relevance: r.similarity ? r.similarity * 100 : undefined
+                }))
+              }
+            };
+          }
+          return searchResult;
 
-      case 'delete':
-        return await this.client.deleteMemory(action.params.id);
+        case 'list':
+          return await this.client.listMemories({
+            limit: action.params.limit || 10
+          });
 
-      case 'optimize_prompt':
-        // Optimize prompt using OpenAI
-        return await this.optimizePrompt(action.params.original_prompt, action.params.context);
+        case 'get':
+          return await this.client.getMemory(action.params.id);
 
-      default:
-        return null;
+        case 'delete':
+          return await this.client.deleteMemory(action.params.id);
+
+        case 'optimize_prompt':
+          // Optimize prompt using OpenAI
+          return await this.optimizePrompt(action.params.original_prompt, action.params.context);
+
+        default:
+          return { error: `Unknown action type: ${action.type}` };
+      }
+    } catch (error) {
+      // Return error object instead of throwing - keeps REPL alive
+      const errorMessage = error instanceof Error ? error.message : String(error);
+
+      // Provide helpful context based on error type
+      if (errorMessage.includes('401') || errorMessage.includes('Unauthorized')) {
+        return { error: 'Authentication failed. Try running: onasis-repl login' };
+      } else if (errorMessage.includes('404') || errorMessage.includes('not found')) {
+        return { error: 'Memory not found. It may have been deleted.' };
+      } else if (errorMessage.includes('timeout') || errorMessage.includes('ECONNREFUSED')) {
+        return { error: 'Could not connect to the memory service. Check your network or API URL.' };
+      }
+
+      return { error: errorMessage };
     }
   }
 
