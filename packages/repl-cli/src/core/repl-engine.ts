@@ -103,14 +103,9 @@ export class ReplEngine {
     console.log(chalk.cyan('━'.repeat(50)));
     console.log(chalk.gray(`Mode: ${this.context.mode} | API: ${this.config.apiUrl || 'https://api.lanonasis.com'}`));
     console.log(chalk.gray(`Natural Language: ${this.nlMode ? chalk.green('ON') : chalk.yellow('OFF')}`));
-    // Show L0/LZero status
+    // Show L0/LZero status (vendor details hidden from users)
     const l0Enabled = this.config.l0?.enabled !== false;
     console.log(chalk.gray(`LZero Orchestrator: ${l0Enabled ? chalk.green('ACTIVE') : chalk.yellow('OFF')}`));
-    if (this.config.openaiApiKey) {
-      console.log(chalk.gray(`AI Model: ${this.config.openaiModel || 'gpt-4-turbo-preview'}`));
-    } else {
-      console.log(chalk.yellow(`⚠️  No OpenAI key - using LZero pattern matching`));
-    }
     // Show user profile if available
     const userName = this.config.userProfile?.name || this.config.userContext?.name;
     const userEmail = this.config.userProfile?.email;
