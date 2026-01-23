@@ -212,9 +212,10 @@ export class CoreMemoryClient {
     }
 
     // Handle gateway vs direct API URL formatting
-    const baseUrl = this.config.apiUrl.includes('/api')
-      ? this.config.apiUrl.replace('/api', '')
-      : this.config.apiUrl;
+    // Strip any trailing /api, /api/v1, or /api/v1/ suffixes to avoid double paths
+    let baseUrl = this.config.apiUrl;
+    baseUrl = baseUrl.replace(/\/api\/v1\/?$/, '');  // Remove /api/v1 or /api/v1/
+    baseUrl = baseUrl.replace(/\/api\/?$/, '');       // Remove /api or /api/
 
     const url = `${baseUrl}/api/v1${endpoint}`;
 
@@ -449,7 +450,8 @@ export class CoreMemoryClient {
     });
 
     const queryString = params.toString();
-    const endpoint = queryString ? `/memories?${queryString}` : '/memories';
+    // Use /memory/list endpoint (not /memories - blocked by CDN/proxy layer)
+    const endpoint = queryString ? `/memory/list?${queryString}` : '/memory/list';
 
     return this.request<PaginatedResponse<MemoryEntry>>(endpoint);
   }
