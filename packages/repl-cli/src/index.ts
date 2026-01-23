@@ -21,10 +21,26 @@ import {
 
 const program = new Command();
 
+import { readFileSync } from 'fs';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
+
+// Get version from package.json to ensure consistency
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const packageJsonPath = join(__dirname, '..', 'package.json');
+let version = '0.9.0';
+try {
+  const packageJson = JSON.parse(readFileSync(packageJsonPath, 'utf-8'));
+  version = packageJson.version || version;
+} catch {
+  // Fallback to hardcoded version if package.json can't be read
+}
+
 program
   .name('onasis-repl')
   .description('LanOnasis Interactive Memory Assistant')
-  .version('0.7.0');
+  .version(version);
 
 program
   .command('start', { isDefault: true })
