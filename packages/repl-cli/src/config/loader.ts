@@ -1,21 +1,24 @@
 import { readFileSync, existsSync, mkdirSync, writeFileSync } from 'fs';
-import { join } from 'path';
-import { homedir } from 'os';
 import { ReplConfig } from './types.js';
-
-const CONFIG_DIR = join(homedir(), '.lanonasis');
-const CONFIG_FILE = join(CONFIG_DIR, 'repl-config.json');
+import {
+  CONFIG_DIR,
+  CONFIG_FILE,
+  HISTORY_FILE,
+  DEFAULT_API_URL,
+  DEFAULT_OPENAI_MODEL,
+  DEFAULT_MAX_HISTORY_SIZE
+} from './constants.js';
 
 const DEFAULT_CONFIG: ReplConfig = {
-  apiUrl: process.env.MEMORY_API_URL || 'https://api.lanonasis.com',
+  apiUrl: process.env.MEMORY_API_URL || DEFAULT_API_URL,
   useMCP: false,
   mcpServerPath: undefined,
   authToken: process.env.LANONASIS_API_KEY || process.env.MEMORY_API_KEY,
   vendorKey: process.env.LANONASIS_VENDOR_KEY,
   openaiApiKey: process.env.OPENAI_API_KEY,
-  openaiModel: process.env.OPENAI_MODEL || 'gpt-4-turbo-preview',
-  historyFile: join(CONFIG_DIR, 'repl-history.txt'),
-  maxHistorySize: 1000,
+  openaiModel: process.env.OPENAI_MODEL || DEFAULT_OPENAI_MODEL,
+  historyFile: HISTORY_FILE,
+  maxHistorySize: DEFAULT_MAX_HISTORY_SIZE,
   userContext: process.env.USER_NAME || process.env.USER ? {
     name: process.env.USER_NAME || process.env.USER
   } : undefined
