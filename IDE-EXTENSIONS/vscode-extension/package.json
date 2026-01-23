@@ -2,7 +2,7 @@
   "name": "lanonasis-memory",
   "displayName": "LanOnasis Memory Assistant",
   "description": "Memory as a Service integration - AI-powered memory management with semantic search (Compatible with CLI v3.0.6+)",
-  "version": "2.0.9",
+  "version": "2.1.0",
   "publisher": "LanOnasis",
   "icon": "images/icon.png",
   "repository": {
@@ -682,7 +682,7 @@
   "dependencies": {
     "@emotion/is-prop-valid": "^1.4.0",
     "@lanonasis/ide-extension-core": "file:../../packages/ide-extension-core",
-    "@lanonasis/memory-client": "^2.2.0",
+    "@lanonasis/memory-client": "file:../../packages/memory-client",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
     "framer-motion": "^12.26.1",
@@ -705,7 +705,7 @@
     "@typescript-eslint/parser": "^8.49.0",
     "@vitejs/plugin-react": "^5.1.2",
     "@vscode/test-electron": "^2.5.2",
-    "@vscode/vsce": "^3.9.0",
+    "@vscode/vsce": "^3.7.1",
     "autoprefixer": "^10.4.22",
     "css-loader": "^7.1.2",
     "esbuild": "^0.27.2",
