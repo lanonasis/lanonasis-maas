@@ -466,7 +466,15 @@ export class LanonasisMCPServer {
               text: `Authentication Error: ${error instanceof Error ? error.message : 'Authentication failed'}`
             }
           ],
-          isError: true
+          isError: true,
+          task: {
+            taskId: `${clientId}-${Date.now()}`,
+            status: 'failed' as const,
+            ttl: null,
+            createdAt: new Date().toISOString(),
+            lastUpdatedAt: new Date().toISOString(),
+            statusMessage: 'Authentication failed'
+          }
         };
       }
 
@@ -480,7 +488,14 @@ export class LanonasisMCPServer {
               type: 'text',
               text: JSON.stringify(result, null, 2)
             }
-          ]
+          ],
+          task: {
+            taskId: `${clientId}-${Date.now()}`,
+            status: 'completed' as const,
+            ttl: null,
+            createdAt: new Date().toISOString(),
+            lastUpdatedAt: new Date().toISOString()
+          }
         };
       } catch (error) {
         return {
@@ -490,7 +505,15 @@ export class LanonasisMCPServer {
               text: `Error: ${error instanceof Error ? error.message : 'Unknown error'}`
             }
           ],
-          isError: true
+          isError: true,
+          task: {
+            taskId: `${clientId}-${Date.now()}`,
+            status: 'failed' as const,
+            ttl: null,
+            createdAt: new Date().toISOString(),
+            lastUpdatedAt: new Date().toISOString(),
+            statusMessage: error instanceof Error ? error.message : 'Unknown error'
+          }
         };
       }
     });
