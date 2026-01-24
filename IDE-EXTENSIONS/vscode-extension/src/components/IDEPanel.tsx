@@ -1016,12 +1016,12 @@ export const IDEPanel = () => {
                   {/* Chat History */}
                   <div ref={chatScrollRef} className="flex-1 overflow-y-auto p-3 space-y-3">
                     {!isAuthenticated ? (
-                      <div className="text-[13px] text-[var(--vscode-descriptionForeground)] flex items-center justify-center text-center italic opacity-80 py-4">
+                      <div className="text-[13px] text-[var(--vscode-foreground)] flex items-center justify-center text-center italic opacity-90 py-4">
                         Please connect to enable AI assistance.
                       </div>
                     ) : chatHistory.length === 0 && !isChatLoading ? (
-                      <div className="text-[13px] text-[var(--vscode-descriptionForeground)] flex items-center justify-center text-center italic opacity-80 py-4">
-                        <Lightbulb className="h-4 w-4 mr-2 opacity-60" />
+                      <div className="text-[13px] text-[var(--vscode-foreground)] flex items-center justify-center text-center italic opacity-90 py-4">
+                        <Lightbulb className="h-4 w-4 mr-2 text-[var(--vscode-button-background)]" />
                         Ask me to recall context or refine prompts.
                       </div>
                     ) : (
