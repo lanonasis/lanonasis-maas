@@ -234,17 +234,32 @@ export class SecureApiKeyService {
             this.log('Starting Device Code authentication flow...');
 
             // Step 1: Request device code
-            const deviceResponse = await fetch(`${authUrl}/oauth/device`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json'
-                },
-                body: JSON.stringify({
-                    client_id: clientId,
-                    scope: 'memories:read memories:write memories:delete'
-                })
-            });
+            const deviceController = new AbortController();
+            const deviceTimeoutId = setTimeout(() => deviceController.abort(), SecureApiKeyService.TOKEN_EXCHANGE_TIMEOUT_MS);
+
+            let deviceResponse: Response;
+            try {
+                deviceResponse = await fetch(`${authUrl}/oauth/device`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        client_id: clientId,
+                        scope: 'memories:read memories:write memories:delete'
+                    }),
+                    signal: deviceController.signal
+                });
+            } catch (error) {
+                clearTimeout(deviceTimeoutId);
+                if (error instanceof Error && error.name === 'AbortError') {
+                    throw new Error(`Device code request timed out after ${SecureApiKeyService.TOKEN_EXCHANGE_TIMEOUT_MS / 1000} seconds. Please check your network connection.`);
+                }
+                throw error;
+            } finally {
+                clearTimeout(deviceTimeoutId);
+            }
 
             if (!deviceResponse.ok) {
                 const errorText = await deviceResponse.text();
@@ -301,18 +316,27 @@ export class SecureApiKeyService {
                     await new Promise(resolve => setTimeout(resolve, pollInterval));
 
                     try {
-                        const tokenResponse = await fetch(`${authUrl}/oauth/token`, {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/x-www-form-urlencoded',
-                                'Accept': 'application/json'
-                            },
-                            body: new URLSearchParams({
-                                grant_type: grantType,
-                                device_code: deviceData.device_code,
-                                client_id: clientId
-                            }).toString()
-                        });
+                        const pollController = new AbortController();
+                        const pollTimeoutId = setTimeout(() => pollController.abort(), SecureApiKeyService.TOKEN_EXCHANGE_TIMEOUT_MS);
+
+                        let tokenResponse: Response;
+                        try {
+                            tokenResponse = await fetch(`${authUrl}/oauth/token`, {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/x-www-form-urlencoded',
+                                    'Accept': 'application/json'
+                                },
+                                body: new URLSearchParams({
+                                    grant_type: grantType,
+                                    device_code: deviceData.device_code,
+                                    client_id: clientId
+                                }).toString(),
+                                signal: pollController.signal
+                            });
+                        } finally {
+                            clearTimeout(pollTimeoutId);
+                        }
 
                         const tokenData = await tokenResponse.json() as {
                             access_token?: string;
@@ -613,14 +637,30 @@ export class SecureApiKeyService {
                 refresh_token: refreshToken
             });
 
-            const response = await fetch(tokenUrl.toString(), {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                    'Accept': 'application/json'
-                },
-                body: body.toString()
-            });
+            const refreshController = new AbortController();
+            const refreshTimeoutId = setTimeout(() => refreshController.abort(), SecureApiKeyService.TOKEN_EXCHANGE_TIMEOUT_MS);
+
+            let response: Response;
+            try {
+                response = await fetch(tokenUrl.toString(), {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'Accept': 'application/json'
+                    },
+                    body: body.toString(),
+                    signal: refreshController.signal
+                });
+            } catch (error) {
+                clearTimeout(refreshTimeoutId);
+                if (error instanceof Error && error.name === 'AbortError') {
+                    this.logError('Token refresh timed out', `Timeout after ${SecureApiKeyService.TOKEN_EXCHANGE_TIMEOUT_MS / 1000} seconds`);
+                    return null;
+                }
+                throw error;
+            } finally {
+                clearTimeout(refreshTimeoutId);
+            }
 
             if (!response.ok) {
                 const errorText = await response.text();
@@ -739,6 +779,8 @@ export class SecureApiKeyService {
     /**
      * Exchange OAuth authorization code for token
      */
+    private static readonly TOKEN_EXCHANGE_TIMEOUT_MS = 30000; // 30 seconds
+
     private async exchangeCodeForToken(
         code: string,
         codeVerifier: string,
@@ -755,14 +797,29 @@ export class SecureApiKeyService {
             code_verifier: codeVerifier
         });
 
-        const response = await fetch(tokenUrl.toString(), {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
-                'Accept': 'application/json'
-            },
-            body: body.toString()
-        });
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), SecureApiKeyService.TOKEN_EXCHANGE_TIMEOUT_MS);
+
+        let response: Response;
+        try {
+            response = await fetch(tokenUrl.toString(), {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'Accept': 'application/json'
+                },
+                body: body.toString(),
+                signal: controller.signal
+            });
+        } catch (error) {
+            clearTimeout(timeoutId);
+            if (error instanceof Error && error.name === 'AbortError') {
+                throw new Error(`Token exchange timed out after ${SecureApiKeyService.TOKEN_EXCHANGE_TIMEOUT_MS / 1000} seconds. Please check your network connection and try again.`);
+            }
+            throw error;
+        } finally {
+            clearTimeout(timeoutId);
+        }
 
         if (!response.ok) {
             const errorText = await response.text();
