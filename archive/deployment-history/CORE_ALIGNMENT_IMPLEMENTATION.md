@@ -169,15 +169,15 @@ curl -X OPTIONS "https://your-domain.com/api/v1/memory" \
 ### **Environment Variables Required**
 ```bash
 # Core Variables (Already set)
-SUPABASE_URL=https://<project-ref>.supabase.co
-SUPABASE_SERVICE_KEY=REDACTED_SUPABASE_SERVICE_ROLE_KEY
+https://<project-ref>.supabase.co
+REDACTED_SUPABASE_SERVICE_ROLE_KEY=REDACTED_SUPABASE_SERVICE_ROLE_KEY
 
 # New Variables for Enhanced Security
 ALLOWED_ORIGINS=https://dashboard.lanonasis.com,https://docs.lanonasis.com,https://api.lanonasis.com
 NODE_ENV=production
 
 # Optional (defaults provided)
-JWT_SECRET=REDACTED_JWT_SECRET
+REDACTED_JWT_SECRET=REDACTED_JWT_SECRET
 CENTRAL_AUTH_URL=https://api.lanonasis.com/v1/auth
 ```
 

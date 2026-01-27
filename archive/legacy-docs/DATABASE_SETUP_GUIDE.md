@@ -60,9 +60,9 @@ supabase db push --db-url "postgresql://<user>:<password>@<host>:<port>/<db>"
 Update `.env` file with correct credentials:
 ```env
 # Supabase Configuration
-SUPABASE_URL=https://<project-ref>.supabase.co
+https://<project-ref>.supabase.co
 SUPABASE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-SUPABASE_SERVICE_KEY=REDACTED_SUPABASE_SERVICE_ROLE_KEY
+REDACTED_SUPABASE_SERVICE_ROLE_KEY=REDACTED_SUPABASE_SERVICE_ROLE_KEY
 
 # Unified Router Configuration
 USE_UNIFIED_ROUTER=false  # true for production

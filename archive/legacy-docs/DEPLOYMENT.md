@@ -263,13 +263,13 @@ memory --help
 
 ```bash
 # Database Configuration
-DATABASE_URL=postgresql://<user>:<password>@<host>:<port>/<db>
-SUPABASE_URL=https://<project-ref>.supabase.co
+postgresql://<user>:<password>@<host>:<port>/<db>
+https://<project-ref>.supabase.co
 SUPABASE_KEY=your-supabase-anon-key
-SUPABASE_SERVICE_KEY=REDACTED_SUPABASE_SERVICE_ROLE_KEY
+REDACTED_SUPABASE_SERVICE_ROLE_KEY=REDACTED_SUPABASE_SERVICE_ROLE_KEY
 
 # Authentication
-JWT_SECRET=REDACTED_JWT_SECRET
+REDACTED_JWT_SECRET=REDACTED_JWT_SECRET
 API_KEY_ENCRYPTION_KEY=your-encryption-key-for-api-keys
 
 # OpenAI Integration
@@ -306,7 +306,7 @@ SMTP_USER=your-email@gmail.com
 SMTP_PASSWORD=your-app-password
 
 # Webhook Configuration
-WEBHOOK_SECRET=REDACTED_WEBHOOK_SECRET
+REDACTED_WEBHOOK_SECRET=REDACTED_WEBHOOK_SECRET
 
 # Storage Configuration
 MAX_MEMORY_SIZE=10000

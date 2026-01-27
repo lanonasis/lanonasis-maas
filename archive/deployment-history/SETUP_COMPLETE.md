@@ -38,7 +38,7 @@ Your orchestrator and database setup is **COMPLETE** and ready for use!
 
 1. **Start Development Server**:
    ```bash
-   JWT_SECRET=REDACTED_JWT_SECRET
+REDACTED_JWT_SECRET=REDACTED_JWT_SECRET
    ```
 
 2. **Test Orchestrator**:

@@ -323,9 +323,9 @@ Validation: Supabase auth.getUser()
 
 ### Netlify Functions (onasis-core)
 ```env
-SUPABASE_URL=https://<project-ref>.supabase.co
-SUPABASE_SERVICE_KEY=REDACTED_SUPABASE_SERVICE_ROLE_KEY
-JWT_SECRET=REDACTED_JWT_SECRET
+https://<project-ref>.supabase.co
+REDACTED_SUPABASE_SERVICE_ROLE_KEY=REDACTED_SUPABASE_SERVICE_ROLE_KEY
+REDACTED_JWT_SECRET=REDACTED_JWT_SECRET
 ```
 
 ### CLI (lanonasis-maas/cli)

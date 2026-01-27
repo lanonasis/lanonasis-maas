@@ -80,9 +80,9 @@ Set these in Vercel Dashboard → Project Settings → Environment Variables:
 
 ```env
 # Supabase Configuration
-SUPABASE_URL=https://<project-ref>.supabase.co
-SUPABASE_SERVICE_KEY=REDACTED_SUPABASE_SERVICE_ROLE_KEY
-SUPABASE_ANON_KEY=REDACTED_SUPABASE_ANON_KEY
+https://<project-ref>.supabase.co
+REDACTED_SUPABASE_SERVICE_ROLE_KEY=REDACTED_SUPABASE_SERVICE_ROLE_KEY
+REDACTED_SUPABASE_ANON_KEY=REDACTED_SUPABASE_ANON_KEY
 
 # OpenAI (for embeddings)
 OPENAI_API_KEY=REDACTED_OPENAI_API_KEY

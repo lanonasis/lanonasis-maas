@@ -119,9 +119,9 @@ curl https://developer.lanonasis.com/docs
 Both platforms need the same environment variables:
 
 ```env
-SUPABASE_URL=https://<project-ref>.supabase.co
-SUPABASE_SERVICE_KEY=REDACTED_SUPABASE_SERVICE_ROLE_KEY
-SUPABASE_ANON_KEY=REDACTED_SUPABASE_ANON_KEY
+https://<project-ref>.supabase.co
+REDACTED_SUPABASE_SERVICE_ROLE_KEY=REDACTED_SUPABASE_SERVICE_ROLE_KEY
+REDACTED_SUPABASE_ANON_KEY=REDACTED_SUPABASE_ANON_KEY
 OPENAI_API_KEY=REDACTED_OPENAI_API_KEY
 NODE_ENV=production
 ```

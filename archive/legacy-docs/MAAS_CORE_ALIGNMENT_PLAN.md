@@ -149,8 +149,8 @@ export const centralAuth = async (req: Request, res: Response, next: NextFunctio
 ```bash
 ALLOWED_ORIGINS=https://dashboard.lanonasis.com,https://docs.lanonasis.com,https://api.lanonasis.com
 CENTRAL_AUTH_URL=https://api.lanonasis.com/auth/validate
-SUPABASE_URL=https://<project-ref>.supabase.co
-SUPABASE_SERVICE_ROLE_KEY=REDACTED_SUPABASE_SERVICE_ROLE_KEY
+https://<project-ref>.supabase.co
+REDACTED_SUPABASE_SERVICE_ROLE_KEY=REDACTED_SUPABASE_SERVICE_ROLE_KEY
 ALIGNMENT_ENFORCED=false  # Feature flag for rollout
 ```
 

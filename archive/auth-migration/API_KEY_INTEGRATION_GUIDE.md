@@ -252,8 +252,8 @@ class PaymentAgent {
 API_KEY_ENCRYPTION_KEY=your-32-char-encryption-key
 
 # Database connection
-SUPABASE_URL=https://<project-ref>.supabase.co
-SUPABASE_SERVICE_KEY=REDACTED_SUPABASE_SERVICE_ROLE_KEY
+https://<project-ref>.supabase.co
+REDACTED_SUPABASE_SERVICE_ROLE_KEY=REDACTED_SUPABASE_SERVICE_ROLE_KEY
 
 # For MCP integration
 MCP_SERVER_PORT=3001

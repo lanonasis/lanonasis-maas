@@ -227,14 +227,14 @@ HOST=localhost
 # SUPABASE DATABASE CONFIGURATION
 # Get these from: https://supabase.com/dashboard/project/your-project/settings/api
 # ============================================
-SUPABASE_URL=https://<project-ref>.supabase.co
+https://<project-ref>.supabase.co
 SUPABASE_KEY=your-anon-key-here
-SUPABASE_SERVICE_KEY=REDACTED_SUPABASE_SERVICE_ROLE_KEY
+REDACTED_SUPABASE_SERVICE_ROLE_KEY=REDACTED_SUPABASE_SERVICE_ROLE_KEY
 
 # ============================================
 # AUTHENTICATION
 # ============================================
-JWT_SECRET=REDACTED_JWT_SECRET
+REDACTED_JWT_SECRET=REDACTED_JWT_SECRET
 AUTH_REDIRECT_URL=http://localhost:3000/auth/callback
 
 # ============================================

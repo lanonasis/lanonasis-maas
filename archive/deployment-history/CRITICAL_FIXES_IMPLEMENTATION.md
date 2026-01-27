@@ -58,15 +58,15 @@ PORT=3000
 HOST=0.0.0.0
 
 # Supabase Configuration (Required)
-SUPABASE_URL=https://<project-ref>.supabase.co
+https://<project-ref>.supabase.co
 SUPABASE_KEY=your_supabase_anon_key_here
-SUPABASE_SERVICE_KEY=REDACTED_SUPABASE_SERVICE_ROLE_KEY
+REDACTED_SUPABASE_SERVICE_ROLE_KEY=REDACTED_SUPABASE_SERVICE_ROLE_KEY
 
 # OpenAI Configuration (Required for embeddings)
 OPENAI_API_KEY=REDACTED_OPENAI_API_KEY
 
 # JWT Configuration (Required)
-JWT_SECRET=REDACTED_JWT_SECRET
+REDACTED_JWT_SECRET=REDACTED_JWT_SECRET
 JWT_EXPIRES_IN=7d
 
 # Redis Configuration (Optional)
