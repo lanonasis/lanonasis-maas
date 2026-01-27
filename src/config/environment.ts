@@ -9,12 +9,12 @@ const envSchema = z.object({
   HOST: z.string().default('localhost'),
   
   // Database
-  SUPABASE_URL=https://<project-ref>.supabase.co
+https://<project-ref>.supabase.co
   SUPABASE_KEY: z.string().min(1),
-  SUPABASE_SERVICE_KEY=REDACTED_SUPABASE_SERVICE_ROLE_KEY
+REDACTED_SUPABASE_SERVICE_ROLE_KEY=REDACTED_SUPABASE_SERVICE_ROLE_KEY
   
   // Authentication
-  JWT_SECRET=REDACTED_JWT_SECRET
+REDACTED_JWT_SECRET=REDACTED_JWT_SECRET
   JWT_EXPIRES_IN: z.string().default('24h'),
   
   // API Key Configuration

@@ -5,8 +5,8 @@ const DEFAULT_OPENAI_COST_PER_1K = 0.00002; // USD
 const DEFAULT_AZURE_COST_PER_1K = 0.00002; // Align with OpenAI small embedding model
 
 const rawConfigSchema = z.object({
-  SUPABASE_URL=https://<project-ref>.supabase.co
-  SUPABASE_SERVICE_KEY=REDACTED_SUPABASE_SERVICE_ROLE_KEY
+https://<project-ref>.supabase.co
+REDACTED_SUPABASE_SERVICE_ROLE_KEY=REDACTED_SUPABASE_SERVICE_ROLE_KEY
 
   EMBEDDING_PROVIDER_PRIORITY: z.string().optional(),
   EMBEDDING_MAX_RETRIES: z.coerce.number().min(0).max(10).default(3),

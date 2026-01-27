@@ -44,10 +44,10 @@ Create `.env` file:
 
 ```bash
 # Database Configuration
-DATABASE_URL=postgresql://<user>:<password>@<host>:<port>/<db>
-SUPABASE_URL=https://<project-ref>.supabase.co
-SUPABASE_SERVICE_KEY=REDACTED_SUPABASE_SERVICE_ROLE_KEY
-SUPABASE_ANON_KEY=REDACTED_SUPABASE_ANON_KEY
+postgresql://<user>:<password>@<host>:<port>/<db>
+https://<project-ref>.supabase.co
+REDACTED_SUPABASE_SERVICE_ROLE_KEY=REDACTED_SUPABASE_SERVICE_ROLE_KEY
+REDACTED_SUPABASE_ANON_KEY=REDACTED_SUPABASE_ANON_KEY
 
 # OpenAI Configuration
 OPENAI_API_KEY=REDACTED_OPENAI_API_KEY
@@ -58,7 +58,7 @@ NODE_ENV=production
 API_VERSION=v1
 
 # Security
-JWT_SECRET=REDACTED_JWT_SECRET
+REDACTED_JWT_SECRET=REDACTED_JWT_SECRET
 RATE_LIMIT_MAX=100
 RATE_LIMIT_WINDOW=15
 
@@ -1095,7 +1095,7 @@ services:
       - "8080:8080"
     environment:
       NODE_ENV: production
-      DATABASE_URL=postgresql://<user>:<password>@<host>:<port>/<db>
+postgresql://<user>:<password>@<host>:<port>/<db>
       OPENAI_API_KEY=REDACTED_OPENAI_API_KEY
       REDIS_URL: ${REDIS_URL}
     depends_on:

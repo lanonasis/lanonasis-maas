@@ -91,7 +91,7 @@ execute_sql_psql() {
     db_host=$(echo $SUPABASE_URL=https://<project-ref>.supabase.co
     
     # Use psql with SSL
-    PGPASSWORD=REDACTED_DB_PASSWORD
+REDACTED_DB_PASSWORD
         -h "$db_host" \
         -p 5432 \
         -U postgres \
