@@ -53,6 +53,8 @@ export declare class MCPClient {
     private retryAttempts;
     private maxRetries;
     private healthCheckInterval;
+    private healthCheckTimeout;
+    private wsReconnectTimeout;
     private connectionStartTime;
     private lastHealthCheck;
     private activeConnectionMode;

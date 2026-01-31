@@ -4,16 +4,7 @@ import { jest, beforeAll, afterAll, afterEach } from '@jest/globals';
 process.env.NODE_ENV = 'test';
 process.env.CLI_VERBOSE = 'false';
 
-// Configure test credentials for E2E tests
-if (!process.env.TEST_USERNAME) {
-  process.env.TEST_USERNAME = 'x@x.com';
-}
-if (!process.env.TEST_PASSWORD) {
-  process.env.TEST_PASSWORD = 'Laxxxxxxpassword';
-}
-if (!process.env.TEST_VENDOR_KEY) {
-  process.env.TEST_VENDOR_KEY = 'vx_pmtwfu***********';
-}
+// Configure test credentials for E2E tests only when explicitly provided
 
 // Configure service endpoints for production testing
 if (!process.env.AUTH_BASE) {
@@ -31,28 +22,6 @@ if (!process.env.MCP_WS_BASE) {
 if (!process.env.MCP_SSE_BASE) {
   process.env.MCP_SSE_BASE = 'https://mcp.lanonasis.com/api/v1/events';
 }
-
-// Provide a stable in-memory ApiKeyStorage for tests so vendor key flows
-// don't depend on system keychains or missing package builds.
-jest.mock('@lanonasis/oauth-client', () => {
-  class ApiKeyStorage {
-    private stored?: { apiKey: string };
-    async initialize(): Promise<void> {
-      return;
-    }
-    async store(data: { apiKey: string }): Promise<void> {
-      this.stored = { apiKey: data.apiKey };
-    }
-    async retrieve(): Promise<{ apiKey: string } | null> {
-      return this.stored ?? null;
-    }
-    async clear(): Promise<void> {
-      this.stored = undefined;
-    }
-  }
-
-  return { ApiKeyStorage };
-});
 
 // Mock console methods to reduce noise in tests
 const originalConsole = { ...console };

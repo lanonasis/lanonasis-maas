@@ -5,6 +5,8 @@ import { getMCPClient } from '../utils/mcp-client.js';
 import { EnhancedMCPClient } from '../mcp/client/enhanced-client.js';
 import { CLIConfig } from '../utils/config.js';
 import WebSocket from 'ws';
+import { dirname, join } from 'path';
+import { createConnectionManager } from '../ux/index.js';
 /**
  * Register MCP-related CLI commands (mcp and mcp-server) on a Commander program.
  *
@@ -79,6 +81,7 @@ export function mcpCommands(program) {
         .action(async (options) => {
         const spinner = ora('Connecting to MCP server...').start();
         const config = new CLIConfig();
+        await config.init();
         try {
             let connectionMode;
             // Determine connection mode - WebSocket takes precedence over remote and local
@@ -112,6 +115,28 @@ export function mcpCommands(program) {
             let connected = false;
             // Use Enhanced MCP Client for better connection handling
             const enhancedClient = new EnhancedMCPClient();
+            if (connectionMode === 'local' && !options.localArgs && !options.url) {
+                const configDir = dirname(config.getConfigPath());
+                const manager = createConnectionManager(join(configDir, 'mcp-config.json'));
+                if (options.server) {
+                    await manager.updateConfig({ localServerPath: options.server });
+                }
+                const result = await manager.connectLocal();
+                if (result.success) {
+                    spinner.succeed(chalk.green('Connected to local MCP server'));
+                    process.exit(0);
+                }
+                else {
+                    spinner.fail(result.error || 'Failed to connect to local MCP server');
+                    if (result.suggestions && result.suggestions.length > 0) {
+                        result.suggestions.forEach((suggestion) => {
+                            console.log(chalk.yellow(`  • ${suggestion}`));
+                        });
+                    }
+                    process.exit(1);
+                }
+                return;
+            }
             if (options.url) {
                 // Connect to specific URL (WebSocket or remote)
                 const serverConfig = {

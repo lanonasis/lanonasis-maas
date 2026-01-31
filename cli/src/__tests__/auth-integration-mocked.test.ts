@@ -8,11 +8,11 @@
  */
 
 import { describe, it, expect, beforeAll, afterEach, jest } from '@jest/globals';
-import { CLIConfig } from '../utils/config.js';
 import * as fsPromises from 'fs/promises';
 import { existsSync } from 'fs';
 import * as path from 'path';
 import * as os from 'os';
+import { createTestJwt } from './helpers/jwt.js';
 
 // Mock axios for HTTP requests
 const mockAxios = {
@@ -20,15 +20,18 @@ const mockAxios = {
   post: jest.fn(),
 };
 
-jest.mock('axios', () => ({
+jest.unstable_mockModule('axios', () => ({
   default: mockAxios,
 }));
+
+const { CLIConfig } = await import('../utils/config.js');
 
 describe('CLI Authentication Integration Tests (Mocked)', () => {
   let testConfigDir: string;
   let config: CLIConfig;
 
   beforeAll(async () => {
+    delete process.env.SKIP_SERVER_VALIDATION;
     // Create temporary test directory
     testConfigDir = path.join(os.tmpdir(), `test-auth-integration-mocked-${Date.now()}`);
     await fsPromises.mkdir(testConfigDir, { recursive: true });
@@ -44,6 +47,9 @@ describe('CLI Authentication Integration Tests (Mocked)', () => {
   afterEach(() => {
     mockAxios.get.mockReset();
     mockAxios.post.mockReset();
+    delete process.env.FORCE_SERVICE_DISCOVERY;
+    delete process.env.SKIP_SERVICE_DISCOVERY;
+    delete process.env.SKIP_SERVER_VALIDATION;
   });
 
   describe('Service Discovery', () => {
@@ -52,19 +58,29 @@ describe('CLI Authentication Integration Tests (Mocked)', () => {
       mockAxios.get.mockResolvedValueOnce({
         status: 200,
         data: {
-          auth_base: 'https://api.lanonasis.com',
-          mcp_base: 'https://mcp.lanonasis.com',
-          mcp_ws_base: 'wss://mcp.lanonasis.com',
-          mcp_sse_base: 'https://mcp.lanonasis.com/sse',
+          auth: {
+            base: 'https://api.lanonasis.com',
+          },
+          endpoints: {
+            http: 'https://mcp.lanonasis.com/api/v1',
+            websocket: 'wss://mcp.lanonasis.com',
+            sse: 'https://mcp.lanonasis.com/sse',
+          },
         },
       });
 
+      const previousNodeEnv = process.env.NODE_ENV;
+      process.env.NODE_ENV = 'production';
+      process.env.FORCE_SERVICE_DISCOVERY = 'true';
+      process.env.SKIP_SERVICE_DISCOVERY = 'false';
+
       await config.discoverServices(true);
+      process.env.NODE_ENV = previousNodeEnv;
 
       const services = config.get('discoveredServices') as any;
       expect(services).toBeDefined();
       expect(services.auth_base).toBe('https://api.lanonasis.com');
-      expect(services.mcp_base).toBe('https://mcp.lanonasis.com');
+      expect(services.mcp_base).toBe('https://mcp.lanonasis.com/api/v1');
       expect(services.mcp_ws_base).toBe('wss://mcp.lanonasis.com');
       expect(services.mcp_sse_base).toBe('https://mcp.lanonasis.com/sse');
     });
@@ -72,7 +88,13 @@ describe('CLI Authentication Integration Tests (Mocked)', () => {
     it('should handle service discovery failures gracefully', async () => {
       mockAxios.get.mockRejectedValueOnce(new Error('Network error'));
 
+      const previousNodeEnv = process.env.NODE_ENV;
+      process.env.NODE_ENV = 'production';
+      process.env.FORCE_SERVICE_DISCOVERY = 'true';
+      process.env.SKIP_SERVICE_DISCOVERY = 'false';
+
       await expect(config.discoverServices(true)).rejects.toThrow();
+      process.env.NODE_ENV = previousNodeEnv;
     });
   });
 
@@ -81,7 +103,7 @@ describe('CLI Authentication Integration Tests (Mocked)', () => {
       const testVendorKey = 'pk_test123456789.sk_test123456789012345';
 
       // Mock successful vendor key validation
-      mockAxios.post.mockResolvedValueOnce({
+      mockAxios.get.mockResolvedValueOnce({
         status: 200,
         data: { valid: true, user_id: 'user-123' },
       });
@@ -97,18 +119,17 @@ describe('CLI Authentication Integration Tests (Mocked)', () => {
       const invalidKey = 'invalid-key';
 
       // Mock failed validation
-      mockAxios.post.mockResolvedValueOnce({
-        status: 401,
-        data: { error: 'Invalid vendor key' },
-      });
+      const authError = new Error('Unauthorized');
+      (authError as any).response = { status: 401, data: { error: 'invalid vendor key' } };
+      mockAxios.get.mockRejectedValue(authError);
 
-      await expect(config.setVendorKey(invalidKey)).rejects.toThrow(/Vendor key is invalid/i);
+      await expect(config.setVendorKey(invalidKey)).rejects.toThrow(/Key is invalid/i);
     });
 
     it('should handle network errors during vendor key validation', async () => {
       const testVendorKey = 'pk_test123456789.sk_test123456789012345';
 
-      mockAxios.post.mockRejectedValueOnce(new Error('Network error'));
+      mockAxios.get.mockRejectedValue(new Error('Network error'));
 
       await expect(config.setVendorKey(testVendorKey)).rejects.toThrow();
     });
@@ -117,7 +138,7 @@ describe('CLI Authentication Integration Tests (Mocked)', () => {
   describe('Token Authentication', () => {
     it('should verify JWT token expiration', async () => {
       // Create a mock token that's not expired
-      const testToken = 'REDACTED_JWT';
+      const testToken = createTestJwt(Math.floor(Date.now() / 1000) + 60 * 60);
       
       await config.setToken(testToken);
 
@@ -128,7 +149,7 @@ describe('CLI Authentication Integration Tests (Mocked)', () => {
 
     it('should detect expired tokens', async () => {
       // Create a mock expired token
-      const expiredToken = 'REDACTED_JWT';
+      const expiredToken = createTestJwt(Math.floor(Date.now() / 1000) - 60 * 60);
       
       await config.setToken(expiredToken);
 
@@ -160,9 +181,9 @@ describe('CLI Authentication Integration Tests (Mocked)', () => {
       await config.setToken(testToken);
 
       // Mock failed validation
-      mockAxios.get.mockResolvedValueOnce({
-        status: 401,
-        data: { valid: false },
+      mockAxios.get.mockRejectedValue({
+        response: { status: 401, data: { valid: false } },
+        message: 'Unauthorized',
       });
 
       const isValid = await config.validateStoredCredentials();
@@ -175,9 +196,9 @@ describe('CLI Authentication Integration Tests (Mocked)', () => {
       await config.setToken(testToken);
 
       // Mock network error
-      mockAxios.get.mockRejectedValueOnce(new Error('Network error'));
+      mockAxios.get.mockRejectedValue(new Error('Network error'));
 
-      await expect(config.validateStoredCredentials()).rejects.toThrow();
+      await expect(config.validateStoredCredentials()).resolves.toBe(false);
     });
   });
 

@@ -1,8 +1,11 @@
 import chalk from 'chalk';
 import inquirer from 'inquirer';
+import { dirname, join } from 'path';
 import { CLIConfig } from '../utils/config.js';
+import { createOnboardingFlow } from '../ux/index.js';
 export async function initCommand(options) {
     const config = new CLIConfig();
+    await config.init();
     console.log(chalk.blue.bold('🚀 Initializing MaaS CLI'));
     console.log();
     // Check if config already exists
@@ -21,6 +24,15 @@ export async function initCommand(options) {
             return;
         }
     }
+    const onboardingConfigPath = join(dirname(config.getConfigPath()), 'onboarding.json');
+    const onboardingFlow = createOnboardingFlow(onboardingConfigPath);
+    const setupResult = await onboardingFlow.runInitialSetup();
+    if (!setupResult.completed && setupResult.issues && setupResult.issues.length > 0) {
+        console.log(chalk.yellow('⚠️  Onboarding completed with issues:'));
+        setupResult.issues.forEach((issue) => console.log(chalk.yellow(`  • ${issue}`)));
+    }
+    // Reload config after onboarding to preserve generated defaults
+    await config.load();
     // Get configuration
     const answers = await inquirer.prompt([
         {

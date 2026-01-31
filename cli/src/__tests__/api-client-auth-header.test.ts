@@ -1,6 +1,4 @@
 import { describe, it, expect, jest, beforeEach } from '@jest/globals';
-import { APIClient } from '../utils/api.js';
-import { CLIConfig } from '../utils/config.js';
 
 // Capture the request interceptor the API client registers so we can invoke it manually
 const requestHandlers: Array<(config: any) => any> = [];
@@ -20,13 +18,14 @@ const mockAxiosInstance = {
   defaults: {}
 };
 
-jest.mock('axios', () => ({
-  __esModule: true,
+jest.unstable_mockModule('axios', () => ({
   default: {
-    create: jest.fn(() => mockAxiosInstance)
+    create: jest.fn(() => mockAxiosInstance),
   },
-  create: jest.fn(() => mockAxiosInstance)
+  create: jest.fn(() => mockAxiosInstance),
 }));
+
+const { APIClient } = await import('../utils/api.js');
 
 describe('APIClient authentication headers', () => {
   beforeEach(() => {
@@ -37,7 +36,7 @@ describe('APIClient authentication headers', () => {
 
   it('prefers vendor key from secure storage when configuring requests', async () => {
     const client = new APIClient();
-    const config = (client as any).config as CLIConfig;
+    const config = (client as any).config;
 
     // Stub config methods to avoid filesystem/network calls
     config.init = jest.fn().mockResolvedValue(undefined);
@@ -64,7 +63,7 @@ describe('APIClient authentication headers', () => {
 
   it('falls back to JWT bearer auth when no vendor key is available', async () => {
     const client = new APIClient();
-    const config = (client as any).config as CLIConfig;
+    const config = (client as any).config;
 
     config.init = jest.fn().mockResolvedValue(undefined);
     config.discoverServices = jest.fn().mockResolvedValue(undefined);

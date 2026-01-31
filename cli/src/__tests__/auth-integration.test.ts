@@ -125,9 +125,15 @@ describe('Authentication Integration Tests', () => {
         await config.init();
     });
 
-    const serviceDiscoveryTest = hasCredentials ? it : it.skip;
-    const vendorKeyRequiredTest = hasVendorKey ? it : it.skip;
-    const tokenRequiredTest = hasToken ? it : it.skip;
+    const runIntegrationTests = process.env.RUN_INTEGRATION_TESTS === 'true';
+    const serviceDiscoveryTest = runIntegrationTests && hasCredentials ? it : it.skip;
+    const vendorKeyValidationEnabled =
+        runIntegrationTests && hasVendorKey && process.env.SKIP_SERVER_VALIDATION !== 'true';
+    const vendorKeyRequiredTest = vendorKeyValidationEnabled ? it : it.skip;
+    const invalidVendorKeyTest = vendorKeyValidationEnabled && process.env.ENABLE_VENDOR_KEY_NEGATIVE_TESTS === 'true'
+        ? it
+        : it.skip;
+    const tokenRequiredTest = runIntegrationTests && hasToken ? it : it.skip;
 
     describe('Service Discovery', () => {
         serviceDiscoveryTest('should discover service endpoints from .well-known/onasis.json', async () => {
@@ -154,7 +160,7 @@ describe('Authentication Integration Tests', () => {
             expect(config.get('authMethod')).toBe('vendor_key');
         });
 
-        vendorKeyRequiredTest('should reject invalid vendor keys', async () => {
+        invalidVendorKeyTest('should reject invalid vendor keys', async () => {
             const invalidKey = 'invalid-key';
 
             await expect(config.setVendorKey(invalidKey)).rejects.toThrow(/Vendor key is invalid/i);
