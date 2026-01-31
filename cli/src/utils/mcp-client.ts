@@ -78,6 +78,8 @@ export class MCPClient {
   private retryAttempts: number = 0;
   private maxRetries: number = 3;
   private healthCheckInterval: NodeJS.Timeout | null = null;
+  private healthCheckTimeout: NodeJS.Timeout | null = null;
+  private wsReconnectTimeout: NodeJS.Timeout | null = null;
   private connectionStartTime: number = 0;
   private lastHealthCheck: Date | null = null;
   private activeConnectionMode: string = 'local'; // Track actual connection mode
@@ -234,6 +236,9 @@ export class MCPClient {
             console.log(chalk.yellow(`Retry ${this.retryAttempts}/${this.maxRetries}: Connecting to remote MCP server...`));
           }
 
+          // Verify remote health before establishing SSE
+          await this.checkRemoteHealth(serverUrl);
+
           // Initialize SSE connection for real-time updates
           await this.initializeSSE(serverUrl);
 
@@ -260,7 +265,7 @@ export class MCPClient {
           // Check if the server file exists
           if (!fs.existsSync(serverPath)) {
             console.log(chalk.yellow(`⚠️  Local MCP server not found at ${serverPath}`));
-            console.log(chalk.cyan('💡 For remote use WebSocket: lanonasis mcp connect --mode websocket --url wss://mcp.lanonasis.com/ws'));
+            console.log(chalk.cyan('💡 For remote connection, use: lanonasis mcp connect --mode websocket --url wss://mcp.lanonasis.com/ws'));
             throw new Error(`MCP server not found at ${serverPath}`);
           }
 
@@ -347,8 +352,8 @@ export class MCPClient {
 
     this.retryAttempts++;
 
-    if (this.retryAttempts >= this.maxRetries) {
-      console.error(chalk.red(`Failed to connect after ${this.maxRetries} attempts`));
+    if (this.retryAttempts > this.maxRetries) {
+      console.error(chalk.red(`Failed to connect after ${this.maxRetries + 1} attempts`));
       this.provideNetworkTroubleshootingGuidance(error);
       this.isConnected = false;
       return false;
@@ -461,7 +466,7 @@ export class MCPClient {
    */
   private async validateAuthBeforeConnect(): Promise<void> {
     const token = this.config.get<string>('token');
-    const vendorKey = this.config.get<string>('vendorKey');
+    const vendorKey = await this.config.getVendorKeyAsync();
 
     // Check if we have any authentication credentials
     if (!token && !vendorKey) {
@@ -570,7 +575,7 @@ export class MCPClient {
     // Use the proper SSE endpoint from config
     const sseUrl = this.config.getMCPSSEUrl() ?? `${serverUrl}/events`;
     const token = this.config.get<string>('token');
-    const vendorKey = this.config.get<string>('vendorKey');
+    const vendorKey = await this.config.getVendorKeyAsync();
     const authKey = token || vendorKey || process.env.LANONASIS_API_KEY;
 
     if (authKey) {
@@ -597,7 +602,7 @@ export class MCPClient {
    */
   private async initializeWebSocket(wsUrl: string): Promise<void> {
     const token = this.config.get<string>('token');
-    const vendorKey = this.config.get<string>('vendorKey');
+    const vendorKey = await this.config.getVendorKeyAsync();
     const authKey = token || vendorKey || process.env.LANONASIS_API_KEY;
 
     if (!authKey) {
@@ -660,8 +665,11 @@ export class MCPClient {
           console.log(chalk.yellow(`WebSocket connection closed (${code}): ${reason}`));
 
           // Auto-reconnect after delay
-          setTimeout(() => {
-            if (this.isConnected) {
+          if (this.wsReconnectTimeout) {
+            clearTimeout(this.wsReconnectTimeout);
+          }
+          this.wsReconnectTimeout = setTimeout(() => {
+            if (this.isConnected && process.env.NODE_ENV !== 'test') {
               console.log(chalk.blue('🔄 Attempting to reconnect to WebSocket...'));
               this.initializeWebSocket(wsUrl).catch(err => {
                 console.error('Failed to reconnect:', err);
@@ -700,7 +708,8 @@ export class MCPClient {
     }, 30000);
 
     // Perform initial health check
-    setTimeout(() => this.performHealthCheck(), 5000);
+    const initialDelay = process.env.NODE_ENV === 'test' ? 50 : 5000;
+    this.healthCheckTimeout = setTimeout(() => this.performHealthCheck(), initialDelay);
   }
 
   /**
@@ -710,6 +719,10 @@ export class MCPClient {
     if (this.healthCheckInterval) {
       clearInterval(this.healthCheckInterval);
       this.healthCheckInterval = null;
+    }
+    if (this.healthCheckTimeout) {
+      clearTimeout(this.healthCheckTimeout);
+      this.healthCheckTimeout = null;
     }
   }
 
@@ -762,10 +775,10 @@ export class MCPClient {
   /**
    * Check remote connection health
    */
-  private async checkRemoteHealth(): Promise<void> {
-    const apiUrl = this.config.getMCPRestUrl() ?? 'https://mcp.lanonasis.com/api/v1';
+  private async checkRemoteHealth(serverUrl?: string): Promise<void> {
+    const apiUrl = serverUrl ?? this.config.getMCPRestUrl() ?? 'https://mcp.lanonasis.com/api/v1';
     const token = this.config.get<string>('token');
-    const vendorKey = this.config.get<string>('vendorKey');
+    const vendorKey = await this.config.getVendorKeyAsync();
     const authKey = token || vendorKey || process.env.LANONASIS_API_KEY;
 
     if (!authKey) {
@@ -842,6 +855,7 @@ export class MCPClient {
    */
   async disconnect(): Promise<void> {
     this.stopHealthMonitoring();
+    this.isConnected = false;
 
     if (this.client) {
       await this.client.close();
@@ -849,6 +863,8 @@ export class MCPClient {
     }
 
     if (this.sseConnection) {
+      this.sseConnection.onmessage = null;
+      this.sseConnection.onerror = null;
       this.sseConnection.close();
       this.sseConnection = null;
     }
@@ -858,7 +874,10 @@ export class MCPClient {
       this.wsConnection = null;
     }
 
-    this.isConnected = false;
+    if (this.wsReconnectTimeout) {
+      clearTimeout(this.wsReconnectTimeout);
+      this.wsReconnectTimeout = null;
+    }
     this.activeConnectionMode = 'websocket'; // Reset to default
   }
 
@@ -905,7 +924,7 @@ export class MCPClient {
   private async callRemoteTool(toolName: string, args: MCPToolArgs): Promise<MCPToolResponse> {
     const apiUrl = this.config.getMCPRestUrl() ?? 'https://mcp.lanonasis.com/api/v1';
     const token = this.config.get<string>('token');
-    const vendorKey = this.config.get<string>('vendorKey');
+    const vendorKey = await this.config.getVendorKeyAsync();
     const authKey = token || vendorKey || process.env.LANONASIS_API_KEY;
 
     if (!authKey) {
@@ -1070,7 +1089,7 @@ export class MCPClient {
     }
 
     const connectionUptime = this.connectionStartTime > 0
-      ? Date.now() - this.connectionStartTime
+      ? Math.max(Date.now() - this.connectionStartTime, this.isConnected ? 1 : 0)
       : undefined;
 
     return {

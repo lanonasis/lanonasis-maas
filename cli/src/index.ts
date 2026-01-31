@@ -14,6 +14,8 @@ import { mcpCommands } from './commands/mcp.js';
 import apiKeysCommand from './commands/api-keys.js';
 import { CLIConfig } from './utils/config.js';
 import { getMCPClient } from './utils/mcp-client.js';
+import { dirname, join } from 'path';
+import { createOnboardingFlow } from './ux/index.js';
 
 // Load environment variables
 config();
@@ -51,13 +53,34 @@ program
   .option('--no-mcp', 'disable MCP and use direct API')
   .hook('preAction', async (thisCommand, actionCommand) => {
     const opts = thisCommand.opts();
-    await cliConfig.init();    if (opts.verbose) {
+    await cliConfig.init();
+    if (opts.verbose) {
       process.env.CLI_VERBOSE = 'true';
     }
     if (opts.apiUrl) {
       process.env.MEMORY_API_URL = opts.apiUrl;
     }
     process.env.CLI_OUTPUT_FORMAT = opts.output;
+
+    const skipOnboarding =
+      actionCommand.name() === 'init' ||
+      actionCommand.name() === 'auth' ||
+      actionCommand.parent?.name?.() === 'auth';
+
+    if (!skipOnboarding) {
+      try {
+        const onboardingConfigPath = join(dirname(cliConfig.getConfigPath()), 'onboarding.json');
+        const onboardingFlow = createOnboardingFlow(onboardingConfigPath);
+        if (onboardingFlow.detectFirstRun()) {
+          await onboardingFlow.runInitialSetup();
+        }
+      } catch (error) {
+        if (process.env.CLI_VERBOSE === 'true') {
+          console.log(colors.warning('Onboarding skipped due to error'));
+          console.log(colors.muted(`Error: ${error instanceof Error ? error.message : String(error)}`));
+        }
+      }
+    }
     
     // Auto-initialize MCP unless disabled
     const isMcpFlow = actionCommand.name() === 'mcp' ||

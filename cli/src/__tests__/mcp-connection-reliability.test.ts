@@ -1,23 +1,31 @@
 import { describe, it, expect, beforeEach, afterEach, jest } from '@jest/globals';
-import { MCPClient } from '../utils/mcp-client.js';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as os from 'os';
-import WebSocket from 'ws';
 
 // Mock dependencies
 const mockWebSocketConstructor = jest.fn();
 const mockEventSourceConstructor = jest.fn();
+const mockAxios: any = {
+  get: jest.fn(),
+  post: jest.fn()
+};
+const mockMCPClientConstructor = jest.fn();
 
-jest.mock('ws', () => ({
-  default: mockWebSocketConstructor
+const MockWebSocket = Object.assign(mockWebSocketConstructor, {
+  OPEN: 1,
+  CONNECTING: 0,
+});
+
+jest.unstable_mockModule('ws', () => ({
+  default: MockWebSocket,
 }));
 
-jest.mock('eventsource', () => ({
-  EventSource: mockEventSourceConstructor
+jest.unstable_mockModule('eventsource', () => ({
+  EventSource: mockEventSourceConstructor,
 }));
 
-jest.mock('chalk', () => ({
+jest.unstable_mockModule('chalk', () => ({
   default: {
     blue: {
       bold: (str: string) => str,
@@ -27,34 +35,31 @@ jest.mock('chalk', () => ({
     green: (str: string) => str,
     red: (str: string) => str,
     yellow: (str: string) => str,
-  }
+  },
 }));
 
-const mockAxios: any = {
-  get: jest.fn(),
-  post: jest.fn()
-};
-
-jest.mock('axios', () => ({
+jest.unstable_mockModule('axios', () => ({
   default: mockAxios,
   get: mockAxios.get,
-  post: mockAxios.post
+  post: mockAxios.post,
 }));
 
 // Mock MCP SDK
-const mockMCPClientConstructor = jest.fn();
-jest.mock('@modelcontextprotocol/sdk/client/index.js', () => ({
+jest.unstable_mockModule('@modelcontextprotocol/sdk/client/index.js', () => ({
   Client: mockMCPClientConstructor.mockImplementation(() => ({
     connect: jest.fn(),
     close: jest.fn(),
     callTool: jest.fn(),
-    listTools: jest.fn()
-  }))
+    listTools: jest.fn(),
+  })),
 }));
 
-jest.mock('@modelcontextprotocol/sdk/client/stdio.js', () => ({
-  StdioClientTransport: jest.fn()
+jest.unstable_mockModule('@modelcontextprotocol/sdk/client/stdio.js', () => ({
+  StdioClientTransport: jest.fn(),
 }));
+
+const { MCPClient } = await import('../utils/mcp-client.js');
+const { default: WebSocket } = await import('ws');
 
 describe('MCP Connection Reliability Tests', () => {
   let mcpClient: MCPClient;
@@ -198,7 +203,8 @@ describe('MCP Connection Reliability Tests', () => {
 
       // Should show authentication error
       expect(consoleSpy).toHaveBeenCalledWith(
-        expect.stringContaining('Authentication failed')
+        expect.stringContaining('Authentication failed'),
+        expect.anything()
       );
 
       consoleSpy.mockRestore();
@@ -361,7 +367,8 @@ describe('MCP Connection Reliability Tests', () => {
 
       // Should show appropriate error message
       expect(consoleSpy).toHaveBeenCalledWith(
-        expect.stringContaining('WebSocket error')
+        expect.stringContaining('WebSocket error'),
+        expect.anything()
       );
 
       consoleSpy.mockRestore();

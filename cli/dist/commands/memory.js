@@ -6,6 +6,31 @@ import wrap from 'word-wrap';
 import { format } from 'date-fns';
 import { apiClient } from '../utils/api.js';
 import { formatBytes, truncateText } from '../utils/formatting.js';
+import { CLIConfig } from '../utils/config.js';
+import { createTextInputHandler } from '../ux/index.js';
+const resolveInputMode = async () => {
+    const config = new CLIConfig();
+    await config.init();
+    const directMode = config.get('inputMode');
+    const userPrefs = config.get('userPreferences');
+    const resolved = (directMode || userPrefs?.inputMode);
+    return resolved === 'editor' ? 'editor' : 'inline';
+};
+const collectMemoryContent = async (prompt, inputMode, defaultContent) => {
+    if (inputMode === 'editor') {
+        const { content } = await inquirer.prompt([
+            {
+                type: 'editor',
+                name: 'content',
+                message: prompt,
+                default: defaultContent,
+            },
+        ]);
+        return content;
+    }
+    const handler = createTextInputHandler();
+    return handler.collectMultilineInput(prompt);
+};
 export function memoryCommands(program) {
     // Create memory
     program
@@ -22,39 +47,42 @@ export function memoryCommands(program) {
         try {
             let { title, content, type, tags, topicId, interactive } = options;
             if (interactive || (!title || !content)) {
+                const inputMode = await resolveInputMode();
                 const answers = await inquirer.prompt([
                     {
                         type: 'input',
                         name: 'title',
                         message: 'Memory title:',
                         default: title,
-                        validate: (input) => input.length > 0 || 'Title is required'
-                    },
-                    {
-                        type: 'input',
-                        name: 'content',
-                        message: 'Memory content (or use -c flag for multi-line):',
-                        default: content,
-                        validate: (input) => input.length > 0 || 'Content is required'
+                        validate: (input) => input.length > 0 || 'Title is required',
                     },
                     {
                         type: 'list',
                         name: 'type',
                         message: 'Memory type:',
                         choices: ['conversation', 'knowledge', 'project', 'context', 'reference'],
-                        default: type || 'context'
+                        default: type || 'context',
                     },
                     {
                         type: 'input',
                         name: 'tags',
                         message: 'Tags (comma-separated):',
-                        default: tags || ''
-                    }
+                        default: tags || '',
+                    },
                 ]);
                 title = answers.title;
-                content = answers.content;
                 type = answers.type;
                 tags = answers.tags;
+                const shouldPromptContent = !content || (interactive && inputMode === 'editor');
+                if (shouldPromptContent) {
+                    content = await collectMemoryContent('Memory content:', inputMode, content);
+                }
+            }
+            if (!title || title.trim().length === 0) {
+                throw new Error('Title is required');
+            }
+            if (!content || content.trim().length === 0) {
+                throw new Error('Content is required');
             }
             const spinner = ora('Creating memory...').start();
             const memoryData = {
@@ -275,36 +303,32 @@ export function memoryCommands(program) {
                 const spinner = ora('Fetching current memory...').start();
                 const currentMemory = await apiClient.getMemory(id);
                 spinner.stop();
+                const inputMode = await resolveInputMode();
                 const answers = await inquirer.prompt([
                     {
                         type: 'input',
                         name: 'title',
                         message: 'Title:',
-                        default: currentMemory.title
-                    },
-                    {
-                        type: 'editor',
-                        name: 'content',
-                        message: 'Content:',
-                        default: currentMemory.content
+                        default: currentMemory.title,
                     },
                     {
                         type: 'list',
                         name: 'type',
                         message: 'Memory type:',
                         choices: ['conversation', 'knowledge', 'project', 'context', 'reference'],
-                        default: currentMemory.memory_type
+                        default: currentMemory.memory_type,
                     },
                     {
                         type: 'input',
                         name: 'tags',
                         message: 'Tags (comma-separated):',
-                        default: currentMemory.tags.join(', ')
-                    }
+                        default: currentMemory.tags?.join(', ') || '',
+                    },
                 ]);
+                const content = await collectMemoryContent('Content:', inputMode, currentMemory.content);
                 updateData = {
                     title: answers.title,
-                    content: answers.content,
+                    content,
                     memory_type: answers.type,
                     tags: answers.tags.split(',').map((tag) => tag.trim()).filter(Boolean)
                 };

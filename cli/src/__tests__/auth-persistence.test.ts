@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, jest } from '@jest/globals
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as os from 'os';
+import { createTestJwt } from './helpers/jwt.js';
 
 // Mock axios for network calls - must be done before importing CLIConfig
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -95,7 +96,7 @@ describe('Authentication Persistence Tests', () => {
     });
 
     it('should store and retrieve JWT token credentials across CLI sessions', async () => {
-      const testToken = 'REDACTED_JWT';
+      const testToken = createTestJwt(Math.floor(Date.now() / 1000) + 60 * 60);
 
       // Store JWT token
       await config.setToken(testToken);
@@ -201,7 +202,7 @@ describe('Authentication Persistence Tests', () => {
   describe('Token Expiry Handling', () => {
     it('should detect if JWT token is authenticated', async () => {
       // Valid token (in the future)
-      const validToken = 'REDACTED_JWT';
+      const validToken = createTestJwt(Math.floor(Date.now() / 1000) + 60 * 60);
 
       await config.setToken(validToken);
       const isAuthenticated = await config.isAuthenticated();
@@ -210,7 +211,7 @@ describe('Authentication Persistence Tests', () => {
 
     it('should detect if JWT token is expired', async () => {
       // Expired token (in the past)
-      const expiredToken = 'REDACTED_JWT';
+      const expiredToken = createTestJwt(Math.floor(Date.now() / 1000) - 60 * 60);
 
       await config.setToken(expiredToken);
       const isAuthenticated = await config.isAuthenticated();

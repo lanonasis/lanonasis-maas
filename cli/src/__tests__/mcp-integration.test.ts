@@ -23,6 +23,8 @@ describe('MCP Connection Integration Tests', () => {
     let mcpClient: MCPClient;
     let testConfigDir: string;
     let hasCredentials = false;
+    const runIntegrationTests = process.env.RUN_INTEGRATION_TESTS === 'true';
+    let integrationTest: typeof it = it.skip;
 
     beforeAll(async () => {
         const configPath = path.join(os.homedir(), '.maas', 'config.json');
@@ -63,9 +65,12 @@ describe('MCP Connection Integration Tests', () => {
         }
 
         hasCredentials = Boolean(resolvedToken || resolvedVendorKey);
+        integrationTest = runIntegrationTests && hasCredentials ? it : it.skip;
 
-        if (hasCredentials) {
+        if (hasCredentials && runIntegrationTests) {
             console.log('✓ Found credentials for MCP testing (environment or ~/.maas/config.json)');
+        } else if (!runIntegrationTests) {
+            console.warn('⚠️  RUN_INTEGRATION_TESTS is not set - MCP integration tests will be skipped');
         } else {
             console.warn(`
 ⚠️  No credentials found - MCP tests will be skipped
@@ -102,7 +107,7 @@ describe('MCP Connection Integration Tests', () => {
     });
 
     describe('HTTP Transport (Remote Mode)', () => {
-        it('should connect to MCP server via HTTP with real credentials', async () => {
+        integrationTest('should connect to MCP server via HTTP with real credentials', async () => {
             if (!hasCredentials) {
                 console.log('⊘ Skipping - no credentials');
                 return;
@@ -121,7 +126,7 @@ describe('MCP Connection Integration Tests', () => {
             expect(status.mode).toBe('remote');
         }, 30000); // 30 second timeout for real connection
 
-        it('should list available MCP tools via HTTP', async () => {
+        integrationTest('should list available MCP tools via HTTP', async () => {
             if (!hasCredentials) {
                 console.log('⊘ Skipping - no credentials');
                 return;
@@ -151,7 +156,7 @@ describe('MCP Connection Integration Tests', () => {
     });
 
     describe('WebSocket Transport', () => {
-        it('should connect to MCP server via WebSocket', async () => {
+        integrationTest('should connect to MCP server via WebSocket', async () => {
             if (!hasCredentials) {
                 console.log('⊘ Skipping - no credentials');
                 return;
@@ -172,7 +177,7 @@ describe('MCP Connection Integration Tests', () => {
             }
         }, 30000);
 
-        it('should handle WebSocket connection health monitoring', async () => {
+        integrationTest('should handle WebSocket connection health monitoring', async () => {
             if (!hasCredentials) {
                 console.log('⊘ Skipping - no credentials');
                 return;
@@ -195,7 +200,7 @@ describe('MCP Connection Integration Tests', () => {
     });
 
     describe('SSE Transport (Server-Sent Events)', () => {
-        it('should handle SSE connection in remote mode', async () => {
+        integrationTest('should handle SSE connection in remote mode', async () => {
             if (!hasCredentials) {
                 console.log('⊘ Skipping - no credentials');
                 return;
@@ -214,7 +219,7 @@ describe('MCP Connection Integration Tests', () => {
     });
 
     describe('Connection Reliability', () => {
-        it('should report accurate connection status', async () => {
+        integrationTest('should report accurate connection status', async () => {
             if (!hasCredentials) {
                 console.log('⊘ Skipping connection status test - no credentials');
                 return;
@@ -243,7 +248,7 @@ describe('MCP Connection Integration Tests', () => {
             }
         });
 
-        it('should handle graceful disconnection', async () => {
+        integrationTest('should handle graceful disconnection', async () => {
             if (!hasCredentials) {
                 console.log('⊘ Skipping disconnection test - no credentials');
                 return;
