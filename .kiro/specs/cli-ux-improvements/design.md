@@ -195,7 +195,7 @@ interface UserPreferences {
 }
 ```
 
-Now I need to use the prework tool to analyze the acceptance criteria before writing the Correctness Properties section:
+## Correctness Properties
 
 ## Correctness Properties
 
