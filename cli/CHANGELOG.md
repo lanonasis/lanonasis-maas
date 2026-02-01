@@ -1,5 +1,76 @@
 # Changelog - @lanonasis/cli
 
+## [3.9.0] - 2026-02-01
+
+### 🎨 CLI UX Revolution
+
+#### Seamless Multi-Line Text Input
+- **Inline Text Editor**: Professional multi-line text input without external editors
+  - Raw terminal mode for keystroke capture
+  - Full editing support (arrow keys, backspace, newlines)
+  - Visual feedback with line numbers and cursor indicators
+  - Submit with Ctrl+D, cancel with Ctrl+C
+  - Configurable fallback to external editors
+
+#### Intelligent MCP Server Connection Management
+- **Auto-Configuration**: Automatically detects and configures embedded MCP servers
+- **Connection Lifecycle**: Smart server process management with health monitoring
+- **Persistent Configuration**: Saves and loads user preferences across sessions
+- **Connection Verification**: Validates server connectivity before operations
+- **Graceful Error Handling**: Clear error messages with actionable resolution steps
+
+#### First-Run Onboarding Experience
+- **Guided Setup**: Interactive onboarding flow for new users
+- **Connectivity Testing**: Automatic testing of API endpoints and services
+- **Smart Defaults**: Configures optimal settings based on environment
+- **User Preferences**: Captures and persists input mode, editor choice, and behavior preferences
+- **Troubleshooting Guidance**: Context-aware help when issues are detected
+
+### 🐛 Critical Bug Fixes (PR #93)
+
+#### P1: Connection Verification False Positive
+- **Issue**: `verifyConnection()` returned `true` even when server was in error/stopped state
+- **Fix**: Added explicit checks for error and stopped states before declaring success
+- **Impact**: Users will now see accurate connection status instead of false positives
+
+#### P2: Configuration Not Loaded Before Use
+- **Issue**: `ConnectionManager.init()` method existed but was never called
+- **Fix**: Added `init()` to ConnectionManager interface and call it before `connectLocal()`
+- **Impact**: User configuration is now properly loaded and respected
+
+#### P2: Empty Content Overwrites in Inline Updates
+- **Issue**: When updating memories in inline mode, `defaultContent` wasn't passed to TextInputHandler
+- **Fix**: Added `defaultContent` support throughout the text input pipeline
+- **Impact**: Memory updates preserve existing content instead of starting with blank slate
+
+### 🧪 Testing & Quality
+
+- **Comprehensive Test Suite**: 168 passing tests including property-based tests
+- **Zero TypeScript Errors**: All compilation errors resolved
+- **No Regressions**: All existing tests continue to pass
+- **Professional Documentation**: Complete inline documentation and type definitions
+
+### 📦 Package Cleanup
+
+- **npmignore**: Excludes test files and development artifacts from published package
+- **Directory Reorganization**: Cleaner structure with examples moved to `docs/examples/`
+- **Build Optimization**: Reduced package size by excluding unnecessary files
+
+### 🔄 Breaking Changes
+None - Fully backward compatible
+
+### 📝 Technical Details
+
+**New Implementations**:
+- `TextInputHandlerImpl` ([cli/src/ux/implementations/TextInputHandlerImpl.ts](cli/src/ux/implementations/TextInputHandlerImpl.ts))
+- `ConnectionManagerImpl` ([cli/src/ux/implementations/ConnectionManagerImpl.ts](cli/src/ux/implementations/ConnectionManagerImpl.ts))
+- `OnboardingFlowImpl` ([cli/src/ux/implementations/OnboardingFlowImpl.ts](cli/src/ux/implementations/OnboardingFlowImpl.ts))
+
+**Integration Points**:
+- Memory commands now use inline text input by default ([cli/src/commands/memory.ts](cli/src/commands/memory.ts:116-119))
+- MCP connect command uses ConnectionManager ([cli/src/commands/mcp.ts](cli/src/commands/mcp.ts:130-137))
+- Init command includes onboarding flow ([cli/src/commands/init.ts](cli/src/commands/init.ts))
+
 ## [3.7.0] - 2025-11-23
 
 ### 🔐 Security Infrastructure Upgrade
