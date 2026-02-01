@@ -1,6 +1,30 @@
 {
   "name": "@lanonasis/cli",
-  "version": "3.8.1",
+  "version": "3.9.0",
+  "description": "Professional CLI for LanOnasis Memory as a Service (MaaS) with MCP support, seamless inline editing, and enterprise-grade security",
+  "keywords": [
+    "lanonasis",
+    "memory",
+    "maas",
+    "mcp",
+    "cli",
+    "model-context-protocol",
+    "semantic-search",
+    "vector-database",
+    "knowledge-management",
+    "enterprise"
+  ],
+  "homepage": "https://docs.lanonasis.com",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lanonasis/lanonasis-maas.git",
+    "directory": "cli"
+  },
+  "bugs": {
+    "url": "https://github.com/lanonasis/lanonasis-maas/issues"
+  },
+  "author": "LanOnasis Team",
+  "license": "MIT",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -17,10 +41,15 @@
     }
   },
   "files": [
-    "dist",
+    "dist/**/*.js",
+    "dist/**/*.d.ts",
+    "!dist/**/__tests__",
+    "!dist/**/*.test.*",
+    "!dist/**/*.spec.*",
     "scripts",
     "README.md",
-    "LICENSE"
+    "LICENSE",
+    "CHANGELOG.md"
   ],
   "dependencies": {
     "@lanonasis/oauth-client": "1.2.5",

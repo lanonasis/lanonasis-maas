@@ -1,11 +1,11 @@
-# @lanonasis/cli v3.7.0 - Enterprise Security & MCP Experience
+# @lanonasis/cli v3.9.0 - Enterprise Security & Professional UX
 
 [![NPM Version](https://img.shields.io/npm/v/@lanonasis/cli)](https://www.npmjs.com/package/@lanonasis/cli)
 [![Downloads](https://img.shields.io/npm/dt/@lanonasis/cli)](https://www.npmjs.com/package/@lanonasis/cli)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Golden Contract](https://img.shields.io/badge/Onasis--Core-v0.1%20Compliant-gold)](https://api.lanonasis.com/.well-known/onasis.json)
 
-🚀 **NEW IN v3.0**: Advanced Model Context Protocol (MCP) support with multi-server connections, enhanced error handling, and enterprise-grade transport protocols. Revolutionary interactive CLI experience with guided workflows, smart suggestions, achievement system, and power user mode. Professional command-line interface for LanOnasis Memory as a Service (MaaS) platform with **Golden Contract compliance**.
+🎉 **NEW IN v3.9**: Professional CLI UX with seamless inline text editing, intelligent MCP connection management, and first-run onboarding. Advanced Model Context Protocol (MCP) support with multi-server connections, enhanced error handling, and enterprise-grade transport protocols. Revolutionary interactive CLI experience with guided workflows and **Golden Contract compliance**.
 
 ## 🚀 Quick Start
 
@@ -33,6 +33,69 @@ onasis health                                   # Verify system health
 # Create your first memory
 onasis memory create --title "Welcome" --content "My first memory"
 ```
+
+## ✨ Professional CLI UX (v3.9.0+)
+
+### Seamless Inline Text Editing
+No more external editor dependencies! Create and update memories with a professional inline text editor:
+
+```bash
+# Create memory with inline multi-line editor
+onasis memory create --inline
+# Type your content directly in the terminal
+# Use arrow keys to navigate, Enter for new lines
+# Ctrl+D to save, Ctrl+C to cancel
+
+# Update existing memory
+onasis memory update <id> --inline
+# Your existing content is preserved and editable
+```
+
+**Features**:
+- ✨ Multi-line editing with visual feedback
+- 🎯 Line numbers and cursor indicators
+- ⌨️ Full keyboard navigation (arrows, backspace, etc.)
+- 💾 Auto-preserves existing content when updating
+- 🚫 No external editor configuration needed
+
+### Intelligent MCP Connection
+Automatic MCP server discovery and configuration:
+
+```bash
+# Connect to local MCP server (auto-configured)
+onasis mcp connect --local
+# Server path detected automatically
+# Configuration persisted for next time
+
+# Check connection status
+onasis mcp status
+```
+
+**Features**:
+- 🔍 Auto-detects embedded MCP server
+- 💾 Saves configuration automatically
+- 🔄 Health monitoring and auto-reconnection
+- ✅ Connection verification before operations
+- 🛠️ Clear error messages with fix suggestions
+
+### First-Run Onboarding
+Interactive setup for new users:
+
+```bash
+onasis init
+# Guided setup walks you through:
+# - API configuration
+# - Connectivity testing
+# - Input mode preferences
+# - Troubleshooting if needed
+```
+
+**Features**:
+- 📋 Step-by-step guided setup
+- 🧪 Automatic connectivity tests
+- ⚙️ Smart default configuration
+- 💡 Context-aware troubleshooting
+- 📖 Interactive help and tips
 
 ## 🤖 Claude Desktop Integration
 

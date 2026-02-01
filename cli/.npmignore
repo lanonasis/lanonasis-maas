@@ -1,0 +1,56 @@
+# Test files and directories
+**/__tests__/
+**/*.test.js
+**/*.test.d.ts
+**/*.test.ts
+**/*.spec.js
+**/*.spec.d.ts
+**/*.spec.ts
+coverage/
+.nyc_output/
+
+# Source files (only ship compiled dist/)
+src/
+
+# Development configuration
+tsconfig.json
+tsconfig.*.json
+jest.config.js
+jest.config.ts
+.eslintrc*
+.prettierrc*
+
+# Development documentation
+*.md
+!README.md
+
+# Git and CI/CD
+.git/
+.github/
+.gitignore
+.gitattributes
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+
+# Build artifacts and caches
+node_modules/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.DS_Store
+
+# Temporary files
+tmp/
+temp/
+*.tmp
