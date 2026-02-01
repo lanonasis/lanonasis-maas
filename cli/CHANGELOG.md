@@ -26,6 +26,21 @@
 - **User Preferences**: Captures and persists input mode, editor choice, and behavior preferences
 - **Troubleshooting Guidance**: Context-aware help when issues are detected
 
+### 🔐 Authentication Clarifications
+
+#### OAuth vs Direct API Access
+- **Clear Scope Documentation**: OAuth2 login now explicitly states it enables MCP integration
+- **Improved Error Messages**: 401 errors for OAuth users include specific guidance for direct API access
+- **Authentication Method Guidance**: CLI provides clear instructions for:
+  - **OAuth**: Use for MCP integration and real-time features
+  - **Vendor Key**: Obtain from dashboard for direct API access (`lanonasis auth login --vendor`)
+  - **Credentials**: Use username/password for direct API access (`lanonasis auth login --credentials`)
+
+#### Secure Storage Fallback
+- **Keytar Optional**: When keytar (native secure storage) is unavailable, CLI gracefully falls back to encrypted file storage
+- **Cross-Platform**: Encrypted storage works consistently across all platforms
+- **No Data Loss**: Credentials are preserved in `~/.lanonasis/api-key.enc` with AES-256-GCM encryption
+
 ### 🐛 Critical Bug Fixes (PR #93)
 
 #### P1: Connection Verification False Positive

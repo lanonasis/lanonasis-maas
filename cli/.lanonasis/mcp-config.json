@@ -1,8 +1,0 @@
-{
-  "localServerPath": "",
-  "serverPort": 31173,
-  "autoStart": true,
-  "connectionTimeout": 1005,
-  "retryAttempts": 9,
-  "logLevel": "debug"
-}

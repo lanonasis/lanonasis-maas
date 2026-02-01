@@ -156,11 +156,13 @@ onasis login --vendor-key <your-vendor-key>
 
 ### 2. OAuth Browser Authentication
 
-Secure browser-based authentication:
+Secure browser-based authentication for MCP integration:
 
 ```bash
 onasis login --oauth
 ```
+
+> **Note**: OAuth authentication enables MCP integration features (real-time updates, WebSocket connections). For direct CLI memory commands (`memory list`, `memory create`, etc.), use vendor key or credentials authentication.
 
 ### 3. Interactive Credentials
 
