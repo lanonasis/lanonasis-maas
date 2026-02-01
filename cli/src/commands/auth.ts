@@ -814,26 +814,23 @@ async function handleOAuthFlow(config: CLIConfig): Promise<void> {
     const tokens = await exchangeCodeForTokens(code, pkce.verifier, authBase, redirectUri);
     spinner.succeed('Access tokens received');
 
-    // Store OAuth tokens - these are already valid auth-gateway tokens from /oauth/token
-    // No need for additional exchange since /oauth/token returns auth-gateway's own tokens
+    // Store OAuth tokens - these are auth-gateway tokens from /oauth/token
+    // Note: OAuth tokens are valid for MCP services but not for direct API access
     await config.setToken(tokens.access_token);
     await config.set('refresh_token', tokens.refresh_token);
     await config.set('token_expires_at', Date.now() + (tokens.expires_in * 1000));
     await config.set('authMethod', 'oauth');
-
-    // The OAuth access token from auth-gateway works as the API token for all services
-    // Store it as the vendor key equivalent for MCP and API access
-    spinner.text = 'Configuring unified access...';
-    spinner.start();
-
-    // Use the OAuth access token directly - it's already an auth-gateway token
-    await config.setVendorKey(tokens.access_token);
-    spinner.succeed('Unified authentication configured');
+    spinner.succeed('OAuth tokens stored');
 
     console.log();
     console.log(chalk.green('✓ OAuth2 authentication successful'));
-    console.log(colors.info('You can now use all Lanonasis services'));
-    console.log(chalk.gray('✓ MCP, API, and CLI access configured'));
+    console.log(colors.info('You can now use MCP integration features'));
+    console.log();
+    console.log(chalk.yellow('Note: ') + chalk.gray('OAuth login enables MCP integration.'));
+    console.log(chalk.gray('For direct CLI memory commands, use:'));
+    console.log(chalk.cyan('  lanonasis auth login --vendor') + chalk.gray(' (get a vendor key from dashboard)'));
+    console.log(chalk.gray('  OR'));
+    console.log(chalk.cyan('  lanonasis auth login --credentials') + chalk.gray(' (use username/password)'));
 
     process.exit(0);
 
