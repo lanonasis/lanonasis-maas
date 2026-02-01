@@ -68,6 +68,7 @@ export class MCPClient {
             // Save the successful connection mode as preference
             this.config.set('mcpConnectionMode', mode);
             this.config.set('mcpPreference', mode);
+            this.config.set('mcpUseRemote', mode === 'remote' || mode === 'websocket');
             // Save the specific URL that worked
             if (url) {
                 if (mode === 'websocket') {
@@ -525,7 +526,12 @@ export class MCPClient {
                 this.wsConnection.on('message', (data) => {
                     try {
                         const message = JSON.parse(data.toString());
-                        console.log(chalk.blue('📡 MCP message:'), message.id, message.method || 'response');
+                        const messageId = message.id ?? 'event';
+                        const messageType = message.method
+                            || (message.error ? 'error' : undefined)
+                            || (message.result ? 'result' : undefined)
+                            || 'response';
+                        console.log(chalk.blue('📡 MCP message:'), messageId, messageType);
                     }
                     catch (error) {
                         console.error('Failed to parse WebSocket message:', error);
@@ -740,7 +746,7 @@ export class MCPClient {
         if (!this.isConnected) {
             throw new Error('Not connected to MCP server. Run "lanonasis mcp connect" first.');
         }
-        const useRemote = this.config.get('mcpUseRemote') ?? false;
+        const useRemote = this.shouldUseRemoteToolBridge();
         if (useRemote) {
             // Remote MCP calls are translated to REST API calls
             return await this.callRemoteTool(toolName, args);
@@ -854,7 +860,7 @@ export class MCPClient {
         if (!this.isConnected) {
             throw new Error('Not connected to MCP server');
         }
-        const useRemote = this.config.get('mcpUseRemote') ?? false;
+        const useRemote = this.shouldUseRemoteToolBridge();
         if (useRemote) {
             // Return hardcoded list for remote mode
             return [
@@ -882,6 +888,16 @@ export class MCPClient {
      */
     isConnectedToServer() {
         return this.isConnected;
+    }
+    /**
+     * Determine whether tool operations should use the remote REST bridge.
+     * WebSocket mode uses the same bridge for tool list/call operations.
+     */
+    shouldUseRemoteToolBridge() {
+        if (this.activeConnectionMode === 'remote' || this.activeConnectionMode === 'websocket') {
+            return true;
+        }
+        return this.config.get('mcpUseRemote') ?? false;
     }
     /**
      * Get connection status details with health information

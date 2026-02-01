@@ -192,6 +192,11 @@ export declare class MCPClient {
      */
     isConnectedToServer(): boolean;
     /**
+     * Determine whether tool operations should use the remote REST bridge.
+     * WebSocket mode uses the same bridge for tool list/call operations.
+     */
+    private shouldUseRemoteToolBridge;
+    /**
      * Get connection status details with health information
      */
     getConnectionStatus(): {

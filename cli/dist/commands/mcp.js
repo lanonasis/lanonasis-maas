@@ -212,12 +212,38 @@ export function mcpCommands(program) {
         let healthLabel = chalk.gray('Unknown');
         let healthDetails;
         let isServiceReachable = false;
+        let resolvedHealthUrl;
         try {
             const axios = (await import('axios')).default;
-            // Derive MCP health URL from discovered REST base (e.g. https://mcp.lanonasis.com/api/v1 -> https://mcp.lanonasis.com/health)
-            const restUrl = config.getMCPRestUrl();
-            const rootBase = restUrl.replace(/\/api\/v1$/, '');
-            const healthUrl = `${rootBase}/health`;
+            const normalizeMcpHealthUrl = (inputUrl) => {
+                const parsed = new URL(inputUrl);
+                if (parsed.protocol === 'wss:') {
+                    parsed.protocol = 'https:';
+                }
+                else if (parsed.protocol === 'ws:') {
+                    parsed.protocol = 'http:';
+                }
+                parsed.pathname = '/health';
+                parsed.search = '';
+                parsed.hash = '';
+                return parsed.toString();
+            };
+            // Prefer MCP host health based on active mode:
+            // - websocket: use configured websocket host (wss -> https)
+            // - remote: use configured MCP REST host
+            // - local/default: fall back to discovered MCP REST host
+            let healthProbeBase;
+            if (status.mode === 'websocket') {
+                healthProbeBase = config.get('mcpWebSocketUrl') ?? config.getMCPServerUrl();
+            }
+            else if (status.mode === 'remote') {
+                healthProbeBase = config.get('mcpServerUrl') ?? config.getMCPRestUrl();
+            }
+            else {
+                healthProbeBase = config.getMCPRestUrl();
+            }
+            const healthUrl = normalizeMcpHealthUrl(healthProbeBase);
+            resolvedHealthUrl = healthUrl;
             const token = config.getToken();
             const vendorKey = await config.getVendorKeyAsync();
             const headers = {};
@@ -234,7 +260,8 @@ export function mcpCommands(program) {
                 timeout: 5000
             });
             const overallStatus = String(response.data?.status ?? '').toLowerCase();
-            const ok = response.status === 200 && (!overallStatus || overallStatus === 'healthy');
+            const okStatuses = new Set(['healthy', 'ok', 'up']);
+            const ok = response.status === 200 && (!overallStatus || okStatuses.has(overallStatus));
             if (ok) {
                 healthLabel = chalk.green('Healthy');
                 isServiceReachable = true;
@@ -284,6 +311,9 @@ export function mcpCommands(program) {
         console.log(`Health: ${healthLabel}`);
         if (healthDetails && process.env.CLI_VERBOSE === 'true') {
             console.log(chalk.gray(`Health details: ${healthDetails}`));
+        }
+        if (resolvedHealthUrl && process.env.CLI_VERBOSE === 'true') {
+            console.log(chalk.gray(`Health probe URL: ${resolvedHealthUrl}`));
         }
         // Show features when service is reachable
         if (isServiceReachable) {

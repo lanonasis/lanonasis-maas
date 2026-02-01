@@ -233,8 +233,13 @@ export class ConnectionManagerImpl implements ConnectionManager {
         },
       });
 
+      if (serverProcess.pid === undefined) {
+        reject(new Error('Failed to start local MCP server: process ID was not assigned'));
+        return;
+      }
+
       const serverInstance: ServerInstance = {
-        pid: serverProcess.pid!,
+        pid: serverProcess.pid,
         port: this.config.serverPort || 3000,
         status: 'starting',
         startTime: new Date(),
@@ -334,7 +339,7 @@ export class ConnectionManagerImpl implements ConnectionManager {
           }
         }, 5000);
 
-        this.serverProcess!.on('exit', () => {
+        this.serverProcess!.once('exit', () => {
           clearTimeout(forceKillTimeout);
           this.serverProcess = null;
           if (this.connectionStatus.serverInstance) {

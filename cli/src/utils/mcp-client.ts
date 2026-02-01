@@ -139,6 +139,7 @@ export class MCPClient {
       // Save the successful connection mode as preference
       this.config.set('mcpConnectionMode', mode);
       this.config.set('mcpPreference', mode);
+      this.config.set('mcpUseRemote', mode === 'remote' || mode === 'websocket');
 
       // Save the specific URL that worked
       if (url) {
@@ -650,7 +651,12 @@ export class MCPClient {
         this.wsConnection.on('message', (data) => {
           try {
             const message = JSON.parse(data.toString());
-            console.log(chalk.blue('📡 MCP message:'), message.id, message.method || 'response');
+            const messageId = message.id ?? 'event';
+            const messageType = message.method
+              || (message.error ? 'error' : undefined)
+              || (message.result ? 'result' : undefined)
+              || 'response';
+            console.log(chalk.blue('📡 MCP message:'), messageId, messageType);
           } catch (error) {
             console.error('Failed to parse WebSocket message:', error);
           }
@@ -889,7 +895,7 @@ export class MCPClient {
       throw new Error('Not connected to MCP server. Run "lanonasis mcp connect" first.');
     }
 
-    const useRemote = this.config.get('mcpUseRemote') ?? false;
+    const useRemote = this.shouldUseRemoteToolBridge();
 
     if (useRemote) {
       // Remote MCP calls are translated to REST API calls
@@ -1013,7 +1019,7 @@ export class MCPClient {
       throw new Error('Not connected to MCP server');
     }
 
-    const useRemote = this.config.get('mcpUseRemote') ?? false;
+    const useRemote = this.shouldUseRemoteToolBridge();
 
     if (useRemote) {
       // Return hardcoded list for remote mode
@@ -1043,6 +1049,17 @@ export class MCPClient {
    */
   isConnectedToServer(): boolean {
     return this.isConnected;
+  }
+
+  /**
+   * Determine whether tool operations should use the remote REST bridge.
+   * WebSocket mode uses the same bridge for tool list/call operations.
+   */
+  private shouldUseRemoteToolBridge(): boolean {
+    if (this.activeConnectionMode === 'remote' || this.activeConnectionMode === 'websocket') {
+      return true;
+    }
+    return this.config.get<boolean>('mcpUseRemote') ?? false;
   }
 
   /**

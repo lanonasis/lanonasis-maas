@@ -1,330 +1,306 @@
-# PR #93 - Required Fixes
+# PR #93 Code Review Fixes - Implementation Guide
 
-This document contains the exact code changes needed to fix the three critical issues identified in the PR review.
+## Status Summary
 
----
-
-## Fix #1: Connection Verification False Positive (P1)
-
-**File:** `cli/src/ux/implementations/ConnectionManagerImpl.ts`
-
-**Replace lines 267-290 with:**
-
-```typescript
-  /**
-   * Verify that the MCP server connection is working
-   */
-  async verifyConnection(serverPath: string): Promise<boolean> {
-    try {
-      // Simple verification - check if server path exists and is accessible
-      await fs.access(serverPath);
-
-      // If we have a running server instance, check if it's responsive
-      if (this.connectionStatus.serverInstance) {
-        const { status, pid } = this.connectionStatus.serverInstance;
-
-        // Explicitly check for error/stopped states
-        if (status === 'error' || status === 'stopped') {
-          return false;
-        }
-
-        // Only verify process for running servers
-        if (status === 'running') {
-          try {
-            process.kill(pid, 0); // Signal 0 checks if process exists
-            return true;
-          } catch {
-            // Process doesn't exist despite status being 'running'
-            this.connectionStatus.serverInstance.status = 'stopped';
-            return false;
-          }
-        }
-
-        // Starting state is not yet ready
-        if (status === 'starting') {
-          return false;
-        }
-      }
-
-      // No server instance means we haven't started it yet
-      // This is okay for initial connection attempts
-      return true;
-    } catch {
-      return false;
-    }
-  }
-```
+**Date:** February 1, 2026
+**PR:** #93 - CLI UX Improvements
+**Current State:** ✅ All tests passing, ✅ Build succeeds with 0 errors
 
 ---
 
-## Fix #2: Configuration Not Loaded Before Use (P2)
+## Completed Fixes (9/13)
 
-**File:** `cli/src/ux/implementations/ConnectionManagerImpl.ts`
+### ✅ 1. oauth-client.ts - Memory Leak in Tests
 
-### Part A: Add init method after constructor
+**Status:** FIXED
+**File:** `cli/src/__tests__/mocks/oauth-client.ts`
 
-**Add after line 48 (after constructor):**
+### ✅ 2. init.ts - forEach Expression Body
 
-```typescript
-  /**
-   * Initialize the connection manager by loading persisted configuration
-   */
-  async init(): Promise<void> {
-    await this.loadConfig();
-  }
-```
+**Status:** FIXED
+**File:** `cli/src/commands/init.ts`
 
-### Part B: Update connectLocal to load config
+### ✅ 3. mcp.ts - Config Init Outside Try/Catch
 
-**Replace lines 54-61 with:**
-
-```typescript
-  /**
-   * Connect to the local embedded MCP server
-   */
-  async connectLocal(): Promise<ConnectionResult> {
-    try {
-      // Load persisted configuration first
-      await this.loadConfig();
-
-      // First, try to detect the server path
-      const configuredPath = this.config.localServerPath?.trim();
-      const serverPath = configuredPath || (await this.detectServerPath());
-```
-
-### Part C: Update usage in mcp.ts
-
+**Status:** FIXED
 **File:** `cli/src/commands/mcp.ts`
 
-**Find this code (around line 130):**
+### ✅ 4. memory.ts - Empty Content Validation
 
-```typescript
-        if (connectionMode === 'local' && !options.localArgs && !options.url) {
-          const configDir = dirname(config.getConfigPath());
-          const manager = createConnectionManager(join(configDir, 'mcp-config.json'));
+**Status:** FIXED
+**File:** `cli/src/commands/memory.ts`
 
-          if (options.server) {
-            await manager.updateConfig({ localServerPath: options.server });
-          }
+### ✅ 5. memory.ts - DefaultContent Not Forwarded
 
-          const result = await manager.connectLocal();
-```
+**Status:** VERIFIED - NO CHANGE NEEDED
+**File:** `cli/src/commands/memory.ts`
 
-**Replace with:**
+### ✅ 6. ConnectionManager.test.ts - Kill Mock Return Value
 
-```typescript
-        if (connectionMode === 'local' && !options.localArgs && !options.url) {
-          const configDir = dirname(config.getConfigPath());
-          const manager = createConnectionManager(join(configDir, 'mcp-config.json'));
+**Status:** FIXED
+**File:** `cli/src/ux/__tests__/ConnectionManager.test.ts`
 
-          // Initialize manager to load persisted config
-          await manager.init();
+### ✅ 7. ConnectionManager.test.ts - Unused mockPaths
 
-          if (options.server) {
-            await manager.updateConfig({ localServerPath: options.server });
-          }
+**Status:** FIXED
+**File:** `cli/src/ux/__tests__/ConnectionManager.test.ts`
 
-          const result = await manager.connectLocal();
-```
+### ✅ 10. ConnectionManagerImpl.ts - Constructor Config Loading
+
+**Status:** VERIFIED - init() method exists and is called
+**File:** `cli/src/ux/implementations/ConnectionManagerImpl.ts`
+
+### ✅ 12. TextInputHandlerImpl.ts - Block Scope for 'right' Case
+
+**Status:** FIXED
+**File:** `cli/src/ux/implementations/TextInputHandlerImpl.ts`
+
+### ✅ 13. README.md - Missing Language Identifier
+
+**Status:** FIXED
+**File:** `cli/src/ux/README.md`
 
 ---
 
-## Fix #3: Empty Content Overwrites in Inline Updates (P2)
+## Remaining Fixes (3/13)
 
-### Part A: Update InputOptions interface
+### ⚠️ Issue #8: stopLocalServer Listener Accumulation
 
-**File:** `cli/src/ux/interfaces/TextInputHandler.ts`
+**File:** `cli/src/ux/implementations/ConnectionManagerImpl.ts` (lines 324-348)
 
-**Replace lines 18-24 with:**
+**Problem:**
 
 ```typescript
-export interface InputOptions {
-  placeholder?: string;
-  defaultContent?: string;
-  maxLines?: number;
-  submitKeys?: string[];
-  cancelKeys?: string[];
-  showLineNumbers?: boolean;
+async stopLocalServer(): Promise<void> {
+  if (this.serverProcess) {
+    return new Promise((resolve) => {
+      const forceKillTimeout = setTimeout(() => {
+        if (this.serverProcess) {
+          this.serverProcess.kill('SIGKILL');
+        }
+      }, 5000);
+
+      this.serverProcess!.on('exit', () => {  // ⚠️ Uses .on() - accumulates listeners
+        clearTimeout(forceKillTimeout);
+        this.serverProcess = null;
+        if (this.connectionStatus.serverInstance) {
+          this.connectionStatus.serverInstance.status = 'stopped';
+        }
+        this.connectionStatus.isConnected = false;
+        resolve();
+      });
+
+      this.serverProcess!.kill('SIGTERM');
+    });
+  }
 }
 ```
 
-### Part B: Update TextInputHandlerImpl to use defaultContent
+**Issue:**
 
-**File:** `cli/src/ux/implementations/TextInputHandlerImpl.ts`
+- Using `.on('exit')` instead of `.once('exit')` can accumulate listeners if stopLocalServer is called multiple times
+- If the process doesn't exit within 5 seconds, the timeout fires but the listener remains
 
-**Replace lines 38-50 with:**
+**Fix:**
 
 ```typescript
-  /**
-   * Collect multi-line text input from the user
-   */
-  async collectMultilineInput(prompt: string, options?: InputOptions): Promise<string> {
-    const mergedOptions = { ...DEFAULT_INPUT_OPTIONS, ...options };
+async stopLocalServer(): Promise<void> {
+  if (this.serverProcess) {
+    return new Promise((resolve) => {
+      const forceKillTimeout = setTimeout(() => {
+        if (this.serverProcess) {
+          this.serverProcess.kill('SIGKILL');
+        }
+      }, 5000);
 
-    // Initialize content with defaultContent if provided
-    const initialContent = mergedOptions.defaultContent
-      ? mergedOptions.defaultContent.split('\n')
-      : [''];
+      this.serverProcess!.once('exit', () => {  // ✅ Use .once() instead of .on()
+        clearTimeout(forceKillTimeout);
+        this.serverProcess = null;
+        if (this.connectionStatus.serverInstance) {
+          this.connectionStatus.serverInstance.status = 'stopped';
+        }
+        this.connectionStatus.isConnected = false;
+        resolve();
+      });
 
-    // Create new input session
-    this.currentSession = {
-      id: `session_${Date.now()}`,
-      prompt,
-      content: initialContent,
-      cursorPosition: {
-        line: initialContent.length - 1,
-        column: initialContent[initialContent.length - 1].length
-      },
-      startTime: new Date(),
-      options: mergedOptions,
-      status: 'active',
-    };
+      this.serverProcess!.kill('SIGTERM');
+    });
+  }
+}
 ```
 
-### Part C: Update memory.ts to pass defaultContent
+**Impact:** Low - Only affects scenarios where stopLocalServer is called multiple times
 
-**File:** `cli/src/commands/memory.ts`
+---
 
-**Replace lines 100-118 with:**
+### ⚠️ Issue #9: Undefined PID Handling
+
+**File:** `cli/src/ux/implementations/ConnectionManagerImpl.ts` (line 237)
+
+**Problem:**
 
 ```typescript
-const collectMemoryContent = async (
-  prompt: string,
-  inputMode: InputMode,
-  defaultContent?: string,
-): Promise<string> => {
-  if (inputMode === 'editor') {
-    const { content } = await inquirer.prompt<{ content: string }>([
-      {
-        type: 'editor',
-        name: 'content',
-        message: prompt,
-        default: defaultContent,
-      },
-    ]);
-    return content;
-  }
-
-  const handler = createTextInputHandler();
-  return handler.collectMultilineInput(prompt, {
-    defaultContent,
-  });
+const serverInstance: ServerInstance = {
+  pid: serverProcess.pid!, // ⚠️ Non-null assertion - pid can be undefined
+  port: this.config.serverPort || 3000,
+  status: 'starting',
+  startTime: new Date(),
+  logPath: join(dirname(this.configPath), 'mcp-server.log'),
 };
 ```
 
----
+**Issue:**
 
-## Testing the Fixes
+- `serverProcess.pid` can be `undefined` if the process hasn't spawned yet
+- Using non-null assertion (`!`) bypasses TypeScript's safety checks
+- Could cause runtime errors when accessing `pid` later
 
-After applying all fixes, run these tests:
-
-### 1. Test Fix #1 (Connection Verification)
-
-```bash
-cd cli
-npm test -- ConnectionManager.test.ts
-```
-
-Add this test case to verify the fix:
+**Fix:**
 
 ```typescript
-it('should return false when server is in error state', async () => {
-  const connectionManager = new ConnectionManagerImpl();
-  connectionManager['connectionStatus'].serverInstance = {
-    pid: 12345,
-    port: 3000,
-    status: 'error',
-    startTime: new Date(),
-    logPath: '/tmp/test.log',
-  };
-
-  const isValid = await connectionManager.verifyConnection('/valid/path/server.js');
-  expect(isValid).toBe(false);
-});
-
-it('should return false when server is stopped', async () => {
-  const connectionManager = new ConnectionManagerImpl();
-  connectionManager['connectionStatus'].serverInstance = {
-    pid: 12345,
-    port: 3000,
-    status: 'stopped',
-    startTime: new Date(),
-    logPath: '/tmp/test.log',
-  };
-
-  const isValid = await connectionManager.verifyConnection('/valid/path/server.js');
-  expect(isValid).toBe(false);
-});
+const serverInstance: ServerInstance = {
+  pid: serverProcess.pid ?? 0, // ✅ Provide default value
+  port: this.config.serverPort || 3000,
+  status: 'starting',
+  startTime: new Date(),
+  logPath: join(dirname(this.configPath), 'mcp-server.log'),
+};
 ```
 
-### 2. Test Fix #2 (Config Loading)
+Or better yet, check explicitly:
 
-```bash
-# Create a test config file
-mkdir -p /tmp/test-cli/.lanonasis
-echo '{"localServerPath":"/custom/path/server.js"}' > /tmp/test-cli/.lanonasis/mcp-config.json
+```typescript
+if (!serverProcess.pid) {
+  reject(new Error('Failed to get process ID for server'));
+  return;
+}
 
-# Run CLI from that directory
-cd /tmp/test-cli
-lanonasis mcp connect --local
-
-# Should use /custom/path/server.js instead of auto-detecting
+const serverInstance: ServerInstance = {
+  pid: serverProcess.pid,
+  port: this.config.serverPort || 3000,
+  status: 'starting',
+  startTime: new Date(),
+  logPath: join(dirname(this.configPath), 'mcp-server.log'),
+};
 ```
 
-### 3. Test Fix #3 (Default Content)
-
-```bash
-# Create a memory
-lanonasis memory create -t "Test Memory" -c "Original content"
-
-# Update it with inline mode (should preserve content if you just press Ctrl+D)
-lanonasis memory update <memory-id> -i
-
-# When prompted for content, immediately press Ctrl+D
-# Content should remain "Original content", not become empty
-```
-
-### 4. Run Full Test Suite
-
-```bash
-cd cli
-npm run build
-npm test
-```
-
-All tests should pass.
+**Impact:** Low - Most spawned processes will have a PID, but edge cases exist
 
 ---
 
-## Verification Checklist
+### ⚠️ Issue #11: TextInputHandler Cleanup on Error
 
-- [ ] Fix #1 applied to ConnectionManagerImpl.ts
-- [ ] Fix #2 Part A applied (init method added)
-- [ ] Fix #2 Part B applied (connectLocal updated)
-- [ ] Fix #2 Part C applied (mcp.ts updated)
-- [ ] Fix #3 Part A applied (InputOptions updated)
-- [ ] Fix #3 Part B applied (TextInputHandlerImpl updated)
-- [ ] Fix #3 Part C applied (memory.ts updated)
-- [ ] All TypeScript compilation errors resolved
-- [ ] Unit tests pass
-- [ ] Manual testing completed for all three scenarios
-- [ ] PR updated with fixes
-- [ ] Re-review requested
+**File:** `cli/src/ux/implementations/TextInputHandlerImpl.ts` (lines 100-104)
+
+**Problem:**
+
+```typescript
+// Store handlers for special key processing
+(this as any)._completeHandler = complete;
+(this as any)._cancelHandler = cancel;
+
+process.stdin.on('data', handleKeypress);  // Line 100 - Listener registered
+} catch (error) {
+  this.disableRawMode();  // ⚠️ Only disables raw mode, doesn't remove listener
+  reject(error);
+}
+```
+
+**Issue:**
+
+- If an error is thrown after line 100, the listener is not removed
+- This can cause memory leaks and unexpected behavior
+- The `cleanup()` function exists but isn't called in the catch block
+
+**Fix:**
+
+```typescript
+// Store handlers for special key processing
+(this as any)._completeHandler = complete;
+(this as any)._cancelHandler = cancel;
+
+process.stdin.on('data', handleKeypress);
+} catch (error) {
+  cleanup();  // ✅ Call cleanup() instead of just disableRawMode()
+  reject(error);
+}
+```
+
+**Impact:** Low - Only affects error scenarios, but important for proper cleanup
 
 ---
 
-## Estimated Time
+## Implementation Plan
 
-- Applying fixes: 30 minutes
-- Testing: 30 minutes
-- Documentation: 15 minutes
-- **Total: ~1.5 hours**
+### Step 1: Fix Issue #8 (stopLocalServer)
+
+1. Open `cli/src/ux/implementations/ConnectionManagerImpl.ts`
+2. Navigate to line 337
+3. Change `.on('exit')` to `.once('exit')`
+4. Run tests: `npm test`
+5. Verify ConnectionManager.test.ts passes
+
+### Step 2: Fix Issue #9 (PID Handling)
+
+1. Open `cli/src/ux/implementations/ConnectionManagerImpl.ts`
+2. Navigate to line 237
+3. Add explicit check for undefined PID
+4. Run tests: `npm test`
+5. Verify ConnectionManager.test.ts passes
+
+### Step 3: Fix Issue #11 (TextInputHandler Cleanup)
+
+1. Open `cli/src/ux/implementations/TextInputHandlerImpl.ts`
+2. Navigate to line 102
+3. Change `this.disableRawMode()` to `cleanup()`
+4. Run tests: `npm test`
+5. Verify TextInputHandler.test.ts passes
+
+### Step 4: Final Verification
+
+1. Run full test suite: `npm test`
+2. Run build: `npm run build`
+3. Verify 0 errors
+4. Update PRE_MERGE_FIXES.md with completion status
+
+---
+
+## Testing Checklist
+
+- [x] ConnectionManager.test.ts passes (16 tests)
+- [x] TextInputHandler.test.ts passes
+- [x] OnboardingFlow.test.ts passes
+- [x] Build succeeds with 0 errors
+- [ ] Issue #8 fix verified
+- [ ] Issue #9 fix verified
+- [ ] Issue #11 fix verified
+- [ ] All tests pass after fixes
+- [ ] Build succeeds after fixes
 
 ---
 
 ## Notes
 
-- All fixes are backward compatible
+- All three remaining issues are low-impact edge cases
+- Current implementation is functional and all tests pass
+- Fixes improve code robustness and follow best practices
 - No breaking changes to public APIs
-- Existing tests should continue to pass
-- Consider adding the new test cases shown above for better coverage
+- Backward compatible
+
+---
+
+## Time Estimate
+
+| Task      | Estimated Time  |
+| --------- | --------------- |
+| Fix #8    | 5 minutes       |
+| Fix #9    | 10 minutes      |
+| Fix #11   | 5 minutes       |
+| Testing   | 5 minutes       |
+| **Total** | **~25 minutes** |
+
+---
+
+**Last Updated:** February 1, 2026
+**Status:** 9/13 fixes complete, 3 remaining
+**Next Action:** Implement remaining 3 fixes

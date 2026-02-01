@@ -623,6 +623,46 @@ describe('MCP Connection Reliability Tests', () => {
   });
 
   describe('Tool Execution Reliability', () => {
+    it('should use remote tool bridge for websocket mode', async () => {
+      const internalClient = mcpClient as any;
+      internalClient.isConnected = true;
+      internalClient.activeConnectionMode = 'websocket';
+      internalClient.client = null;
+
+      const config = internalClient.config;
+      await config.setAndSave('mcpUseRemote', false);
+
+      const remoteSpy = jest
+        .spyOn(internalClient, 'callRemoteTool')
+        .mockResolvedValue({ code: 200, message: 'ok' });
+
+      const result = await mcpClient.callTool('memory_create_memory', {
+        title: 'ws mode',
+        content: 'ws mode content'
+      });
+
+      expect(remoteSpy).toHaveBeenCalledWith('memory_create_memory', {
+        title: 'ws mode',
+        content: 'ws mode content'
+      });
+      expect(result).toMatchObject({ code: 200, message: 'ok' });
+    });
+
+    it('should list tools via remote bridge for websocket mode', async () => {
+      const internalClient = mcpClient as any;
+      internalClient.isConnected = true;
+      internalClient.activeConnectionMode = 'websocket';
+      internalClient.client = null;
+
+      const config = internalClient.config;
+      await config.setAndSave('mcpUseRemote', false);
+
+      const tools = await mcpClient.listTools();
+      expect(Array.isArray(tools)).toBe(true);
+      expect(tools.length).toBeGreaterThan(0);
+      expect(tools[0]).toHaveProperty('name', 'memory_create_memory');
+    });
+
     it('should handle tool execution failures gracefully', async () => {
       // Configure MCP client as a connected remote client without using real network
       const internalClient = mcpClient as any;

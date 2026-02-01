@@ -61,11 +61,19 @@ export class TextInputHandlerImpl implements TextInputHandler {
     };
 
     return new Promise((resolve, reject) => {
+      let handleKeypress: ((chunk: Buffer) => void) | null = null;
+      const cleanup = () => {
+        if (handleKeypress) {
+          process.stdin.removeListener('data', handleKeypress);
+        }
+        this.disableRawMode();
+      };
+
       try {
         this.enableRawMode();
-        this.displayInputPrompt('');
+        this.displayInputPrompt(this.getCurrentContent());
 
-        const handleKeypress = (chunk: Buffer) => {
+        handleKeypress = (chunk: Buffer) => {
           const key = this.parseKeyEvent(chunk);
 
           if (this.handleSpecialKeys(key)) {
@@ -77,11 +85,6 @@ export class TextInputHandlerImpl implements TextInputHandler {
             this.addCharacterToInput(key.sequence);
             this.displayInputPrompt(this.getCurrentContent());
           }
-        };
-
-        const cleanup = () => {
-          process.stdin.removeListener('data', handleKeypress);
-          this.disableRawMode();
         };
 
         // Set up completion handlers
@@ -107,7 +110,7 @@ export class TextInputHandlerImpl implements TextInputHandler {
 
         process.stdin.on('data', handleKeypress);
       } catch (error) {
-        this.disableRawMode();
+        cleanup();
         reject(error);
       }
     });
