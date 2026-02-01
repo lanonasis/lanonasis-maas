@@ -368,6 +368,7 @@ export class TextInputHandlerImpl implements TextInputHandler {
         }
         break;
       case 'right':
+      {
         const currentLineLength = content[cursorPosition.line]?.length || 0;
         if (cursorPosition.column < currentLineLength) {
           cursorPosition.column++;
@@ -376,6 +377,7 @@ export class TextInputHandlerImpl implements TextInputHandler {
           cursorPosition.column = 0;
         }
         break;
+      }
     }
   }
 
