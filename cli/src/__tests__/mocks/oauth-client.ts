@@ -3,7 +3,7 @@ let storedKey: { apiKey: string } | undefined;
 export class ApiKeyStorage {
 
   async initialize(): Promise<void> {
-    return;
+    storedKey = undefined;
   }
 
   async store(data: { apiKey: string }): Promise<void> {
