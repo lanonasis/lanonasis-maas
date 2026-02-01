@@ -29,7 +29,9 @@ const collectMemoryContent = async (prompt, inputMode, defaultContent) => {
         return content;
     }
     const handler = createTextInputHandler();
-    return handler.collectMultilineInput(prompt);
+    return handler.collectMultilineInput(prompt, {
+        defaultContent,
+    });
 };
 export function memoryCommands(program) {
     // Create memory

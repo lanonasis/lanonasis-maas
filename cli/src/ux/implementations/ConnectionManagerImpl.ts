@@ -52,10 +52,20 @@ export class ConnectionManagerImpl implements ConnectionManager {
   }
 
   /**
+   * Initialize the connection manager by loading persisted configuration
+   */
+  async init(): Promise<void> {
+    await this.loadConfig();
+  }
+
+  /**
    * Connect to the local embedded MCP server
    */
   async connectLocal(): Promise<ConnectionResult> {
     try {
+      // Load persisted configuration first
+      await this.loadConfig();
+
       // First, try to detect the server path
       const configuredPath = this.config.localServerPath?.trim();
       const serverPath = configuredPath || (await this.detectServerPath());
@@ -271,18 +281,34 @@ export class ConnectionManagerImpl implements ConnectionManager {
       await fs.access(serverPath);
 
       // If we have a running server instance, check if it's responsive
-      if (this.connectionStatus.serverInstance?.status === 'running') {
-        // TODO: Implement actual MCP protocol health check
-        // For now, just verify the process is still running
-        const { pid } = this.connectionStatus.serverInstance;
-        try {
-          process.kill(pid, 0); // Signal 0 checks if process exists
-          return true;
-        } catch {
+      if (this.connectionStatus.serverInstance) {
+        const { status, pid } = this.connectionStatus.serverInstance;
+
+        // Explicitly check for error/stopped states
+        if (status === 'error' || status === 'stopped') {
+          return false;
+        }
+
+        // Only verify process for running servers
+        if (status === 'running') {
+          try {
+            process.kill(pid, 0); // Signal 0 checks if process exists
+            return true;
+          } catch {
+            // Process doesn't exist despite status being 'running'
+            this.connectionStatus.serverInstance.status = 'stopped';
+            return false;
+          }
+        }
+
+        // Starting state is not yet ready
+        if (status === 'starting') {
           return false;
         }
       }
 
+      // No server instance means we haven't started it yet
+      // This is okay for initial connection attempts
       return true;
     } catch {
       return false;

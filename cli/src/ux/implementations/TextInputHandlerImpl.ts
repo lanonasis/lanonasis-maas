@@ -41,12 +41,20 @@ export class TextInputHandlerImpl implements TextInputHandler {
   async collectMultilineInput(prompt: string, options?: InputOptions): Promise<string> {
     const mergedOptions = { ...DEFAULT_INPUT_OPTIONS, ...options };
 
+    // Initialize content with defaultContent if provided
+    const initialContent = mergedOptions.defaultContent
+      ? mergedOptions.defaultContent.split('\n')
+      : [''];
+
     // Create new input session
     this.currentSession = {
       id: `session_${Date.now()}`,
       prompt,
-      content: [''],
-      cursorPosition: { line: 0, column: 0 },
+      content: initialContent,
+      cursorPosition: {
+        line: initialContent.length - 1,
+        column: initialContent[initialContent.length - 1].length
+      },
       startTime: new Date(),
       options: mergedOptions,
       status: 'active',
