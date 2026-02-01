@@ -64,6 +64,12 @@ export interface MCPConfig {
  */
 export interface ConnectionManager {
   /**
+   * Initialize the connection manager by loading persisted configuration
+   * @returns Promise that resolves when initialization is complete
+   */
+  init(): Promise<void>;
+
+  /**
    * Connect to the local embedded MCP server
    * @returns Promise that resolves to connection result
    */

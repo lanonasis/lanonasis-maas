@@ -118,6 +118,8 @@ export function mcpCommands(program) {
             if (connectionMode === 'local' && !options.localArgs && !options.url) {
                 const configDir = dirname(config.getConfigPath());
                 const manager = createConnectionManager(join(configDir, 'mcp-config.json'));
+                // Initialize manager to load persisted config
+                await manager.init();
                 if (options.server) {
                     await manager.updateConfig({ localServerPath: options.server });
                 }

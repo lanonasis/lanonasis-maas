@@ -20,6 +20,7 @@ export interface CursorPosition {
 
 export interface InputOptions {
   placeholder?: string;
+  defaultContent?: string;
   maxLines?: number;
   submitKeys?: string[];
   cancelKeys?: string[];
