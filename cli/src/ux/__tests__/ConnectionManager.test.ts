@@ -148,7 +148,12 @@ describe('ConnectionManager', () => {
             autoStart: fc.boolean(),
             connectionTimeout: fc.integer({ min: 1000, max: 60000 }),
             retryAttempts: fc.integer({ min: 1, max: 10 }),
-            logLevel: fc.constantFrom('error' as const, 'warn' as const, 'info' as const, 'debug' as const),
+            logLevel: fc.constantFrom(
+              'error' as const,
+              'warn' as const,
+              'info' as const,
+              'debug' as const,
+            ),
           }),
           async (configUpdate) => {
             // Property: Configuration updates should always result in valid configurations
@@ -248,6 +253,174 @@ describe('ConnectionManager', () => {
       const isValid = await connectionManager.verifyConnection('/invalid/path/server.js');
       expect(isValid).toBe(false);
     });
+
+    it('should return false when server status is error', async () => {
+      // This test verifies that verifyConnection returns false when the server
+      // instance has an 'error' status, even if the server path exists.
+
+      // First, we need to get the connection manager into a state where it has
+      // a server instance with error status. We'll do this by starting a server
+      // that immediately fails.
+
+      // Mock detectServerPath to return a valid path
+      jest.spyOn(connectionManager, 'detectServerPath').mockResolvedValue('/mock/server.js');
+
+      // Mock fs.access to succeed (server path exists)
+      mockAccess.mockResolvedValue(undefined);
+
+      // Create a mock process that spawns but immediately errors
+      const mockProcess = {
+        pid: 12345,
+        stdout: { pipe: jest.fn() },
+        stderr: { pipe: jest.fn() },
+        on: jest.fn((event: string, callback: (codeOrError?: number | Error) => void) => {
+          if (event === 'spawn') {
+            // Spawn successfully
+            setTimeout(() => callback(), 0);
+          } else if (event === 'exit') {
+            // But then exit with error code immediately after
+            setTimeout(() => callback(1), 5);
+          }
+        }),
+        kill: jest.fn((signal: string) => {
+          // When killed, trigger exit
+          const exitCallbacks = (mockProcess.on as jest.Mock).mock.calls
+            .filter(([event]) => event === 'exit')
+            .map(([, callback]) => callback as (code?: number) => void);
+          exitCallbacks.forEach((cb) => cb(0));
+          return true;
+        }),
+      };
+
+      mockSpawn.mockReturnValue(mockProcess as any);
+
+      // Attempt to connect - this will start the server
+      await connectionManager.connectLocal();
+
+      // Wait for the exit event to be processed
+      await new Promise((resolve) => setTimeout(resolve, 20));
+
+      // Now the server instance should have status 'error'
+      // Verify that verifyConnection returns false
+      const isValid = await connectionManager.verifyConnection('/mock/server.js');
+      expect(isValid).toBe(false);
+    }, 10000); // Increase timeout for this test
+
+    it('should return false when server status is stopped', async () => {
+      // This test verifies that verifyConnection returns false when the server
+      // instance has a 'stopped' status, even if the server path exists.
+
+      // Mock detectServerPath to return a valid path
+      jest.spyOn(connectionManager, 'detectServerPath').mockResolvedValue('/mock/server.js');
+
+      // Mock fs.access to succeed (server path exists)
+      mockAccess.mockResolvedValue(undefined);
+
+      // Create a mock process that spawns successfully but then stops cleanly
+      const mockProcess = {
+        pid: 12345,
+        stdout: { pipe: jest.fn() },
+        stderr: { pipe: jest.fn() },
+        on: jest.fn((event: string, callback: (codeOrError?: number | Error) => void) => {
+          if (event === 'spawn') {
+            // Spawn successfully
+            setTimeout(() => callback(), 0);
+          } else if (event === 'exit') {
+            // Exit cleanly with code 0 (stopped, not error)
+            setTimeout(() => callback(0), 5);
+          }
+        }),
+        kill: jest.fn((signal: string) => {
+          // When killed, trigger exit with code 0
+          const exitCallbacks = (mockProcess.on as jest.Mock).mock.calls
+            .filter(([event]) => event === 'exit')
+            .map(([, callback]) => callback as (code?: number) => void);
+          exitCallbacks.forEach((cb) => cb(0));
+          return true;
+        }),
+      };
+
+      mockSpawn.mockReturnValue(mockProcess as any);
+
+      // Attempt to connect - this will start the server
+      await connectionManager.connectLocal();
+
+      // Wait for the exit event to be processed
+      await new Promise((resolve) => setTimeout(resolve, 20));
+
+      // Now the server instance should have status 'stopped'
+      // Verify that verifyConnection returns false
+      const isValid = await connectionManager.verifyConnection('/mock/server.js');
+      expect(isValid).toBe(false);
+    }, 10000); // Increase timeout for this test
+
+    it('should return false when server status is starting', async () => {
+      // This test verifies that verifyConnection returns false when the server
+      // instance has a 'starting' status (not yet ready).
+
+      // Mock fs.access to succeed (server path exists)
+      mockAccess.mockResolvedValue(undefined);
+
+      // Access the private connectionStatus property for testing
+      // This is necessary because we need to set up a specific state
+      const manager = connectionManager as any;
+      manager.connectionStatus.serverInstance = {
+        pid: 12345,
+        port: 3000,
+        status: 'starting',
+        startTime: new Date(),
+        logPath: '/tmp/test.log',
+      };
+
+      // Verify that verifyConnection returns false for starting state
+      const isValid = await connectionManager.verifyConnection('/mock/server.js');
+      expect(isValid).toBe(false);
+    });
+
+    it('should return true when server status is running with valid process', async () => {
+      // This test verifies that verifyConnection returns true when the server
+      // instance has a 'running' status and the process exists.
+
+      // Mock detectServerPath to return a valid path
+      jest.spyOn(connectionManager, 'detectServerPath').mockResolvedValue('/mock/server.js');
+
+      // Mock fs.access to succeed (server path exists)
+      mockAccess.mockResolvedValue(undefined);
+
+      // Create a mock process that spawns successfully and stays running
+      const mockProcess = {
+        pid: process.pid, // Use current process PID so process.kill(pid, 0) succeeds
+        stdout: { pipe: jest.fn() },
+        stderr: { pipe: jest.fn() },
+        on: jest.fn((event: string, callback: (codeOrError?: number | Error) => void) => {
+          if (event === 'spawn') {
+            // Spawn successfully
+            setTimeout(() => callback(), 0);
+          }
+          // Don't fire exit event - keep it running
+        }),
+        kill: jest.fn((signal: string) => {
+          // When killed, trigger exit
+          const exitCallbacks = (mockProcess.on as jest.Mock).mock.calls
+            .filter(([event]) => event === 'exit')
+            .map(([, callback]) => callback as (code?: number) => void);
+          exitCallbacks.forEach((cb) => cb(0));
+          return true;
+        }),
+      };
+
+      mockSpawn.mockReturnValue(mockProcess as any);
+
+      // Attempt to connect - this will start the server
+      const result = await connectionManager.connectLocal();
+
+      // Connection should succeed
+      expect(result.success).toBe(true);
+
+      // Verify that verifyConnection returns true for running server
+      const isValid = await connectionManager.verifyConnection('/mock/server.js');
+      expect(isValid).toBe(true);
+    }, 10000);
 
     it('should handle server startup timeout', async () => {
       // Mock spawn to simulate timeout
