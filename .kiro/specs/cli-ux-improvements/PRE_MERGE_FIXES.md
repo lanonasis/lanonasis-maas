@@ -6,12 +6,37 @@ This document tracks the three critical issues that must be fixed before merging
 
 ## Status Overview
 
-- [x] Fix #1: Connection Verification False Positive (P1)
-- [x] Fix #2: Configuration Not Loaded Before Use (P2)
-- [x] Fix #3: Empty Content Overwrites in Inline Updates (P2)
-- [x] All tests passing
+- [x] Fix #1: Connection Verification False Positive (P1) - COMPLETE
+- [x] Fix #2: Configuration Not Loaded Before Use (P2) - COMPLETE
+- [x] Fix #3: Empty Content Overwrites in Inline Updates (P2) - COMPLETE
+- [x] All tests passing (16/16 ConnectionManager, all TextInputHandler, all OnboardingFlow)
+- [x] Build succeeds with 0 errors
+- [ ] PR #93 Code Review Issues (9/13 complete, 3 remaining)
 - [ ] Manual testing completed
 - [ ] PR updated and re-review requested
+
+### Additional PR Review Fixes Status
+
+**Completed (9/13):**
+
+- ✅ Issue #1: oauth-client.ts memory leak
+- ✅ Issue #2: init.ts forEach expression body
+- ✅ Issue #3: mcp.ts config.init() placement
+- ✅ Issue #4: memory.ts empty content validation
+- ✅ Issue #5: memory.ts defaultContent forwarding (verified)
+- ✅ Issue #6: ConnectionManager.test.ts kill mock
+- ✅ Issue #7: ConnectionManager.test.ts unused mockPaths
+- ✅ Issue #10: ConnectionManagerImpl constructor config loading (verified)
+- ✅ Issue #12: TextInputHandlerImpl block scope for 'right' case
+- ✅ Issue #13: README.md code fence language identifier
+
+**Remaining (3/13):**
+
+- ⚠️ Issue #8: stopLocalServer listener accumulation (use .once() instead of .on())
+- ⚠️ Issue #9: Undefined PID handling (add explicit check)
+- ⚠️ Issue #11: TextInputHandler cleanup on error (call cleanup() in catch)
+
+See `PR_93_FIXES.md` for detailed implementation guide.
 
 ---
 
@@ -194,15 +219,52 @@ When updating memory with inline mode, `defaultContent` is not passed to TextInp
 
 ---
 
+## Additional PR Review Issues
+
+In addition to the three critical pre-merge fixes above, the PR #93 code review identified 13 additional issues. As of February 1, 2026:
+
+- **9 issues have been fixed**
+- **3 issues remain** (all low-impact edge cases)
+
+### Remaining Issues
+
+#### Issue #8: stopLocalServer Listener Accumulation
+
+**File:** `cli/src/ux/implementations/ConnectionManagerImpl.ts` (line 337)
+**Fix:** Change `.on('exit')` to `.once('exit')`
+**Impact:** Low - only affects multiple stopLocalServer calls
+**Time:** 5 minutes
+
+#### Issue #9: Undefined PID Handling
+
+**File:** `cli/src/ux/implementations/ConnectionManagerImpl.ts` (line 237)
+**Fix:** Add explicit check for `serverProcess.pid` being undefined
+**Impact:** Low - most processes have PIDs, but edge cases exist
+**Time:** 10 minutes
+
+#### Issue #11: TextInputHandler Cleanup on Error
+
+**File:** `cli/src/ux/implementations/TextInputHandlerImpl.ts` (line 102)
+**Fix:** Call `cleanup()` instead of just `this.disableRawMode()` in catch block
+**Impact:** Low - only affects error scenarios
+**Time:** 5 minutes
+
+**Total Time to Complete:** ~20 minutes
+
+See `PR_93_FIXES.md` for detailed implementation guide and `PR_93_REFACTORING_PLAN.md` for complete issue tracking.
+
+---
+
 ## References
 
 - **Detailed Analysis:** See PR_93_VALIDATION_REPORT.md
 - **Code Changes:** See PR_93_FIXES.md
+- **Refactoring Plan:** See PR_93_REFACTORING_PLAN.md
 - **Requirements:** See requirements.md
 - **Tasks:** See tasks.md
 
 ---
 
 **Last Updated:** February 1, 2026  
-**Status:** All fixes implemented and verified - Ready for manual testing  
+**Status:** All critical fixes implemented and verified - 3 low-impact issues remain  
 **PR:** #93 - CLI UX Improvements

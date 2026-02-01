@@ -3,7 +3,8 @@ let storedKey: { apiKey: string } | undefined;
 export class ApiKeyStorage {
 
   async initialize(): Promise<void> {
-    storedKey = undefined;
+    // Keep stored data stable across initialize() calls in a test process.
+    // Real secure stores don't wipe credentials when re-initialized.
   }
 
   async store(data: { apiKey: string }): Promise<void> {
