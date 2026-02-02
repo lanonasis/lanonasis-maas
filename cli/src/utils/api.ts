@@ -239,17 +239,7 @@ export class APIClient {
           
           if (status === 401) {
             console.error(chalk.red('✖ Authentication failed'));
-
-            // Check if user is using OAuth - OAuth tokens only work with MCP, not direct API
-            const authMethod = this.config.get<string>('authMethod');
-            if (authMethod === 'oauth') {
-              console.log(chalk.yellow('\nNote: OAuth tokens are for MCP integration only.'));
-              console.log(chalk.gray('For direct API access, you have two options:'));
-              console.log(chalk.gray('  1. Get a vendor key from the dashboard: ') + chalk.cyan('lanonasis auth login --vendor'));
-              console.log(chalk.gray('  2. Login with username/password: ') + chalk.cyan('lanonasis auth login --credentials'));
-            } else {
-              console.log(chalk.yellow('Please run:'), chalk.white('lanonasis auth login'));
-            }
+            console.log(chalk.yellow('Please run:'), chalk.white('memory login'));
             process.exit(1);
           }
           
