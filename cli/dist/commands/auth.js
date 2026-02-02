@@ -606,6 +606,10 @@ async function handleVendorKeyAuth(vendorKey, config) {
     const spinner = ora('Validating vendor key...').start();
     try {
         await config.setVendorKey(vendorKey);
+        // Explicitly set authMethod to vendor_key when user does explicit vendor key auth
+        // This overrides any previous OAuth authMethod
+        await config.set('authMethod', 'vendor_key');
+        await config.save();
         // Test the vendor key with a health check
         await apiClient.get('/health');
         spinner.succeed('Vendor key authentication successful');

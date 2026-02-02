@@ -1,6 +1,6 @@
 {
   "name": "@lanonasis/cli",
-  "version": "3.9.2",
+  "version": "3.9.3",
   "description": "Professional CLI for LanOnasis Memory as a Service (MaaS) with MCP support, seamless inline editing, and enterprise-grade security",
   "keywords": [
     "lanonasis",
