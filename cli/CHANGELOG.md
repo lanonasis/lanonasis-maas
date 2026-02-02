@@ -1,5 +1,28 @@
 # Changelog - @lanonasis/cli
 
+## [3.9.2] - 2026-02-02
+
+### 🐛 Bug Fixes
+
+- **Auth Method Override**: Fixed vendor key authentication not overriding previous OAuth `authMethod`
+  - When users explicitly authenticate with vendor key after OAuth, the `authMethod` is now correctly set to `vendor_key`
+  - This fixes "Authenticated: No" status after successful vendor key authentication
+  - Reverted changes from 3.9.1 that incorrectly removed vendor key storage from OAuth flow
+
+## [3.9.1] - 2026-02-01
+
+### 🔐 Authentication Fixes
+
+- **OAuth Scope Clarification**: OAuth login now clearly states it enables MCP integration only
+- **Improved Error Messages**: 401 errors for OAuth users include specific guidance for direct API access
+- **Removed Misleading Storage**: OAuth tokens are no longer incorrectly stored as vendor keys
+- **Documentation Updates**: README and in-CLI help clarify authentication method differences
+
+### 🐛 Bug Fixes
+
+- Fixed confusing error message when OAuth users try to use direct CLI commands
+- Removed `.lanonasis/mcp-config.json` from version control
+
 ## [3.9.0] - 2026-02-01
 
 ### 🎨 CLI UX Revolution
