@@ -1,5 +1,29 @@
 # Changelog - @lanonasis/cli
 
+## [3.9.3] - 2026-02-02
+
+### ✨ Features
+
+- **Non-Interactive Vendor Key Auth**: Added `-k, --vendor-key <key>` option to `auth login` command
+  - Enables non-interactive authentication in CI/CD pipelines and automation scripts
+  - Example: `onasis auth login --vendor-key <your-key>`
+
+### 🐛 Bug Fixes
+
+- **JWT Authentication Routing**: Fixed API routing for JWT/OAuth authenticated sessions
+  - JWT tokens from username/password or OAuth login now correctly route to MCP server
+  - Memory operations (list, create, search, update, delete) work with JWT authentication
+  - Path translation handles endpoint differences between API and MCP servers
+  - Vendor key authentication continues to route to main API server
+
+- **Missing CLI Option**: The `--vendor-key` option was defined in code but not exposed in CLI
+  - Now properly registered in command-line interface
+
+### ⚠️ Known Limitations
+
+- `memory stats` command not available with JWT authentication (MCP server limitation)
+- For full API access including stats, use vendor key authentication
+
 ## [3.9.2] - 2026-02-02
 
 ### 🐛 Bug Fixes

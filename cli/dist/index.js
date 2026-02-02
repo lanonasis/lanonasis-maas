@@ -221,6 +221,7 @@ authCmd
     .description('Login to your MaaS account')
     .option('-e, --email <email>', 'email address')
     .option('-p, --password <password>', 'password')
+    .option('-k, --vendor-key <key>', 'vendor key for API access')
     .action(loginCommand);
 authCmd
     .command('logout')

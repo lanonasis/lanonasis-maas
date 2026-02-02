@@ -15,19 +15,43 @@ export class APIClient {
             await this.config.init();
             // Service Discovery
             await this.config.discoverServices();
-            // Use appropriate base URL based on endpoint
+            // Use appropriate base URL based on endpoint and auth method
             const isAuthEndpoint = config.url?.includes('/auth/') || config.url?.includes('/login') || config.url?.includes('/register') || config.url?.includes('/oauth/');
             const discoveredServices = this.config.get('discoveredServices');
-            config.baseURL = isAuthEndpoint ?
-                (discoveredServices?.auth_base || 'https://auth.lanonasis.com') :
-                this.config.getApiUrl();
+            const authMethod = this.config.get('authMethod');
+            const vendorKey = await this.config.getVendorKeyAsync();
+            // Determine the correct API base URL:
+            // - Auth endpoints -> auth.lanonasis.com
+            // - JWT auth (no vendor key) -> mcp.lanonasis.com (supports JWT tokens)
+            // - Vendor key auth -> api.lanonasis.com (requires vendor key)
+            let apiBaseUrl;
+            const useMcpServer = !vendorKey && (authMethod === 'jwt' || authMethod === 'oauth' || authMethod === 'oauth2');
+            if (isAuthEndpoint) {
+                apiBaseUrl = discoveredServices?.auth_base || 'https://auth.lanonasis.com';
+            }
+            else if (vendorKey) {
+                // Vendor key works with api.lanonasis.com
+                apiBaseUrl = this.config.getApiUrl();
+            }
+            else if (useMcpServer) {
+                // JWT/OAuth tokens work with mcp.lanonasis.com
+                apiBaseUrl = 'https://mcp.lanonasis.com/api/v1';
+            }
+            else {
+                apiBaseUrl = this.config.getApiUrl();
+            }
+            config.baseURL = apiBaseUrl;
+            // Path translation for MCP server:
+            // MCP uses /memory (singular) while main API uses /memories (plural)
+            if (useMcpServer && config.url) {
+                config.url = config.url.replace(/\/api\/v1\/memories/g, '/memory');
+            }
             // Add project scope header for auth endpoints
             if (isAuthEndpoint) {
                 config.headers['X-Project-Scope'] = 'lanonasis-maas';
             }
             // Enhanced Authentication Support
             const token = this.config.getToken();
-            const vendorKey = await this.config.getVendorKeyAsync();
             if (vendorKey) {
                 // Vendor key authentication (validated server-side)
                 // Send raw key - server handles hashing for comparison
