@@ -1,11 +1,11 @@
-# @lanonasis/cli v3.9.0 - Enterprise Security & Professional UX
+# @lanonasis/cli v3.9.3 - Enterprise Security & Professional UX
 
 [![NPM Version](https://img.shields.io/npm/v/@lanonasis/cli)](https://www.npmjs.com/package/@lanonasis/cli)
 [![Downloads](https://img.shields.io/npm/dt/@lanonasis/cli)](https://www.npmjs.com/package/@lanonasis/cli)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Golden Contract](https://img.shields.io/badge/Onasis--Core-v0.1%20Compliant-gold)](https://api.lanonasis.com/.well-known/onasis.json)
 
-🎉 **NEW IN v3.9**: Professional CLI UX with seamless inline text editing, intelligent MCP connection management, and first-run onboarding. Advanced Model Context Protocol (MCP) support with multi-server connections, enhanced error handling, and enterprise-grade transport protocols. Revolutionary interactive CLI experience with guided workflows and **Golden Contract compliance**.
+🎉 **NEW IN v3.9.3**: Fixed JWT authentication routing for username/password login, resolved frozen terminal during interactive input, and added non-interactive vendor key authentication (`-k` flag). Professional CLI UX with seamless inline text editing, intelligent MCP connection management, and first-run onboarding.
 
 ## 🚀 Quick Start
 
@@ -151,7 +151,11 @@ onasis login --vendor-key pk_xxxxx.sk_xxxxx  // ✅ Automatically hashed
 Best for API integrations and automation. Copy the vendor key value exactly as shown in your LanOnasis dashboard (keys may vary in format):
 
 ```bash
-onasis login --vendor-key <your-vendor-key>
+# Full option
+onasis auth login --vendor-key <your-vendor-key>
+
+# Short form (for scripts and CI/CD)
+onasis auth login -k <your-vendor-key>
 ```
 
 ### 2. OAuth Browser Authentication
@@ -178,6 +182,13 @@ onasis login  # Will prompt for email and password
 onasis auth status    # Check current authentication
 onasis auth logout    # Logout from current session
 ```
+
+**Auth Login Options:**
+| Short | Long | Description |
+|-------|------|-------------|
+| `-k` | `--vendor-key <key>` | Authenticate with vendor key (non-interactive) |
+| `-e` | `--email <email>` | Email for credentials login |
+| `-p` | `--password <pass>` | Password for credentials login |
 
 ## 💻 Shell Completions
 
@@ -224,23 +235,37 @@ onasis quickstart      # Essential commands reference
 
 ```bash
 # List memories
-onasis memory list
-onasis memory list --memory-type context --limit 20 --sort-by created_at
+onasis memory list                        # or: onasis memory ls
+onasis memory list --type context --limit 20
 
-# Create memories
-onasis memory create --title "Project Notes" --content "Important information"
-onasis memory create --title "Reference" --memory-type reference --tags "docs,api"
+# Create memories (non-interactive)
+onasis memory create -t "Project Notes" -c "Important information"
+onasis memory create -t "Reference" --type reference --tags "docs,api"
+
+# Create memories (interactive)
+onasis memory create -i                   # Interactive mode with inline editor
+onasis memory create                      # Prompts for missing fields
 
 # Search memories
 onasis memory search "api integration"
-onasis memory search "meeting notes" --memory-types context,reference
+onasis memory search "meeting notes" --type context
 
 # Memory operations
 onasis memory get <id>                    # Get specific memory
-onasis memory update <id> --title "New Title"
+onasis memory update <id> -t "New Title"  # Update title
+onasis memory update <id> -i              # Interactive update
 onasis memory delete <id>                 # Delete memory
 onasis memory stats                       # Memory statistics
 ```
+
+**Create/Update Options:**
+| Short | Long | Description |
+|-------|------|-------------|
+| `-t` | `--title` | Memory title |
+| `-c` | `--content` | Memory content |
+| `-i` | `--interactive` | Interactive mode |
+| | `--type` | Memory type (context, project, knowledge, etc.) |
+| | `--tags` | Comma-separated tags |
 
 ### Topic Management
 
