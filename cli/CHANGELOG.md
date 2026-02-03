@@ -16,6 +16,11 @@
   - Path translation handles endpoint differences between API and MCP servers
   - Vendor key authentication continues to route to main API server
 
+- **Frozen Terminal During Text Input**: Fixed SSE/WebSocket event handlers interfering with inline text editor
+  - Real-time update messages (📡) now only display in verbose mode
+  - Prevents terminal freeze during interactive prompts (memory create, update)
+  - Raw terminal mode no longer conflicts with background MCP events
+
 - **Missing CLI Option**: The `--vendor-key` option was defined in code but not exposed in CLI
   - Now properly registered in command-line interface
 

@@ -469,7 +469,10 @@ export class MCPClient {
             this.sseConnection.onmessage = (event) => {
                 try {
                     const data = JSON.parse(event.data);
-                    console.log(chalk.blue('📡 Real-time update:'), data.type);
+                    // Only show SSE updates in verbose mode to avoid interfering with interactive prompts
+                    if (process.env.CLI_VERBOSE === 'true') {
+                        console.log(chalk.blue('📡 Real-time update:'), data.type);
+                    }
                 }
                 catch {
                     // Ignore parse errors
@@ -526,15 +529,20 @@ export class MCPClient {
                 this.wsConnection.on('message', (data) => {
                     try {
                         const message = JSON.parse(data.toString());
-                        const messageId = message.id ?? 'event';
-                        const messageType = message.method
-                            || (message.error ? 'error' : undefined)
-                            || (message.result ? 'result' : undefined)
-                            || 'response';
-                        console.log(chalk.blue('📡 MCP message:'), messageId, messageType);
+                        // Only show WebSocket messages in verbose mode to avoid interfering with interactive prompts
+                        if (process.env.CLI_VERBOSE === 'true') {
+                            const messageId = message.id ?? 'event';
+                            const messageType = message.method
+                                || (message.error ? 'error' : undefined)
+                                || (message.result ? 'result' : undefined)
+                                || 'response';
+                            console.log(chalk.blue('📡 MCP message:'), messageId, messageType);
+                        }
                     }
                     catch (error) {
-                        console.error('Failed to parse WebSocket message:', error);
+                        if (process.env.CLI_VERBOSE === 'true') {
+                            console.error('Failed to parse WebSocket message:', error);
+                        }
                     }
                 });
                 this.wsConnection.on('error', (error) => {

@@ -60,54 +60,126 @@ export class TextInputHandlerImpl implements TextInputHandler {
       status: 'active',
     };
 
-    return new Promise((resolve, reject) => {
+    return new Promise(async (resolve, reject) => {
       let handleKeypress: ((chunk: Buffer) => void) | null = null;
+      let sigintHandler: (() => void) | null = null;
+
       const cleanup = () => {
         if (handleKeypress) {
           process.stdin.removeListener('data', handleKeypress);
+          handleKeypress = null;
+        }
+        if (sigintHandler) {
+          process.removeListener('SIGINT', sigintHandler);
+          sigintHandler = null;
         }
         this.disableRawMode();
+        // Restore terminal state
+        process.stdout.write('\x1b[?25h'); // Show cursor
       };
 
+      // Set up completion handlers first
+      const complete = (result: string) => {
+        cleanup();
+        if (this.currentSession) {
+          this.currentSession.status = 'completed';
+        }
+        resolve(result);
+      };
+
+      const cancel = () => {
+        cleanup();
+        if (this.currentSession) {
+          this.currentSession.status = 'cancelled';
+        }
+        reject(new Error('Input cancelled by user'));
+      };
+
+      // Store handlers for special key processing
+      (this as any)._completeHandler = complete;
+      (this as any)._cancelHandler = cancel;
+
       try {
+        // Check if we can use raw mode
+        if (!process.stdin.isTTY) {
+          // Fall back to simple readline for non-TTY environments
+          console.log('\nNote: Interactive text input not available. Using simple input mode.');
+          console.log('Enter your text (empty line to finish):');
+          const readline = require('readline');
+          const rl = readline.createInterface({
+            input: process.stdin,
+            output: process.stdout
+          });
+          const lines: string[] = [];
+          rl.on('line', (line: string) => {
+            if (line === '') {
+              rl.close();
+              complete(lines.join('\n'));
+            } else {
+              lines.push(line);
+            }
+          });
+          rl.on('close', () => {
+            complete(lines.join('\n'));
+          });
+          return;
+        }
+
+        // Add SIGINT handler as fallback for Ctrl+C
+        sigintHandler = () => {
+          cancel();
+        };
+        process.on('SIGINT', sigintHandler);
+
+        // Safety: Add a way to escape via triple-ESC (sends 3 escape chars quickly)
+        let escapeCount = 0;
+        let escapeTimer: NodeJS.Timeout | null = null;
+
+        // Try to claim stdin from any previous handlers
+        process.stdin.removeAllListeners('data');
+        process.stdin.removeAllListeners('readable');
+        process.stdin.removeAllListeners('end');
+
         this.enableRawMode();
+
+        // Verify raw mode is working
+        if (!this.isRawModeEnabled) {
+          console.log('\nWarning: Could not enable raw mode. Falling back to editor mode.');
+          cleanup();
+          const { content } = await (await import('inquirer')).default.prompt<{ content: string }>([
+            { type: 'editor', name: 'content', message: prompt, default: mergedOptions.defaultContent }
+          ]);
+          resolve(content);
+          return;
+        }
+
         this.displayInputPrompt(this.getCurrentContent());
 
         handleKeypress = (chunk: Buffer) => {
-          const key = this.parseKeyEvent(chunk);
+          try {
+            const key = this.parseKeyEvent(chunk);
 
-          if (this.handleSpecialKeys(key)) {
-            return;
-          }
+            if (this.handleSpecialKeys(key)) {
+              return;
+            }
 
-          // Handle regular character input
-          if (key.sequence && this.currentSession) {
-            this.addCharacterToInput(key.sequence);
-            this.displayInputPrompt(this.getCurrentContent());
+            // Handle regular character input
+            if (key.sequence && this.currentSession) {
+              // Filter out control characters that shouldn't be added as text
+              if (key.sequence.charCodeAt(0) >= 32 || key.sequence === '\t') {
+                this.addCharacterToInput(key.sequence);
+                this.displayInputPrompt(this.getCurrentContent());
+              }
+            }
+          } catch (err) {
+            // Don't let errors in key handling crash the input
+            console.error('Key handling error:', err);
           }
         };
 
-        // Set up completion handlers
-        const complete = (result: string) => {
-          cleanup();
-          if (this.currentSession) {
-            this.currentSession.status = 'completed';
-          }
-          resolve(result);
-        };
-
-        const cancel = () => {
-          cleanup();
-          if (this.currentSession) {
-            this.currentSession.status = 'cancelled';
-          }
-          reject(new Error('Input cancelled by user'));
-        };
-
-        // Store handlers for special key processing
-        (this as any)._completeHandler = complete;
-        (this as any)._cancelHandler = cancel;
-
+        // Ensure stdin is flowing before adding listener
+        // This is critical after inquirer prompts which may pause stdin
+        process.stdin.resume();
         process.stdin.on('data', handleKeypress);
       } catch (error) {
         cleanup();
@@ -123,7 +195,12 @@ export class TextInputHandlerImpl implements TextInputHandler {
     if (!this.isRawModeEnabled && process.stdin.isTTY) {
       this.originalStdinMode = process.stdin.isRaw;
       process.stdin.setRawMode(true);
+      process.stdin.resume(); // Ensure stdin is flowing to receive data events
       this.isRawModeEnabled = true;
+    } else if (!process.stdin.isTTY) {
+      // Non-TTY mode - can't use raw mode, fall back to line mode
+      console.error('Warning: Not a TTY, inline text input may not work correctly');
+      process.stdin.resume();
     }
   }
 
@@ -135,6 +212,7 @@ export class TextInputHandlerImpl implements TextInputHandler {
       process.stdin.setRawMode(this.originalStdinMode || false);
       this.isRawModeEnabled = false;
     }
+    // Don't pause stdin here as other handlers may need it
   }
 
   /**
