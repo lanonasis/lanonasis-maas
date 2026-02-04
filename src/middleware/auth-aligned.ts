@@ -7,7 +7,7 @@ import jwt from 'jsonwebtoken';
 import { ensureApiKeyHash } from '@lanonasis/security-sdk/hash-utils';
 import { resolveOrganizationId } from '@/services/organizationResolver';
 
-const supabase = createClient(config.SUPABASE_URL
+const supabase = createClient(config.SUPABASE_URL, config.SUPABASE_SERVICE_KEY);
 
 // Import the proper types from our centralized type definitions
 import { UnifiedUser, AuthenticatedUser } from '@/types/express-auth';

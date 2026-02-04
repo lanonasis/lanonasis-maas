@@ -4,9 +4,9 @@
 const { createClient } = require('@supabase/supabase-js');
 
 // Environment variables
-const supabaseUrl = process.env.SUPABASE_URL=https://<project-ref>.supabase.co
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY=REDACTED_SUPABASE_SERVICE_ROLE_KEY
-const openaiApiKey = process.env.OPENAI_API_KEY=REDACTED_OPENAI_API_KEY
+const supabaseUrl = process.env.SUPABASE_URL || '';
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY || '';
+const openaiApiKey = process.env.OPENAI_API_KEY || '';
 
 // Initialize Supabase client
 const supabase = createClient(supabaseUrl, supabaseServiceKey);

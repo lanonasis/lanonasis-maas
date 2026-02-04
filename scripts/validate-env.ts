@@ -80,11 +80,11 @@ const validateCoreConfig = () => {
   
   const requiredVars = [
     'NODE_ENV',
-    'SUPABASE_URL=https://<project-ref>.supabase.co
+    'SUPABASE_URL'
     'SUPABASE_KEY',
-    'SUPABASE_SERVICE_KEY=REDACTED_SUPABASE_SERVICE_ROLE_KEY
-    'JWT_SECRET=REDACTED_JWT_SECRET
-    'OPENAI_API_KEY=REDACTED_OPENAI_API_KEY
+    'SUPABASE_SERVICE_KEY'
+    'JWT_SECRET'
+    'OPENAI_API_KEY'
   ];
   
   let hasErrors = false;
@@ -100,17 +100,17 @@ const validateCoreConfig = () => {
     }
   }
   
-  // Validate JWT_SECRET=REDACTED_JWT_SECRET
-  if (process.env.JWT_SECRET=REDACTED_JWT_SECRET
-    log.error('JWT_SECRET=REDACTED_JWT_SECRET
-    addResult('Core', 'JWT_SECRET=REDACTED_JWT_SECRET
+  // Validate JWT_SECRET is configured
+  if (!process.env.JWT_SECRET
+    log.error('JWT_SECRET'
+    addResult('Core', 'JWT_SECRET'
     hasErrors = true;
   }
   
-  // Validate Supabase URL format
-  if (process.env.SUPABASE_URL=https://<project-ref>.supabase.co
-    log.error('SUPABASE_URL=https://<project-ref>.supabase.co
-    addResult('Core', 'SUPABASE_URL=https://<project-ref>.supabase.co
+  // Validate Supabase URL is configured
+  if (!process.env.SUPABASE_URL
+    log.error('SUPABASE_URL'
+    addResult('Core', 'SUPABASE_URL'
     hasErrors = true;
   }
   

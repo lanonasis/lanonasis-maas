@@ -8,8 +8,8 @@ import { config } from '@/config/environment';
 
 // Create Supabase client with service role key for server-side operations
 export const supabase = createClient(
-  config.SUPABASE_URL
-  config.SUPABASE_SERVICE_KEY
+  config.SUPABASE_URL,
+  config.SUPABASE_SERVICE_KEY,
   {
     auth: {
       autoRefreshToken: false,

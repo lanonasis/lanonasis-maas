@@ -5,14 +5,14 @@ import dotenv from 'dotenv'
 // Load environment variables
 dotenv.config()
 
-const supabaseUrl = process.env.SUPABASE_URL=https://<project-ref>.supabase.co
-const supabaseKey = process.env.SUPABASE_ANON_KEY=REDACTED_SUPABASE_ANON_KEY
+const supabaseUrl = process.env.SUPABASE_URL || ""
+const supabaseKey = process.env.SUPABASE_ANON_KEY || ""
 
 if (!supabaseUrl || !supabaseKey) {
-  console.error('❌ Missing SUPABASE_URL=https://<project-ref>.supabase.co
+  console.error('SUPABASE_URL environment variable is required
   console.log('Please create a .env file with:')
-  console.log('SUPABASE_URL=https://<project-ref>.supabase.co
-  console.log('SUPABASE_ANON_KEY=REDACTED_SUPABASE_ANON_KEY
+  console.log('SUPABASE_URL is required'
+  console.log('SUPABASE_ANON_KEY is required'SUPABASE_ANON_KEY
   process.exit(1)
 }
 
