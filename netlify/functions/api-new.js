@@ -13,11 +13,11 @@ process.env.API_PREFIX = process.env.API_PREFIX || '/api';
 process.env.API_VERSION = process.env.API_VERSION || 'v1';
 
 // Validate critical environment variables
-if (!process.env.SUPABASE_URL=https://<project-ref>.supabase.co
-  console.error('CRITICAL: SUPABASE_URL=https://<project-ref>.supabase.co
+if (!process.env.SUPABASE_URL) {
+  console.error('CRITICAL: SUPABASE_URL is required');
 }
-if (!process.env.SUPABASE_SERVICE_KEY=REDACTED_SUPABASE_SERVICE_ROLE_KEY
-  console.error('CRITICAL: SUPABASE_SERVICE_KEY=REDACTED_SUPABASE_SERVICE_ROLE_KEY
+if (!process.env.SUPABASE_SERVICE_KEY) {
+  console.error('CRITICAL: SUPABASE_SERVICE_KEY is required');
 }
 
 // Import the compiled TypeScript server routes

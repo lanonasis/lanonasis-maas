@@ -241,9 +241,9 @@ router.post('/token', async (req, res) => {
   authorizationCodes.delete(code);
 
   // Generate access token
-  const jwtSecret = process.env.JWT_SECRET=REDACTED_JWT_SECRET
+  const jwtSecret = process.env.JWT_SECRET
   if (!jwtSecret) {
-    console.error('JWT_SECRET=REDACTED_JWT_SECRET
+    console.error('JWT_SECRET is required to sign OAuth tokens');
     process.exit(1);
   }
   const accessToken = jwt.sign(

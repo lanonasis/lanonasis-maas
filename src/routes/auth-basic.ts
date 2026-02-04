@@ -97,7 +97,7 @@ router.post('/login', async (req: Request, res: Response): Promise<void> => {
         role: userData?.role || 'user',
         plan: userData?.plan || 'free'
       },
-      config.JWT_SECRET=REDACTED_JWT_SECRET
+      config.JWT_SECRET
       { expiresIn: config.JWT_EXPIRES_IN as string } as SignOptions
     );
 
@@ -247,7 +247,7 @@ router.post('/register', async (req: Request, res: Response): Promise<void> => {
         role: 'user',
         plan: 'free'
       },
-      config.JWT_SECRET=REDACTED_JWT_SECRET
+      config.JWT_SECRET
       { expiresIn: config.JWT_EXPIRES_IN as string } as SignOptions
     );
 
@@ -310,7 +310,7 @@ router.post('/refresh', async (req: Request, res: Response): Promise<void> => {
     const token = authHeader.substring(7);
 
     try {
-      const decoded = jwt.verify(token, config.JWT_SECRET=REDACTED_JWT_SECRET
+      const decoded = jwt.verify(token, config.JWT_SECRET
       const decodedObj = typeof decoded === 'object' && decoded !== null ? (decoded as Record<string, unknown>) : {};
       
       // Generate new token with same claims
@@ -322,7 +322,7 @@ router.post('/refresh', async (req: Request, res: Response): Promise<void> => {
           role: decodedObj.role,
           plan: decodedObj.plan
         },
-        config.JWT_SECRET=REDACTED_JWT_SECRET
+        config.JWT_SECRET
         { expiresIn: config.JWT_EXPIRES_IN as string } as SignOptions
       );
 

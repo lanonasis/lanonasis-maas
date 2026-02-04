@@ -6,7 +6,7 @@ import { asyncHandler } from '@/middleware/errorHandler';
 import { ensureApiKeyHash } from '@lanonasis/security-sdk/hash-utils';
 
 const router: Router = Router();
-const supabase = createClient(config.SUPABASE_URL=https://<project-ref>.supabase.co
+const supabase = createClient(config.SUPABASE_URL
 
 // Store active MCP SSE connections
 const mcpConnections = new Map<string, Response>();

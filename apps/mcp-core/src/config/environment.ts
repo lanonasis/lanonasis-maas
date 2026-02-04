@@ -5,15 +5,15 @@ const DEFAULT_OPENAI_COST_PER_1K = 0.00002; // USD
 const DEFAULT_AZURE_COST_PER_1K = 0.00002; // Align with OpenAI small embedding model
 
 const rawConfigSchema = z.object({
-https://<project-ref>.supabase.co
-REDACTED_SUPABASE_SERVICE_ROLE_KEY=REDACTED_SUPABASE_SERVICE_ROLE_KEY
+  SUPABASE_URL: z.string().url(),
+  SUPABASE_SERVICE_KEY: z.string().min(1),
 
   EMBEDDING_PROVIDER_PRIORITY: z.string().optional(),
   EMBEDDING_MAX_RETRIES: z.coerce.number().min(0).max(10).default(3),
   EMBEDDING_RETRY_DELAY_MS: z.coerce.number().min(0).max(10_000).default(250),
   EMBEDDING_LOCAL_DIMENSION: z.coerce.number().min(32).max(4096).default(1536),
 
-  OPENAI_API_KEY=REDACTED_OPENAI_API_KEY
+  OPENAI_API_KEY: z.string().min(1),
   OPENAI_EMBEDDING_MODEL: z.string().default('text-embedding-3-small'),
   OPENAI_EMBEDDING_COST_PER_1K_TOKENS: z.coerce.number().optional(),
 
@@ -40,8 +40,8 @@ const rawConfig = rawConfigSchema.parse(process.env);
 const providerPriority = parseProviderPriority(rawConfig.EMBEDDING_PROVIDER_PRIORITY);
 
 export const config = {
-  supabaseUrl: rawConfig.SUPABASE_URL=https://<project-ref>.supabase.co
-  supabaseServiceKey: rawConfig.SUPABASE_SERVICE_KEY=REDACTED_SUPABASE_SERVICE_ROLE_KEY
+  supabaseUrl: rawConfig.SUPABASE_URL,
+  supabaseServiceKey: rawConfig.SUPABASE_SERVICE_KEY,
   providerPriority,
   embedding: {
     maxRetries: rawConfig.EMBEDDING_MAX_RETRIES,
@@ -49,7 +49,7 @@ export const config = {
     localDimension: rawConfig.EMBEDDING_LOCAL_DIMENSION
   },
   openai: {
-    apiKey: rawConfig.OPENAI_API_KEY=REDACTED_OPENAI_API_KEY
+    apiKey: rawConfig.OPENAI_API_KEY,
     model: rawConfig.OPENAI_EMBEDDING_MODEL,
     costPer1kTokens: rawConfig.OPENAI_EMBEDDING_COST_PER_1K_TOKENS ?? DEFAULT_OPENAI_COST_PER_1K
   },

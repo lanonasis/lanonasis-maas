@@ -72,9 +72,9 @@ const validateApiKey = async (apiKey: string): Promise<ApiKeyValidationResult> =
  */
 const validateJWT = async (token: string): Promise<Record<string, unknown>> => {
   try {
-    const jwtSecret = process.env.JWT_SECRET=REDACTED_JWT_SECRET
+    const jwtSecret = process.env.JWT_SECRET
     if (!jwtSecret) {
-      throw createAuthError('JWT secret not configured', 'JWT_SECRET=REDACTED_JWT_SECRET
+      throw createAuthError('JWT secret not configured', 'JWT_SECRET_MISSING');
     }
 
     const decoded = jwt.verify(token, jwtSecret) as Record<string, unknown>;
@@ -120,9 +120,9 @@ const validateJWT = async (token: string): Promise<Record<string, unknown>> => {
  */
 const validateSSOToken = async (token: string): Promise<Record<string, unknown> | null> => {
   try {
-    const jwtSecret = process.env.JWT_SECRET=REDACTED_JWT_SECRET
+    const jwtSecret = process.env.JWT_SECRET
     if (!jwtSecret) {
-      console.warn('JWT_SECRET=REDACTED_JWT_SECRET
+      console.warn('JWT_SECRET is not configured; skipping SSO validation');
       return null;
     }
 
@@ -334,4 +334,3 @@ export const optionalAuth = async (req: Request, res: Response, next: NextFuncti
 };
 
 export default centralAuth;
-

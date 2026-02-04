@@ -69,7 +69,7 @@ router.get('/', async (req: Request, res: Response) => {
   try {
     // Check Supabase connection
     const dbStartTime = Date.now();
-    const supabase = createClient(config.SUPABASE_URL=https://<project-ref>.supabase.co
+    const supabase = createClient(config.SUPABASE_URL
     
     try {
       const { error } = await supabase.from('memory_entries').select('id').limit(1);
@@ -148,7 +148,7 @@ router.get('/', async (req: Request, res: Response) => {
 router.get('/ready', async (req: Request, res: Response) => {
   try {
     // Quick readiness check - just verify we can connect to Supabase
-    const supabase = createClient(config.SUPABASE_URL=https://<project-ref>.supabase.co
+    const supabase = createClient(config.SUPABASE_URL
     const { error } = await supabase.from('memory_entries').select('id').limit(1);
     
     if (error && !error.message.includes('permission denied')) {

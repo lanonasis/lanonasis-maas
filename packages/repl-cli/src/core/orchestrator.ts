@@ -73,7 +73,7 @@ export class NaturalLanguageOrchestrator {
       createPluginManager({ includeBuiltins: true, includeMemoryServices: true })
     );
 
-    this.openaiApiKey = config.openaiApiKey || process.env.OPENAI_API_KEY=REDACTED_OPENAI_API_KEY
+    this.openaiApiKey = config.openaiApiKey || process.env.OPENAI_API_KEY
     this.model = config.model || process.env.OPENAI_MODEL || 'gpt-4-turbo-preview';
     this.userContext = config.userContext;
 

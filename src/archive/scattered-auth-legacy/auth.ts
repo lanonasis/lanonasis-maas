@@ -53,8 +53,8 @@ export const authMiddleware = async (
 
     try {
       // Validate JWT secret exists
-      if (!config.JWT_SECRET=REDACTED_JWT_SECRET
-        logger.error('JWT_SECRET=REDACTED_JWT_SECRET
+      if (!config.JWT_SECRET) {
+        logger.error('JWT_SECRET is not configured');
         res.status(500).json({
           error: 'Server configuration error'
         });
@@ -62,7 +62,7 @@ export const authMiddleware = async (
       }
 
       // Verify JWT token
-      const decoded = jwt.verify(token, config.JWT_SECRET=REDACTED_JWT_SECRET
+      const decoded = jwt.verify(token, config.JWT_SECRET) as UnifiedUser;
       
       // Add user info to request
       req.user = decoded;

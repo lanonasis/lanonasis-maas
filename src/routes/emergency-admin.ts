@@ -24,11 +24,11 @@ const router: Router = Router();
 
 // Emergency token must be set in environment
 const EMERGENCY_TOKEN = process.env.EMERGENCY_BOOTSTRAP_TOKEN || 'set-a-secure-token-here';
-const SUPABASE_URL=https://<project-ref>.supabase.co
-const SUPABASE_SERVICE_KEY=REDACTED_SUPABASE_SERVICE_ROLE_KEY
+const SUPABASE_URL = process.env.SUPABASE_URL || ''
+const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || ''
 
 // Initialize Supabase with service role key
-const supabase = createClient(SUPABASE_URL=https://<project-ref>.supabase.co
+const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY, {
   auth: {
     autoRefreshToken: false,
     persistSession: false

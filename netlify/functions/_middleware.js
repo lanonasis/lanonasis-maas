@@ -64,13 +64,13 @@ const createJWTMiddleware = (config) => {
 };
 
 // Configuration with fail-fast validation
-const SUPABASE_URL=https://<project-ref>.supabase.co
-const SUPABASE_SERVICE_KEY=REDACTED_SUPABASE_SERVICE_ROLE_KEY
+const SUPABASE_URL = process.env.SUPABASE_URL || ''
+const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || ''
 const PROJECT_NAME = 'lanonasis-maas';
 
 // Fail-fast validation for required environment variables
-if (!SUPABASE_SERVICE_KEY=REDACTED_SUPABASE_SERVICE_ROLE_KEY
-  throw new Error('SUPABASE_SERVICE_KEY=REDACTED_SUPABASE_SERVICE_ROLE_KEY
+if (!SUPABASE_SERVICE_KEY) {
+  throw new Error('SUPABASE_SERVICE_KEY is required');
 }
 
 // Initialize audit logger
@@ -78,8 +78,8 @@ const auditLogger = createAuditLogger(PROJECT_NAME);
 
 // Initialize JWT middleware
 const jwtMiddleware = createJWTMiddleware({
-  supabaseUrl: SUPABASE_URL=https://<project-ref>.supabase.co
-  supabaseServiceKey: SUPABASE_SERVICE_KEY=REDACTED_SUPABASE_SERVICE_ROLE_KEY
+  supabaseUrl: SUPABASE_URL,
+  supabaseServiceKey: SUPABASE_SERVICE_KEY,
   projectName: PROJECT_NAME,
   allowedScopes: ['lanonasis-maas']
 });

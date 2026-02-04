@@ -7,7 +7,7 @@ import jwt from 'jsonwebtoken';
 import { ensureApiKeyHash } from '@lanonasis/security-sdk/hash-utils';
 import { resolveOrganizationId } from '@/services/organizationResolver';
 
-const supabase = createClient(config.SUPABASE_URL=https://<project-ref>.supabase.co
+const supabase = createClient(config.SUPABASE_URL
 
 // Import the proper types from our centralized type definitions
 import { UnifiedUser, AuthenticatedUser } from '@/types/express-auth';
@@ -187,13 +187,13 @@ export const alignedAuthMiddleware = async (
         logger.info(`[${req.id}] API key authentication successful for user ${user.id}`);
       } else {
         // Handle JWT token authentication (from auth-gateway or Supabase)
-        const jwtSecret = process.env.JWT_SECRET=REDACTED_JWT_SECRET
+        const jwtSecret = process.env.JWT_SECRET
         if (!jwtSecret) {
-          logger.error(`[${req.id}] JWT_SECRET=REDACTED_JWT_SECRET
+          logger.error(`[${req.id}] JWT_SECRET is not configured`);
           res.status(500).json(createErrorEnvelope(req,
             'Server configuration error',
             'ConfigError',
-            'JWT_SECRET=REDACTED_JWT_SECRET
+            'JWT_SECRET_MISSING'
           ));
           return;
         }
