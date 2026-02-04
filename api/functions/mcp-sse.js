@@ -54,8 +54,8 @@ const authRateLimit = rateLimit({
 });
 
 // Environment variables
-const supabaseUrl = process.env.SUPABASE_URL=https://<project-ref>.supabase.co
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY=REDACTED_SUPABASE_SERVICE_ROLE_KEY
+const supabaseUrl = process.env.SUPABASE_URL || '';
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY || '';
 
 // Initialize Supabase client
 const supabase = createClient(

@@ -1,7 +1,10 @@
 import { createClient } from '@supabase/supabase-js';
 import { embedText } from './utils/embedder';
 
-const supabase = createClient(process.env.SUPABASE_URL=https://<project-ref>.supabase.co
+const supabase = createClient(
+  process.env.SUPABASE_URL || '',
+  process.env.SUPABASE_SERVICE_KEY || ''
+);
 
 export async function saveMemory({ title, content, type = 'context', user_id }: {
   title: string;

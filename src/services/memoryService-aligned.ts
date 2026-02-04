@@ -92,8 +92,8 @@ export class AlignedMemoryService {
   private openai: OpenAI;
 
   constructor() {
-    this.supabase = createClient(config.SUPABASE_URL
-    this.openai = new OpenAI({ apiKey: config.OPENAI_API_KEY
+    this.supabase = createClient(config.SUPABASE_URL, config.SUPABASE_SERVICE_KEY);
+    this.openai = new OpenAI({ apiKey: config.OPENAI_API_KEY });
   }
 
   /**
