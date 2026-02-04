@@ -3,21 +3,21 @@ import crypto from 'crypto';
 import { z } from 'zod';
 
 // Environment configuration
-const supabaseUrlRaw = process.env.SUPABASE_URL=https://<project-ref>.supabase.co
+const supabaseUrlRaw = process.env.SUPABASE_URL
 if (!supabaseUrlRaw) {
-  throw new Error('SUPABASE_URL=https://<project-ref>.supabase.co
+  throw new Error('SUPABASE_URL is required')
 }
 const supabaseUrl: string = supabaseUrlRaw;
 
-const supabaseKeyRaw = process.env.SUPABASE_SERVICE_KEY=REDACTED_SUPABASE_SERVICE_ROLE_KEY
+const supabaseKeyRaw = process.env.SUPABASE_SERVICE_KEY
 if (!supabaseKeyRaw) {
-  throw new Error('SUPABASE_SERVICE_KEY=REDACTED_SUPABASE_SERVICE_ROLE_KEY
+  throw new Error('SUPABASE_SERVICE_KEY is required')
 }
 const supabaseKey: string = supabaseKeyRaw;
 
-const encryptionKeyRaw = process.env.API_KEY_ENCRYPTION_KEY ?? process.env.JWT_SECRET=REDACTED_JWT_SECRET
+const encryptionKeyRaw = process.env.API_KEY_ENCRYPTION_KEY ?? process.env.JWT_SECRET
 if (!encryptionKeyRaw) {
-  throw new Error('API_KEY_ENCRYPTION_KEY or JWT_SECRET=REDACTED_JWT_SECRET
+  throw new Error('API_KEY_ENCRYPTION_KEY or JWT_SECRET is required')
 }
 const encryptionKey: string = encryptionKeyRaw;
 

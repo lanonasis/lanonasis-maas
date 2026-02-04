@@ -5,8 +5,8 @@ const { createClient } = require('@supabase/supabase-js');
 const crypto = require('crypto');
 
 // Environment variables validation
-const supabaseUrl = process.env.SUPABASE_URL=https://<project-ref>.supabase.co
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY=REDACTED_SUPABASE_SERVICE_ROLE_KEY
+const supabaseUrl = process.env.SUPABASE_URL
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY
 
 if (!supabaseUrl || !supabaseServiceKey) {
   console.error('CRITICAL: Missing required environment variables for MCP SSE');
@@ -165,10 +165,10 @@ exports.handler = async (event) => {
     
     console.log('🔍 Starting API key authentication...');
     console.log('Environment check:', {
-      hasSupabaseUrl: !!process.env.SUPABASE_URL=https://<project-ref>.supabase.co
-      hasSupabaseKey: !!process.env.SUPABASE_SERVICE_KEY=REDACTED_SUPABASE_SERVICE_ROLE_KEY
-      supabaseUrl: process.env.SUPABASE_URL=https://<project-ref>.supabase.co
-      serviceKeyPrefix: process.env.SUPABASE_SERVICE_KEY=REDACTED_SUPABASE_SERVICE_ROLE_KEY
+      hasSupabaseUrl: !!process.env.SUPABASE_URL
+      hasSupabaseKey: !!process.env.SUPABASE_SERVICE_KEY
+      supabaseUrl: process.env.SUPABASE_URL
+      serviceKeyPrefix: process.env.SUPABASE_SERVICE_KEY
       apiKeyLength: apiKey?.length,
       apiKeyPrefix: apiKey?.substring(0, 20) + '...'
     });
@@ -177,14 +177,14 @@ exports.handler = async (event) => {
     let authSupabase;
     try {
       // Ensure we have the required environment variables
-      if (!process.env.SUPABASE_URL=https://<project-ref>.supabase.co
+      if (!process.env.SUPABASE_URL
         throw new Error('Missing required Supabase environment variables');
       }
       
       // Create a fresh Supabase client for authentication
       authSupabase = createClient(
-        process.env.SUPABASE_URL=https://<project-ref>.supabase.co
-        process.env.SUPABASE_SERVICE_KEY=REDACTED_SUPABASE_SERVICE_ROLE_KEY
+        process.env.SUPABASE_URL
+        process.env.SUPABASE_SERVICE_KEY
         {
           auth: {
             autoRefreshToken: false,
@@ -224,10 +224,10 @@ exports.handler = async (event) => {
         
         // Try Edge Function as fallback
         try {
-          const edgeResponse = await fetch(`${process.env.SUPABASE_URL=https://<project-ref>.supabase.co
+          const edgeResponse = await fetch(`${process.env.SUPABASE_URL
             method: 'POST',
             headers: {
-              'Authorization': `Bearer ${process.env.SUPABASE_SERVICE_KEY=REDACTED_SUPABASE_SERVICE_ROLE_KEY
+              'Authorization': `Bearer ${process.env.SUPABASE_SERVICE_KEY
               'Content-Type': 'application/json'
             },
             body: JSON.stringify({

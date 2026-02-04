@@ -14,7 +14,7 @@ import { config } from '@/config/environment';
 import { logger } from '@/utils/logger';
 import { v4 as uuidv4, validate as isValidUUID } from 'uuid';
 
-const supabase: SupabaseClient = createClient(config.SUPABASE_URL=https://<project-ref>.supabase.co
+const supabase: SupabaseClient = createClient(config.SUPABASE_URL
 
 export interface OrganizationResolution {
   organizationId: string;

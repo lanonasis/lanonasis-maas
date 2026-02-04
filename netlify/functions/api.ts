@@ -3,8 +3,8 @@ import { createClient } from '@supabase/supabase-js';
 
 // Initialize Supabase client
 const supabase = createClient(
-  process.env.SUPABASE_URL=https://<project-ref>.supabase.co
-  process.env.SUPABASE_SERVICE_ROLE_KEY=REDACTED_SUPABASE_SERVICE_ROLE_KEY
+  process.env.SUPABASE_URL
+  process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
 // CORS headers
@@ -65,12 +65,12 @@ export const handler: Handler = async (event, context) => {
           
           // Generate embedding if content provided
           let embedding = null;
-          if (body.content && process.env.OPENAI_API_KEY=REDACTED_OPENAI_API_KEY
+          if (body.content && process.env.OPENAI_API_KEY
             try {
               const response = await fetch('https://api.openai.com/v1/embeddings', {
                 method: 'POST',
                 headers: {
-                  'Authorization': `Bearer ${process.env.OPENAI_API_KEY=REDACTED_OPENAI_API_KEY
+                  'Authorization': `Bearer ${process.env.OPENAI_API_KEY
                   'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({

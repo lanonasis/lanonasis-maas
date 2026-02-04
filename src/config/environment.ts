@@ -9,12 +9,13 @@ const envSchema = z.object({
   HOST: z.string().default('localhost'),
   
   // Database
-https://<project-ref>.supabase.co
+  SUPABASE_URL: z.string().url(),
+  SUPABASE_SERVICE_KEY: z.string().min(1),
+  SUPABASE_ANON_KEY: z.string().min(1).optional(),
   SUPABASE_KEY: z.string().min(1),
-REDACTED_SUPABASE_SERVICE_ROLE_KEY=REDACTED_SUPABASE_SERVICE_ROLE_KEY
   
   // Authentication
-REDACTED_JWT_SECRET=REDACTED_JWT_SECRET
+  JWT_SECRET: z.string().min(32),
   JWT_EXPIRES_IN: z.string().default('24h'),
   
   // API Key Configuration
@@ -30,7 +31,7 @@ REDACTED_JWT_SECRET=REDACTED_JWT_SECRET
   MCP_MAX_TOOLS_PER_KEY: z.string().transform(Number).default('10'),
   
   // OpenAI
-  OPENAI_API_KEY=REDACTED_OPENAI_API_KEY
+  OPENAI_API_KEY: z.string().min(1),
   
   // Redis (development can fall back to in-memory; production requires a Redis instance)
   REDIS_URL: z.string().url().optional(),

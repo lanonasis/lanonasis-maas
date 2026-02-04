@@ -110,7 +110,7 @@ describe('Authentication Header Semantics Conformance', () => {
     });
 
     it('should reject expired JWT tokens', async () => {
-      const expiredToken = 'REDACTED_JWT';
+      const expiredToken = 'expired.jwt.token';
       
       const response = await apiClient
         .get('/api/v1/memories')

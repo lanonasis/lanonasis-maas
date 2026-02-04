@@ -61,9 +61,9 @@ jest.unstable_mockModule('openai', () => ({
 }));
 
 // Provide default environment configuration for tests
-process.env.SUPABASE_URL=https://<project-ref>.supabase.co
-process.env.SUPABASE_SERVICE_KEY=REDACTED_SUPABASE_SERVICE_ROLE_KEY
-process.env.OPENAI_API_KEY=REDACTED_OPENAI_API_KEY
+process.env.SUPABASE_URL = 'https://test.supabase.co';
+process.env.SUPABASE_SERVICE_KEY = 'test-supabase-service-role-key';
+process.env.OPENAI_API_KEY = 'test-openai-key';
 process.env.OPENAI_EMBEDDING_MODEL = process.env.OPENAI_EMBEDDING_MODEL || 'text-embedding-3-small';
 process.env.EMBEDDING_PROVIDER_PRIORITY = process.env.EMBEDDING_PROVIDER_PRIORITY || 'openai,local';
 process.env.EMBEDDING_MAX_RETRIES = process.env.EMBEDDING_MAX_RETRIES || '2';

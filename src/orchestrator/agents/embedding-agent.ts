@@ -21,7 +21,7 @@ export class EmbeddingAgent extends BaseAgent {
     
     super(config);
     
-    this.openaiApiKey = process.env.OPENAI_API_KEY=REDACTED_OPENAI_API_KEY
+    this.openaiApiKey = process.env.OPENAI_API_KEY
     this.embeddingModel = 'text-embedding-3-small';
     
     if (!this.openaiApiKey) {

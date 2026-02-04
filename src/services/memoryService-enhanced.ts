@@ -102,8 +102,8 @@ export class EnhancedMemoryService {
   private openai: OpenAI;
 
   constructor() {
-    this.supabase = createClient(config.SUPABASE_URL=https://<project-ref>.supabase.co
-    this.openai = new OpenAI({ apiKey: config.OPENAI_API_KEY=REDACTED_OPENAI_API_KEY
+    this.supabase = createClient(config.SUPABASE_URL
+    this.openai = new OpenAI({ apiKey: config.OPENAI_API_KEY
   }
 
   /**

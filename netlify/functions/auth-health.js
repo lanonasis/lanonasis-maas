@@ -25,7 +25,7 @@ exports.handler = async (event, context) => {
   
   try {
     // Check if auth service environment variables are set
-    if (!process.env.SUPABASE_URL=https://<project-ref>.supabase.co
+    if (!process.env.SUPABASE_URL
       authStatus = 'degraded';
     }
   } catch (error) {

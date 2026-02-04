@@ -22,7 +22,7 @@ export const routingConfig: RoutingConfig = {
   fallbackToDirectSupabase: true,
   
   // Direct Supabase URL for fallback
-  supabaseUrl: process.env.SUPABASE_URL=https://<project-ref>.supabase.co
+  supabaseUrl: process.env.SUPABASE_URL
   
   // Service routing map - orchestrator actions to unified router endpoints
   routingMap: {

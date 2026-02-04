@@ -3,9 +3,9 @@ import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 
 // @ts-ignore - Vite env variables
-const SUPABASE_URL=https://<project-ref>.supabase.co
+const SUPABASE_URL = process.env.SUPABASE_URL || ''
 // @ts-ignore - Vite env variables
-const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY=REDACTED_SUPABASE_ANON_KEY
+const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY
 
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";
@@ -40,7 +40,7 @@ export const getOAuthCallbackUrl = () => {
   return 'https://dashboard.lanonasis.com/auth/callback';
 };
 
-export const supabase = createClient<Database>(SUPABASE_URL=https://<project-ref>.supabase.co
+export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
   auth: {
     flowType: 'pkce',
   },
