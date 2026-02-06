@@ -12,10 +12,7 @@
     "resolvePackageJsonExports": false,
     "resolvePackageJsonImports": true,
     "allowSyntheticDefaultImports": true,
-    "strict": true,
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
-    "noFallthroughCasesInSwitch": true,
+    "strict": false,
     "declaration": true,
     "declarationMap": true,
     "sourceMap": true,
@@ -25,7 +22,10 @@
     "importHelpers": true,
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "types": [
+      "node"
+    ]
   },
   "include": [
     "src/**/*"

@@ -1,6 +1,6 @@
 {
   "name": "@lanonasis/memory-client",
-  "version": "2.2.0",
+  "version": "2.2.1",
   "description": "Universal Memory as a Service (MaaS) Client SDK - Works everywhere: Browser, Node.js, React, Vue, Edge Functions",
   "type": "module",
   "main": "dist/index.cjs",
@@ -110,7 +110,7 @@
     "zod": "^4.1.12"
   },
   "peerDependencies": {
-    "react": ">=16.8.0",
+    "react": ">=16.8.0 || >=17.0.0 || >=18.0.0",
     "vue": ">=3.0.0"
   },
   "peerDependenciesMeta": {
@@ -142,9 +142,6 @@
   "publishConfig": {
     "access": "public",
     "registry": "https://registry.npmjs.org/"
-  },
-  "overrides": {
-    "js-yaml": "4.1.1"
   },
   "funding": {
     "type": "github",
