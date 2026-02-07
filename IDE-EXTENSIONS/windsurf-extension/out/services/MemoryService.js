@@ -50,7 +50,7 @@ class MemoryService {
             apiUrl;
     }
     async createMemory(request) {
-        const response = await this.makeAuthenticatedRequest('/api/v1/memory', {
+        const response = await this.makeAuthenticatedRequest('/api/v1/memories', {
             method: 'POST',
             body: JSON.stringify(request)
         });
@@ -61,7 +61,7 @@ class MemoryService {
         return await response.json();
     }
     async getMemory(id) {
-        const response = await this.makeAuthenticatedRequest(`/api/v1/memory/${id}`);
+        const response = await this.makeAuthenticatedRequest(`/api/v1/memories/${id}`);
         if (!response.ok) {
             if (response.status === 404) {
                 throw new Error('Memory not found');
@@ -72,7 +72,7 @@ class MemoryService {
         return await response.json();
     }
     async updateMemory(id, request) {
-        const response = await this.makeAuthenticatedRequest(`/api/v1/memory/${id}`, {
+        const response = await this.makeAuthenticatedRequest(`/api/v1/memories/${id}`, {
             method: 'PUT',
             body: JSON.stringify(request)
         });
@@ -83,7 +83,7 @@ class MemoryService {
         return await response.json();
     }
     async deleteMemory(id) {
-        const response = await this.makeAuthenticatedRequest(`/api/v1/memory/${id}`, {
+        const response = await this.makeAuthenticatedRequest(`/api/v1/memories/${id}`, {
             method: 'DELETE'
         });
         if (!response.ok) {
@@ -105,7 +105,7 @@ class MemoryService {
             params.set('sort', options.sort);
         if (options.order)
             params.set('order', options.order);
-        const url = `/api/v1/memory${params.toString() ? '?' + params.toString() : ''}`;
+        const url = `/api/v1/memories${params.toString() ? '?' + params.toString() : ''}`;
         const response = await this.makeAuthenticatedRequest(url);
         if (!response.ok) {
             const error = await response.text();
@@ -114,7 +114,7 @@ class MemoryService {
         return await response.json();
     }
     async searchMemories(request) {
-        const response = await this.makeAuthenticatedRequest('/api/v1/memory/search', {
+        const response = await this.makeAuthenticatedRequest('/api/v1/memories/search', {
             method: 'POST',
             body: JSON.stringify(request)
         });
@@ -126,7 +126,7 @@ class MemoryService {
         return data.results || [];
     }
     async getMemoryStats() {
-        const response = await this.makeAuthenticatedRequest('/api/v1/memory/admin/stats');
+        const response = await this.makeAuthenticatedRequest('/api/v1/memories/admin/stats');
         if (!response.ok) {
             const error = await response.text();
             throw new Error(`Failed to get memory stats: ${response.status} ${error}`);
@@ -167,7 +167,7 @@ class MemoryService {
         const headers = {
             'Content-Type': 'application/json',
             'Authorization': authHeader,
-            'User-Agent': 'Lanonasis-Cursor-Extension/1.0.0',
+            'User-Agent': 'Windsurf LanOnasis-Memory/1.4.5',
             ...options.headers
         };
         const response = await fetch(url, {
