@@ -33,7 +33,7 @@ const user = {
 
 ```typescript
 // After (FIXED) - Real JWT verification
-const jwtSecret = process.env.JWT_SECRET=REDACTED_JWT_SECRET
+const jwtSecret = process.env.JWT_SECRET
 
 let decoded: any;
 try {

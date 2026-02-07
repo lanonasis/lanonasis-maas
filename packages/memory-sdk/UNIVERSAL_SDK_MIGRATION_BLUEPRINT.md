@@ -149,7 +149,7 @@ export class MultiModalMemoryClient extends MaaSClient {
   }
 
   // ... rest of multimodal methods
-  // Replace `process.env.OPENAI_API_KEY=REDACTED_OPENAI_API_KEY
+  // Replace `process.env.OPENAI_API_KEY
   // Replace hardcoded URLs with `this.openaiBaseUrl`
 }
 ```
@@ -200,7 +200,7 @@ export class NodeMemoryClient extends MultiModalMemoryClient {
     const finalConfig: MultiModalConfig = {
       ...config,
       openaiApiKey: config.openaiApiKey ||
-        (config.autoLoadEnv && process.env.OPENAI_API_KEY=REDACTED_OPENAI_API_KEY
+        (config.autoLoadEnv && process.env.OPENAI_API_KEY
         undefined
     };
 
@@ -296,7 +296,7 @@ export function nodePreset(config: Partial<MultiModalConfig> = {}): MultiModalCo
     apiUrl: process.env.LANONASIS_API_URL || 'https://api.lanonasis.com',
     timeout: 30000,
     headers: { 'X-Client-Type': 'node' },
-    openaiApiKey: process.env.OPENAI_API_KEY=REDACTED_OPENAI_API_KEY
+    openaiApiKey: process.env.OPENAI_API_KEY
     ...config
   };
 }
