@@ -194,7 +194,7 @@ function base64UrlEncode(buffer: Buffer): string {
 #### C. **JWT Secret Missing**
 ```typescript
 // Check if JWT_SECRET=REDACTED_JWT_SECRET
-if (!process.env.JWT_SECRET=REDACTED_JWT_SECRET
+if (!process.env.JWT_SECRET
   throw new Error('JWT_SECRET=REDACTED_JWT_SECRET
 }
 ```
@@ -395,7 +395,7 @@ app.get('/oauth/health', async (req, res) => {
   }
   
   // Check JWT secret
-  health.checks.jwt_secret = process.env.JWT_SECRET=REDACTED_JWT_SECRET
+  health.checks.jwt_secret = process.env.JWT_SECRET
   
   const statusCode = health.status === 'ok' ? 200 : 503;
   res.status(statusCode).json(health);

@@ -124,8 +124,8 @@ app.use(cors());
 app.use(express.json());
 
 const supabase = createClient(
-  process.env.SUPABASE_URL=https://<project-ref>.supabase.co
-  process.env.SUPABASE_SERVICE_KEY=REDACTED_SUPABASE_SERVICE_ROLE_KEY
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_KEY
 );
 
 // Health check
@@ -154,7 +154,7 @@ app.post('/api/v1/auth/login', async (req, res) => {
       email: authData.user.email,
       organizationId: authData.user.user_metadata?.organization_id || 'default',
       exp: Math.floor(Date.now() / 1000) + (60 * 60 * 24)
-    }, process.env.JWT_SECRET=REDACTED_JWT_SECRET
+    }, process.env.JWT_SECRET
     
     res.json({
       user: {

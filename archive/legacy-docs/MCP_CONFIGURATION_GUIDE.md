@@ -624,7 +624,7 @@ class MemoryCache {
 const { Pool } = require('pg');
 
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL=postgresql://<user>:<password>@<host>:<port>/<db>
+  connectionString: process.env.DATABASE_URL
   max: 20,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 2000,
@@ -969,7 +969,7 @@ app.get('/api/v1/health', async (req, res) => {
   try {
     // OpenAI API connectivity
     const openaiTest = await fetch('https://api.openai.com/v1/models', {
-      headers: { 'Authorization': `Bearer ${process.env.OPENAI_API_KEY=REDACTED_OPENAI_API_KEY
+      headers: { 'Authorization': `Bearer ${process.env.OPENAI_API_KEY
     });
     health.checks.openai = { status: openaiTest.ok ? 'healthy' : 'unhealthy' };
   } catch (error) {
