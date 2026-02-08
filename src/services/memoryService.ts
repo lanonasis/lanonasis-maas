@@ -3,15 +3,31 @@ import OpenAI from 'openai';
 
 import { config } from '@/config/environment';
 import { logger, logPerformance } from '@/utils/logger';
-import { 
-  MemoryEntry, 
-  MemorySearchResult, 
-  CreateMemoryRequest, 
+import {
+  MemoryEntry,
+  MemorySearchResult,
+  CreateMemoryRequest,
   UpdateMemoryRequest,
   MemoryStats,
-  MemoryType 
+  MemoryType
 } from '@/types/memory';
 import { InternalServerError } from '@/middleware/errorHandler';
+
+// Embedding provider configuration
+type EmbeddingProvider = 'openai' | 'voyage';
+
+const PROVIDER_CONFIG = {
+  openai: {
+    model: process.env.OPENAI_MODEL || 'text-embedding-3-small',
+    dimensions: 1536,
+    url: 'https://api.openai.com/v1/embeddings',
+  },
+  voyage: {
+    model: process.env.VOYAGE_MODEL || 'voyage-4',
+    dimensions: 1024,
+    url: 'https://api.voyageai.com/v1/embeddings',
+  },
+} as const;
 
 interface SearchFilters {
   memory_types?: MemoryType[];
@@ -39,35 +55,93 @@ export interface ListMemoryFilters extends Record<string, unknown> {
 
 export class MemoryService {
   private supabase: SupabaseClient;
-  private openai: OpenAI;
+  private openai: OpenAI | null = null;
+  private readonly provider: EmbeddingProvider;
+  private readonly embeddingModel: string;
 
   constructor() {
     this.supabase = createClient(config.SUPABASE_URL, config.SUPABASE_SERVICE_KEY);
-    this.openai = new OpenAI({ apiKey: config.OPENAI_API_KEY });
+
+    // Determine provider from environment
+    this.provider = (process.env.EMBEDDING_PROVIDER?.toLowerCase() || 'openai') as EmbeddingProvider;
+    this.embeddingModel = PROVIDER_CONFIG[this.provider].model;
+
+    // Only initialize OpenAI client if using OpenAI provider
+    if (this.provider === 'openai' && config.OPENAI_API_KEY) {
+      this.openai = new OpenAI({ apiKey: config.OPENAI_API_KEY });
+    }
+
+    logger.info(`MemoryService initialized with provider: ${this.provider}, model: ${this.embeddingModel}`);
   }
 
   /**
-   * Create vector embedding for text
+   * Create vector embedding for text using configured provider
    */
   private async createEmbedding(text: string): Promise<number[]> {
     const startTime = Date.now();
-    
+    const truncatedText = text.substring(0, 8000);
+
     try {
-      const response = await this.openai.embeddings.create({
-        model: 'text-embedding-ada-002',
-        input: text.substring(0, 8000) // Limit input length
-      });
+      let embedding: number[];
+
+      if (this.provider === 'voyage') {
+        embedding = await this.createVoyageEmbedding(truncatedText);
+      } else {
+        embedding = await this.createOpenAIEmbedding(truncatedText);
+      }
 
       logPerformance('embedding_creation', Date.now() - startTime, {
         text_length: text.length,
-        model: 'text-embedding-ada-002'
+        model: this.embeddingModel,
+        provider: this.provider
       });
 
-      return response.data[0]?.embedding || [];
+      return embedding;
     } catch (error) {
-      logger.error('Failed to create embedding', { error, text_length: text.length });
+      logger.error('Failed to create embedding', { error, text_length: text.length, provider: this.provider });
       throw new InternalServerError('Failed to create text embedding');
     }
+  }
+
+  private async createOpenAIEmbedding(text: string): Promise<number[]> {
+    if (!this.openai) {
+      throw new Error('OpenAI client not initialized');
+    }
+
+    const response = await this.openai.embeddings.create({
+      model: this.embeddingModel,
+      input: text
+    });
+
+    return response.data[0]?.embedding || [];
+  }
+
+  private async createVoyageEmbedding(text: string): Promise<number[]> {
+    const voyageApiKey = process.env.VOYAGE_API_KEY;
+    if (!voyageApiKey) {
+      throw new Error('VOYAGE_API_KEY not configured');
+    }
+
+    const response = await fetch(PROVIDER_CONFIG.voyage.url, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${voyageApiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        input: [text],
+        model: this.embeddingModel,
+        input_type: 'document',
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(`Voyage API error (${response.status}): ${JSON.stringify(errorData)}`);
+    }
+
+    const data = await response.json() as { data: Array<{ embedding: number[] }> };
+    return data.data[0]?.embedding || [];
   }
 
   /**
