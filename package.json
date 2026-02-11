@@ -9,7 +9,7 @@
     "dev": "tsx watch src/server.ts",
     "build": "tsc && tsc-alias",
     "start": "node dist/server.js",
-    "test": "jest && jest --config apps/mcp-core/jest.config.ts",
+    "test": "jest",
     "test:watch": "jest --watch",
     "test:mcp-core": "jest --config apps/mcp-core/jest.config.ts",
     "test:coverage": "jest --coverage && jest --config apps/mcp-core/jest.config.ts --coverage",
