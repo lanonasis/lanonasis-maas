@@ -5,6 +5,13 @@ config({ path: '.env.test' });
 
 // Set test environment
 process.env.NODE_ENV = 'test';
+process.env.SUPABASE_URL = 'https://example.supabase.co';
+process.env.SUPABASE_SERVICE_KEY = 'test-supabase-service-key';
+process.env.SUPABASE_KEY = 'test-supabase-key';
+process.env.JWT_SECRET = 'test-jwt-secret-0123456789abcdef';
+process.env.API_KEY_ENCRYPTION_KEY = '12345678901234567890123456789012';
+process.env.OPENAI_API_KEY = 'test-openai-api-key';
+process.env.REDIS_URL = 'redis://localhost:6379';
 
 // Mock console methods to reduce noise in tests
 const originalConsole = { ...console };
@@ -71,3 +78,9 @@ jest.mock('redis', () => {
     }))
   };
 });
+
+jest.mock('@lanonasis/security-sdk/hash-utils', () => {
+  return {
+    ensureApiKeyHash: jest.fn((value: string) => `mock-hash-${value}`)
+  };
+}, { virtual: true });
