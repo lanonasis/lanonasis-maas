@@ -10,6 +10,9 @@ export default {
     '<rootDir>/src/**/__tests__/**/*.test.ts',
     '<rootDir>/tests/**/*.test.ts'
   ],
+  testPathIgnorePatterns: [
+    '<rootDir>/tests/integration/'
+  ],
   collectCoverageFrom: [
     'src/**/*.ts',
     '!src/**/*.d.ts',
