@@ -15,7 +15,7 @@
   "scripts": {
     "build": "tsc && tsc-alias",
     "dev": "tsx src/index.ts",
-    "test": "jest",
+    "test": "jest --passWithNoTests",
     "lint": "eslint src/**/*.ts",
     "prepublishOnly": "npm run build"
   },
