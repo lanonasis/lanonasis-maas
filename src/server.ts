@@ -4,7 +4,6 @@ import helmet from 'helmet';
 import swaggerUi from 'swagger-ui-express';
 import swaggerJsdoc from 'swagger-jsdoc';
 import path from 'path';
-import { fileURLToPath } from 'url';
 
 import { config } from '@/config/environment';
 import { logger } from '@/utils/logger';
@@ -195,24 +194,25 @@ app.use(corsGuard);
 app.use(metricsMiddleware);
 
 // Static file serving
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const moduleDirname = typeof __dirname !== 'undefined'
+  ? __dirname
+  : path.join(process.cwd(), 'src');
 
 // Serve dashboard
-app.use('/dashboard', express.static(path.join(__dirname, '../dashboard/dist')));
-app.get('/dashboard/*', (req, res) => {
-  res.sendFile(path.join(__dirname, '../dashboard/dist/index.html'));
+app.use('/dashboard', express.static(path.join(moduleDirname, '../dashboard/dist')));
+app.get(/^\/dashboard\/.*/, (req, res) => {
+  res.sendFile(path.join(moduleDirname, '../dashboard/dist/index.html'));
 });
 
 // Serve MCP connection interface
 app.get('/mcp', (req, res) => {
-  res.sendFile(path.join(__dirname, 'static/mcp-connection.html'));
+  res.sendFile(path.join(moduleDirname, 'static/mcp-connection.html'));
 });
 
 // Serve documentation portal
-app.use('/docs-portal', express.static(path.join(__dirname, '../docs/dist')));
-app.get('/docs-portal/*', (req, res) => {
-  res.sendFile(path.join(__dirname, '../docs/dist/index.html'));
+app.use('/docs-portal', express.static(path.join(moduleDirname, '../docs/dist')));
+app.get(/^\/docs-portal\/.*/, (req, res) => {
+  res.sendFile(path.join(moduleDirname, '../docs/dist/index.html'));
 });
 
 // API Documentation with improved configuration
