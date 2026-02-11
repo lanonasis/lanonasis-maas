@@ -51,6 +51,8 @@ async function buildExtension() {
       'vscode', // VS Code API is provided by the host
       'keytar', // Native module for secure storage (Windsurf adapter)
       'electron', // Electron APIs (Cursor adapter)
+      '@lanonasis/ide-extension-core', // Built separately in monorepo
+      '@lanonasis/memory-client', // Runtime dependency, not bundled in extension build
     ],
     // Resolve path aliases from tsconfig and local packages
     alias: {

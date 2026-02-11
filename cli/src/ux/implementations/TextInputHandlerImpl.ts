@@ -179,7 +179,7 @@ export class TextInputHandlerImpl implements TextInputHandler {
 
         // Ensure stdin is flowing before adding listener
         // This is critical after inquirer prompts which may pause stdin
-        process.stdin.resume();
+        this.resumeStdinIfSupported();
         process.stdin.on('data', handleKeypress);
       } catch (error) {
         cleanup();
@@ -195,12 +195,12 @@ export class TextInputHandlerImpl implements TextInputHandler {
     if (!this.isRawModeEnabled && process.stdin.isTTY) {
       this.originalStdinMode = process.stdin.isRaw;
       process.stdin.setRawMode(true);
-      process.stdin.resume(); // Ensure stdin is flowing to receive data events
+      this.resumeStdinIfSupported(); // Ensure stdin is flowing to receive data events
       this.isRawModeEnabled = true;
     } else if (!process.stdin.isTTY) {
       // Non-TTY mode - can't use raw mode, fall back to line mode
       console.error('Warning: Not a TTY, inline text input may not work correctly');
-      process.stdin.resume();
+      this.resumeStdinIfSupported();
     }
   }
 
@@ -336,6 +336,12 @@ export class TextInputHandlerImpl implements TextInputHandler {
     }
 
     return key;
+  }
+
+  private resumeStdinIfSupported(): void {
+    if (typeof process.stdin.resume === 'function') {
+      process.stdin.resume();
+    }
   }
 
   /**
