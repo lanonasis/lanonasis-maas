@@ -91,18 +91,18 @@ export declare const MemoryListSchema: z.ZodObject<{
     tags?: string[];
     limit?: number;
     topic_id?: string;
+    order?: "desc" | "asc";
     memory_type?: "context" | "reference" | "note";
     offset?: number;
     sort_by?: "title" | "created_at" | "updated_at";
-    order?: "desc" | "asc";
 }, {
     tags?: string[];
     limit?: number;
     topic_id?: string;
+    order?: "desc" | "asc";
     memory_type?: "context" | "reference" | "note";
     offset?: number;
     sort_by?: "title" | "created_at" | "updated_at";
-    order?: "desc" | "asc";
 }>;
 export declare const TopicCreateSchema: z.ZodObject<{
     name: z.ZodString;
@@ -463,18 +463,18 @@ export declare const MCPSchemas: {
             tags?: string[];
             limit?: number;
             topic_id?: string;
+            order?: "desc" | "asc";
             memory_type?: "context" | "reference" | "note";
             offset?: number;
             sort_by?: "title" | "created_at" | "updated_at";
-            order?: "desc" | "asc";
         }, {
             tags?: string[];
             limit?: number;
             topic_id?: string;
+            order?: "desc" | "asc";
             memory_type?: "context" | "reference" | "note";
             offset?: number;
             sort_by?: "title" | "created_at" | "updated_at";
-            order?: "desc" | "asc";
         }>;
     };
     topic: {

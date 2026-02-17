@@ -54,11 +54,15 @@ export interface UpdateMemoryRequest {
     metadata?: Record<string, unknown>;
 }
 export interface GetMemoriesParams {
+    page?: number;
     limit?: number;
     offset?: number;
     memory_type?: MemoryType;
     tags?: string[] | string;
     topic_id?: string;
+    user_id?: string;
+    sort?: 'created_at' | 'updated_at' | 'last_accessed' | 'access_count' | 'title';
+    order?: 'asc' | 'desc';
     sort_by?: 'created_at' | 'updated_at' | 'last_accessed' | 'access_count';
     sort_order?: 'asc' | 'desc';
 }
@@ -148,6 +152,7 @@ export interface ApiErrorResponse {
 export declare class APIClient {
     private client;
     private config;
+    private normalizeMemoryEntry;
     constructor();
     login(email: string, password: string): Promise<AuthResponse>;
     register(email: string, password: string, organizationName?: string): Promise<AuthResponse>;
