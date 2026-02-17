@@ -67,11 +67,15 @@ export interface UpdateMemoryRequest {
 }
 
 export interface GetMemoriesParams {
+  page?: number;
   limit?: number;
   offset?: number;
   memory_type?: MemoryType;
   tags?: string[] | string;
   topic_id?: string;
+  user_id?: string;
+  sort?: 'created_at' | 'updated_at' | 'last_accessed' | 'access_count' | 'title';
+  order?: 'asc' | 'desc';
   sort_by?: 'created_at' | 'updated_at' | 'last_accessed' | 'access_count';
   sort_order?: 'asc' | 'desc';
 }
@@ -171,6 +175,27 @@ export class APIClient {
   private client: AxiosInstance;
   private config: CLIConfig;
 
+  private normalizeMemoryEntry(payload: unknown): MemoryEntry {
+    // API responses are inconsistent across gateways:
+    // - Some return the memory entry directly
+    // - Some wrap it in `{ data: <memory>, message?: string }`
+    if (payload && typeof payload === 'object') {
+      const obj = payload as Record<string, unknown>;
+      const directId = obj.id;
+      if (typeof directId === 'string' && directId.length > 0) {
+        return payload as MemoryEntry;
+      }
+      const data = obj.data;
+      if (data && typeof data === 'object') {
+        const dataObj = data as Record<string, unknown>;
+        if (typeof dataObj.id === 'string' && dataObj.id.length > 0) {
+          return data as MemoryEntry;
+        }
+      }
+    }
+    return payload as MemoryEntry;
+  }
+
   constructor() {
     this.config = new CLIConfig();
     this.client = axios.create({
@@ -180,6 +205,9 @@ export class APIClient {
     // Setup request interceptor to add auth token and headers
     this.client.interceptors.request.use(async (config) => {
       await this.config.init();
+
+      // Keep OAuth sessions alive automatically (prevents intermittent "auth required" cutouts).
+      await this.config.refreshTokenIfNeeded();
       
       // Service Discovery
       await this.config.discoverServices();
@@ -189,18 +217,27 @@ export class APIClient {
       const discoveredServices = this.config.get<any>('discoveredServices');
       const authMethod = this.config.get<string>('authMethod');
       const vendorKey = await this.config.getVendorKeyAsync();
+      const token = this.config.getToken();
+      const forceApiFromEnv = process.env.LANONASIS_FORCE_API === 'true'
+        || process.env.CLI_FORCE_API === 'true'
+        || process.env.ONASIS_FORCE_API === 'true';
+      const forceApiFromConfig = this.config.get<boolean>('forceApi') === true
+        || this.config.get<string>('connectionTransport') === 'api';
+      const forceDirectApi = forceApiFromEnv || forceApiFromConfig;
+      const prefersTokenAuth = Boolean(token) && (authMethod === 'jwt' || authMethod === 'oauth' || authMethod === 'oauth2');
+      const useVendorKeyAuth = Boolean(vendorKey) && !prefersTokenAuth;
 
       // Determine the correct API base URL:
       // - Auth endpoints -> auth.lanonasis.com
       // - JWT auth (no vendor key) -> mcp.lanonasis.com (supports JWT tokens)
       // - Vendor key auth -> api.lanonasis.com (requires vendor key)
       let apiBaseUrl: string;
-      const useMcpServer = !vendorKey && (authMethod === 'jwt' || authMethod === 'oauth' || authMethod === 'oauth2');
+      const useMcpServer = !forceDirectApi && prefersTokenAuth && !useVendorKeyAuth;
 
       if (isAuthEndpoint) {
         apiBaseUrl = discoveredServices?.auth_base || 'https://auth.lanonasis.com';
-      } else if (vendorKey) {
-        // Vendor key works with api.lanonasis.com
+      } else if (forceDirectApi) {
+        // Force direct REST API mode to bypass MCP routing for troubleshooting.
         apiBaseUrl = this.config.getApiUrl();
       } else if (useMcpServer) {
         // JWT/OAuth tokens work with mcp.lanonasis.com
@@ -222,9 +259,20 @@ export class APIClient {
       }
 
       // Enhanced Authentication Support
-      const token = this.config.getToken();
-      
-      if (vendorKey) {
+      // Even in forced direct-API mode, prefer bearer token auth when available.
+      // This avoids accidentally sending an OAuth access token as X-API-Key (we store it
+      // in secure storage for MCP/WebSocket usage), which can cause 401s.
+      const preferVendorKeyInDirectApiMode = forceDirectApi && Boolean(vendorKey) && !prefersTokenAuth;
+      if (preferVendorKeyInDirectApiMode) {
+        // Vendor key authentication (validated server-side)
+        // Send raw key - server handles hashing for comparison
+        config.headers['X-API-Key'] = vendorKey;
+        config.headers['X-Auth-Method'] = 'vendor_key';
+      } else if (prefersTokenAuth) {
+        // JWT/OAuth token authentication takes precedence when both are present.
+        config.headers.Authorization = `Bearer ${token}`;
+        config.headers['X-Auth-Method'] = 'jwt';
+      } else if (vendorKey) {
         // Vendor key authentication (validated server-side)
         // Send raw key - server handles hashing for comparison
         config.headers['X-API-Key'] = vendorKey;
@@ -243,7 +291,10 @@ export class APIClient {
       config.headers['X-Project-Scope'] = 'lanonasis-maas';
       
       if (process.env.CLI_VERBOSE === 'true') {
+        const transportMode = forceDirectApi ? 'api-forced' : (useMcpServer ? 'mcp-http' : 'api');
+        config.headers['X-Transport-Mode'] = transportMode;
         console.log(chalk.dim(`→ ${config.method?.toUpperCase()} ${config.url} [${requestId}]`));
+        console.log(chalk.dim(`  transport=${transportMode} baseURL=${config.baseURL}`));
       }
       
       return config;
@@ -263,7 +314,7 @@ export class APIClient {
           
           if (status === 401) {
             console.error(chalk.red('✖ Authentication failed'));
-            console.log(chalk.yellow('Please run:'), chalk.white('memory login'));
+            console.log(chalk.yellow('Please run:'), chalk.white('lanonasis auth login'));
             process.exit(1);
           }
           
@@ -314,22 +365,95 @@ export class APIClient {
   // All memory endpoints use /api/v1/memories path (plural, per REST conventions)
   async createMemory(data: CreateMemoryRequest): Promise<MemoryEntry> {
     const response = await this.client.post('/api/v1/memories', data);
-    return response.data;
+    return this.normalizeMemoryEntry(response.data);
   }
 
   async getMemories(params: GetMemoriesParams = {}): Promise<PaginatedResponse<MemoryEntry>> {
-    const response = await this.client.get('/api/v1/memories', { params });
-    return response.data;
+    try {
+      const response = await this.client.get('/api/v1/memories', { params });
+      return response.data;
+    } catch (error: any) {
+      // Backward-compatible fallback: newer API contracts may reject GET list and prefer search-only.
+      if (error?.response?.status === 405) {
+        const limit = Number(params.limit || 20);
+        const page = Number(params.page || 1);
+        const offset = Number(params.offset ?? Math.max(0, (page - 1) * limit));
+
+        const searchPayload: SearchMemoryRequest & { offset?: number } = {
+          query: '*',
+          limit,
+          threshold: 0
+        };
+
+        if (params.memory_type) {
+          searchPayload.memory_types = [params.memory_type];
+        }
+        if (params.tags) {
+          searchPayload.tags = Array.isArray(params.tags)
+            ? params.tags
+            : String(params.tags).split(',').map((tag) => tag.trim()).filter(Boolean);
+        }
+        if (params.topic_id) {
+          searchPayload.topic_id = params.topic_id;
+        }
+        if (offset > 0) {
+          searchPayload.offset = offset;
+        }
+
+        const fallback = await this.client.post('/api/v1/memories/search', searchPayload);
+        const payload = fallback.data || {};
+        const resultsArray = Array.isArray(payload.data)
+          ? payload.data
+          : Array.isArray(payload.results)
+            ? payload.results
+            : [];
+        const memories = resultsArray
+          .map((entry: unknown) => {
+            // Some gateways/search endpoints wrap results as `{ data: <memory> }`.
+            if (entry && typeof entry === 'object') {
+              const obj = entry as Record<string, unknown>;
+              const data = obj.data;
+              if (data && typeof data === 'object') {
+                const dataObj = data as Record<string, unknown>;
+                if (typeof dataObj.id === 'string' && dataObj.id.length > 0) {
+                  return data;
+                }
+              }
+            }
+            return entry;
+          })
+          .map((entry: unknown) => this.normalizeMemoryEntry(entry));
+        const total = Number.isFinite(payload.total) ? Number(payload.total) : memories.length;
+        const pages = Math.max(1, Math.ceil(total / limit));
+        const currentPage = Math.max(1, Math.floor(offset / limit) + 1);
+
+        return {
+          ...payload,
+          data: memories,
+          memories,
+          pagination: {
+            total,
+            limit,
+            offset,
+            has_more: (offset + memories.length) < total,
+            page: currentPage,
+            pages
+          }
+        };
+      }
+
+      throw error;
+    }
   }
 
   async getMemory(id: string): Promise<MemoryEntry> {
     const response = await this.client.get(`/api/v1/memories/${id}`);
-    return response.data;
+    return this.normalizeMemoryEntry(response.data);
   }
 
   async updateMemory(id: string, data: UpdateMemoryRequest): Promise<MemoryEntry> {
     const response = await this.client.put(`/api/v1/memories/${id}`, data);
-    return response.data;
+    return this.normalizeMemoryEntry(response.data);
   }
 
   async deleteMemory(id: string): Promise<void> {

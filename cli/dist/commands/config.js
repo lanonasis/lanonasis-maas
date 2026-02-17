@@ -11,11 +11,13 @@ export function configCommands(program) {
         .action(async (key, value) => {
         const config = new CLIConfig();
         await config.init();
+        let shouldSave = true;
         // Handle special cases
         switch (key) {
             case 'api-url':
                 await config.setApiUrl(value);
                 console.log(chalk.green('✓ API URL updated:'), value);
+                shouldSave = false; // setApiUrl already persists
                 break;
             case 'ai-integration':
                 if (value === 'claude-mcp') {
@@ -42,10 +44,18 @@ export function configCommands(program) {
                 config.set('mcpServerUrl', value);
                 console.log(chalk.green('✓ MCP server URL updated:'), value);
                 break;
+            case 'force-api':
+                config.set('forceApi', value === 'true');
+                config.set('connectionTransport', value === 'true' ? 'api' : 'auto');
+                console.log(chalk.green('✓ Force direct API mode:'), value === 'true' ? 'enabled' : 'disabled');
+                break;
             default:
                 // Generic config set
                 config.set(key, value);
                 console.log(chalk.green(`✓ ${key} set to:`), value);
+        }
+        if (shouldSave) {
+            await config.save();
         }
     });
     // Generic config get command
@@ -101,6 +111,7 @@ export function configCommands(program) {
             { key: 'mcp-use-remote', description: 'Use remote MCP server', current: config.get('mcpUseRemote') || false },
             { key: 'mcp-server-path', description: 'Local MCP server path', current: config.get('mcpServerPath') || 'default' },
             { key: 'mcp-server-url', description: 'Remote MCP server URL', current: config.get('mcpServerUrl') || 'https://mcp.lanonasis.com' },
+            { key: 'force-api', description: 'Force direct API transport', current: config.get('forceApi') || false },
             { key: 'mcpEnabled', description: 'MCP integration enabled', current: config.get('mcpEnabled') || false }
         ];
         configOptions.forEach(opt => {

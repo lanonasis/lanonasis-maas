@@ -242,6 +242,12 @@ onasis memory list --type context --limit 20
 onasis memory create -t "Project Notes" -c "Important information"
 onasis memory create -t "Reference" --type reference --tags "docs,api"
 
+# Create memory via JSON payload
+onasis memory create --json '{"title":"Design decisions","type":"project","content":"Summary...","tags":["architecture","design"]}'
+
+# Create memory from a file
+onasis memory create -t "Session notes" --content-file ./notes.md
+
 # Create memories (interactive)
 onasis memory create -i                   # Interactive mode with inline editor
 onasis memory create                      # Prompts for missing fields
@@ -258,6 +264,34 @@ onasis memory delete <id>                 # Delete memory
 onasis memory stats                       # Memory statistics
 ```
 
+#### `onasis memory save-session`
+
+Save the current CLI session context (CWD + git branch/status + changed files) as a memory entry so you can persist what you worked on and pick it up later.
+
+- `--test-summary`: Stores a human-readable test result summary (e.g., `Vitest: 53 passed, 1 skipped`) in the saved session memory.
+- `--title`: Sets the memory title (default: `Session summary`).
+- `--type`: Sets the memory type (default: `project`).
+- `--tags`: Comma-separated tags for session metadata (default: `session,cli`).
+
+**Examples**
+```bash
+onasis memory save-session --test-summary "Vitest: 53 passed, 1 skipped"
+onasis memory save-session --title "API client fixes" --type project --tags "session,cli,testing"
+```
+
+See **Session management** below for related commands.
+
+#### Session management
+
+Sessions are stored as memory entries (tagged `session,cli` by default). Related commands:
+
+```bash
+onasis memory save-session
+onasis memory list-sessions
+onasis memory load-session <id>
+onasis memory delete-session <id>
+```
+
 **Create/Update Options:**
 | Short | Long | Description |
 |-------|------|-------------|
@@ -266,6 +300,8 @@ onasis memory stats                       # Memory statistics
 | `-i` | `--interactive` | Interactive mode |
 | | `--type` | Memory type (context, project, knowledge, etc.) |
 | | `--tags` | Comma-separated tags |
+| | `--json` | JSON payload (title, content, type/memory_type, tags, topic_id) |
+| | `--content-file` | Read content from a file |
 
 ### Topic Management
 
@@ -637,4 +673,3 @@ The CLI will show the authorization URL - copy and paste it into your browser ma
 
 **Token refresh failed:**
 Run `onasis auth login` to re-authenticate.
-

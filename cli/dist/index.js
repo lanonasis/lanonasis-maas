@@ -53,6 +53,18 @@ program
         process.env.MEMORY_API_URL = opts.apiUrl;
     }
     process.env.CLI_OUTPUT_FORMAT = opts.output;
+    const forceApiFromEnv = process.env.LANONASIS_FORCE_API === 'true' ||
+        process.env.CLI_FORCE_API === 'true' ||
+        process.env.ONASIS_FORCE_API === 'true';
+    const forceApiFromConfig = cliConfig.get('forceApi') === true ||
+        cliConfig.get('connectionTransport') === 'api';
+    const forceDirectApi = forceApiFromEnv || forceApiFromConfig || opts.mcp === false;
+    if (process.env.CLI_VERBOSE === 'true') {
+        console.log(colors.muted(`transport flags: env=${forceApiFromEnv} config=${forceApiFromConfig} no_mcp=${opts.mcp === false}`));
+    }
+    if (forceDirectApi) {
+        process.env.LANONASIS_FORCE_API = 'true';
+    }
     const skipOnboarding = actionCommand.name() === 'init' ||
         actionCommand.name() === 'auth' ||
         actionCommand.parent?.name?.() === 'auth';
@@ -76,7 +88,9 @@ program
         actionCommand.parent?.name?.() === 'mcp' ||
         actionCommand.name() === 'mcp-server' ||
         actionCommand.parent?.name?.() === 'mcp-server';
-    if (opts.mcp !== false && !isMcpFlow && !['init', 'auth', 'login', 'health', 'status'].includes(actionCommand.name())) {
+    const isConfigFlow = actionCommand.name() === 'config' ||
+        actionCommand.parent?.name?.() === 'config';
+    if (!forceDirectApi && !isMcpFlow && !isConfigFlow && !['init', 'auth', 'login', 'health', 'status'].includes(actionCommand.name())) {
         try {
             const client = getMCPClient();
             if (!client.isConnectedToServer()) {
@@ -93,6 +107,9 @@ program
                 console.log(colors.muted(`Error: ${error instanceof Error ? error.message : String(error)}`));
             }
         }
+    }
+    else if (forceDirectApi && process.env.CLI_VERBOSE === 'true') {
+        console.log(colors.muted('MCP auto-connect skipped (force direct API enabled)'));
     }
 });
 // Enhanced global error handler
@@ -399,11 +416,10 @@ const topicCmd = program
     .description('Topic management commands');
 requireAuth(topicCmd);
 topicCommands(topicCmd);
-// Configuration commands (require auth)
+// Configuration commands (no auth required)
 const configCmd = program
     .command('config')
     .description('Configuration management');
-requireAuth(configCmd);
 configCommands(configCmd);
 // Organization commands (require auth)
 const orgCmd = program

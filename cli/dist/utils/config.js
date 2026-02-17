@@ -678,6 +678,9 @@ export class CLIConfig {
         return this.config.user;
     }
     async isAuthenticated() {
+        // Attempt refresh for OAuth sessions before checks (prevents intermittent auth dropouts).
+        // This is safe to call even when not using OAuth; it will no-op.
+        await this.refreshTokenIfNeeded();
         // Check if using vendor key authentication
         if (this.config.authMethod === 'vendor_key') {
             // Use async method to read from encrypted ApiKeyStorage
@@ -736,6 +739,16 @@ export class CLIConfig {
         const token = this.getToken();
         if (!token)
             return false;
+        // OAuth tokens are often opaque (not JWT). Prefer local expiry metadata when present.
+        if (this.config.authMethod === 'oauth') {
+            const tokenExpiresAt = this.get('token_expires_at');
+            if (typeof tokenExpiresAt === 'number') {
+                const isValid = Date.now() < tokenExpiresAt;
+                this.authCheckCache = { isValid, timestamp: Date.now() };
+                return isValid;
+            }
+            // Fall through to legacy validation when we don't have expiry metadata.
+        }
         // Check cache first
         if (this.authCheckCache && (Date.now() - this.authCheckCache.timestamp) < this.AUTH_CACHE_TTL) {
             return this.authCheckCache.isValid;
@@ -968,9 +981,83 @@ export class CLIConfig {
             return;
         }
         try {
+            // OAuth token refresh (opaque tokens + refresh_token + token_expires_at)
+            if (this.config.authMethod === 'oauth') {
+                const refreshToken = this.get('refresh_token');
+                if (!refreshToken) {
+                    return;
+                }
+                const tokenExpiresAtRaw = this.get('token_expires_at');
+                const tokenExpiresAt = (() => {
+                    const n = typeof tokenExpiresAtRaw === 'number'
+                        ? tokenExpiresAtRaw
+                        : typeof tokenExpiresAtRaw === 'string'
+                            ? Number(tokenExpiresAtRaw)
+                            : undefined;
+                    if (typeof n !== 'number' || !Number.isFinite(n) || n <= 0) {
+                        return undefined;
+                    }
+                    // Support both seconds and milliseconds since epoch.
+                    // Seconds are ~1.7e9; ms are ~1.7e12.
+                    return n < 1e11 ? n * 1000 : n;
+                })();
+                const nowMs = Date.now();
+                const refreshWindowMs = 5 * 60 * 1000; // 5 minutes
+                // If we don't know expiry, don't force a refresh.
+                if (typeof tokenExpiresAt !== 'number' || nowMs < (tokenExpiresAt - refreshWindowMs)) {
+                    return;
+                }
+                await this.discoverServices();
+                const authBase = this.getDiscoveredApiUrl();
+                const resp = await axios.post(`${authBase}/oauth/token`, {
+                    grant_type: 'refresh_token',
+                    refresh_token: refreshToken,
+                    client_id: 'lanonasis-cli'
+                }, {
+                    headers: { 'Content-Type': 'application/json' },
+                    timeout: 10000,
+                    proxy: false
+                });
+                // Some gateways wrap responses as `{ data: { ... } }`.
+                const raw = resp?.data;
+                const payload = raw && typeof raw === 'object' && raw.data && typeof raw.data === 'object'
+                    ? raw.data
+                    : raw;
+                const accessToken = payload?.access_token ?? payload?.token;
+                const refreshedRefreshToken = payload?.refresh_token;
+                const expiresIn = payload?.expires_in;
+                if (typeof accessToken !== 'string' || accessToken.length === 0) {
+                    throw new Error('Token refresh response missing access_token');
+                }
+                // setToken() assumes JWT by default; ensure authMethod stays oauth after storing.
+                await this.setToken(accessToken);
+                this.config.authMethod = 'oauth';
+                if (typeof refreshedRefreshToken === 'string' && refreshedRefreshToken.length > 0) {
+                    this.config.refresh_token = refreshedRefreshToken;
+                }
+                if (typeof expiresIn === 'number' && Number.isFinite(expiresIn)) {
+                    this.config.token_expires_at = Date.now() + (expiresIn * 1000);
+                }
+                // Keep the encrypted "vendor key" in sync for MCP/WebSocket clients that use X-API-Key.
+                // This does not change authMethod away from oauth (setVendorKey guards against that).
+                try {
+                    await this.setVendorKey(accessToken);
+                }
+                catch {
+                    // Non-fatal: bearer token refresh still helps API calls.
+                }
+                await this.save().catch(() => { });
+                return;
+            }
             // Check if token is JWT and if it's close to expiry
             if (token.startsWith('cli_')) {
                 // CLI tokens don't need refresh, they're long-lived
+                return;
+            }
+            // Only attempt JWT refresh for tokens that look like JWTs.
+            // OAuth access tokens in this system can be opaque strings; treating them as JWTs
+            // creates noisy failures and can cause unwanted state writes.
+            if (token.split('.').length !== 3) {
                 return;
             }
             const decoded = jwtDecode(token);

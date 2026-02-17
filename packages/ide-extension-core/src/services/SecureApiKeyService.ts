@@ -78,7 +78,9 @@ export class SecureApiKeyService implements ISecureAuthService {
 
   /**
    * Get API key from secure storage
-   * OAuth tokens are returned as-is (not hashed), API keys are hashed
+   * For API key auth, we return the raw key (what callers need to send over the wire)
+   * and keep a hashed copy in storage for migration/validation.
+   * OAuth tokens are returned as-is (never hashed).
    */
   async getApiKey(): Promise<string | null> {
     try {
@@ -148,7 +150,8 @@ export class SecureApiKeyService implements ISecureAuthService {
 
   /**
    * Store API key in secure storage
-   * OAuth tokens are stored as-is, API keys are hashed
+   * Stores a raw copy for API calls and a hashed copy for migration/validation.
+   * OAuth tokens are stored as-is (never hashed).
    */
   async storeApiKey(apiKey: string, type: CredentialType = 'apiKey'): Promise<void> {
     // CRITICAL: Do not hash OAuth tokens! Only hash regular API keys
@@ -171,10 +174,14 @@ export class SecureApiKeyService implements ISecureAuthService {
         if (token?.access_token) {
           // Check if token is still valid
           if (this.isTokenValid(token)) {
+            // Refresh tokens are stored separately (and may not be present in the authToken JSON).
+            const refreshToken = await this.adapter.secureStorage.get(
+              SecureApiKeyService.REFRESH_TOKEN_KEY
+            );
             return {
               type: 'oauth',
               token: token.access_token,
-              refreshToken: token.refresh_token,
+              refreshToken: refreshToken ?? token.refresh_token,
               expiresAt: token.expires_at
             };
           }
