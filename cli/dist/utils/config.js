@@ -434,6 +434,200 @@ export class CLIConfig {
         }
         throw new Error('Auth health endpoints unreachable');
     }
+    getAuthVerificationEndpoints(pathname) {
+        const authBase = (this.config.discoveredServices?.auth_base || 'https://auth.lanonasis.com').replace(/\/$/, '');
+        return Array.from(new Set([
+            `${authBase}${pathname}`,
+            `https://auth.lanonasis.com${pathname}`,
+            `http://localhost:4000${pathname}`
+        ]));
+    }
+    extractAuthErrorMessage(payload) {
+        if (!payload || typeof payload !== 'object') {
+            return undefined;
+        }
+        const data = payload;
+        const fields = ['message', 'error', 'reason', 'code'];
+        for (const field of fields) {
+            const value = data[field];
+            if (typeof value === 'string' && value.trim().length > 0) {
+                return value;
+            }
+        }
+        return undefined;
+    }
+    async verifyTokenWithAuthGateway(token) {
+        const headers = {
+            'Authorization': `Bearer ${token}`,
+            'X-Project-Scope': 'lanonasis-maas'
+        };
+        let fallbackReason = 'Unable to verify token with auth gateway';
+        // Primary check (required by auth contract): /v1/auth/verify
+        for (const endpoint of this.getAuthVerificationEndpoints('/v1/auth/verify')) {
+            try {
+                const response = await axios.post(endpoint, {}, {
+                    headers,
+                    timeout: 5000,
+                    proxy: false
+                });
+                const payload = response.data;
+                if (payload.valid === true || Boolean(payload.payload)) {
+                    return { valid: true, method: 'token', endpoint };
+                }
+                if (payload.valid === false) {
+                    return {
+                        valid: false,
+                        method: 'token',
+                        endpoint,
+                        reason: this.extractAuthErrorMessage(payload) || 'Token is invalid'
+                    };
+                }
+            }
+            catch (error) {
+                const normalizedError = this.normalizeServiceError(error);
+                const responsePayload = normalizedError.response?.data;
+                const responseCode = typeof responsePayload?.code === 'string' ? responsePayload.code : undefined;
+                const reason = this.extractAuthErrorMessage(responsePayload) || normalizedError.message || fallbackReason;
+                fallbackReason = reason;
+                // If auth gateway explicitly rejected token, stop early.
+                if ((normalizedError.response?.status === 401 || normalizedError.response?.status === 403) &&
+                    responseCode &&
+                    responseCode !== 'AUTH_TOKEN_MISSING') {
+                    return { valid: false, method: 'token', endpoint, reason };
+                }
+            }
+        }
+        // Fallback for deployments where proxy layers strip Authorization headers.
+        for (const endpoint of this.getAuthVerificationEndpoints('/v1/auth/verify-token')) {
+            try {
+                const response = await axios.post(endpoint, { token }, {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Project-Scope': 'lanonasis-maas'
+                    },
+                    timeout: 5000,
+                    proxy: false
+                });
+                const payload = response.data;
+                if (payload.valid === true) {
+                    return { valid: true, method: 'token', endpoint };
+                }
+                if (payload.valid === false) {
+                    return {
+                        valid: false,
+                        method: 'token',
+                        endpoint,
+                        reason: this.extractAuthErrorMessage(payload) || 'Token is invalid'
+                    };
+                }
+            }
+            catch (error) {
+                const normalizedError = this.normalizeServiceError(error);
+                const responsePayload = normalizedError.response?.data;
+                fallbackReason = this.extractAuthErrorMessage(responsePayload) || normalizedError.message || fallbackReason;
+            }
+        }
+        return {
+            valid: false,
+            method: 'token',
+            reason: fallbackReason
+        };
+    }
+    async verifyVendorKeyWithAuthGateway(vendorKey) {
+        const headers = {
+            'X-API-Key': vendorKey,
+            'X-Auth-Method': 'vendor_key',
+            'X-Project-Scope': 'lanonasis-maas'
+        };
+        let fallbackReason = 'Unable to verify API key with auth gateway';
+        // Primary check (required by auth contract): /v1/auth/verify
+        for (const endpoint of this.getAuthVerificationEndpoints('/v1/auth/verify')) {
+            try {
+                const response = await axios.post(endpoint, {}, {
+                    headers,
+                    timeout: 5000,
+                    proxy: false
+                });
+                const payload = response.data;
+                if (payload.valid === true || Boolean(payload.payload)) {
+                    return { valid: true, method: 'vendor_key', endpoint };
+                }
+                if (payload.valid === false) {
+                    return {
+                        valid: false,
+                        method: 'vendor_key',
+                        endpoint,
+                        reason: this.extractAuthErrorMessage(payload) || 'API key is invalid'
+                    };
+                }
+            }
+            catch (error) {
+                const normalizedError = this.normalizeServiceError(error);
+                const responsePayload = normalizedError.response?.data;
+                const responseCode = typeof responsePayload?.code === 'string' ? responsePayload.code : undefined;
+                const reason = this.extractAuthErrorMessage(responsePayload) || normalizedError.message || fallbackReason;
+                fallbackReason = reason;
+                // If auth gateway explicitly rejected API key, stop early.
+                if ((normalizedError.response?.status === 401 || normalizedError.response?.status === 403) &&
+                    responseCode &&
+                    responseCode !== 'AUTH_TOKEN_MISSING') {
+                    return { valid: false, method: 'vendor_key', endpoint, reason };
+                }
+            }
+        }
+        // Fallback for deployments where reverse proxies don't forward custom auth headers on /verify.
+        for (const endpoint of this.getAuthVerificationEndpoints('/v1/auth/verify-api-key')) {
+            try {
+                const response = await axios.post(endpoint, {}, {
+                    headers,
+                    timeout: 5000,
+                    proxy: false
+                });
+                const payload = response.data;
+                if (payload.valid === true) {
+                    return { valid: true, method: 'vendor_key', endpoint };
+                }
+                if (payload.valid === false) {
+                    return {
+                        valid: false,
+                        method: 'vendor_key',
+                        endpoint,
+                        reason: this.extractAuthErrorMessage(payload) || 'API key is invalid'
+                    };
+                }
+            }
+            catch (error) {
+                const normalizedError = this.normalizeServiceError(error);
+                const responsePayload = normalizedError.response?.data;
+                fallbackReason = this.extractAuthErrorMessage(responsePayload) || normalizedError.message || fallbackReason;
+            }
+        }
+        return {
+            valid: false,
+            method: 'vendor_key',
+            reason: fallbackReason
+        };
+    }
+    async verifyCurrentCredentialsWithServer() {
+        await this.refreshTokenIfNeeded();
+        await this.discoverServices();
+        const token = this.getToken();
+        const vendorKey = await this.getVendorKeyAsync();
+        if (this.config.authMethod === 'vendor_key' && vendorKey) {
+            return this.verifyVendorKeyWithAuthGateway(vendorKey);
+        }
+        if (token) {
+            return this.verifyTokenWithAuthGateway(token);
+        }
+        if (vendorKey) {
+            return this.verifyVendorKeyWithAuthGateway(vendorKey);
+        }
+        return {
+            valid: false,
+            method: 'none',
+            reason: 'No credentials configured'
+        };
+    }
     // Manual endpoint override functionality
     async setManualEndpoints(endpoints) {
         if (!this.config.discoveredServices) {
@@ -520,16 +714,12 @@ export class CLIConfig {
             return;
         }
         try {
-            // Import axios dynamically to avoid circular dependency
-            // Ensure service discovery is done
             await this.discoverServices();
-            const authBase = this.config.discoveredServices?.auth_base || 'https://auth.lanonasis.com';
-            // Use pingAuthHealth for validation (simpler and more reliable)
-            await this.pingAuthHealth(axios, authBase, {
-                'X-API-Key': vendorKey,
-                'X-Auth-Method': 'vendor_key',
-                'X-Project-Scope': 'lanonasis-maas'
-            }, { timeout: 10000, proxy: false });
+            const verification = await this.verifyVendorKeyWithAuthGateway(vendorKey);
+            if (verification.valid) {
+                return;
+            }
+            throw new Error(verification.reason || 'Authentication failed. The key may be invalid, expired, or revoked.');
         }
         catch (error) {
             const normalizedError = this.normalizeServiceError(error);
@@ -701,21 +891,17 @@ export class CLIConfig {
             }
             // Vendor key not recently validated - verify with server
             try {
-                await this.discoverServices();
-                const authBase = this.config.discoveredServices?.auth_base || 'https://auth.lanonasis.com';
-                // Ping auth health with vendor key to verify it's still valid
-                await this.pingAuthHealth(axios, authBase, {
-                    'X-API-Key': vendorKey,
-                    'X-Auth-Method': 'vendor_key',
-                    'X-Project-Scope': 'lanonasis-maas'
-                }, { timeout: 5000, proxy: false });
+                const verification = await this.verifyVendorKeyWithAuthGateway(vendorKey);
+                if (!verification.valid) {
+                    throw new Error(verification.reason || 'Vendor key validation failed');
+                }
                 // Update last validated timestamp on success
                 this.config.lastValidated = new Date().toISOString();
                 await this.save().catch(() => { }); // Don't fail auth check if save fails
                 this.authCheckCache = { isValid: true, timestamp: Date.now() };
                 return true;
             }
-            catch (error) {
+            catch {
                 // Server validation failed - check for grace period (7 days offline)
                 const gracePeriod = 7 * 24 * 60 * 60 * 1000;
                 const withinGracePeriod = lastValidated &&
@@ -947,22 +1133,14 @@ export class CLIConfig {
             if (!vendorKey && !token) {
                 return false;
             }
-            // Import axios dynamically to avoid circular dependency
-            // Ensure service discovery is done
-            await this.discoverServices();
-            const authBase = this.config.discoveredServices?.auth_base || 'https://auth.lanonasis.com';
-            const headers = {
-                'X-Project-Scope': 'lanonasis-maas'
-            };
-            if (vendorKey) {
-                headers['X-API-Key'] = vendorKey;
-                headers['X-Auth-Method'] = 'vendor_key';
+            const verification = this.config.authMethod === 'vendor_key' && vendorKey
+                ? await this.verifyVendorKeyWithAuthGateway(vendorKey)
+                : token
+                    ? await this.verifyTokenWithAuthGateway(token)
+                    : await this.verifyVendorKeyWithAuthGateway(vendorKey);
+            if (!verification.valid) {
+                throw new Error(verification.reason || 'Stored credentials are invalid');
             }
-            else if (token) {
-                headers['Authorization'] = `Bearer ${token}`;
-                headers['X-Auth-Method'] = 'jwt';
-            }
-            await this.pingAuthHealth(axios, authBase, headers);
             // Update last validated timestamp
             this.config.lastValidated = new Date().toISOString();
             await this.resetFailureCount();

@@ -153,6 +153,7 @@ export declare class APIClient {
     private client;
     private config;
     private normalizeMemoryEntry;
+    private shouldUseLegacyMemoryRpcFallback;
     constructor();
     login(email: string, password: string): Promise<AuthResponse>;
     register(email: string, password: string, organizationName?: string): Promise<AuthResponse>;

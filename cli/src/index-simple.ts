@@ -633,12 +633,21 @@ program
     // Initialize config first
     await cliConfig.init();
 
-    const isAuth = await cliConfig.isAuthenticated();
+    const verification = await cliConfig.verifyCurrentCredentialsWithServer().catch((error: unknown) => ({
+      valid: false,
+      method: 'none' as const,
+      endpoint: undefined as string | undefined,
+      reason: error instanceof Error ? error.message : String(error)
+    }));
+    const isAuth = verification.valid;
     const apiUrl = cliConfig.getApiUrl();
 
     console.log(chalk.blue.bold('MaaS CLI Status'));
     console.log(`API URL: ${apiUrl}`);
     console.log(`Authenticated: ${isAuth ? chalk.green('Yes') : chalk.red('No')}`);
+    if (process.env.CLI_VERBOSE === 'true' && verification.endpoint) {
+      console.log(`Verified via: ${verification.endpoint}`);
+    }
 
     if (isAuth) {
       const user = await cliConfig.getCurrentUser();
@@ -646,7 +655,11 @@ program
         console.log(`User: ${user.email}`);
         console.log(`Plan: ${user.plan}`);
       }
+      return;
     }
+
+    console.log(chalk.yellow(`Auth check: ${verification.reason || 'Credential validation failed'}`));
+    console.log(chalk.yellow('Please run:'), chalk.white('lanonasis auth login'));
   });
 
 // Health command using the healthCheck function

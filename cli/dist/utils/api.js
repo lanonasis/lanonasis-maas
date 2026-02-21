@@ -25,6 +25,21 @@ export class APIClient {
         }
         return payload;
     }
+    shouldUseLegacyMemoryRpcFallback(error) {
+        const status = error?.response?.status;
+        const errorData = error?.response?.data;
+        const message = `${errorData?.error || ''} ${errorData?.message || ''}`.toLowerCase();
+        if (status === 405) {
+            return true;
+        }
+        if (status === 400 && message.includes('memory id is required')) {
+            return true;
+        }
+        if (status === 400 && message.includes('method not allowed')) {
+            return true;
+        }
+        return false;
+    }
     constructor() {
         this.config = new CLIConfig();
         this.client = axios.create({
@@ -43,12 +58,14 @@ export class APIClient {
             const authMethod = this.config.get('authMethod');
             const vendorKey = await this.config.getVendorKeyAsync();
             const token = this.config.getToken();
+            const isMemoryEndpoint = typeof config.url === 'string' && config.url.startsWith('/api/v1/memories');
             const forceApiFromEnv = process.env.LANONASIS_FORCE_API === 'true'
                 || process.env.CLI_FORCE_API === 'true'
                 || process.env.ONASIS_FORCE_API === 'true';
             const forceApiFromConfig = this.config.get('forceApi') === true
                 || this.config.get('connectionTransport') === 'api';
-            const forceDirectApi = forceApiFromEnv || forceApiFromConfig;
+            // Memory CRUD/search endpoints should always use the API gateway path.
+            const forceDirectApi = forceApiFromEnv || forceApiFromConfig || isMemoryEndpoint;
             const prefersTokenAuth = Boolean(token) && (authMethod === 'jwt' || authMethod === 'oauth' || authMethod === 'oauth2');
             const useVendorKeyAuth = Boolean(vendorKey) && !prefersTokenAuth;
             // Determine the correct API base URL:
@@ -183,11 +200,91 @@ export class APIClient {
             return response.data;
         }
         catch (error) {
-            // Backward-compatible fallback: newer API contracts may reject GET list and prefer search-only.
+            // Backward-compatible fallback: newer API contracts may reject GET list.
             if (error?.response?.status === 405) {
                 const limit = Number(params.limit || 20);
                 const page = Number(params.page || 1);
                 const offset = Number(params.offset ?? Math.max(0, (page - 1) * limit));
+                // Preferred fallback: POST list endpoint (avoids triggering vector search for plain listings).
+                const listPayload = {
+                    limit,
+                    offset
+                };
+                if (params.memory_type) {
+                    listPayload.memory_type = params.memory_type;
+                }
+                if (params.tags) {
+                    listPayload.tags = Array.isArray(params.tags)
+                        ? params.tags
+                        : String(params.tags).split(',').map((tag) => tag.trim()).filter(Boolean);
+                }
+                if (params.topic_id) {
+                    listPayload.topic_id = params.topic_id;
+                }
+                if (params.user_id) {
+                    listPayload.user_id = params.user_id;
+                }
+                if (params.sort || params.sort_by) {
+                    listPayload.sort_by = params.sort_by || params.sort;
+                }
+                if (params.order || params.sort_order) {
+                    listPayload.sort_order = params.sort_order || params.order;
+                }
+                for (const endpoint of ['/api/v1/memories/list', '/api/v1/memory/list']) {
+                    try {
+                        const listResponse = await this.client.post(endpoint, listPayload);
+                        const payload = listResponse.data || {};
+                        const resultsArray = Array.isArray(payload.data)
+                            ? payload.data
+                            : Array.isArray(payload.memories)
+                                ? payload.memories
+                                : Array.isArray(payload.results)
+                                    ? payload.results
+                                    : [];
+                        const memories = resultsArray.map((entry) => this.normalizeMemoryEntry(entry));
+                        const pagination = (payload.pagination && typeof payload.pagination === 'object')
+                            ? payload.pagination
+                            : {};
+                        const total = Number.isFinite(Number(pagination.total))
+                            ? Number(pagination.total)
+                            : Number.isFinite(Number(payload.total))
+                                ? Number(payload.total)
+                                : memories.length;
+                        const pages = Number.isFinite(Number(pagination.total_pages))
+                            ? Number(pagination.total_pages)
+                            : Number.isFinite(Number(pagination.pages))
+                                ? Number(pagination.pages)
+                                : Math.max(1, Math.ceil(total / limit));
+                        const currentPage = Number.isFinite(Number(pagination.page))
+                            ? Number(pagination.page)
+                            : Math.max(1, Math.floor(offset / limit) + 1);
+                        const hasMore = typeof pagination.has_more === 'boolean'
+                            ? pagination.has_more
+                            : typeof pagination.has_next === 'boolean'
+                                ? pagination.has_next
+                                : (offset + memories.length) < total;
+                        return {
+                            ...payload,
+                            data: memories,
+                            memories,
+                            pagination: {
+                                total,
+                                limit,
+                                offset,
+                                has_more: hasMore,
+                                page: currentPage,
+                                pages
+                            }
+                        };
+                    }
+                    catch (listError) {
+                        if (listError?.response?.status === 404 || listError?.response?.status === 405) {
+                            continue;
+                        }
+                        throw listError;
+                    }
+                }
+                // Secondary fallback: search endpoint for legacy contracts that expose only search.
                 const searchPayload = {
                     query: '*',
                     limit,
@@ -251,15 +348,51 @@ export class APIClient {
         }
     }
     async getMemory(id) {
-        const response = await this.client.get(`/api/v1/memories/${id}`);
-        return this.normalizeMemoryEntry(response.data);
+        try {
+            const response = await this.client.get(`/api/v1/memories/${id}`);
+            return this.normalizeMemoryEntry(response.data);
+        }
+        catch (error) {
+            if (this.shouldUseLegacyMemoryRpcFallback(error)) {
+                const fallback = await this.client.post('/api/v1/memory/get', { id });
+                const payload = fallback.data && typeof fallback.data === 'object'
+                    ? fallback.data.data ?? fallback.data
+                    : fallback.data;
+                return this.normalizeMemoryEntry(payload);
+            }
+            throw error;
+        }
     }
     async updateMemory(id, data) {
-        const response = await this.client.put(`/api/v1/memories/${id}`, data);
-        return this.normalizeMemoryEntry(response.data);
+        try {
+            const response = await this.client.put(`/api/v1/memories/${id}`, data);
+            return this.normalizeMemoryEntry(response.data);
+        }
+        catch (error) {
+            if (this.shouldUseLegacyMemoryRpcFallback(error)) {
+                const fallback = await this.client.post('/api/v1/memory/update', {
+                    id,
+                    ...data
+                });
+                const payload = fallback.data && typeof fallback.data === 'object'
+                    ? fallback.data.data ?? fallback.data
+                    : fallback.data;
+                return this.normalizeMemoryEntry(payload);
+            }
+            throw error;
+        }
     }
     async deleteMemory(id) {
-        await this.client.delete(`/api/v1/memories/${id}`);
+        try {
+            await this.client.delete(`/api/v1/memories/${id}`);
+        }
+        catch (error) {
+            if (this.shouldUseLegacyMemoryRpcFallback(error)) {
+                await this.client.post('/api/v1/memory/delete', { id });
+                return;
+            }
+            throw error;
+        }
     }
     async searchMemories(query, options = {}) {
         const response = await this.client.post('/api/v1/memories/search', {
