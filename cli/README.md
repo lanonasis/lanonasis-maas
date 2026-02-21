@@ -1,11 +1,11 @@
-# @lanonasis/cli v3.9.6 - Auth Routing & Memory Reliability
+# @lanonasis/cli v3.9.7 - OAuth PKCE Auth & whoami
 
 [![NPM Version](https://img.shields.io/npm/v/@lanonasis/cli)](https://www.npmjs.com/package/@lanonasis/cli)
 [![Downloads](https://img.shields.io/npm/dt/@lanonasis/cli)](https://www.npmjs.com/package/@lanonasis/cli)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Golden Contract](https://img.shields.io/badge/Onasis--Core-v0.1%20Compliant-gold)](https://api.lanonasis.com/.well-known/onasis.json)
 
-🎉 **NEW IN v3.9.6**: Fixed memory auth routing to the API gateway, added compatibility fallbacks for legacy memory endpoints, improved auth status verification, and stabilized OAuth/JWT refresh behavior during CLI memory operations.
+🎉 **NEW IN v3.9.7**: Full OAuth PKCE session support across CLI and API gateway. New `onasis whoami` command. `auth status` now shows live user profile and probes real memory API access. Seven auth verification fixes eliminate false-positive "Authenticated: Yes" reports.
 
 ## 🚀 Quick Start
 
@@ -172,12 +172,27 @@ Traditional username/password authentication:
 onasis login  # Will prompt for email and password
 ```
 
-### Authentication Status
+### Authentication Status & Profile
 
 ```bash
-onasis auth status    # Check current authentication
+onasis auth status    # Check current authentication (probes live memory API access)
 onasis auth logout    # Logout from current session
+onasis whoami         # Display full authenticated user profile
 ```
+
+`auth status` now performs a live end-to-end check:
+1. Validates the local credential (vendor key probe hits a real protected endpoint, not `/health`)
+2. Fetches and displays your user profile from `GET /v1/auth/me`
+3. Issues a real memory list request to confirm API access is working
+4. Warns if manual endpoint overrides are active
+
+`onasis whoami` displays:
+- Email address and display name
+- Role (admin, user, authenticated)
+- Plan tier (free, pro, enterprise)
+- OAuth provider (if applicable)
+- Project scope
+- Last login time
 
 **Auth Login Options:**
 | Short | Long | Description |
@@ -222,6 +237,7 @@ echo 'onasis --completion fish | source' >> ~/.config/fish/config.fish
 ```bash
 onasis health           # Comprehensive system health check
 onasis status          # Quick status overview
+onasis whoami          # Display authenticated user profile (email, role, plan, provider)
 onasis init            # Initialize CLI configuration
 onasis guide           # Interactive setup guide
 onasis quickstart      # Essential commands reference

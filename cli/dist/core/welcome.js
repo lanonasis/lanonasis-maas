@@ -73,7 +73,7 @@ export class WelcomeExperience {
         const choices = isAuthenticated ? existingUserOptions : newUserOptions;
         const { choice } = await inquirer.prompt([
             {
-                type: 'list',
+                type: 'select',
                 name: 'choice',
                 message: isAuthenticated ?
                     'Welcome back! What would you like to do?' :
@@ -229,7 +229,7 @@ export class InteractiveSetup {
         console.log("Let's connect to your Onasis service\n");
         const { connectionType } = await inquirer.prompt([
             {
-                type: 'list',
+                type: 'select',
                 name: 'connectionType',
                 message: 'Where is your Onasis service hosted?',
                 choices: [
@@ -291,7 +291,7 @@ export class InteractiveSetup {
         };
         const { authMethod } = await inquirer.prompt([
             {
-                type: 'list',
+                type: 'select',
                 name: 'authMethod',
                 message: 'Select authentication method:',
                 choices: [
@@ -395,7 +395,7 @@ export class InteractiveSetup {
         console.log("Let's personalize your experience\n");
         const answers = await inquirer.prompt([
             {
-                type: 'list',
+                type: 'select',
                 name: 'outputFormat',
                 message: 'Preferred output format:',
                 choices: [

@@ -5,6 +5,8 @@ import { CLIConfig } from './config.js';
 export class APIClient {
     client;
     config;
+    /** When true, throw on 401/403 instead of printing+exiting (for callers that handle errors) */
+    noExit = false;
     normalizeMemoryEntry(payload) {
         // API responses are inconsistent across gateways:
         // - Some return the memory entry directly
@@ -148,11 +150,21 @@ export class APIClient {
             if (error.response) {
                 const { status, data } = error.response;
                 if (status === 401) {
+                    // Invalidate the local auth cache so the next isAuthenticated() call
+                    // performs a fresh server check rather than returning a stale result.
+                    this.config.invalidateAuthCache().catch(() => { });
+                    if (this.noExit) {
+                        // Caller handles the error (e.g. auth status probe) — throw so try/catch fires
+                        return Promise.reject(error);
+                    }
                     console.error(chalk.red('✖ Authentication failed'));
                     console.log(chalk.yellow('Please run:'), chalk.white('lanonasis auth login'));
                     process.exit(1);
                 }
                 if (status === 403) {
+                    if (this.noExit) {
+                        return Promise.reject(error);
+                    }
                     console.error(chalk.red('✖ Permission denied'));
                     if (data.message) {
                         console.error(chalk.gray(data.message));
@@ -434,6 +446,15 @@ export class APIClient {
     // Health check
     async getHealth() {
         const response = await this.client.get('/health');
+        return response.data;
+    }
+    /**
+     * Fetch the current user's profile from the auth gateway (GET /v1/auth/me).
+     * Works for all auth methods: OAuth Bearer token, vendor key (X-API-Key), and JWT.
+     * The /auth/ prefix causes the request interceptor to route this to auth_base.
+     */
+    async getUserProfile() {
+        const response = await this.client.get('/v1/auth/me');
         return response.data;
     }
     // Generic HTTP methods

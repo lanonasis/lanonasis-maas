@@ -170,9 +170,25 @@ export interface ApiErrorResponse {
   details?: Record<string, unknown>;
 }
 
+export interface UserProfile {
+  id: string;
+  email: string;
+  name: string | null;
+  avatar_url: string | null;
+  role: string;
+  provider: string | null;
+  project_scope: string | null;
+  platform: string | null;
+  created_at: string | null;
+  last_sign_in_at: string | null;
+  metadata?: { locale: string | null; timezone: string | null };
+}
+
 export class APIClient {
   private client: AxiosInstance;
   private config: CLIConfig;
+  /** When true, throw on 401/403 instead of printing+exiting (for callers that handle errors) */
+  noExit = false;
 
   private normalizeMemoryEntry(payload: unknown): MemoryEntry {
     // API responses are inconsistent across gateways:
@@ -334,12 +350,22 @@ export class APIClient {
           const { status, data } = error.response as { status: number; data: ApiErrorResponse; statusText: string; };
           
           if (status === 401) {
+            // Invalidate the local auth cache so the next isAuthenticated() call
+            // performs a fresh server check rather than returning a stale result.
+            this.config.invalidateAuthCache().catch(() => {});
+            if (this.noExit) {
+              // Caller handles the error (e.g. auth status probe) — throw so try/catch fires
+              return Promise.reject(error);
+            }
             console.error(chalk.red('✖ Authentication failed'));
             console.log(chalk.yellow('Please run:'), chalk.white('lanonasis auth login'));
             process.exit(1);
           }
-          
+
           if (status === 403) {
+            if (this.noExit) {
+              return Promise.reject(error);
+            }
             console.error(chalk.red('✖ Permission denied'));
             if (data.message) {
               console.error(chalk.gray(data.message));
@@ -645,6 +671,16 @@ export class APIClient {
   // Health check
   async getHealth(): Promise<HealthStatus> {
     const response = await this.client.get('/health');
+    return response.data;
+  }
+
+  /**
+   * Fetch the current user's profile from the auth gateway (GET /v1/auth/me).
+   * Works for all auth methods: OAuth Bearer token, vendor key (X-API-Key), and JWT.
+   * The /auth/ prefix causes the request interceptor to route this to auth_base.
+   */
+  async getUserProfile(): Promise<UserProfile> {
+    const response = await this.client.get('/v1/auth/me');
     return response.data;
   }
 

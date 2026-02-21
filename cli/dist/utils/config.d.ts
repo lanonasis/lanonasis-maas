@@ -83,9 +83,18 @@ export declare class CLIConfig {
     verifyCurrentCredentialsWithServer(): Promise<RemoteAuthVerification>;
     setManualEndpoints(endpoints: Partial<CLIConfigData['discoveredServices']>): Promise<void>;
     hasManualEndpointOverrides(): boolean;
+    /**
+     * Clears the in-memory auth cache and removes the `lastValidated` timestamp.
+     * Called after a definitive 401 from the memory API so that the next
+     * `isAuthenticated()` call performs a fresh server verification rather than
+     * returning a stale cached result.
+     */
+    invalidateAuthCache(): Promise<void>;
     clearManualEndpointOverrides(): Promise<void>;
     getDiscoveredApiUrl(): string;
-    setVendorKey(vendorKey: string): Promise<void>;
+    setVendorKey(vendorKey: string, options?: {
+        skipServerValidation?: boolean;
+    }): Promise<void>;
     validateVendorKeyFormat(vendorKey: string): string | boolean;
     private validateVendorKeyWithServer;
     getVendorKey(): string | undefined;
