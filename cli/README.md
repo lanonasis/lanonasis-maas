@@ -1,11 +1,11 @@
-# @lanonasis/cli v3.9.3 - Enterprise Security & Professional UX
+# @lanonasis/cli v3.9.6 - Auth Routing & Memory Reliability
 
 [![NPM Version](https://img.shields.io/npm/v/@lanonasis/cli)](https://www.npmjs.com/package/@lanonasis/cli)
 [![Downloads](https://img.shields.io/npm/dt/@lanonasis/cli)](https://www.npmjs.com/package/@lanonasis/cli)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Golden Contract](https://img.shields.io/badge/Onasis--Core-v0.1%20Compliant-gold)](https://api.lanonasis.com/.well-known/onasis.json)
 
-🎉 **NEW IN v3.9.3**: Fixed JWT authentication routing for username/password login, resolved frozen terminal during interactive input, and added non-interactive vendor key authentication (`-k` flag). Professional CLI UX with seamless inline text editing, intelligent MCP connection management, and first-run onboarding.
+🎉 **NEW IN v3.9.6**: Fixed memory auth routing to the API gateway, added compatibility fallbacks for legacy memory endpoints, improved auth status verification, and stabilized OAuth/JWT refresh behavior during CLI memory operations.
 
 ## 🚀 Quick Start
 
@@ -129,22 +129,18 @@ maas memory list
 
 ## 🔐 Security & Authentication
 
-### Enterprise-Grade SHA-256 Security (v3.7.0+)
+### Enterprise-Grade API Key Handling
 
-All API keys are now secured with SHA-256 cryptographic hashing:
+The CLI uses secure local storage and sends credentials in the expected wire format:
 
-- ✅ **Automatic Hash Normalization**: Keys are automatically hashed before transmission
-- ✅ **Double-Hash Prevention**: Smart detection prevents re-hashing already hashed keys
-- ✅ **Cross-Platform Compatibility**: Works seamlessly across Node.js and browser environments
-- ✅ **Zero Configuration**: Security is automatic and transparent
-
-```typescript
-// Hash utilities are built-in and automatic
-// Your vendor keys are automatically secured
-onasis login --vendor-key pk_xxxxx.sk_xxxxx  // ✅ Automatically hashed
-```
+- ✅ **Encrypted At Rest**: Vendor keys are stored in encrypted local storage (keytar when available, encrypted file fallback otherwise).
+- ✅ **Correct On-Wire Format**: Vendor key auth sends the raw vendor key in `X-API-Key` over HTTPS.
+- ✅ **Single Server-Side Hash Validation**: The API validates keys with server-side hashing and does not require client-side hashing.
+- ✅ **Token-First Sessions**: OAuth/JWT sessions use `Authorization: Bearer <token>` and refresh automatically before expiry.
 
 ### Authentication Methods
+
+> Transport note: for memory commands, keep `manualEndpointOverrides=false` so requests route through `https://api.lanonasis.com`.
 
 ### 1. Vendor Key Authentication (Recommended)
 

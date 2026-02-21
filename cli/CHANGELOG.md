@@ -1,5 +1,20 @@
 # Changelog - @lanonasis/cli
 
+## [3.9.6] - 2026-02-21
+
+### 🐛 Bug Fixes
+
+- **Reliable Memory Auth Routing**: Memory CRUD and search operations now consistently route through the API gateway (`https://api.lanonasis.com`) to avoid MCP endpoint contract mismatches.
+- **Legacy Endpoint Compatibility**: Added fallback support for deployments that still expose RPC-style memory routes (`/api/v1/memory/*`) when REST routes return `400/405`.
+- **Auth Status Accuracy**: `status` now validates live auth state against the auth verify endpoint before reporting authenticated session state.
+- **OAuth Session Stability**: Requests proactively refresh OAuth/JWT sessions to reduce intermittent `memory login required` errors during long-running CLI usage.
+- **Response Normalization**: Memory get/list/search handlers normalize wrapped gateway responses (`{ data: ... }`) for consistent CLI behavior across environments.
+
+### 📚 Documentation
+
+- Clarified auth flow behavior for vendor keys and bearer tokens.
+- Added release notes for endpoint override guidance and memory transport behavior.
+
 ## [3.9.3] - 2026-02-02
 
 ### ✨ Features

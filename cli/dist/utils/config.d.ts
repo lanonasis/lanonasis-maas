@@ -34,6 +34,12 @@ interface CLIConfigData {
     lastAuthFailure?: string | undefined;
     [key: string]: unknown;
 }
+export type RemoteAuthVerification = {
+    valid: boolean;
+    method: 'token' | 'vendor_key' | 'none';
+    endpoint?: string;
+    reason?: string;
+};
 export declare class CLIConfig {
     private configDir;
     private configPath;
@@ -70,6 +76,11 @@ export declare class CLIConfig {
     private resolveFallbackEndpoints;
     private logFallbackUsage;
     private pingAuthHealth;
+    private getAuthVerificationEndpoints;
+    private extractAuthErrorMessage;
+    private verifyTokenWithAuthGateway;
+    private verifyVendorKeyWithAuthGateway;
+    verifyCurrentCredentialsWithServer(): Promise<RemoteAuthVerification>;
     setManualEndpoints(endpoints: Partial<CLIConfigData['discoveredServices']>): Promise<void>;
     hasManualEndpointOverrides(): boolean;
     clearManualEndpointOverrides(): Promise<void>;

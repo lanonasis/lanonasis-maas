@@ -14,16 +14,16 @@ export declare const MemoryCreateSchema: z.ZodObject<{
     title?: string;
     content?: string;
     tags?: string[];
+    memory_type?: "context" | "reference" | "note";
     topic_id?: string;
     metadata?: Record<string, any>;
-    memory_type?: "context" | "reference" | "note";
 }, {
     title?: string;
     content?: string;
     tags?: string[];
+    memory_type?: "context" | "reference" | "note";
     topic_id?: string;
     metadata?: Record<string, any>;
-    memory_type?: "context" | "reference" | "note";
 }>;
 export declare const MemorySearchSchema: z.ZodObject<{
     query: z.ZodString;
@@ -36,16 +36,16 @@ export declare const MemorySearchSchema: z.ZodObject<{
     query?: string;
     tags?: string[];
     limit?: number;
+    memory_type?: "context" | "reference" | "note";
     topic_id?: string;
     threshold?: number;
-    memory_type?: "context" | "reference" | "note";
 }, {
     query?: string;
     tags?: string[];
     limit?: number;
+    memory_type?: "context" | "reference" | "note";
     topic_id?: string;
     threshold?: number;
-    memory_type?: "context" | "reference" | "note";
 }>;
 export declare const MemoryUpdateSchema: z.ZodObject<{
     memory_id: z.ZodString;
@@ -58,16 +58,16 @@ export declare const MemoryUpdateSchema: z.ZodObject<{
     title?: string;
     content?: string;
     tags?: string[];
+    memory_type?: "context" | "reference" | "note";
     memory_id?: string;
     metadata?: Record<string, any>;
-    memory_type?: "context" | "reference" | "note";
 }, {
     title?: string;
     content?: string;
     tags?: string[];
+    memory_type?: "context" | "reference" | "note";
     memory_id?: string;
     metadata?: Record<string, any>;
-    memory_type?: "context" | "reference" | "note";
 }>;
 export declare const MemoryDeleteSchema: z.ZodObject<{
     memory_id: z.ZodString;
@@ -90,19 +90,19 @@ export declare const MemoryListSchema: z.ZodObject<{
 }, "strip", z.ZodTypeAny, {
     tags?: string[];
     limit?: number;
-    topic_id?: string;
-    order?: "desc" | "asc";
-    memory_type?: "context" | "reference" | "note";
     offset?: number;
+    memory_type?: "context" | "reference" | "note";
+    topic_id?: string;
     sort_by?: "title" | "created_at" | "updated_at";
+    order?: "desc" | "asc";
 }, {
     tags?: string[];
     limit?: number;
-    topic_id?: string;
-    order?: "desc" | "asc";
-    memory_type?: "context" | "reference" | "note";
     offset?: number;
+    memory_type?: "context" | "reference" | "note";
+    topic_id?: string;
     sort_by?: "title" | "created_at" | "updated_at";
+    order?: "desc" | "asc";
 }>;
 export declare const TopicCreateSchema: z.ZodObject<{
     name: z.ZodString;
@@ -386,16 +386,16 @@ export declare const MCPSchemas: {
             title?: string;
             content?: string;
             tags?: string[];
+            memory_type?: "context" | "reference" | "note";
             topic_id?: string;
             metadata?: Record<string, any>;
-            memory_type?: "context" | "reference" | "note";
         }, {
             title?: string;
             content?: string;
             tags?: string[];
+            memory_type?: "context" | "reference" | "note";
             topic_id?: string;
             metadata?: Record<string, any>;
-            memory_type?: "context" | "reference" | "note";
         }>;
         search: z.ZodObject<{
             query: z.ZodString;
@@ -408,16 +408,16 @@ export declare const MCPSchemas: {
             query?: string;
             tags?: string[];
             limit?: number;
+            memory_type?: "context" | "reference" | "note";
             topic_id?: string;
             threshold?: number;
-            memory_type?: "context" | "reference" | "note";
         }, {
             query?: string;
             tags?: string[];
             limit?: number;
+            memory_type?: "context" | "reference" | "note";
             topic_id?: string;
             threshold?: number;
-            memory_type?: "context" | "reference" | "note";
         }>;
         update: z.ZodObject<{
             memory_id: z.ZodString;
@@ -430,16 +430,16 @@ export declare const MCPSchemas: {
             title?: string;
             content?: string;
             tags?: string[];
+            memory_type?: "context" | "reference" | "note";
             memory_id?: string;
             metadata?: Record<string, any>;
-            memory_type?: "context" | "reference" | "note";
         }, {
             title?: string;
             content?: string;
             tags?: string[];
+            memory_type?: "context" | "reference" | "note";
             memory_id?: string;
             metadata?: Record<string, any>;
-            memory_type?: "context" | "reference" | "note";
         }>;
         delete: z.ZodObject<{
             memory_id: z.ZodString;
@@ -462,19 +462,19 @@ export declare const MCPSchemas: {
         }, "strip", z.ZodTypeAny, {
             tags?: string[];
             limit?: number;
-            topic_id?: string;
-            order?: "desc" | "asc";
-            memory_type?: "context" | "reference" | "note";
             offset?: number;
+            memory_type?: "context" | "reference" | "note";
+            topic_id?: string;
             sort_by?: "title" | "created_at" | "updated_at";
+            order?: "desc" | "asc";
         }, {
             tags?: string[];
             limit?: number;
-            topic_id?: string;
-            order?: "desc" | "asc";
-            memory_type?: "context" | "reference" | "note";
             offset?: number;
+            memory_type?: "context" | "reference" | "note";
+            topic_id?: string;
             sort_by?: "title" | "created_at" | "updated_at";
+            order?: "desc" | "asc";
         }>;
     };
     topic: {
