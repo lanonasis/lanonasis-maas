@@ -22,7 +22,7 @@ export const MemoryCreateSchema = z.object({
         .uuid()
         .optional()
         .describe("Optional topic ID for organization"),
-    metadata: z.record(z.any())
+    metadata: z.record(z.string(), z.any())
         .optional()
         .describe("Additional metadata")
 });
@@ -71,7 +71,7 @@ export const MemoryUpdateSchema = z.object({
     tags: z.array(z.string())
         .optional()
         .describe("New tags (replaces existing)"),
-    metadata: z.record(z.any())
+    metadata: z.record(z.string(), z.any())
         .optional()
         .describe("New metadata (merges with existing)")
 });
@@ -229,7 +229,7 @@ export const BulkOperationSchema = z.object({
         .describe("Bulk operation type"),
     entity_type: z.enum(["memory", "topic", "apikey"])
         .describe("Entity type for bulk operation"),
-    items: z.array(z.record(z.any()))
+    items: z.array(z.record(z.string(), z.any()))
         .min(1)
         .max(100)
         .describe("Items for bulk operation"),
@@ -249,7 +249,7 @@ export const ImportExportSchema = z.object({
     file_path: z.string()
         .optional()
         .describe("File path for import/export"),
-    filters: z.record(z.any())
+    filters: z.record(z.string(), z.any())
         .optional()
         .describe("Filters for export")
 });
@@ -257,7 +257,7 @@ export const ImportExportSchema = z.object({
 export const ToolExecutionSchema = z.object({
     tool_name: z.string()
         .describe("Name of the tool to execute"),
-    arguments: z.record(z.any())
+    arguments: z.record(z.string(), z.any())
         .describe("Tool arguments"),
     timeout: z.number()
         .positive()
@@ -308,7 +308,7 @@ export class SchemaValidator {
         }
         catch (error) {
             if (error instanceof z.ZodError) {
-                throw new Error(`Validation error: ${error.errors
+                throw new Error(`Validation error: ${error.issues
                     .map(e => `${e.path.join('.')}: ${e.message}`)
                     .join(', ')}`);
             }
@@ -326,7 +326,7 @@ export class SchemaValidator {
         else {
             return {
                 success: false,
-                errors: result.error.errors.map(e => `${e.path.join('.')}: ${e.message}`)
+                errors: result.error.issues.map(e => `${e.path.join('.')}: ${e.message}`)
             };
         }
     }

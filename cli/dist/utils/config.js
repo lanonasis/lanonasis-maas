@@ -190,6 +190,10 @@ export class CLIConfig {
     }
     // Enhanced Service Discovery Integration
     async discoverServices(verbose = false) {
+        // Honour manually configured endpoints — skip auto-discovery so we don't clobber them.
+        if (this.config.manualEndpointOverrides) {
+            return;
+        }
         const isTestEnvironment = process.env.NODE_ENV === 'test';
         const forceDiscovery = process.env.FORCE_SERVICE_DISCOVERY === 'true';
         if ((isTestEnvironment && !forceDiscovery) || process.env.SKIP_SERVICE_DISCOVERY === 'true') {
@@ -534,6 +538,16 @@ export class CLIConfig {
         };
     }
     async verifyVendorKeyWithAuthGateway(vendorKey) {
+        // Detect whether the stored "vendor key" is actually an OAuth/JWT access token
+        // (3-part base64url string separated by dots). OAuth tokens must be verified via the
+        // Bearer token path (/v1/auth/verify-token), not as API keys (/v1/auth/verify-api-key),
+        // because they are not stored in the api_keys table.
+        const isJwtFormat = /^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/.test(vendorKey.trim());
+        if (isJwtFormat) {
+            // Delegate to token verification — the auth gateway's UAI router accepts Bearer tokens
+            // on /v1/auth/verify (requireAuth) and /v1/auth/verify-token (public, body-based).
+            return this.verifyTokenWithAuthGateway(vendorKey);
+        }
         const headers = {
             'X-API-Key': vendorKey,
             'X-Auth-Method': 'vendor_key',
@@ -655,6 +669,17 @@ export class CLIConfig {
     hasManualEndpointOverrides() {
         return !!this.config.manualEndpointOverrides;
     }
+    /**
+     * Clears the in-memory auth cache and removes the `lastValidated` timestamp.
+     * Called after a definitive 401 from the memory API so that the next
+     * `isAuthenticated()` call performs a fresh server verification rather than
+     * returning a stale cached result.
+     */
+    async invalidateAuthCache() {
+        this.authCheckCache = null;
+        delete this.config.lastValidated;
+        await this.save().catch(() => { });
+    }
     async clearManualEndpointOverrides() {
         delete this.config.manualEndpointOverrides;
         delete this.config.lastManualEndpointUpdate;
@@ -667,15 +692,20 @@ export class CLIConfig {
             'https://auth.lanonasis.com';
     }
     // Enhanced authentication support
-    async setVendorKey(vendorKey) {
+    async setVendorKey(vendorKey, options = {}) {
         const trimmedKey = typeof vendorKey === 'string' ? vendorKey.trim() : '';
         // Minimal format validation (non-empty); rely on server-side checks for everything else
         const formatValidation = this.validateVendorKeyFormat(trimmedKey);
         if (formatValidation !== true) {
             throw new Error(typeof formatValidation === 'string' ? formatValidation : 'Vendor key is invalid');
         }
-        // Server-side validation
-        await this.validateVendorKeyWithServer(trimmedKey);
+        // Skip server-side validation when the caller already holds a valid auth credential
+        // (e.g. an OAuth access token being stored for MCP/API access — auth-gateway won't
+        // recognise it as a vendor key even though the memory API accepts it).
+        const isOAuthContext = ['oauth', 'oauth2'].includes(this.config.authMethod || '');
+        if (!options.skipServerValidation && !isOAuthContext) {
+            await this.validateVendorKeyWithServer(trimmedKey);
+        }
         // Initialize and store using ApiKeyStorage from @lanonasis/oauth-client
         // This handles encryption automatically (AES-256-GCM with machine-derived key)
         await this.apiKeyStorage.initialize();
@@ -877,23 +907,21 @@ export class CLIConfig {
             const vendorKey = await this.getVendorKeyAsync();
             if (!vendorKey)
                 return false;
-            // Check cache first
+            // Check in-memory cache first (5-minute TTL)
             if (this.authCheckCache && (Date.now() - this.authCheckCache.timestamp) < this.AUTH_CACHE_TTL) {
                 return this.authCheckCache.isValid;
             }
-            // Check if recently validated (within 24 hours)
+            // Track lastValidated for the offline grace period used in the catch block.
+            // The 24-hour skip-server-validation gate has been removed: it allowed expired/revoked
+            // keys to appear valid as long as they had been validated within the past day.
             const lastValidated = this.config.lastValidated;
-            const recentlyValidated = lastValidated &&
-                (Date.now() - new Date(lastValidated).getTime()) < (24 * 60 * 60 * 1000);
-            if (recentlyValidated) {
-                this.authCheckCache = { isValid: true, timestamp: Date.now() };
-                return true;
-            }
-            // Vendor key not recently validated - verify with server
+            // Verify with server on every cache-miss
             try {
                 const verification = await this.verifyVendorKeyWithAuthGateway(vendorKey);
                 if (!verification.valid) {
-                    throw new Error(verification.reason || 'Vendor key validation failed');
+                    // Auth gateway explicitly rejected the key — no grace period applies.
+                    this.authCheckCache = { isValid: false, timestamp: Date.now() };
+                    return false;
                 }
                 // Update last validated timestamp on success
                 this.config.lastValidated = new Date().toISOString();
@@ -901,8 +929,18 @@ export class CLIConfig {
                 this.authCheckCache = { isValid: true, timestamp: Date.now() };
                 return true;
             }
-            catch {
-                // Server validation failed - check for grace period (7 days offline)
+            catch (err) {
+                // verifyVendorKeyWithAuthGateway throws only on network/timeout errors
+                // (explicit 401/403 returns {valid:false} without throwing).
+                // Apply the 7-day offline grace ONLY for genuine network failures.
+                const normalizedErr = this.normalizeServiceError(err);
+                const httpStatus = normalizedErr.response?.status ?? 0;
+                if (httpStatus === 401 || httpStatus === 403) {
+                    // Explicit auth rejection propagated as an exception — definitely invalid.
+                    this.authCheckCache = { isValid: false, timestamp: Date.now() };
+                    return false;
+                }
+                // Network / server error — apply offline grace period
                 const gracePeriod = 7 * 24 * 60 * 60 * 1000;
                 const withinGracePeriod = lastValidated &&
                     (Date.now() - new Date(lastValidated).getTime()) < gracePeriod;
@@ -913,7 +951,6 @@ export class CLIConfig {
                     this.authCheckCache = { isValid: true, timestamp: Date.now() };
                     return true;
                 }
-                // Grace period expired - require server validation
                 if (process.env.CLI_VERBOSE === 'true') {
                     console.warn('⚠️  Vendor key validation failed and grace period expired');
                 }

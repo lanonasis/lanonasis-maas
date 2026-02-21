@@ -149,9 +149,27 @@ export interface ApiErrorResponse {
     status_code: number;
     details?: Record<string, unknown>;
 }
+export interface UserProfile {
+    id: string;
+    email: string;
+    name: string | null;
+    avatar_url: string | null;
+    role: string;
+    provider: string | null;
+    project_scope: string | null;
+    platform: string | null;
+    created_at: string | null;
+    last_sign_in_at: string | null;
+    metadata?: {
+        locale: string | null;
+        timezone: string | null;
+    };
+}
 export declare class APIClient {
     private client;
     private config;
+    /** When true, throw on 401/403 instead of printing+exiting (for callers that handle errors) */
+    noExit: boolean;
     private normalizeMemoryEntry;
     private shouldUseLegacyMemoryRpcFallback;
     constructor();
@@ -171,6 +189,12 @@ export declare class APIClient {
     updateTopic(id: string, data: UpdateTopicRequest): Promise<MemoryTopic>;
     deleteTopic(id: string): Promise<void>;
     getHealth(): Promise<HealthStatus>;
+    /**
+     * Fetch the current user's profile from the auth gateway (GET /v1/auth/me).
+     * Works for all auth methods: OAuth Bearer token, vendor key (X-API-Key), and JWT.
+     * The /auth/ prefix causes the request interceptor to route this to auth_base.
+     */
+    getUserProfile(): Promise<UserProfile>;
     get<T = any>(url: string, config?: AxiosRequestConfig): Promise<T>;
     post<T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<T>;
     put<T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<T>;

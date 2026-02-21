@@ -11,6 +11,7 @@ import { orgCommands } from './commands/organization.js';
 import { mcpCommands } from './commands/mcp.js';
 import apiKeysCommand from './commands/api-keys.js';
 import { CLIConfig } from './utils/config.js';
+import { APIClient } from './utils/api.js';
 import { getMCPClient } from './utils/mcp-client.js';
 import { dirname, join } from 'path';
 import { createOnboardingFlow } from './ux/index.js';
@@ -253,29 +254,77 @@ authCmd
     .description('Show authentication status')
     .action(async () => {
     const isAuth = await cliConfig.isAuthenticated();
-    const user = await cliConfig.getCurrentUser();
     const failureCount = cliConfig.getFailureCount();
     const lastFailure = cliConfig.getLastAuthFailure();
     const authMethod = cliConfig.get('authMethod');
     const lastValidated = cliConfig.get('lastValidated');
     console.log(chalk.blue.bold('🔐 Authentication Status'));
     console.log('━'.repeat(40));
-    if (isAuth && user) {
+    if (isAuth) {
         console.log(chalk.green('✓ Authenticated'));
-        console.log(`Email: ${user.email}`);
-        console.log(`Organization: ${user.organization_id}`);
-        console.log(`Plan: ${user.plan}`);
         if (authMethod) {
             console.log(`Method: ${authMethod}`);
         }
         if (lastValidated) {
-            const validatedDate = new Date(lastValidated);
-            console.log(`Last validated: ${validatedDate.toLocaleString()}`);
+            console.log(`Last validated: ${new Date(lastValidated).toLocaleString()}`);
+        }
+        // Fetch live profile from auth gateway
+        try {
+            const profileClient = new APIClient();
+            profileClient.noExit = true;
+            const profile = await profileClient.getUserProfile();
+            console.log(`Email: ${profile.email}`);
+            if (profile.name)
+                console.log(`Name: ${profile.name}`);
+            console.log(`Role: ${profile.role}`);
+            if (profile.provider)
+                console.log(`Provider: ${profile.provider}`);
+            if (profile.last_sign_in_at) {
+                console.log(`Last sign-in: ${new Date(profile.last_sign_in_at).toLocaleString()}`);
+            }
+        }
+        catch {
+            // Profile fetch failed (e.g. auth gateway offline) — show cached info if available
+            const cached = await cliConfig.getCurrentUser();
+            if (cached?.email)
+                console.log(`Email: ${cached.email} (cached)`);
         }
     }
     else {
         console.log(chalk.red('✖ Not authenticated'));
-        console.log(chalk.yellow('Run:'), chalk.white('memory login'));
+        console.log(chalk.yellow('Run:'), chalk.white('lanonasis auth login'));
+    }
+    // Warn when manual endpoint overrides are active
+    if (cliConfig.hasManualEndpointOverrides()) {
+        console.log();
+        console.log(chalk.yellow('⚠️  Manual endpoint overrides are active (manualEndpointOverrides=true)'));
+        const services = cliConfig.get('discoveredServices');
+        if (services) {
+            console.log(chalk.gray(`   auth:   ${services['auth_base']}`));
+            console.log(chalk.gray(`   memory: ${services['memory_base']}`));
+        }
+        console.log(chalk.gray('   Run: lanonasis config clear-overrides  to restore auto-discovery'));
+    }
+    // Live memory API probe — shows whether credentials actually work end-to-end
+    if (isAuth) {
+        console.log();
+        process.stdout.write('Memory API access: ');
+        try {
+            const apiClient = new APIClient();
+            apiClient.noExit = true; // catch 401 in our try/catch below instead of process.exit
+            await apiClient.getMemories({ limit: 1 });
+            console.log(chalk.green('✓ accessible'));
+        }
+        catch (err) {
+            const status = err?.response?.status;
+            if (status === 401 || status === 403) {
+                console.log(chalk.red(`✖ rejected (${status}) — credentials are stale or revoked`));
+                console.log(chalk.yellow('  Run: lanonasis auth login'));
+            }
+            else {
+                console.log(chalk.yellow(`⚠  reachable (status: ${status ?? 'network error'})`));
+            }
+        }
     }
     // Show failure tracking information
     if (failureCount > 0) {
@@ -645,15 +694,71 @@ program
         console.log(`Verified via: ${verification.endpoint}`);
     }
     if (isAuth) {
-        const user = await cliConfig.getCurrentUser();
-        if (user) {
-            console.log(`User: ${user.email}`);
-            console.log(`Plan: ${user.plan}`);
+        try {
+            const profileClient = new APIClient();
+            profileClient.noExit = true;
+            const profile = await profileClient.getUserProfile();
+            console.log(`User: ${profile.email}`);
+            if (profile.name)
+                console.log(`Name: ${profile.name}`);
+            console.log(`Role: ${profile.role}`);
+        }
+        catch {
+            const cached = await cliConfig.getCurrentUser();
+            if (cached?.email)
+                console.log(`User: ${cached.email} (cached)`);
         }
         return;
     }
     console.log(chalk.yellow(`Auth check: ${verification.reason || 'Credential validation failed'}`));
     console.log(chalk.yellow('Please run:'), chalk.white('lanonasis auth login'));
+});
+// Whoami command — live profile from auth gateway
+program
+    .command('whoami')
+    .description('Show the currently authenticated user profile')
+    .action(async () => {
+    await cliConfig.init();
+    const isAuth = await cliConfig.isAuthenticated();
+    if (!isAuth) {
+        console.log(chalk.red('✖ Not authenticated'));
+        console.log(chalk.yellow('Run:'), chalk.white('lanonasis auth login'));
+        process.exit(1);
+    }
+    try {
+        const profileClient = new APIClient();
+        profileClient.noExit = true;
+        const profile = await profileClient.getUserProfile();
+        console.log(chalk.blue.bold('👤 Current User'));
+        console.log('━'.repeat(40));
+        console.log(`Email:      ${chalk.white(profile.email)}`);
+        if (profile.name) {
+            console.log(`Name:       ${chalk.white(profile.name)}`);
+        }
+        console.log(`Role:       ${chalk.white(profile.role)}`);
+        if (profile.provider) {
+            console.log(`Provider:   ${chalk.white(profile.provider)}`);
+        }
+        if (profile.project_scope) {
+            console.log(`Scope:      ${chalk.white(profile.project_scope)}`);
+        }
+        if (profile.last_sign_in_at) {
+            console.log(`Last login: ${chalk.white(new Date(profile.last_sign_in_at).toLocaleString())}`);
+        }
+        if (profile.created_at) {
+            console.log(`Member since: ${chalk.white(new Date(profile.created_at).toLocaleString())}`);
+        }
+    }
+    catch (err) {
+        const status = err?.response?.status;
+        if (status === 401 || status === 403) {
+            console.log(chalk.red('✖ Session expired — please log in again'));
+            console.log(chalk.yellow('Run:'), chalk.white('lanonasis auth login'));
+            process.exit(1);
+        }
+        console.error(chalk.red('✖ Failed to fetch profile:'), err instanceof Error ? err.message : String(err));
+        process.exit(1);
+    }
 });
 // Health command using the healthCheck function
 program

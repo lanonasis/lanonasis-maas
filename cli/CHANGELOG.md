@@ -1,5 +1,39 @@
 # Changelog - @lanonasis/cli
 
+## [3.9.7] - 2026-02-21
+
+### ✨ New Features
+
+- **`onasis whoami` command**: Display full authenticated user profile including email, name, role, OAuth provider, project scope, and last login time. Fetches live data from `GET /v1/auth/me`.
+- **Live profile on `auth status`**: `onasis auth status` now fetches the real user profile from the auth gateway and displays email, role, and plan — no longer relies solely on cached local state.
+- **Live memory API probe on `auth status`**: After local auth check passes, `auth status` issues a real memory list request to confirm end-to-end API access, reporting `✓ accessible` or `✖ rejected (401)` with actionable guidance.
+- **Manual endpoint override warning**: `auth status` now warns when `manualEndpointOverrides` is active and shows the configured endpoint URLs.
+
+### 🐛 Bug Fixes
+
+- **OAuth sessions no longer show "Not Authenticated"**: Fixed `auth status` incorrectly reporting unauthenticated for valid OAuth PKCE sessions — was checking `if (isAuth && user)` when `user` may be undefined for OAuth sessions.
+- **`process.exit(1)` no longer kills status probe**: Added `noExit` flag to `APIClient` so callers like `auth status` can catch 401/403 from the memory probe without the interceptor terminating the process.
+- **Stale auth cache cleared on 401**: When the memory API returns 401, the CLI now calls `invalidateAuthCache()` to clear the 5-minute in-memory cache and the persisted `lastValidated` timestamp, preventing the 24-hour grace bypass.
+- **24-hour `lastValidated` skip removed**: Eliminated a security hole that bypassed server re-validation for 24 hours after any successful auth check.
+- **7-day offline grace restricted to network errors**: The offline grace period no longer applies to explicit 401/403 auth rejections — only genuine network failures.
+- **Bogus vendor key always passed auth check**: `pingAuthHealth()` was hitting the unauthenticated `/health` endpoint. Replaced with `probeVendorKeyAuth()` which calls `POST /api/v1/memories/search` — a real protected endpoint. Interprets 401/403 as auth rejection, any other response (400, 405, 5xx) as auth accepted with a backend concern.
+- **`discoverServices()` overwrote manual overrides**: Fixed auto-discovery ignoring `manualEndpointOverrides`; discovery now short-circuits when manual overrides are active.
+- **Stale JWT cleared on vendor key switch**: When `setVendorKey()` sets `authMethod: 'vendor_key'`, any existing JWT tokens are now removed from config to prevent auth-method confusion in the API client.
+- **Zod v4 compatibility**: Fixed `z.record(z.any())` → `z.record(z.string(), z.any())` (5 instances in `tool-schemas.ts`) and `error.errors` → `error.issues` (2 instances in schema validator).
+- **Inquirer v9 compatibility**: Fixed deprecated `type: 'list'` → `type: 'select'` prompt type in `welcome.ts`.
+
+### 📡 Auth Gateway Integration (coordinated release)
+
+These CLI changes are paired with server-side fixes in the same release:
+- **Auth Gateway `requireAuth`**: Added opaque OAuth PKCE token introspection path — OAuth CLI sessions can now access `GET /v1/auth/me` and other protected endpoints.
+- **Central API Gateway (`onasis-gateway`)**: `validateJWTToken()` now falls back to `POST /verify-token` when the session endpoint returns 401, enabling OAuth token passthrough for all proxied services. Added `get-me` tool to the auth-gateway MCP adapter.
+
+### 📚 Documentation
+
+- Updated README with `onasis whoami` command reference.
+- Added `auth status` live probe behavior to authentication section.
+- Added `--no-mcp` flag to memory command examples.
+
 ## [3.9.6] - 2026-02-21
 
 ### 🐛 Bug Fixes
