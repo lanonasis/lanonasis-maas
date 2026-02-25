@@ -34,7 +34,7 @@ export class MCPClient {
       return this.client;
     } catch (error) {
       this.client = undefined;
-      throw new Error(`Failed to connect to MCP server: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(`Failed to connect to MCP server: ${error instanceof Error && error.message ? error.message : String(error)}`);
     } finally {
       if (timeoutHandle) {
         clearTimeout(timeoutHandle);
@@ -61,7 +61,7 @@ export class MCPClient {
         timeoutPromise
       ]);
     } catch (error) {
-      throw new Error(`MCP tool call failed: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(`MCP tool call failed: ${error instanceof Error && error.message ? error.message : String(error)}`);
     } finally {
       if (timeoutHandle) {
         clearTimeout(timeoutHandle);
