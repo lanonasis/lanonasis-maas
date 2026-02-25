@@ -546,7 +546,7 @@ export function memoryCommands(program: Command): void {
               validate: (input: string) => input.length > 0 || 'Title is required',
             },
             {
-              type: 'list',
+              type: 'select',
               name: 'type',
               message: 'Memory type:',
               choices: [...MEMORY_TYPE_CHOICES],
@@ -1105,7 +1105,7 @@ export function memoryCommands(program: Command): void {
               default: currentMemory.title,
             },
             {
-              type: 'list',
+              type: 'select',
               name: 'type',
               message: 'Memory type:',
               choices: [...MEMORY_TYPE_CHOICES],

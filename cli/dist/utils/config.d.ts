@@ -26,7 +26,7 @@ interface CLIConfigData {
     manualEndpointOverrides?: boolean;
     lastManualEndpointUpdate?: string;
     vendorKey?: string | undefined;
-    authMethod?: 'jwt' | 'vendor_key' | 'oauth' | undefined;
+    authMethod?: 'jwt' | 'vendor_key' | 'oauth' | 'oauth2' | undefined;
     tokenExpiry?: number | undefined;
     lastValidated?: string | undefined;
     deviceId?: string;

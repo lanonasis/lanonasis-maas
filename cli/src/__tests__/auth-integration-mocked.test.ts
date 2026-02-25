@@ -157,6 +157,25 @@ describe('CLI Authentication Integration Tests (Mocked)', () => {
       const isAuthenticated = await config.isAuthenticated();
       expect(typeof isAuthenticated).toBe('boolean');
     });
+
+    it('should mark oauth token unauthenticated when server rejects it', async () => {
+      const opaqueToken = 'oauth_access_token_value';
+      await config.setToken(opaqueToken);
+      config.set('authMethod', 'oauth');
+      config.set('token_expires_at', Date.now() + 60 * 60 * 1000);
+      config.set('lastValidated', new Date().toISOString());
+      await config.invalidateAuthCache();
+
+      const authError = new Error('Unauthorized');
+      (authError as any).response = {
+        status: 401,
+        data: { valid: false, error: 'invalid token' },
+      };
+      mockAxios.post.mockRejectedValue(authError);
+
+      const isAuthenticated = await config.isAuthenticated();
+      expect(isAuthenticated).toBe(false);
+    });
   });
 
   describe('Credential Validation', () => {

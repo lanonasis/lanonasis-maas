@@ -52,6 +52,102 @@ export class APIClient {
             return false;
         return code === 'ENOTFOUND' || code === 'EAI_AGAIN' || code === 'ECONNREFUSED';
     }
+    shouldRetryViaSupabaseMemoryFunctions(error) {
+        const status = Number(error?.response?.status || 0);
+        if (status !== 401)
+            return false;
+        const cfg = (error?.config || {});
+        if (cfg.__retriedViaSupabaseMemoryFunctions || cfg.__useSupabaseMemoryFunctions)
+            return false;
+        const baseURL = String(cfg.baseURL || '');
+        if (baseURL.includes('supabase.co'))
+            return false;
+        const requestUrl = String(cfg.url || '');
+        if (!requestUrl.startsWith('/api/v1/memories'))
+            return false;
+        const message = String(error?.response?.data?.message || error?.response?.data?.error || '');
+        if (!/invalid jwt/i.test(message))
+            return false;
+        const authMethod = String(this.config.get('authMethod') || '');
+        const token = this.config.getToken();
+        const hasOpaqueToken = Boolean(token) && token.split('.').length !== 3;
+        return hasOpaqueToken || authMethod === 'oauth' || authMethod === 'oauth2';
+    }
+    getSupabaseFunctionsBaseUrl() {
+        const discoveredServices = this.config.get('discoveredServices');
+        const candidates = [
+            process.env.LANONASIS_SUPABASE_URL,
+            process.env.SUPABASE_URL,
+            discoveredServices?.memory_base
+        ];
+        for (const candidate of candidates) {
+            if (typeof candidate === 'string' && candidate.includes('supabase.co')) {
+                return candidate.replace(/\/$/, '');
+            }
+        }
+        return 'https://lanonasis.supabase.co';
+    }
+    mapMemoryApiRouteToSupabaseFunctions(config, token, vendorKey) {
+        const method = String(config.method || 'get').toLowerCase();
+        const url = String(config.url || '');
+        const mapped = config;
+        mapped.baseURL = this.getSupabaseFunctionsBaseUrl();
+        mapped.headers = mapped.headers || {};
+        if (token) {
+            mapped.headers.Authorization = `Bearer ${token}`;
+            delete mapped.headers['X-API-Key'];
+        }
+        else if (vendorKey) {
+            mapped.headers['X-API-Key'] = vendorKey;
+        }
+        // Supabase functions do not need X-Auth-Method and can reject unexpected values.
+        delete mapped.headers['X-Auth-Method'];
+        mapped.headers['X-Project-Scope'] = 'lanonasis-maas';
+        if (method === 'get' && url === '/api/v1/memories') {
+            mapped.url = '/functions/v1/memory-list';
+            return mapped;
+        }
+        if (method === 'post' && url === '/api/v1/memories') {
+            mapped.url = '/functions/v1/memory-create';
+            return mapped;
+        }
+        if (method === 'post' && url === '/api/v1/memories/search') {
+            mapped.url = '/functions/v1/memory-search';
+            return mapped;
+        }
+        if (method === 'get' && url === '/api/v1/memories/stats') {
+            mapped.url = '/functions/v1/memory-stats';
+            return mapped;
+        }
+        if (method === 'post' && url === '/api/v1/memories/bulk/delete') {
+            mapped.url = '/functions/v1/memory-bulk-delete';
+            return mapped;
+        }
+        const idMatch = url.match(/^\/api\/v1\/memories\/([^/?#]+)$/);
+        if (idMatch) {
+            const id = decodeURIComponent(idMatch[1] || '');
+            if (method === 'get') {
+                mapped.url = '/functions/v1/memory-get';
+                mapped.params = { ...(config.params || {}), id };
+                return mapped;
+            }
+            if (method === 'put' || method === 'patch') {
+                mapped.method = 'post';
+                mapped.url = '/functions/v1/memory-update';
+                const body = (config.data && typeof config.data === 'object')
+                    ? config.data
+                    : {};
+                mapped.data = { id, ...body };
+                return mapped;
+            }
+            if (method === 'delete') {
+                mapped.url = '/functions/v1/memory-delete';
+                mapped.params = { ...(config.params || {}), id };
+                return mapped;
+            }
+        }
+        return mapped;
+    }
     normalizeMcpPathToApi(url) {
         // MCP HTTP compatibility path -> API gateway REST paths
         if (url === '/memory') {
@@ -80,12 +176,24 @@ export class APIClient {
             const authMethod = this.config.get('authMethod');
             const vendorKey = await this.config.getVendorKeyAsync();
             const token = this.config.getToken();
+            const useSupabaseMemoryFunctions = config.__useSupabaseMemoryFunctions === true;
             const isMemoryEndpoint = typeof config.url === 'string' && config.url.startsWith('/api/v1/memories');
             const forceApiFromEnv = process.env.LANONASIS_FORCE_API === 'true'
                 || process.env.CLI_FORCE_API === 'true'
                 || process.env.ONASIS_FORCE_API === 'true';
             const forceApiFromConfig = this.config.get('forceApi') === true
                 || this.config.get('connectionTransport') === 'api';
+            if (useSupabaseMemoryFunctions && typeof config.url === 'string' && config.url.startsWith('/api/v1/memories')) {
+                const remapped = this.mapMemoryApiRouteToSupabaseFunctions(config, token || undefined, vendorKey || undefined);
+                if (process.env.CLI_VERBOSE === 'true') {
+                    const requestId = randomUUID();
+                    remapped.headers['X-Request-ID'] = requestId;
+                    remapped.headers['X-Transport-Mode'] = 'supabase-functions-fallback';
+                    console.log(chalk.dim(`→ ${String(remapped.method || 'get').toUpperCase()} ${remapped.url} [${requestId}]`));
+                    console.log(chalk.dim(`  transport=supabase-functions-fallback baseURL=${remapped.baseURL}`));
+                }
+                return remapped;
+            }
             // Memory CRUD/search endpoints should always use the API gateway path.
             const forceDirectApiRetry = config
                 .__forceDirectApiGatewayRetry === true;
@@ -169,6 +277,14 @@ export class APIClient {
             }
             return response;
         }, (error) => {
+            if (this.shouldRetryViaSupabaseMemoryFunctions(error)) {
+                const retryConfig = {
+                    ...error.config,
+                    __retriedViaSupabaseMemoryFunctions: true,
+                    __useSupabaseMemoryFunctions: true
+                };
+                return this.client.request(retryConfig);
+            }
             if (this.shouldRetryViaApiGateway(error)) {
                 const retryConfig = {
                     ...error.config,

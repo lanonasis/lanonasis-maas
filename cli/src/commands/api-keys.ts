@@ -179,7 +179,7 @@ apiKeysCommand
             validate: (input) => input.length > 0 || 'Value is required'
           },
           {
-            type: 'list',
+            type: 'select',
             name: 'keyType',
             message: 'Key type:',
             when: !keyData.keyType,
@@ -194,21 +194,21 @@ apiKeysCommand
             ]
           },
           {
-            type: 'list',
+            type: 'select',
             name: 'environment',
             message: 'Environment:',
             choices: ['development', 'staging', 'production'],
             default: 'development'
           },
           {
-            type: 'list',
+            type: 'select',
             name: 'projectId',
             message: 'Select project:',
             when: !keyData.projectId && projects.length > 0,
             choices: projects.map((p: any) => ({ name: `${p.name} (${p.id})`, value: p.id }))
           },
           {
-            type: 'list',
+            type: 'select',
             name: 'accessLevel',
             message: 'Access level:',
             choices: ['public', 'authenticated', 'team', 'admin', 'enterprise'],
@@ -584,7 +584,7 @@ mcpCommand
             default: false
           },
           {
-            type: 'list',
+            type: 'select',
             name: 'riskLevel',
             message: 'Risk level:',
             choices: ['low', 'medium', 'high', 'critical'],
@@ -698,7 +698,7 @@ mcpCommand
         
         const answers = await inquirer.prompt([
           {
-            type: 'list',
+            type: 'select',
             name: 'toolId',
             message: 'Select MCP tool:',
             when: !requestData.toolId && tools.length > 0,
@@ -723,7 +723,7 @@ mcpCommand
             validate: (input) => input.length > 0 || 'At least one key name is required'
           },
           {
-            type: 'list',
+            type: 'select',
             name: 'environment',
             message: 'Environment:',
             when: !requestData.environment,
