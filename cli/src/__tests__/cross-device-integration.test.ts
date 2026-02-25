@@ -1,5 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach, jest } from '@jest/globals';
-import { CLIConfig } from '../utils/config.js';
+import { describe, it, expect, beforeAll, beforeEach, afterEach, jest } from '@jest/globals';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as os from 'os';
@@ -11,15 +10,19 @@ const mockAxios: any = {
   post: jest.fn()
 };
 
-jest.mock('axios', () => ({
+jest.unstable_mockModule('axios', () => ({
   default: mockAxios,
   get: mockAxios.get,
   post: mockAxios.post
 }));
 
-jest.mock('eventsource');
-jest.mock('ws');
-jest.mock('@modelcontextprotocol/sdk/client/index.js', () => ({
+jest.unstable_mockModule('eventsource', () => ({
+  default: jest.fn(),
+}));
+jest.unstable_mockModule('ws', () => ({
+  default: jest.fn(),
+}));
+jest.unstable_mockModule('@modelcontextprotocol/sdk/client/index.js', () => ({
   Client: jest.fn().mockImplementation(() => ({
     connect: jest.fn(),
     close: jest.fn(),
@@ -28,17 +31,22 @@ jest.mock('@modelcontextprotocol/sdk/client/index.js', () => ({
   }))
 }));
 
-jest.mock('@modelcontextprotocol/sdk/client/stdio.js', () => ({
+jest.unstable_mockModule('@modelcontextprotocol/sdk/client/stdio.js', () => ({
   StdioClientTransport: jest.fn()
 }));
 
 describe('Cross-Device Integration Tests', () => {
-  let device1Config: CLIConfig;
-  let device2Config: CLIConfig;
-  let device3Config: CLIConfig;
+  let CLIConfig: typeof import('../utils/config.js').CLIConfig;
+  let device1Config: InstanceType<typeof CLIConfig>;
+  let device2Config: InstanceType<typeof CLIConfig>;
+  let device3Config: InstanceType<typeof CLIConfig>;
   let device1Dir: string;
   let device2Dir: string;
   let device3Dir: string;
+
+  beforeAll(async () => {
+    ({ CLIConfig } = await import('../utils/config.js'));
+  });
 
   beforeEach(async () => {
     // Set test environment to skip service discovery
@@ -102,38 +110,34 @@ describe('Cross-Device Integration Tests', () => {
     it('should allow same vendor key to work on multiple devices', async () => {
       const previousSkipValidation = process.env.SKIP_SERVER_VALIDATION;
       process.env.SKIP_SERVER_VALIDATION = 'false';
-      const pingSpy = jest.spyOn(CLIConfig.prototype as any, 'pingAuthHealth');
-
       const sharedVendorKey = 'pk_shared123456789.sk_shared123456789012345';
 
       // Mock successful server validation for all devices
       mockAxios.get.mockResolvedValue({ status: 200, data: { status: 'ok' } } as any);
 
-      try {
-        // Set same vendor key on all devices
-        await device1Config.setVendorKey(sharedVendorKey);
-        await device2Config.setVendorKey(sharedVendorKey);
-        await device3Config.setVendorKey(sharedVendorKey);
+      // Set same vendor key on all devices
+      await device1Config.setVendorKey(sharedVendorKey);
+      await device2Config.setVendorKey(sharedVendorKey);
+      await device3Config.setVendorKey(sharedVendorKey);
 
-        // Verify all devices have the same vendor key
-        expect(await device1Config.getVendorKeyAsync()).toBe(sharedVendorKey);
-        expect(await device2Config.getVendorKeyAsync()).toBe(sharedVendorKey);
-        expect(await device3Config.getVendorKeyAsync()).toBe(sharedVendorKey);
+      // Verify all devices have the same vendor key
+      expect(await device1Config.getVendorKeyAsync()).toBe(sharedVendorKey);
+      expect(await device2Config.getVendorKeyAsync()).toBe(sharedVendorKey);
+      expect(await device3Config.getVendorKeyAsync()).toBe(sharedVendorKey);
 
-        // Verify all devices have same auth method
-        expect(device1Config.get('authMethod')).toBe('vendor_key');
-        expect(device2Config.get('authMethod')).toBe('vendor_key');
-        expect(device3Config.get('authMethod')).toBe('vendor_key');
+      // Verify all devices have same auth method
+      expect(device1Config.get('authMethod')).toBe('vendor_key');
+      expect(device2Config.get('authMethod')).toBe('vendor_key');
+      expect(device3Config.get('authMethod')).toBe('vendor_key');
 
-        // Verify server validation health checks were triggered
-        expect(pingSpy).toHaveBeenCalled();
-      } finally {
-        pingSpy.mockRestore();
-        if (typeof previousSkipValidation === 'undefined') {
-          delete process.env.SKIP_SERVER_VALIDATION;
-        } else {
-          process.env.SKIP_SERVER_VALIDATION = previousSkipValidation;
-        }
+      // Verify server validation path performed remote auth checks.
+      expect(mockAxios.post).toHaveBeenCalled();
+      expect(mockAxios.post.mock.calls.some(([endpoint]: [string]) => endpoint.includes('/v1/auth/verify'))).toBe(true);
+
+      if (typeof previousSkipValidation === 'undefined') {
+        delete process.env.SKIP_SERVER_VALIDATION;
+      } else {
+        process.env.SKIP_SERVER_VALIDATION = previousSkipValidation;
       }
     });
 
@@ -238,7 +242,7 @@ describe('Cross-Device Integration Tests', () => {
 
       try {
         // Simulate discovery failures directly to exercise fallback logic
-        const triggerFallback = async (config: CLIConfig) => {
+        const triggerFallback = async (config: InstanceType<typeof CLIConfig>) => {
           await (config as any).handleServiceDiscoveryFailure(networkError, true);
         };
 
