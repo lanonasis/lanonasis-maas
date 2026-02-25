@@ -45,6 +45,36 @@ interface ListOptions {
   order: string;
 }
 
+type WriteAction = 'create' | 'update';
+type WriteStatus = 'success' | 'error';
+type GateStatus = 'pass' | 'fail' | 'skipped' | 'not_enabled';
+
+interface WriteTelemetryPayload {
+  action: WriteAction;
+  status: WriteStatus;
+  memory_id: string;
+  organization_id?: string;
+  user_id?: string;
+  memory_type?: MemoryType;
+  content_length?: number;
+  tag_count?: number;
+  provider: EmbeddingProvider;
+  embedding_model: string;
+  latency_ms: number;
+  gate_decisions: {
+    schema_validation: GateStatus;
+    injection_filter: GateStatus;
+    similarity_gate: GateStatus;
+    density_gate: GateStatus;
+    tag_normalizer: GateStatus;
+    llm_reconstructor: GateStatus;
+    embedding: GateStatus;
+    storage: GateStatus;
+  };
+  failure_stage?: 'embedding' | 'storage' | 'analytics' | 'unknown';
+  error_message?: string;
+}
+
 export interface ListMemoryFilters extends Record<string, unknown> {
   organization_id?: string;
   user_id?: string;
@@ -58,6 +88,7 @@ export class MemoryService {
   private openai: OpenAI | null = null;
   private readonly provider: EmbeddingProvider;
   private readonly embeddingModel: string;
+  private readonly writeTelemetryEnabled: boolean;
 
   constructor() {
     this.supabase = createClient(config.SUPABASE_URL, config.SUPABASE_SERVICE_KEY);
@@ -71,7 +102,15 @@ export class MemoryService {
       this.openai = new OpenAI({ apiKey: config.OPENAI_API_KEY });
     }
 
+    this.writeTelemetryEnabled = process.env.MEMORY_WRITE_TELEMETRY_ENABLED !== 'false';
+
     logger.info(`MemoryService initialized with provider: ${this.provider}, model: ${this.embeddingModel}`);
+  }
+
+  private logWriteTelemetry(payload: WriteTelemetryPayload): void {
+    if (!this.writeTelemetryEnabled) return;
+
+    logger.info('Memory Write Telemetry', payload);
   }
 
   /**
@@ -149,10 +188,12 @@ export class MemoryService {
    */
   async createMemory(id: string, data: CreateMemoryRequest & { user_id: string; organization_id: string }): Promise<MemoryEntry> {
     const startTime = Date.now();
+    let failureStage: WriteTelemetryPayload['failure_stage'] = 'embedding';
 
     try {
       // Create embedding for the content
       const embedding = await this.createEmbedding(data.content);
+      failureStage = 'storage';
 
       const memoryData = {
         id,
@@ -182,9 +223,34 @@ export class MemoryService {
       }
 
       // Log analytics
+      failureStage = 'analytics';
       await this.logAnalytics(data.organization_id, data.user_id, 'memory_created', 'memory', id, {
         memory_type: data.memory_type,
         content_length: data.content.length
+      });
+
+      this.logWriteTelemetry({
+        action: 'create',
+        status: 'success',
+        memory_id: id,
+        organization_id: data.organization_id,
+        user_id: data.user_id,
+        memory_type: data.memory_type,
+        content_length: data.content.length,
+        tag_count: data.tags?.length ?? 0,
+        provider: this.provider,
+        embedding_model: this.embeddingModel,
+        latency_ms: Date.now() - startTime,
+        gate_decisions: {
+          schema_validation: 'pass',
+          injection_filter: 'pass',
+          similarity_gate: 'not_enabled',
+          density_gate: 'not_enabled',
+          tag_normalizer: 'not_enabled',
+          llm_reconstructor: 'not_enabled',
+          embedding: 'pass',
+          storage: 'pass'
+        }
       });
 
       logPerformance('memory_creation', Date.now() - startTime, {
@@ -194,6 +260,32 @@ export class MemoryService {
 
       return memory;
     } catch (error) {
+      this.logWriteTelemetry({
+        action: 'create',
+        status: 'error',
+        memory_id: id,
+        organization_id: data.organization_id,
+        user_id: data.user_id,
+        memory_type: data.memory_type,
+        content_length: data.content.length,
+        tag_count: data.tags?.length ?? 0,
+        provider: this.provider,
+        embedding_model: this.embeddingModel,
+        latency_ms: Date.now() - startTime,
+        gate_decisions: {
+          schema_validation: 'pass',
+          injection_filter: 'pass',
+          similarity_gate: 'not_enabled',
+          density_gate: 'not_enabled',
+          tag_normalizer: 'not_enabled',
+          llm_reconstructor: 'not_enabled',
+          embedding: failureStage === 'embedding' ? 'fail' : 'pass',
+          storage: failureStage === 'storage' ? 'fail' : (failureStage === 'embedding' ? 'skipped' : 'pass')
+        },
+        failure_stage: failureStage || 'unknown',
+        error_message: error instanceof Error ? error.message : 'unknown error'
+      });
+
       if (error instanceof InternalServerError) throw error;
       logger.error('Unexpected error creating memory', { error });
       throw new InternalServerError('Failed to create memory entry');
@@ -227,6 +319,8 @@ export class MemoryService {
    */
   async updateMemory(id: string, data: UpdateMemoryRequest): Promise<MemoryEntry> {
     const startTime = Date.now();
+    let failureStage: WriteTelemetryPayload['failure_stage'] = data.content !== undefined ? 'embedding' : 'storage';
+    const hasContentUpdate = data.content !== undefined;
 
     try {
       const updateData: Partial<MemoryEntry> & { updated_at: string; embedding?: string } = {
@@ -244,6 +338,7 @@ export class MemoryService {
       if (data.content !== undefined) {
         updateData.content = data.content;
         updateData.embedding = JSON.stringify(await this.createEmbedding(data.content));
+        failureStage = 'storage';
       }
 
       const { data: memory, error } = await this.supabase
@@ -258,6 +353,30 @@ export class MemoryService {
         throw new InternalServerError('Failed to update memory entry');
       }
 
+      this.logWriteTelemetry({
+        action: 'update',
+        status: 'success',
+        memory_id: id,
+        organization_id: memory.organization_id,
+        user_id: memory.user_id,
+        memory_type: memory.memory_type,
+        content_length: data.content?.length,
+        tag_count: data.tags?.length,
+        provider: this.provider,
+        embedding_model: this.embeddingModel,
+        latency_ms: Date.now() - startTime,
+        gate_decisions: {
+          schema_validation: 'pass',
+          injection_filter: 'pass',
+          similarity_gate: 'not_enabled',
+          density_gate: 'not_enabled',
+          tag_normalizer: 'not_enabled',
+          llm_reconstructor: 'not_enabled',
+          embedding: hasContentUpdate ? 'pass' : 'skipped',
+          storage: 'pass'
+        }
+      });
+
       logPerformance('memory_update', Date.now() - startTime, {
         memory_id: id,
         updated_fields: Object.keys(updateData)
@@ -265,6 +384,29 @@ export class MemoryService {
 
       return memory;
     } catch (error) {
+      this.logWriteTelemetry({
+        action: 'update',
+        status: 'error',
+        memory_id: id,
+        content_length: data.content?.length,
+        tag_count: data.tags?.length,
+        provider: this.provider,
+        embedding_model: this.embeddingModel,
+        latency_ms: Date.now() - startTime,
+        gate_decisions: {
+          schema_validation: 'pass',
+          injection_filter: 'pass',
+          similarity_gate: 'not_enabled',
+          density_gate: 'not_enabled',
+          tag_normalizer: 'not_enabled',
+          llm_reconstructor: 'not_enabled',
+          embedding: hasContentUpdate ? (failureStage === 'embedding' ? 'fail' : 'pass') : 'skipped',
+          storage: failureStage === 'storage' ? 'fail' : (hasContentUpdate && failureStage === 'embedding' ? 'skipped' : 'pass')
+        },
+        failure_stage: failureStage || 'unknown',
+        error_message: error instanceof Error ? error.message : 'unknown error'
+      });
+
       if (error instanceof InternalServerError) throw error;
       logger.error('Unexpected error updating memory', { error });
       throw new InternalServerError('Failed to update memory entry');

@@ -101,7 +101,7 @@ export class MemoryCommands {
         context.lastResult = result.data;
       }
     } catch (error) {
-      spinner.fail(chalk.red(`Failed: ${error instanceof Error ? error.message : String(error)}`));
+      spinner.fail(chalk.red(`Failed: ${error instanceof Error && error.message ? error.message : String(error)}`));
     }
   }
   
@@ -139,7 +139,7 @@ export class MemoryCommands {
       }
       context.lastResult = results;
     } catch (error) {
-      spinner.fail(chalk.red(`Search failed: ${error instanceof Error ? error.message : String(error)}`));
+      spinner.fail(chalk.red(`Search failed: ${error instanceof Error && error.message ? error.message : String(error)}`));
     }
   }
   
@@ -167,7 +167,7 @@ export class MemoryCommands {
         spinner.succeed(chalk.gray('No memories found'));
       }
     } catch (error) {
-      spinner.fail(chalk.red(`List failed: ${error instanceof Error ? error.message : String(error)}`));
+      spinner.fail(chalk.red(`List failed: ${error instanceof Error && error.message ? error.message : String(error)}`));
     }
   }
   
@@ -198,7 +198,7 @@ export class MemoryCommands {
         spinner.fail(chalk.yellow(`Memory not found: ${id}`));
       }
     } catch (error) {
-      spinner.fail(chalk.red(`Get failed: ${error instanceof Error ? error.message : String(error)}`));
+      spinner.fail(chalk.red(`Get failed: ${error instanceof Error && error.message ? error.message : String(error)}`));
     }
   }
   
@@ -220,7 +220,7 @@ export class MemoryCommands {
       spinner.succeed(chalk.green('Memory deleted'));
       context.lastResult = { deleted: id };
     } catch (error) {
-      spinner.fail(chalk.red(`Failed: ${error instanceof Error ? error.message : String(error)}`));
+      spinner.fail(chalk.red(`Failed: ${error instanceof Error && error.message ? error.message : String(error)}`));
     }
   }
 }

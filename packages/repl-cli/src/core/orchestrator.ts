@@ -10,11 +10,16 @@ import {
   type L0Response
 } from 'vortexai-l0';
 
+// Onasis AI Router client
+import { AIRouterClient } from './ai-router-client';
+
 export interface OrchestratorConfig {
   apiUrl: string;
   authToken?: string;
   openaiApiKey?: string;
   model?: string;
+  aiRouterUrl?: string;
+  aiRouterAuthToken?: string;
   userContext?: {
     name?: string;
     projects?: string[];
@@ -53,6 +58,7 @@ export class NaturalLanguageOrchestrator {
 
   // VortexAI L0 - Universal Work Orchestrator for broader capabilities
   private l0Orchestrator: L0Orchestrator;
+  private aiRouterClient?: AIRouterClient;
 
   constructor(config: OrchestratorConfig) {
     this.client = createMemoryClient({
@@ -76,6 +82,15 @@ export class NaturalLanguageOrchestrator {
     this.openaiApiKey = config.openaiApiKey || process.env.OPENAI_API_KEY
     this.model = config.model || process.env.OPENAI_MODEL || 'gpt-4-turbo-preview';
     this.userContext = config.userContext;
+
+    // Initialize AI Router client if URL provided
+    if (config.aiRouterUrl) {
+      this.aiRouterClient = new AIRouterClient({
+        baseUrl: config.aiRouterUrl,
+        authToken: config.aiRouterAuthToken,
+        defaultUseCase: 'repl-nlp',
+      });
+    }
 
     // Initialize conversation with enhanced system prompt
     this.conversationHistory.push({
@@ -279,7 +294,7 @@ Remember: You are LZero - be helpful, conversational, and make the experience fe
       spinner.stop();
 
       // Log the actual error for debugging
-      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorMessage = (error instanceof Error && error.message) ? error.message : String(error);
 
       // Check for specific error types to provide better feedback
       if (errorMessage.includes('401') || errorMessage.includes('Unauthorized')) {
@@ -302,123 +317,159 @@ Remember: You are LZero - be helpful, conversational, and make the experience fe
   }
 
   private async callOpenAI(): Promise<OrchestratorResponse> {
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${this.openaiApiKey}`
+    const tools = [
+      {
+        type: 'function',
+        function: {
+          name: 'create_memory',
+          description: 'Create a new memory entry',
+          parameters: {
+            type: 'object',
+            properties: {
+              title: { type: 'string', description: 'Title of the memory' },
+              content: { type: 'string', description: 'Content to remember' },
+              memory_type: {
+                type: 'string',
+                enum: ['context', 'project', 'knowledge', 'reference', 'personal', 'workflow'],
+                description: 'Type of memory'
+              },
+              tags: { type: 'array', items: { type: 'string' }, description: 'Tags for categorization' }
+            },
+            required: ['title', 'content']
+          }
+        }
       },
-      body: JSON.stringify({
-        model: this.model,
-        messages: this.conversationHistory,
-        tools: [
-          {
-            type: 'function',
-            function: {
-              name: 'create_memory',
-              description: 'Create a new memory entry',
-              parameters: {
-                type: 'object',
-                properties: {
-                  title: { type: 'string', description: 'Title of the memory' },
-                  content: { type: 'string', description: 'Content to remember' },
-                  memory_type: {
-                    type: 'string',
-                    enum: ['context', 'project', 'knowledge', 'reference', 'personal', 'workflow'],
-                    description: 'Type of memory'
-                  },
-                  tags: { type: 'array', items: { type: 'string' }, description: 'Tags for categorization' }
-                },
-                required: ['title', 'content']
-              }
-            }
-          },
-          {
-            type: 'function',
-            function: {
-              name: 'search_memories',
-              description: 'Search for memories using semantic search',
-              parameters: {
-                type: 'object',
-                properties: {
-                  query: { type: 'string', description: 'Search query' },
-                  limit: { type: 'number', description: 'Maximum number of results' },
-                  memory_type: { type: 'string', description: 'Filter by memory type' }
-                },
-                required: ['query']
-              }
-            }
-          },
-          {
-            type: 'function',
-            function: {
-              name: 'list_memories',
-              description: 'List recent memories',
-              parameters: {
-                type: 'object',
-                properties: {
-                  limit: { type: 'number', description: 'Maximum number of results', default: 10 }
-                }
-              }
-            }
-          },
-          {
-            type: 'function',
-            function: {
-              name: 'get_memory',
-              description: 'Get a specific memory by ID',
-              parameters: {
-                type: 'object',
-                properties: {
-                  id: { type: 'string', description: 'Memory ID' }
-                },
-                required: ['id']
-              }
-            }
-          },
-          {
-            type: 'function',
-            function: {
-              name: 'delete_memory',
-              description: 'Delete a memory by ID',
-              parameters: {
-                type: 'object',
-                properties: {
-                  id: { type: 'string', description: 'Memory ID' }
-                },
-                required: ['id']
-              }
-            }
-          },
-          {
-            type: 'function',
-            function: {
-              name: 'optimize_prompt',
-              description: 'Optimize or refine a prompt for better AI results. Use this when users ask to improve, refine, enhance, or optimize a prompt.',
-              parameters: {
-                type: 'object',
-                properties: {
-                  original_prompt: { type: 'string', description: 'The original prompt to optimize' },
-                  context: { type: 'string', description: 'Additional context about what the prompt should achieve' },
-                  improvements: { type: 'array', items: { type: 'string' }, description: 'List of specific improvements made' }
-                },
-                required: ['original_prompt']
-              }
+      {
+        type: 'function',
+        function: {
+          name: 'search_memories',
+          description: 'Search for memories using semantic search',
+          parameters: {
+            type: 'object',
+            properties: {
+              query: { type: 'string', description: 'Search query' },
+              limit: { type: 'number', description: 'Maximum number of results' },
+              memory_type: { type: 'string', description: 'Filter by memory type' }
+            },
+            required: ['query']
+          }
+        }
+      },
+      {
+        type: 'function',
+        function: {
+          name: 'list_memories',
+          description: 'List recent memories',
+          parameters: {
+            type: 'object',
+            properties: {
+              limit: { type: 'number', description: 'Maximum number of results', default: 10 }
             }
           }
-        ],
-        tool_choice: 'auto',
-        temperature: 0.7,
-        max_tokens: 500
-      })
-    });
+        }
+      },
+      {
+        type: 'function',
+        function: {
+          name: 'get_memory',
+          description: 'Get a specific memory by ID',
+          parameters: {
+            type: 'object',
+            properties: {
+              id: { type: 'string', description: 'Memory ID' }
+            },
+            required: ['id']
+          }
+        }
+      },
+      {
+        type: 'function',
+        function: {
+          name: 'delete_memory',
+          description: 'Delete a memory by ID',
+          parameters: {
+            type: 'object',
+            properties: {
+              id: { type: 'string', description: 'Memory ID' }
+            },
+            required: ['id']
+          }
+        }
+      },
+      {
+        type: 'function',
+        function: {
+          name: 'optimize_prompt',
+          description: 'Optimize or refine a prompt for better AI results. Use this when users ask to improve, refine, enhance, or optimize a prompt.',
+          parameters: {
+            type: 'object',
+            properties: {
+              original_prompt: { type: 'string', description: 'The original prompt to optimize' },
+              context: { type: 'string', description: 'Additional context about what the prompt should achieve' },
+              improvements: { type: 'array', items: { type: 'string' }, description: 'List of specific improvements made' }
+            },
+            required: ['original_prompt']
+          }
+        }
+      }
+    ];
 
-    if (!response.ok) {
-      throw new Error(`OpenAI API error: ${response.statusText}`);
+    const temperature = 0.7;
+    const maxTokens = 500;
+    const toolChoice = 'auto';
+    const useCase = 'repl-nlp';
+
+    let message: any;
+    let toolCalls: any[] | undefined;
+
+    if (this.aiRouterClient) {
+      try {
+        const response = await this.aiRouterClient.chat({
+          messages: this.conversationHistory,
+          tools,
+          use_case: useCase,
+          temperature,
+          max_tokens: maxTokens,
+          tool_choice: toolChoice,
+        });
+        message = response.message;
+        toolCalls = message.tool_calls;
+      } catch (error) {
+        console.error('AI Router request failed, falling back to OpenAI:', error);
+        // Fall through to OpenAI
+      }
     }
 
-    const data: any = await response.json();
-    const message = data.choices[0].message;
+    // Fallback to OpenAI if AI Router not configured or failed
+    if (!message && this.openaiApiKey) {
+      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${this.openaiApiKey}`
+        },
+        body: JSON.stringify({
+          model: this.model,
+          messages: this.conversationHistory,
+          tools,
+          tool_choice: toolChoice,
+          temperature,
+          max_tokens: maxTokens
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`OpenAI API error: ${response.statusText}`);
+      }
+
+      const data: any = await response.json();
+      message = data.choices[0].message;
+      toolCalls = message.tool_calls;
+    }
+
+    if (!message) {
+      throw new Error('No AI service available. Please configure either AI Router URL or OpenAI API key.');
+    }
 
     // Map function/tool names to internal action types
     const actionMap: Record<string, 'create' | 'search' | 'list' | 'get' | 'delete' | 'optimize_prompt'> = {
@@ -431,8 +482,8 @@ Remember: You are LZero - be helpful, conversational, and make the experience fe
     };
 
     // Preferred: tools API (tool_calls)
-    if (message.tool_calls && message.tool_calls.length > 0) {
-      const toolCall = message.tool_calls[0];
+    if (toolCalls && toolCalls.length > 0) {
+      const toolCall = toolCalls[0];
       const functionName = toolCall.function.name;
       const functionArgs = toolCall.function.arguments
         ? JSON.parse(toolCall.function.arguments)
@@ -748,7 +799,7 @@ Remember: You are LZero - be helpful, conversational, and make the experience fe
       }
     } catch (error) {
       // Return error object instead of throwing - keeps REPL alive
-      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorMessage = (error instanceof Error && error.message) ? error.message : String(error);
 
       // Provide helpful context based on error type
       if (errorMessage.includes('401') || errorMessage.includes('Unauthorized')) {
@@ -764,9 +815,10 @@ Remember: You are LZero - be helpful, conversational, and make the experience fe
   }
 
   private async optimizePrompt(originalPrompt: string, context?: string): Promise<any> {
-    if (!this.openaiApiKey) {
+    // If neither AI Router nor OpenAI is configured, return error
+    if (!this.aiRouterClient && !this.openaiApiKey) {
       return {
-        error: 'OpenAI API key required for prompt optimization'
+        error: 'AI service not configured. Please configure either AI Router URL or OpenAI API key.'
       };
     }
 
@@ -788,29 +840,46 @@ Format your response as JSON with:
 - explanation: Brief explanation of the optimization strategy`;
 
     try {
-      const response = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.openaiApiKey}`
-        },
-        body: JSON.stringify({
-          model: this.model,
+      let content: string;
+
+      // Try AI Router first if available
+      if (this.aiRouterClient) {
+        const response = await this.aiRouterClient.chat({
           messages: [
             { role: 'system', content: 'You are an expert at optimizing AI prompts. Always respond with valid JSON.' },
             { role: 'user', content: optimizationPrompt }
           ],
+          use_case: 'content-generation',
           temperature: 0.7,
           max_tokens: 1000
-        })
-      });
+        });
+        content = response.message.content;
+      } else {
+        // Fallback to OpenAI
+        const response = await fetch('https://api.openai.com/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${this.openaiApiKey}`
+          },
+          body: JSON.stringify({
+            model: this.model,
+            messages: [
+              { role: 'system', content: 'You are an expert at optimizing AI prompts. Always respond with valid JSON.' },
+              { role: 'user', content: optimizationPrompt }
+            ],
+            temperature: 0.7,
+            max_tokens: 1000
+          })
+        });
 
-      if (!response.ok) {
-        throw new Error(`OpenAI API error: ${response.statusText}`);
+        if (!response.ok) {
+          throw new Error(`OpenAI API error: ${response.statusText}`);
+        }
+
+        const data: any = await response.json();
+        content = data.choices[0].message.content;
       }
-
-      const data: any = await response.json();
-      const content = data.choices[0].message.content;
       
       // Try to parse JSON response
       try {

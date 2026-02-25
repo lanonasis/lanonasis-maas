@@ -128,7 +128,7 @@ export class ReplEngine {
         await this.handleCommand(line.trim());
       } catch (error) {
         // Catch any unhandled errors and keep the REPL alive
-        console.error(chalk.red('\n⚠️  Unexpected error:'), error instanceof Error ? error.message : String(error));
+        console.error(chalk.red('\n⚠️  Unexpected error:'), error instanceof Error && error.message ? error.message : String(error));
         console.log(chalk.gray('The REPL is still running. Try again or type "help" for assistance.\n'));
       }
       if (this.running) this.rl.prompt();
@@ -207,7 +207,7 @@ export class ReplEngine {
         await this.routeCommand(firstWord, args);
       }
     } catch (error) {
-      console.error(chalk.red('Error:'), error instanceof Error ? error.message : String(error));
+      console.error(chalk.red('Error:'), error instanceof Error && error.message ? error.message : String(error));
     }
   }
 
@@ -217,7 +217,7 @@ export class ReplEngine {
       response = await this.orchestrator.processNaturalLanguage(input);
     } catch (error) {
       // If orchestrator fails completely, provide a helpful fallback
-      console.error(chalk.red('\n⚠️  Could not process your request:'), error instanceof Error ? error.message : String(error));
+      console.error(chalk.red('\n⚠️  Could not process your request:'), error instanceof Error && error.message ? error.message : String(error));
       console.log(chalk.cyan('\n💡 LZero: ') + chalk.white("I'm having trouble connecting to my brain right now. Let me try to help anyway..."));
       console.log(chalk.gray('\nYou can try:'));
       console.log(chalk.gray('  • Using direct commands: create, search, list, get, delete'));
@@ -367,7 +367,7 @@ export class ReplEngine {
       }
     } catch (error) {
       // Catch action execution errors but keep REPL alive
-      console.error(chalk.red('\n⚠️  Error executing action:'), error instanceof Error ? error.message : String(error));
+      console.error(chalk.red('\n⚠️  Error executing action:'), error instanceof Error && error.message ? error.message : String(error));
       console.log(chalk.cyan('💡 LZero: ') + chalk.gray("Something went wrong, but I'm still here! Try rephrasing or use a direct command.\n"));
     }
   }

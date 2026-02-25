@@ -30,6 +30,8 @@ export interface ReplConfig {
   vendorKey?: string;
   openaiApiKey?: string;
   openaiModel?: string;
+  aiRouterUrl?: string;
+  aiRouterAuthToken?: string;
   historyFile: string;
   maxHistorySize: number;
   // User profile and preferences
