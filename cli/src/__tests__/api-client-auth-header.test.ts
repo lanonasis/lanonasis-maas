@@ -178,25 +178,37 @@ describe('APIClient authentication headers', () => {
     mockAxiosInstance.get.mockRejectedValue({
       response: { status: 405, data: { error: 'Method not allowed' } }
     });
-    mockAxiosInstance.post.mockResolvedValue({
-      data: {
-        data: [
-          {
-            id: 'm1',
-            title: 'Test',
-            content: 'Body',
-            memory_type: 'context',
-            tags: [],
-            user_id: 'u1',
-            organization_id: 'o1',
-            created_at: '2026-01-01T00:00:00.000Z',
-            updated_at: '2026-01-01T00:00:00.000Z',
-            access_count: 0,
-            relevance_score: 1
-          }
-        ],
-        total: 1
+    mockAxiosInstance.post.mockImplementation((url: string) => {
+      if (url === '/api/v1/memory/list' || url === '/api/v1/memories/list') {
+        return Promise.reject({
+          response: { status: 405, data: { error: 'Method not allowed' } }
+        });
       }
+
+      if (url === '/api/v1/memories/search') {
+        return Promise.resolve({
+          data: {
+            data: [
+              {
+                id: 'm1',
+                title: 'Test',
+                content: 'Body',
+                memory_type: 'context',
+                tags: [],
+                user_id: 'u1',
+                organization_id: 'o1',
+                created_at: '2026-01-01T00:00:00.000Z',
+                updated_at: '2026-01-01T00:00:00.000Z',
+                access_count: 0,
+                similarity_score: 1
+              }
+            ],
+            total: 1
+          }
+        });
+      }
+
+      return Promise.reject(new Error(`Unexpected POST call: ${url}`));
     });
 
     const result = await client.getMemories({ page: 1, limit: 1 });

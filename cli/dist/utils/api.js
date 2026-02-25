@@ -42,6 +42,26 @@ export class APIClient {
         }
         return false;
     }
+    shouldRetryViaApiGateway(error) {
+        const baseURL = String(error?.config?.baseURL || '');
+        const code = String(error?.code || '');
+        const alreadyRetried = Boolean(error?.config?.__retriedViaApiGateway);
+        if (alreadyRetried)
+            return false;
+        if (!baseURL.includes('mcp.lanonasis.com'))
+            return false;
+        return code === 'ENOTFOUND' || code === 'EAI_AGAIN' || code === 'ECONNREFUSED';
+    }
+    normalizeMcpPathToApi(url) {
+        // MCP HTTP compatibility path -> API gateway REST paths
+        if (url === '/memory') {
+            return '/api/v1/memories';
+        }
+        if (url.startsWith('/memory/')) {
+            return url.replace('/memory/', '/api/v1/memories/');
+        }
+        return url;
+    }
     constructor() {
         this.config = new CLIConfig();
         this.client = axios.create({
@@ -67,7 +87,9 @@ export class APIClient {
             const forceApiFromConfig = this.config.get('forceApi') === true
                 || this.config.get('connectionTransport') === 'api';
             // Memory CRUD/search endpoints should always use the API gateway path.
-            const forceDirectApi = forceApiFromEnv || forceApiFromConfig || isMemoryEndpoint;
+            const forceDirectApiRetry = config
+                .__forceDirectApiGatewayRetry === true;
+            const forceDirectApi = forceApiFromEnv || forceApiFromConfig || isMemoryEndpoint || forceDirectApiRetry;
             const prefersTokenAuth = Boolean(token) && (authMethod === 'jwt' || authMethod === 'oauth' || authMethod === 'oauth2');
             const useVendorKeyAuth = Boolean(vendorKey) && !prefersTokenAuth;
             // Determine the correct API base URL:
@@ -147,6 +169,18 @@ export class APIClient {
             }
             return response;
         }, (error) => {
+            if (this.shouldRetryViaApiGateway(error)) {
+                const retryConfig = {
+                    ...error.config,
+                    __retriedViaApiGateway: true,
+                    __forceDirectApiGatewayRetry: true
+                };
+                retryConfig.baseURL = this.config.getApiUrl();
+                if (typeof retryConfig.url === 'string') {
+                    retryConfig.url = this.normalizeMcpPathToApi(retryConfig.url);
+                }
+                return this.client.request(retryConfig);
+            }
             if (error.response) {
                 const { status, data } = error.response;
                 if (status === 401) {

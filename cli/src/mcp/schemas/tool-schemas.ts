@@ -42,7 +42,7 @@ export const MemorySearchSchema = z.object({
   threshold: z.number()
     .min(0)
     .max(1)
-    .default(0.7)
+    .default(0.55)
     .describe("Similarity threshold (0-1)"),
   topic_id: z.string()
     .uuid()

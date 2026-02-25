@@ -4,6 +4,7 @@ import ora from 'ora';
 import { table } from 'table';
 import wrap from 'word-wrap';
 import { format } from 'date-fns';
+import { MemoryIntelligenceClient } from '@lanonasis/mem-intel-sdk';
 import { apiClient } from '../utils/api.js';
 import { formatBytes, truncateText } from '../utils/formatting.js';
 import { CLIConfig } from '../utils/config.js';
@@ -12,6 +13,7 @@ import * as fs from 'fs/promises';
 import { exec as execCb } from 'node:child_process';
 import { promisify } from 'node:util';
 const exec = promisify(execCb);
+const MAX_JSON_OPTION_BYTES = 1024 * 1024; // 1 MiB guardrail for CLI JSON flags
 const MEMORY_TYPE_CHOICES = [
     'context',
     'project',
@@ -56,6 +58,205 @@ const collectMemoryContent = async (prompt, inputMode, defaultContent) => {
     return handler.collectMultilineInput(prompt, {
         defaultContent,
     });
+};
+const parseJsonOption = (value, fieldName) => {
+    if (!value)
+        return undefined;
+    const payloadSize = Buffer.byteLength(value, 'utf8');
+    if (payloadSize > MAX_JSON_OPTION_BYTES) {
+        throw new Error(`${fieldName} JSON payload is too large (${payloadSize} bytes). Max allowed is ${MAX_JSON_OPTION_BYTES} bytes.`);
+    }
+    try {
+        return JSON.parse(value);
+    }
+    catch (error) {
+        const message = error instanceof Error ? error.message : 'Invalid JSON';
+        throw new Error(`Invalid ${fieldName} JSON: ${message}`);
+    }
+};
+const isPlainObject = (value) => {
+    return typeof value === 'object' && value !== null && !Array.isArray(value);
+};
+const ensureJsonObject = (value, fieldName) => {
+    if (value === undefined)
+        return undefined;
+    if (!isPlainObject(value)) {
+        throw new Error(`${fieldName} must be a JSON object`);
+    }
+    return value;
+};
+const ensureBehaviorActions = (value, fieldName, options = {}) => {
+    if (value === undefined) {
+        return [];
+    }
+    if (!Array.isArray(value)) {
+        throw new Error(`${fieldName} must be a JSON array`);
+    }
+    if (!options.allowEmpty && value.length === 0) {
+        throw new Error(`${fieldName} must be a non-empty JSON array`);
+    }
+    return value.map((entry, index) => {
+        if (!isPlainObject(entry)) {
+            throw new Error(`${fieldName}[${index}] must be a JSON object`);
+        }
+        const tool = typeof entry.tool === 'string' ? entry.tool.trim() : '';
+        if (!tool) {
+            throw new Error(`${fieldName}[${index}].tool is required`);
+        }
+        const parsed = { tool };
+        if (entry.params !== undefined) {
+            if (!isPlainObject(entry.params)) {
+                throw new Error(`${fieldName}[${index}].params must be a JSON object`);
+            }
+            parsed.params = entry.params;
+        }
+        if (entry.timestamp !== undefined) {
+            if (typeof entry.timestamp !== 'string' || !entry.timestamp.trim()) {
+                throw new Error(`${fieldName}[${index}].timestamp must be a non-empty string`);
+            }
+            parsed.timestamp = entry.timestamp;
+        }
+        if (entry.duration_ms !== undefined) {
+            if (typeof entry.duration_ms !== 'number' ||
+                !Number.isFinite(entry.duration_ms) ||
+                entry.duration_ms < 0) {
+                throw new Error(`${fieldName}[${index}].duration_ms must be a non-negative number`);
+            }
+            parsed.duration_ms = entry.duration_ms;
+        }
+        return parsed;
+    });
+};
+const clampThreshold = (value) => {
+    if (!Number.isFinite(value))
+        return 0.55;
+    return Math.max(0, Math.min(1, value));
+};
+const buildSearchThresholdPlan = (requestedThreshold, hasTagFilter) => {
+    const plan = [];
+    const pushUnique = (threshold) => {
+        const normalized = Number(threshold.toFixed(2));
+        if (!plan.some((item) => Math.abs(item - normalized) < 0.0001)) {
+            plan.push(normalized);
+        }
+    };
+    pushUnique(requestedThreshold);
+    if (requestedThreshold > 0.45) {
+        pushUnique(Math.max(0.45, requestedThreshold - 0.15));
+    }
+    if (hasTagFilter) {
+        // Tag-assisted recall fallback for sparse semantic scores.
+        pushUnique(0);
+    }
+    return plan;
+};
+const tokenizeSearchQuery = (input) => {
+    return input
+        .toLowerCase()
+        .split(/[^a-z0-9]+/g)
+        .map((token) => token.trim())
+        .filter((token) => token.length >= 2);
+};
+const lexicalSimilarityScore = (query, memory) => {
+    const tokens = tokenizeSearchQuery(query);
+    if (tokens.length === 0)
+        return 0;
+    const haystack = `${memory.title || ''} ${memory.content || ''} ${(memory.tags || []).join(' ')}`.toLowerCase();
+    const hits = tokens.filter((token) => haystack.includes(token)).length;
+    if (hits === 0)
+        return 0;
+    const ratio = hits / tokens.length;
+    return Math.max(0.35, Math.min(0.69, Number((ratio * 0.65).toFixed(3))));
+};
+const lexicalFallbackSearch = async (query, searchOptions) => {
+    const candidateLimit = Math.min(Math.max(searchOptions.limit * 8, 50), 200);
+    const primaryType = searchOptions.memory_types?.length === 1 ? searchOptions.memory_types[0] : undefined;
+    const memoriesResult = await apiClient.getMemories({
+        page: 1,
+        limit: candidateLimit,
+        memory_type: primaryType,
+        tags: searchOptions.tags?.join(','),
+    });
+    let candidates = (memoriesResult.memories || memoriesResult.data || []);
+    if (searchOptions.memory_types && searchOptions.memory_types.length > 1) {
+        const typeSet = new Set(searchOptions.memory_types);
+        candidates = candidates.filter((memory) => typeSet.has(memory.memory_type));
+    }
+    if (searchOptions.tags && searchOptions.tags.length > 0) {
+        const normalizedTags = new Set(searchOptions.tags.map((tag) => tag.toLowerCase()));
+        candidates = candidates.filter((memory) => (memory.tags || []).some((tag) => normalizedTags.has(tag.toLowerCase())));
+    }
+    return candidates
+        .map((memory) => ({
+        ...memory,
+        similarity_score: lexicalSimilarityScore(query, memory),
+    }))
+        .filter((memory) => memory.similarity_score > 0)
+        .sort((a, b) => b.similarity_score - a.similarity_score)
+        .slice(0, searchOptions.limit);
+};
+const resolveCurrentUserId = async () => {
+    const profile = await apiClient.getUserProfile();
+    if (!profile?.id) {
+        throw new Error('Unable to resolve user profile id for intelligence request');
+    }
+    return profile.id;
+};
+const createIntelligenceTransport = async () => {
+    const config = new CLIConfig();
+    await config.init();
+    await config.refreshTokenIfNeeded();
+    const authToken = config.getToken();
+    const apiKey = await config.getVendorKeyAsync();
+    const apiUrl = `${config.getApiUrl().replace(/\/$/, '')}/api/v1`;
+    if (authToken) {
+        return {
+            mode: 'sdk',
+            client: new MemoryIntelligenceClient({
+                apiUrl,
+                authToken,
+                authType: 'bearer',
+                allowMissingAuth: false,
+            }),
+        };
+    }
+    if (apiKey) {
+        if (apiKey.startsWith('lano_')) {
+            return {
+                mode: 'sdk',
+                client: new MemoryIntelligenceClient({
+                    apiUrl,
+                    apiKey,
+                    authType: 'apiKey',
+                    allowMissingAuth: false,
+                }),
+            };
+        }
+        // Legacy non-lano key path: use CLI API client auth middleware directly.
+        return { mode: 'api' };
+    }
+    throw new Error('Authentication required. Run "lanonasis auth login" first.');
+};
+const printIntelligenceResult = (title, payload, options) => {
+    if (options.json) {
+        console.log(JSON.stringify(payload, null, 2));
+        return;
+    }
+    console.log(chalk.cyan.bold(`\n${title}`));
+    console.log(JSON.stringify(payload, null, 2));
+};
+const postIntelligenceEndpoint = async (transport, endpoint, payload) => {
+    if (transport.mode === 'sdk') {
+        if (!transport.client) {
+            throw new Error('SDK transport is not initialized');
+        }
+        const response = await transport.client.getHttpClient().postEnhanced(endpoint, payload);
+        if (response.error) {
+            throw new Error(response.error.message || `Request failed for ${endpoint}`);
+        }
+        return response.data;
+    }
+    return await apiClient.post(`/api/v1${endpoint}`, payload);
 };
 export function memoryCommands(program) {
     // Create memory
@@ -471,15 +672,16 @@ export function memoryCommands(program) {
         .description('Search memories using semantic search')
         .argument('<query>', 'search query')
         .option('-l, --limit <limit>', 'number of results', '20')
-        .option('--threshold <threshold>', 'similarity threshold (0-1)', '0.7')
+        .option('--threshold <threshold>', 'similarity threshold (0-1)', '0.55')
         .option('--type <types>', 'filter by memory types (comma-separated)')
         .option('--tags <tags>', 'filter by tags (comma-separated)')
         .action(async (query, options) => {
         try {
             const spinner = ora(`Searching for "${query}"...`).start();
+            const requestedThreshold = clampThreshold(parseFloat(options.threshold || '0.55'));
             const searchOptions = {
                 limit: parseInt(options.limit || '20'),
-                threshold: parseFloat(options.threshold || '0.7')
+                threshold: requestedThreshold
             };
             if (options.type) {
                 searchOptions.memory_types = options.type.split(',').map((t) => t.trim());
@@ -487,18 +689,52 @@ export function memoryCommands(program) {
             if (options.tags) {
                 searchOptions.tags = options.tags.split(',').map((t) => t.trim());
             }
-            const result = await apiClient.searchMemories(query, searchOptions);
+            const thresholdPlan = buildSearchThresholdPlan(requestedThreshold, Boolean(searchOptions.tags?.length));
+            let result = null;
+            let results = [];
+            let thresholdUsed = requestedThreshold;
+            let searchStrategy = 'semantic';
+            for (const threshold of thresholdPlan) {
+                const attempt = await apiClient.searchMemories(query, {
+                    ...searchOptions,
+                    threshold,
+                });
+                const attemptResults = (attempt.results || attempt.data || []);
+                result = attempt;
+                if (attemptResults.length > 0) {
+                    results = attemptResults;
+                    thresholdUsed = threshold;
+                    const attemptStrategy = attempt.search_strategy;
+                    searchStrategy = typeof attemptStrategy === 'string'
+                        ? attemptStrategy
+                        : 'semantic';
+                    break;
+                }
+            }
+            if (results.length === 0) {
+                const lexicalResults = await lexicalFallbackSearch(query, searchOptions);
+                if (lexicalResults.length > 0) {
+                    results = lexicalResults;
+                    searchStrategy = 'cli_lexical_fallback';
+                }
+            }
             spinner.stop();
-            const results = result.results || result.data || [];
             if (results.length === 0) {
                 console.log(chalk.yellow('No memories found matching your search'));
+                console.log(chalk.gray(`Tried thresholds: ${thresholdPlan.map((t) => t.toFixed(2)).join(', ')}`));
                 return;
             }
             console.log(chalk.blue.bold(`\n🔍 Search Results (${result.total_results || results.length} found)`));
             console.log(chalk.gray(`Query: "${query}" | Search time: ${result.search_time_ms || 0}ms`));
+            if (Math.abs(thresholdUsed - requestedThreshold) > 0.0001) {
+                console.log(chalk.gray(`No matches at ${requestedThreshold.toFixed(2)}; used adaptive threshold ${thresholdUsed.toFixed(2)}`));
+            }
+            if (searchStrategy) {
+                console.log(chalk.gray(`Search strategy: ${searchStrategy}`));
+            }
             console.log();
             results.forEach((memory, index) => {
-                const score = (memory.relevance_score * 100).toFixed(1);
+                const score = (memory.similarity_score * 100).toFixed(1);
                 console.log(chalk.green(`${index + 1}. ${memory.title}`) + chalk.gray(` (${score}% match)`));
                 console.log(chalk.white(`   ${truncateText(memory.content, 100)}`));
                 console.log(chalk.cyan(`   ID: ${memory.id}`) + chalk.gray(` | Type: ${memory.memory_type}`));
@@ -703,6 +939,280 @@ export function memoryCommands(program) {
         catch (error) {
             const errorMessage = error instanceof Error ? error.message : 'Unknown error';
             console.error(chalk.red('✖ Failed to get statistics:'), errorMessage);
+            process.exit(1);
+        }
+    });
+    // Intelligence commands powered by @lanonasis/mem-intel-sdk
+    const intelligence = program
+        .command('intelligence')
+        .description('Memory intelligence operations');
+    intelligence
+        .command('health-check')
+        .description('Run memory intelligence health check')
+        .option('--json', 'Output raw JSON payload')
+        .action(async (options) => {
+        try {
+            const spinner = ora('Running intelligence health check...').start();
+            const transport = await createIntelligenceTransport();
+            const userId = await resolveCurrentUserId();
+            const result = await postIntelligenceEndpoint(transport, '/intelligence/health-check', { user_id: userId, response_format: 'json' });
+            spinner.stop();
+            printIntelligenceResult('🩺 Intelligence Health Check', result, options);
+        }
+        catch (error) {
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+            console.error(chalk.red('✖ Intelligence health check failed:'), errorMessage);
+            process.exit(1);
+        }
+    });
+    intelligence
+        .command('suggest-tags')
+        .description('Suggest tags for a memory')
+        .argument('<memory-id>', 'Memory ID')
+        .option('--max <number>', 'Maximum suggestions', '8')
+        .option('--json', 'Output raw JSON payload')
+        .action(async (memoryId, options) => {
+        try {
+            const spinner = ora('Generating tag suggestions...').start();
+            const transport = await createIntelligenceTransport();
+            const userId = await resolveCurrentUserId();
+            const maxSuggestions = Math.max(1, Math.min(20, parseInt(options.max || '8', 10)));
+            const result = await postIntelligenceEndpoint(transport, '/intelligence/suggest-tags', {
+                memory_id: memoryId,
+                user_id: userId,
+                max_suggestions: maxSuggestions,
+                include_existing_tags: true,
+                response_format: 'json',
+            });
+            spinner.stop();
+            printIntelligenceResult('🏷️ Tag Suggestions', result, options);
+        }
+        catch (error) {
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+            console.error(chalk.red('✖ Failed to suggest tags:'), errorMessage);
+            process.exit(1);
+        }
+    });
+    intelligence
+        .command('find-related')
+        .description('Find memories related to a source memory')
+        .argument('<memory-id>', 'Source memory ID')
+        .option('--limit <number>', 'Maximum related memories', '5')
+        .option('--threshold <number>', 'Similarity threshold (0-1)', '0.7')
+        .option('--json', 'Output raw JSON payload')
+        .action(async (memoryId, options) => {
+        try {
+            const spinner = ora('Finding related memories...').start();
+            const transport = await createIntelligenceTransport();
+            const userId = await resolveCurrentUserId();
+            const result = await postIntelligenceEndpoint(transport, '/intelligence/find-related', {
+                memory_id: memoryId,
+                user_id: userId,
+                limit: Math.max(1, Math.min(20, parseInt(options.limit || '5', 10))),
+                similarity_threshold: Math.max(0, Math.min(1, parseFloat(options.threshold || '0.7'))),
+                response_format: 'json',
+            });
+            spinner.stop();
+            printIntelligenceResult('🔗 Related Memories', result, options);
+        }
+        catch (error) {
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+            console.error(chalk.red('✖ Failed to find related memories:'), errorMessage);
+            process.exit(1);
+        }
+    });
+    intelligence
+        .command('detect-duplicates')
+        .description('Detect duplicate memory entries')
+        .option('--threshold <number>', 'Similarity threshold (0-1)', '0.88')
+        .option('--max-pairs <number>', 'Maximum duplicate pairs to inspect', '100')
+        .option('--json', 'Output raw JSON payload')
+        .action(async (options) => {
+        try {
+            const spinner = ora('Detecting duplicates...').start();
+            const transport = await createIntelligenceTransport();
+            const userId = await resolveCurrentUserId();
+            const result = await postIntelligenceEndpoint(transport, '/intelligence/detect-duplicates', {
+                user_id: userId,
+                similarity_threshold: Math.max(0, Math.min(1, parseFloat(options.threshold || '0.88'))),
+                max_pairs: Math.max(10, Math.min(500, parseInt(options.maxPairs || '100', 10))),
+                response_format: 'json',
+            });
+            spinner.stop();
+            printIntelligenceResult('🧬 Duplicate Detection', result, options);
+        }
+        catch (error) {
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+            console.error(chalk.red('✖ Failed to detect duplicates:'), errorMessage);
+            process.exit(1);
+        }
+    });
+    intelligence
+        .command('extract-insights')
+        .description('Extract insights from memory collection')
+        .option('--topic <topic>', 'Optional topic filter')
+        .option('--type <type>', `Optional memory type filter (${MEMORY_TYPE_CHOICES.join(', ')})`)
+        .option('--max-memories <number>', 'Maximum memories to analyze', '50')
+        .option('--json', 'Output raw JSON payload')
+        .action(async (options) => {
+        try {
+            const spinner = ora('Extracting insights...').start();
+            const transport = await createIntelligenceTransport();
+            const userId = await resolveCurrentUserId();
+            const memoryType = options.type ? coerceMemoryType(options.type) : undefined;
+            if (options.type && !memoryType) {
+                throw new Error(`Invalid type "${options.type}". Expected one of: ${MEMORY_TYPE_CHOICES.join(', ')}`);
+            }
+            const result = await postIntelligenceEndpoint(transport, '/intelligence/extract-insights', {
+                user_id: userId,
+                topic: options.topic,
+                memory_type: memoryType,
+                max_memories: Math.max(5, Math.min(200, parseInt(options.maxMemories || '50', 10))),
+                response_format: 'json',
+            });
+            spinner.stop();
+            printIntelligenceResult('💡 Memory Insights', result, options);
+        }
+        catch (error) {
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+            console.error(chalk.red('✖ Failed to extract insights:'), errorMessage);
+            process.exit(1);
+        }
+    });
+    intelligence
+        .command('analyze-patterns')
+        .description('Analyze memory usage patterns')
+        .option('--days <number>', 'Days to include in analysis', '30')
+        .option('--json', 'Output raw JSON payload')
+        .action(async (options) => {
+        try {
+            const spinner = ora('Analyzing memory patterns...').start();
+            const transport = await createIntelligenceTransport();
+            const userId = await resolveCurrentUserId();
+            const result = await postIntelligenceEndpoint(transport, '/intelligence/analyze-patterns', {
+                user_id: userId,
+                time_range_days: Math.max(1, Math.min(365, parseInt(options.days || '30', 10))),
+                response_format: 'json',
+            });
+            spinner.stop();
+            printIntelligenceResult('📈 Pattern Analysis', result, options);
+        }
+        catch (error) {
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+            console.error(chalk.red('✖ Failed to analyze patterns:'), errorMessage);
+            process.exit(1);
+        }
+    });
+    // Behavior commands powered by @lanonasis/mem-intel-sdk
+    const behavior = program
+        .command('behavior')
+        .description('Behavior pattern intelligence operations');
+    behavior
+        .command('record')
+        .description('Record a behavior pattern from successful workflow steps')
+        .requiredOption('--trigger <text>', 'Behavior trigger description')
+        .requiredOption('--final-outcome <result>', 'Final outcome: success | partial | failed')
+        .requiredOption('--actions <json>', 'Actions JSON array. Example: [{"tool":"memory.search","params":{"query":"auth fix"}}]')
+        .option('--context <json>', 'Context JSON object')
+        .option('--confidence <number>', 'Confidence score (0-1)', '0.7')
+        .option('--json', 'Output raw JSON payload')
+        .action(async (options) => {
+        try {
+            const spinner = ora('Recording behavior pattern...').start();
+            const transport = await createIntelligenceTransport();
+            const userId = await resolveCurrentUserId();
+            const parsedActions = parseJsonOption(options.actions, '--actions');
+            const actions = ensureBehaviorActions(parsedActions, '--actions');
+            const parsedContext = parseJsonOption(options.context, '--context');
+            const context = ensureJsonObject(parsedContext, '--context');
+            const finalOutcome = options.finalOutcome;
+            if (!['success', 'partial', 'failed'].includes(finalOutcome)) {
+                throw new Error('--final-outcome must be one of: success, partial, failed');
+            }
+            const result = await postIntelligenceEndpoint(transport, '/intelligence/behavior-record', {
+                user_id: userId,
+                trigger: options.trigger,
+                context: context || {},
+                actions,
+                final_outcome: finalOutcome,
+                confidence: Math.max(0, Math.min(1, parseFloat(options.confidence || '0.7'))),
+            });
+            spinner.stop();
+            printIntelligenceResult('🧠 Behavior Recorded', result, options);
+        }
+        catch (error) {
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+            console.error(chalk.red('✖ Failed to record behavior pattern:'), errorMessage);
+            process.exit(1);
+        }
+    });
+    behavior
+        .command('recall')
+        .description('Recall behavior patterns relevant to the current task')
+        .requiredOption('--task <text>', 'Current task description')
+        .option('--context <json>', 'Additional context JSON object')
+        .option('--limit <number>', 'Maximum patterns to return', '5')
+        .option('--threshold <number>', 'Similarity threshold (0-1)', '0.7')
+        .option('--json', 'Output raw JSON payload')
+        .action(async (options) => {
+        try {
+            const spinner = ora('Recalling behavior patterns...').start();
+            const transport = await createIntelligenceTransport();
+            const userId = await resolveCurrentUserId();
+            const parsedContext = parseJsonOption(options.context, '--context');
+            const context = ensureJsonObject(parsedContext, '--context') || {};
+            const result = await postIntelligenceEndpoint(transport, '/intelligence/behavior-recall', {
+                user_id: userId,
+                context: {
+                    ...context,
+                    current_task: options.task,
+                },
+                limit: Math.max(1, Math.min(20, parseInt(options.limit || '5', 10))),
+                similarity_threshold: Math.max(0, Math.min(1, parseFloat(options.threshold || '0.7'))),
+            });
+            spinner.stop();
+            printIntelligenceResult('🔁 Behavior Recall', result, options);
+        }
+        catch (error) {
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+            console.error(chalk.red('✖ Failed to recall behavior patterns:'), errorMessage);
+            process.exit(1);
+        }
+    });
+    behavior
+        .command('suggest')
+        .description('Suggest next actions from learned behavior patterns')
+        .requiredOption('--task <text>', 'Current task description')
+        .option('--state <json>', 'Additional current state JSON object')
+        .option('--completed-steps <json>', 'Completed steps JSON array')
+        .option('--max-suggestions <number>', 'Maximum suggestions', '3')
+        .option('--json', 'Output raw JSON payload')
+        .action(async (options) => {
+        try {
+            const spinner = ora('Generating behavior suggestions...').start();
+            const transport = await createIntelligenceTransport();
+            const userId = await resolveCurrentUserId();
+            const parsedState = parseJsonOption(options.state, '--state');
+            const state = ensureJsonObject(parsedState, '--state') || {};
+            const parsedCompletedSteps = parseJsonOption(options.completedSteps, '--completed-steps');
+            const completedSteps = parsedCompletedSteps === undefined
+                ? undefined
+                : ensureBehaviorActions(parsedCompletedSteps, '--completed-steps', { allowEmpty: true });
+            const result = await postIntelligenceEndpoint(transport, '/intelligence/behavior-suggest', {
+                user_id: userId,
+                current_state: {
+                    ...state,
+                    task_description: options.task,
+                    completed_steps: completedSteps,
+                },
+                max_suggestions: Math.max(1, Math.min(10, parseInt(options.maxSuggestions || '3', 10))),
+            });
+            spinner.stop();
+            printIntelligenceResult('🎯 Behavior Suggestions', result, options);
+        }
+        catch (error) {
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+            console.error(chalk.red('✖ Failed to suggest actions:'), errorMessage);
             process.exit(1);
         }
     });

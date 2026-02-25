@@ -186,7 +186,7 @@ export class LanonasisMCPServer {
                 type: 'number',
                 minimum: 0,
                 maximum: 1,
-                default: 0.7,
+                default: 0.55,
                 description: 'Similarity threshold'
               }
             },
@@ -655,7 +655,7 @@ Tags: [Optional comma-separated tags]`
                 
 Query: ${args?.query || '[Enter search terms]'}
 Limit: [Number of results, default 10]
-Threshold: [Similarity threshold 0-1, default 0.7]`
+Threshold: [Similarity threshold 0-1, default 0.55]`
               }
             }
           ]

@@ -1,5 +1,23 @@
 # Changelog - @lanonasis/cli
 
+## [3.9.8] - 2026-02-25
+
+### ✨ New Features
+
+- **Issue #98 (CLI Memory UX Enhancements)**:
+  - Added `onasis memory create --json <json>` for direct JSON payload creation.
+  - Added `onasis memory create --content-file <path>` for file-based content ingestion.
+  - Added `onasis memory save-session` to persist branch/status/changed-files session context as memory.
+- **Behavior methods via CLI commands**:
+  - Added `onasis memory intelligence` subcommands for health check, tag suggestions, related lookup, duplicate detection, insight extraction, and pattern analysis.
+  - Added `onasis memory behavior` subcommands for `record`, `recall`, and `suggest` workflow behavior operations.
+
+### 🐛 Bug Fixes
+
+- Normalized memory response handling for create/get/update wrappers (`{ data: ... }`) so CLI output fields like ID/Title/Type are consistently resolved.
+- Ensured token refresh is executed before memory command paths to reduce intermittent re-auth prompts during active OAuth sessions.
+- Aligned default semantic search thresholds to `0.55` across memory and MCP search command paths for consistent result behavior.
+
 ## [3.9.7] - 2026-02-21
 
 ### ✨ New Features

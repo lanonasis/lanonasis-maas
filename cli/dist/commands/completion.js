@@ -133,6 +133,16 @@ export async function generateCompletionData() {
                         options: []
                     },
                     {
+                        name: 'intelligence',
+                        description: 'Memory intelligence operations (use: memory intelligence --help)',
+                        options: []
+                    },
+                    {
+                        name: 'behavior',
+                        description: 'Behavior pattern operations (use: memory behavior --help)',
+                        options: []
+                    },
+                    {
                         name: 'bulk-delete',
                         description: 'Delete multiple memories',
                         options: [

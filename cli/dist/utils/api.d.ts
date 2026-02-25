@@ -22,6 +22,7 @@ export interface LoginRequest {
     password: string;
 }
 export type MemoryType = 'context' | 'project' | 'knowledge' | 'reference' | 'personal' | 'workflow';
+export type WriteIntent = 'new' | 'continue' | 'auto';
 export interface MemoryEntry {
     id: string;
     title: string;
@@ -44,6 +45,9 @@ export interface CreateMemoryRequest {
     tags?: string[];
     topic_id?: string;
     metadata?: Record<string, unknown>;
+    continuity_key?: string;
+    idempotency_key?: string;
+    write_intent?: WriteIntent;
 }
 export interface UpdateMemoryRequest {
     title?: string;
@@ -52,6 +56,9 @@ export interface UpdateMemoryRequest {
     tags?: string[];
     topic_id?: string | null;
     metadata?: Record<string, unknown>;
+    continuity_key?: string;
+    idempotency_key?: string;
+    write_intent?: WriteIntent;
 }
 export interface GetMemoriesParams {
     page?: number;
@@ -75,7 +82,7 @@ export interface SearchMemoryRequest {
     threshold?: number;
 }
 export interface MemorySearchResult extends MemoryEntry {
-    relevance_score: number;
+    similarity_score: number;
 }
 export interface MemoryStats {
     total_memories: number;
@@ -172,6 +179,8 @@ export declare class APIClient {
     noExit: boolean;
     private normalizeMemoryEntry;
     private shouldUseLegacyMemoryRpcFallback;
+    private shouldRetryViaApiGateway;
+    private normalizeMcpPathToApi;
     constructor();
     login(email: string, password: string): Promise<AuthResponse>;
     register(email: string, password: string, organizationName?: string): Promise<AuthResponse>;
