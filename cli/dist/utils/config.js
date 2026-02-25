@@ -962,15 +962,20 @@ export class CLIConfig {
         const token = this.getToken();
         if (!token)
             return false;
-        // OAuth tokens are often opaque (not JWT). Prefer local expiry metadata when present.
-        if (this.config.authMethod === 'oauth') {
+        // OAuth tokens are often opaque (not JWT). Use local expiry metadata as a quick
+        // pre-check, but do not treat it as authoritative for a "true" result. We still
+        // run server verification on cache misses to avoid status/API drift.
+        let oauthTokenLocallyValid;
+        if (this.config.authMethod === 'oauth' || this.config.authMethod === 'oauth2') {
             const tokenExpiresAt = this.get('token_expires_at');
             if (typeof tokenExpiresAt === 'number') {
-                const isValid = Date.now() < tokenExpiresAt;
-                this.authCheckCache = { isValid, timestamp: Date.now() };
-                return isValid;
+                oauthTokenLocallyValid = Date.now() < tokenExpiresAt;
+                if (!oauthTokenLocallyValid) {
+                    this.authCheckCache = { isValid: false, timestamp: Date.now() };
+                    return false;
+                }
             }
-            // Fall through to legacy validation when we don't have expiry metadata.
+            // Fall through to server validation path.
         }
         // Check cache first
         if (this.authCheckCache && (Date.now() - this.authCheckCache.timestamp) < this.AUTH_CACHE_TTL) {
@@ -978,9 +983,11 @@ export class CLIConfig {
         }
         // Local expiry check first (fast)
         let locallyValid = false;
-        // Handle simple CLI tokens (format: cli_xxx_timestamp)
-        if (token.startsWith('cli_')) {
-            // Extract timestamp from CLI token
+        if (typeof oauthTokenLocallyValid === 'boolean') {
+            locallyValid = oauthTokenLocallyValid;
+        }
+        else if (token.startsWith('cli_')) {
+            // Handle simple CLI tokens (format: cli_xxx_timestamp)
             const parts = token.split('_');
             if (parts.length >= 3) {
                 const lastPart = parts[parts.length - 1];
@@ -1033,17 +1040,7 @@ export class CLIConfig {
             this.authCheckCache = { isValid: false, timestamp: Date.now() };
             return false;
         }
-        // Token is locally valid - check if we need server validation
-        // Skip server validation if we have a recent lastValidated timestamp (within 24 hours)
-        const lastValidated = this.config.lastValidated;
-        const skipServerValidation = lastValidated &&
-            (Date.now() - new Date(lastValidated).getTime()) < (24 * 60 * 60 * 1000); // 24 hours
-        if (skipServerValidation) {
-            // Trust the local validation if it was recently validated
-            this.authCheckCache = { isValid: locallyValid, timestamp: Date.now() };
-            return locallyValid;
-        }
-        // Verify with server (security check) for tokens that haven't been validated recently
+        // Token is locally valid - verify with server on cache miss for consistency
         try {
             // Try auth-gateway first (port 4000), then fall back to Netlify function
             const endpoints = [
@@ -1059,16 +1056,25 @@ export class CLIConfig {
                     if (response.data.valid === true) {
                         break;
                     }
-                    // Server explicitly said invalid - this is an auth error, not network error
+                    // Explicit auth rejection should always invalidate local auth state.
                     if (response.status === 401 || response.status === 403 || response.data.valid === false) {
                         authError = true;
                     }
+                    else {
+                        // Non-auth failures (like 404/5xx) should behave like transient verification failures.
+                        networkError = true;
+                    }
                 }
                 catch (error) {
-                    // Check if this is a network error (no response) vs auth error (got response)
+                    // Check if this is a network/transient error vs explicit auth rejection.
                     if (error.response) {
-                        // Got a response, likely 401/403
-                        authError = true;
+                        const status = error.response.status;
+                        if (status === 401 || status === 403) {
+                            authError = true;
+                        }
+                        else {
+                            networkError = true;
+                        }
                     }
                     else {
                         // Network error (ECONNREFUSED, ETIMEDOUT, etc.)

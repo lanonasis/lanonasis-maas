@@ -188,7 +188,7 @@ export class UserGuidanceSystem {
                 default: 'https://api.lanonasis.com/api/v1'
             },
             {
-                type: 'list',
+                type: 'select',
                 name: 'outputFormat',
                 message: 'Preferred output format:',
                 choices: ['table', 'json', 'yaml', 'csv'],
@@ -206,7 +206,7 @@ export class UserGuidanceSystem {
         console.log();
         const { authMethod } = await inquirer.prompt([
             {
-                type: 'list',
+                type: 'select',
                 name: 'authMethod',
                 message: 'Choose authentication method:',
                 choices: [
@@ -335,7 +335,7 @@ export class UserGuidanceSystem {
         console.log();
         const { shell } = await inquirer.prompt([
             {
-                type: 'list',
+                type: 'select',
                 name: 'shell',
                 message: 'Which shell do you use?',
                 choices: [

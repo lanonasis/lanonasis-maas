@@ -340,7 +340,7 @@ export class InteractiveMemoryCreator {
       
       const { topicChoice } = await inquirer.prompt([
         {
-          type: 'list',
+          type: 'select',
           name: 'topicChoice',
           message: 'Select topic:',
           choices: [
@@ -402,7 +402,7 @@ export class InteractiveMemoryCreator {
     // Memory type selection
     const { memoryType } = await inquirer.prompt([
       {
-        type: 'list',
+        type: 'select',
         name: 'memoryType',
         message: 'Memory Type:',
         choices: [
@@ -426,7 +426,7 @@ export class InteractiveMemoryCreator {
     // Confirm save
     const { action } = await inquirer.prompt([
       {
-        type: 'list',
+        type: 'select',
         name: 'action',
         message: 'Ready to save?',
         choices: [
@@ -544,7 +544,7 @@ export class InteractiveSearch {
     // Result actions
     const { action } = await inquirer.prompt([
       {
-        type: 'list',
+        type: 'select',
         name: 'action',
         message: 'Actions:',
         choices: [

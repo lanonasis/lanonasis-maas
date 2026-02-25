@@ -180,6 +180,9 @@ export declare class APIClient {
     private normalizeMemoryEntry;
     private shouldUseLegacyMemoryRpcFallback;
     private shouldRetryViaApiGateway;
+    private shouldRetryViaSupabaseMemoryFunctions;
+    private getSupabaseFunctionsBaseUrl;
+    private mapMemoryApiRouteToSupabaseFunctions;
     private normalizeMcpPathToApi;
     constructor();
     login(email: string, password: string): Promise<AuthResponse>;

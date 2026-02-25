@@ -200,13 +200,20 @@ describe('Authentication Persistence Tests', () => {
   });
 
   describe('Token Expiry Handling', () => {
-    it('should detect if JWT token is authenticated', async () => {
+    it('should return false when JWT token cannot be verified by server', async () => {
       // Valid token (in the future)
       const validToken = createTestJwt(Math.floor(Date.now() / 1000) + 60 * 60);
 
+      mockAxios.post.mockRejectedValue({
+        response: {
+          status: 404,
+          data: { error: 'Not found' }
+        }
+      });
+
       await config.setToken(validToken);
       const isAuthenticated = await config.isAuthenticated();
-      expect(isAuthenticated).toBe(true);
+      expect(isAuthenticated).toBe(false);
     });
 
     it('should detect if JWT token is expired', async () => {

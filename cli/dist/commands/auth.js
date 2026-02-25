@@ -569,7 +569,7 @@ export async function loginCommand(options) {
     // Show authentication options
     const authChoice = await inquirer.prompt([
         {
-            type: 'list',
+            type: 'select',
             name: 'method',
             message: 'Choose authentication method:',
             choices: [

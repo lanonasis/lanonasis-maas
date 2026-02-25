@@ -655,7 +655,7 @@ export async function loginCommand(options: LoginOptions): Promise<void> {
   // Show authentication options
   const authChoice = await inquirer.prompt<{ method: 'vendor' | 'oauth' | 'credentials' }>([
     {
-      type: 'list',
+      type: 'select',
       name: 'method',
       message: 'Choose authentication method:',
       choices: [

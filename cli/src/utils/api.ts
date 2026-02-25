@@ -1,4 +1,4 @@
-import axios, { AxiosInstance, AxiosRequestConfig } from 'axios';
+import axios, { AxiosInstance, AxiosRequestConfig, InternalAxiosRequestConfig } from 'axios';
 import chalk from 'chalk';
 import { randomUUID } from 'crypto';
 import { CLIConfig } from './config.js';
@@ -247,6 +247,120 @@ export class APIClient {
     return code === 'ENOTFOUND' || code === 'EAI_AGAIN' || code === 'ECONNREFUSED';
   }
 
+  private shouldRetryViaSupabaseMemoryFunctions(error: any): boolean {
+    const status = Number(error?.response?.status || 0);
+    if (status !== 401) return false;
+
+    const cfg = (error?.config || {}) as AxiosRequestConfig & {
+      __retriedViaSupabaseMemoryFunctions?: boolean;
+      __useSupabaseMemoryFunctions?: boolean;
+    };
+    if (cfg.__retriedViaSupabaseMemoryFunctions || cfg.__useSupabaseMemoryFunctions) return false;
+
+    const baseURL = String(cfg.baseURL || '');
+    if (baseURL.includes('supabase.co')) return false;
+
+    const requestUrl = String(cfg.url || '');
+    if (!requestUrl.startsWith('/api/v1/memories')) return false;
+
+    const message = String(error?.response?.data?.message || error?.response?.data?.error || '');
+    if (!/invalid jwt/i.test(message)) return false;
+
+    const authMethod = String(this.config.get<string>('authMethod') || '');
+    const token = this.config.getToken();
+    const hasOpaqueToken = Boolean(token) && token!.split('.').length !== 3;
+
+    return hasOpaqueToken || authMethod === 'oauth' || authMethod === 'oauth2';
+  }
+
+  private getSupabaseFunctionsBaseUrl(): string {
+    const discoveredServices = this.config.get<any>('discoveredServices');
+    const candidates = [
+      process.env.LANONASIS_SUPABASE_URL,
+      process.env.SUPABASE_URL,
+      discoveredServices?.memory_base
+    ];
+
+    for (const candidate of candidates) {
+      if (typeof candidate === 'string' && candidate.includes('supabase.co')) {
+        return candidate.replace(/\/$/, '');
+      }
+    }
+
+    return 'https://lanonasis.supabase.co';
+  }
+
+  private mapMemoryApiRouteToSupabaseFunctions(
+    config: InternalAxiosRequestConfig,
+    token?: string,
+    vendorKey?: string
+  ): InternalAxiosRequestConfig {
+    const method = String(config.method || 'get').toLowerCase();
+    const url = String(config.url || '');
+
+    const mapped = config;
+    mapped.baseURL = this.getSupabaseFunctionsBaseUrl();
+    mapped.headers = mapped.headers || ({} as InternalAxiosRequestConfig['headers']);
+
+    if (token) {
+      (mapped.headers as any).Authorization = `Bearer ${token}`;
+      delete (mapped.headers as any)['X-API-Key'];
+    } else if (vendorKey) {
+      (mapped.headers as any)['X-API-Key'] = vendorKey;
+    }
+
+    // Supabase functions do not need X-Auth-Method and can reject unexpected values.
+    delete (mapped.headers as any)['X-Auth-Method'];
+    (mapped.headers as any)['X-Project-Scope'] = 'lanonasis-maas';
+
+    if (method === 'get' && url === '/api/v1/memories') {
+      mapped.url = '/functions/v1/memory-list';
+      return mapped;
+    }
+    if (method === 'post' && url === '/api/v1/memories') {
+      mapped.url = '/functions/v1/memory-create';
+      return mapped;
+    }
+    if (method === 'post' && url === '/api/v1/memories/search') {
+      mapped.url = '/functions/v1/memory-search';
+      return mapped;
+    }
+    if (method === 'get' && url === '/api/v1/memories/stats') {
+      mapped.url = '/functions/v1/memory-stats';
+      return mapped;
+    }
+    if (method === 'post' && url === '/api/v1/memories/bulk/delete') {
+      mapped.url = '/functions/v1/memory-bulk-delete';
+      return mapped;
+    }
+
+    const idMatch = url.match(/^\/api\/v1\/memories\/([^/?#]+)$/);
+    if (idMatch) {
+      const id = decodeURIComponent(idMatch[1] || '');
+      if (method === 'get') {
+        mapped.url = '/functions/v1/memory-get';
+        mapped.params = { ...(config.params || {}), id };
+        return mapped;
+      }
+      if (method === 'put' || method === 'patch') {
+        mapped.method = 'post';
+        mapped.url = '/functions/v1/memory-update';
+        const body = (config.data && typeof config.data === 'object')
+          ? (config.data as Record<string, unknown>)
+          : {};
+        mapped.data = { id, ...body };
+        return mapped;
+      }
+      if (method === 'delete') {
+        mapped.url = '/functions/v1/memory-delete';
+        mapped.params = { ...(config.params || {}), id };
+        return mapped;
+      }
+    }
+
+    return mapped;
+  }
+
   private normalizeMcpPathToApi(url: string): string {
     // MCP HTTP compatibility path -> API gateway REST paths
     if (url === '/memory') {
@@ -280,12 +394,28 @@ export class APIClient {
       const authMethod = this.config.get<string>('authMethod');
       const vendorKey = await this.config.getVendorKeyAsync();
       const token = this.config.getToken();
+      const useSupabaseMemoryFunctions = (config as AxiosRequestConfig & {
+        __useSupabaseMemoryFunctions?: boolean;
+      }).__useSupabaseMemoryFunctions === true;
       const isMemoryEndpoint = typeof config.url === 'string' && config.url.startsWith('/api/v1/memories');
       const forceApiFromEnv = process.env.LANONASIS_FORCE_API === 'true'
         || process.env.CLI_FORCE_API === 'true'
         || process.env.ONASIS_FORCE_API === 'true';
       const forceApiFromConfig = this.config.get<boolean>('forceApi') === true
         || this.config.get<string>('connectionTransport') === 'api';
+
+      if (useSupabaseMemoryFunctions && typeof config.url === 'string' && config.url.startsWith('/api/v1/memories')) {
+        const remapped = this.mapMemoryApiRouteToSupabaseFunctions(config, token || undefined, vendorKey || undefined);
+        if (process.env.CLI_VERBOSE === 'true') {
+          const requestId = randomUUID();
+          (remapped.headers as any)['X-Request-ID'] = requestId;
+          (remapped.headers as any)['X-Transport-Mode'] = 'supabase-functions-fallback';
+          console.log(chalk.dim(`→ ${String(remapped.method || 'get').toUpperCase()} ${remapped.url} [${requestId}]`));
+          console.log(chalk.dim(`  transport=supabase-functions-fallback baseURL=${remapped.baseURL}`));
+        }
+        return remapped;
+      }
+
       // Memory CRUD/search endpoints should always use the API gateway path.
       const forceDirectApiRetry = (config as AxiosRequestConfig & { __forceDirectApiGatewayRetry?: boolean })
         .__forceDirectApiGatewayRetry === true;
@@ -375,6 +505,19 @@ export class APIClient {
         return response;
       },
       (error) => {
+        if (this.shouldRetryViaSupabaseMemoryFunctions(error)) {
+          const retryConfig = {
+            ...error.config,
+            __retriedViaSupabaseMemoryFunctions: true,
+            __useSupabaseMemoryFunctions: true
+          } as AxiosRequestConfig & {
+            __retriedViaSupabaseMemoryFunctions?: boolean;
+            __useSupabaseMemoryFunctions?: boolean;
+          };
+
+          return this.client.request(retryConfig);
+        }
+
         if (this.shouldRetryViaApiGateway(error)) {
           const retryConfig = {
             ...error.config,

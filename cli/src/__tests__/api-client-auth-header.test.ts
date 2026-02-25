@@ -155,6 +155,39 @@ describe('APIClient authentication headers', () => {
     expect(updated.headers['X-API-Key']).toBeUndefined();
   });
 
+  it('maps memory list requests to Supabase function routes during JWT harmonization fallback', async () => {
+    const client = new APIClient();
+    const config = (client as any).config;
+
+    config.init = jest.fn().mockResolvedValue(undefined);
+    config.refreshTokenIfNeeded = jest.fn().mockResolvedValue(undefined);
+    config.discoverServices = jest.fn().mockResolvedValue(undefined);
+    config.get = jest.fn((key: string) => {
+      if (key === 'discoveredServices') return { auth_base: 'https://auth.example.com', memory_base: 'https://api.example.com' };
+      if (key === 'authMethod') return 'oauth';
+      if (key === 'forceApi') return true;
+      if (key === 'connectionTransport') return 'api';
+      return undefined;
+    });
+    config.getApiUrl = jest.fn().mockReturnValue('https://api.example.com');
+    config.getToken = jest.fn().mockReturnValue('opaque-oauth-token');
+    config.getVendorKeyAsync = jest.fn().mockResolvedValue(undefined);
+
+    const handler = requestHandlers[0];
+    const updated = await handler({
+      headers: {},
+      url: '/api/v1/memories',
+      method: 'get',
+      params: { limit: 3 },
+      __useSupabaseMemoryFunctions: true
+    });
+
+    expect(updated.baseURL).toBe('https://lanonasis.supabase.co');
+    expect(updated.url).toBe('/functions/v1/memory-list');
+    expect(updated.headers.Authorization).toBe('Bearer opaque-oauth-token');
+    expect(updated.headers['X-Auth-Method']).toBeUndefined();
+  });
+
   it('falls back to search endpoint when GET /memories is not allowed', async () => {
     const client = new APIClient();
     const config = (client as any).config;
