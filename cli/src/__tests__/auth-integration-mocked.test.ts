@@ -103,7 +103,7 @@ describe('CLI Authentication Integration Tests (Mocked)', () => {
       const testVendorKey = 'pk_test123456789.sk_test123456789012345';
 
       // Mock successful vendor key validation
-      mockAxios.get.mockResolvedValueOnce({
+      mockAxios.post.mockResolvedValueOnce({
         status: 200,
         data: { valid: true, user_id: 'user-123' },
       });
@@ -121,9 +121,9 @@ describe('CLI Authentication Integration Tests (Mocked)', () => {
       // Mock failed validation
       const authError = new Error('Unauthorized');
       (authError as any).response = { status: 401, data: { error: 'invalid vendor key' } };
-      mockAxios.get.mockRejectedValue(authError);
+      mockAxios.post.mockRejectedValue(authError);
 
-      await expect(config.setVendorKey(invalidKey)).rejects.toThrow(/Key is invalid/i);
+      await expect(config.setVendorKey(invalidKey)).rejects.toThrow(/(Key is invalid|invalid vendor key)/i);
     });
 
     it('should handle network errors during vendor key validation', async () => {

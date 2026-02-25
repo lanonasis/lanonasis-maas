@@ -55,7 +55,7 @@
   "license": "MIT",
   "dependencies": {
     "@genkit-ai/mcp": "^1.25.0",
-    "@lanonasis/oauth-client": "workspace:*",
+    "@lanonasis/oauth-client": "npm:@lanonasis/oauth-client@2.0.0",
     "@lanonasis/security-sdk": "^1.0.3",
     "@netlify/functions": "^2.8.2",
     "@supabase/supabase-js": "^2.56.1",
