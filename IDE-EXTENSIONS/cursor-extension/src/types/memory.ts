@@ -34,6 +34,9 @@ export interface CreateMemoryRequest {
   tags?: string[];
   topic_id?: string;
   metadata?: Record<string, unknown>;
+  continuity_key?: string;
+  idempotency_key?: string;
+  write_intent?: 'new' | 'continue' | 'auto';
 }
 
 export interface UpdateMemoryRequest {
@@ -43,6 +46,9 @@ export interface UpdateMemoryRequest {
   tags?: string[];
   topic_id?: string | null;
   metadata?: Record<string, unknown>;
+  continuity_key?: string;
+  idempotency_key?: string;
+  write_intent?: 'new' | 'continue' | 'auto';
 }
 
 export interface SearchMemoryRequest {
@@ -75,7 +81,10 @@ export const createMemorySchema = z.object({
   memory_type: CoreMemoryType.default('context'),
   tags: coreCreate.tags,
   topic_id: z.string().uuid().optional(),
-  metadata: coreCreate.metadata
+  metadata: coreCreate.metadata,
+  continuity_key: z.string().min(1).max(255).optional(),
+  idempotency_key: z.string().min(1).max(255).optional(),
+  write_intent: z.enum(['new', 'continue', 'auto']).optional()
 });
 
 const coreUpdate = CoreUpdateMemoryRequestSchema.shape;
@@ -85,7 +94,10 @@ export const updateMemorySchema = z.object({
   memory_type: CoreMemoryType.optional(),
   tags: coreUpdate.tags,
   topic_id: z.string().uuid().nullable().optional(),
-  metadata: coreUpdate.metadata
+  metadata: coreUpdate.metadata,
+  continuity_key: z.string().min(1).max(255).optional(),
+  idempotency_key: z.string().min(1).max(255).optional(),
+  write_intent: z.enum(['new', 'continue', 'auto']).optional()
 });
 
 const coreSearch = CoreSearchMemoryRequestSchema.shape;

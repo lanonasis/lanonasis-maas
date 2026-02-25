@@ -5,6 +5,8 @@ import { z } from 'zod';
  */
 export const MEMORY_TYPES = ['context', 'project', 'knowledge', 'reference', 'personal', 'workflow'] as const;
 export type MemoryType = typeof MEMORY_TYPES[number];
+export const WRITE_INTENTS = ['new', 'continue', 'auto'] as const;
+export type WriteIntent = typeof WRITE_INTENTS[number];
 
 /**
  * Memory status values
@@ -233,7 +235,10 @@ export const createMemorySchema = z.object({
   topic_id: z.string().uuid().optional(),
   project_ref: z.string().max(100).optional(),
   tags: z.array(z.string().min(1).max(50)).max(20).default([]),
-  metadata: z.record(z.string(), z.unknown()).optional()
+  metadata: z.record(z.string(), z.unknown()).optional(),
+  continuity_key: z.string().min(1).max(255).optional(),
+  idempotency_key: z.string().min(1).max(255).optional(),
+  write_intent: z.enum(WRITE_INTENTS).optional()
 });
 
 export const updateMemorySchema = z.object({
@@ -245,7 +250,10 @@ export const updateMemorySchema = z.object({
   topic_id: z.string().uuid().nullable().optional(),
   project_ref: z.string().max(100).nullable().optional(),
   tags: z.array(z.string().min(1).max(50)).max(20).optional(),
-  metadata: z.record(z.string(), z.unknown()).optional()
+  metadata: z.record(z.string(), z.unknown()).optional(),
+  continuity_key: z.string().min(1).max(255).optional(),
+  idempotency_key: z.string().min(1).max(255).optional(),
+  write_intent: z.enum(WRITE_INTENTS).optional()
 });
 
 export const searchMemorySchema = z.object({

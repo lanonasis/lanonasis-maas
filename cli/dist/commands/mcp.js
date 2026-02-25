@@ -462,7 +462,7 @@ export function mcpCommands(program) {
         .description('Search memories via MCP')
         .argument('<query>', 'Search query')
         .option('-l, --limit <number>', 'Maximum results', '10')
-        .option('-t, --threshold <number>', 'Similarity threshold (0-1)', '0.7')
+        .option('-t, --threshold <number>', 'Similarity threshold (0-1)', '0.55')
         .action(async (query, options) => {
         const spinner = ora('Searching memories via MCP...').start();
         try {
@@ -488,7 +488,7 @@ export function mcpCommands(program) {
                 console.log(`\n${chalk.bold(`${index + 1}. ${memory.title}`)}`);
                 console.log(`   ID: ${chalk.gray(memory.id)}`);
                 console.log(`   Type: ${chalk.blue(memory.memory_type)}`);
-                console.log(`   Score: ${chalk.green((memory.relevance_score * 100).toFixed(1) + '%')}`);
+                console.log(`   Score: ${chalk.green((memory.similarity_score * 100).toFixed(1) + '%')}`);
                 console.log(`   Content: ${memory.content.substring(0, 100)}...`);
             });
         }

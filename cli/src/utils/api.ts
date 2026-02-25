@@ -30,6 +30,7 @@ export interface LoginRequest {
 }
 
 export type MemoryType = 'context' | 'project' | 'knowledge' | 'reference' | 'personal' | 'workflow';
+export type WriteIntent = 'new' | 'continue' | 'auto';
 
 export interface MemoryEntry {
   id: string;
@@ -54,6 +55,9 @@ export interface CreateMemoryRequest {
   tags?: string[];
   topic_id?: string;
   metadata?: Record<string, unknown>;
+  continuity_key?: string;
+  idempotency_key?: string;
+  write_intent?: WriteIntent;
 }
 
 export interface UpdateMemoryRequest {
@@ -63,6 +67,9 @@ export interface UpdateMemoryRequest {
   tags?: string[];
   topic_id?: string | null;
   metadata?: Record<string, unknown>;
+  continuity_key?: string;
+  idempotency_key?: string;
+  write_intent?: WriteIntent;
 }
 
 export interface GetMemoriesParams {
@@ -89,7 +96,7 @@ export interface SearchMemoryRequest {
 }
 
 export interface MemorySearchResult extends MemoryEntry {
-  relevance_score: number;
+  similarity_score: number;
 }
 
 export interface MemoryStats {
@@ -231,6 +238,26 @@ export class APIClient {
     return false;
   }
 
+  private shouldRetryViaApiGateway(error: any): boolean {
+    const baseURL = String(error?.config?.baseURL || '');
+    const code = String(error?.code || '');
+    const alreadyRetried = Boolean(error?.config?.__retriedViaApiGateway);
+    if (alreadyRetried) return false;
+    if (!baseURL.includes('mcp.lanonasis.com')) return false;
+    return code === 'ENOTFOUND' || code === 'EAI_AGAIN' || code === 'ECONNREFUSED';
+  }
+
+  private normalizeMcpPathToApi(url: string): string {
+    // MCP HTTP compatibility path -> API gateway REST paths
+    if (url === '/memory') {
+      return '/api/v1/memories';
+    }
+    if (url.startsWith('/memory/')) {
+      return url.replace('/memory/', '/api/v1/memories/');
+    }
+    return url;
+  }
+
   constructor() {
     this.config = new CLIConfig();
     this.client = axios.create({
@@ -260,7 +287,9 @@ export class APIClient {
       const forceApiFromConfig = this.config.get<boolean>('forceApi') === true
         || this.config.get<string>('connectionTransport') === 'api';
       // Memory CRUD/search endpoints should always use the API gateway path.
-      const forceDirectApi = forceApiFromEnv || forceApiFromConfig || isMemoryEndpoint;
+      const forceDirectApiRetry = (config as AxiosRequestConfig & { __forceDirectApiGatewayRetry?: boolean })
+        .__forceDirectApiGatewayRetry === true;
+      const forceDirectApi = forceApiFromEnv || forceApiFromConfig || isMemoryEndpoint || forceDirectApiRetry;
       const prefersTokenAuth = Boolean(token) && (authMethod === 'jwt' || authMethod === 'oauth' || authMethod === 'oauth2');
       const useVendorKeyAuth = Boolean(vendorKey) && !prefersTokenAuth;
 
@@ -346,6 +375,24 @@ export class APIClient {
         return response;
       },
       (error) => {
+        if (this.shouldRetryViaApiGateway(error)) {
+          const retryConfig = {
+            ...error.config,
+            __retriedViaApiGateway: true,
+            __forceDirectApiGatewayRetry: true
+          } as AxiosRequestConfig & {
+            __retriedViaApiGateway?: boolean;
+            __forceDirectApiGatewayRetry?: boolean;
+          };
+
+          retryConfig.baseURL = this.config.getApiUrl();
+          if (typeof retryConfig.url === 'string') {
+            retryConfig.url = this.normalizeMcpPathToApi(retryConfig.url);
+          }
+
+          return this.client.request(retryConfig);
+        }
+
         if (error.response) {
           const { status, data } = error.response as { status: number; data: ApiErrorResponse; statusText: string; };
           
