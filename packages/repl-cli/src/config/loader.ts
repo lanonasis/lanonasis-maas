@@ -5,6 +5,7 @@ import {
   CONFIG_FILE,
   HISTORY_FILE,
   DEFAULT_API_URL,
+  DEFAULT_AI_ROUTER_URL,
   DEFAULT_OPENAI_MODEL,
   DEFAULT_MAX_HISTORY_SIZE
 } from './constants.js';
@@ -17,8 +18,10 @@ const DEFAULT_CONFIG: ReplConfig = {
   vendorKey: process.env.LANONASIS_VENDOR_KEY,
   openaiApiKey: process.env.OPENAI_API_KEY,
   openaiModel: process.env.OPENAI_MODEL || DEFAULT_OPENAI_MODEL,
-  aiRouterUrl: process.env.AI_ROUTER_URL,
+  // AI router is the default NL engine; OpenAI key is now optional.
+  aiRouterUrl: process.env.AI_ROUTER_URL || DEFAULT_AI_ROUTER_URL,
   aiRouterAuthToken: process.env.AI_ROUTER_AUTH_TOKEN,
+  aiRouterApiKey: process.env.AI_ROUTER_API_KEY,
   historyFile: HISTORY_FILE,
   maxHistorySize: DEFAULT_MAX_HISTORY_SIZE,
   // User profile defaults
@@ -71,5 +74,18 @@ export async function loadConfig(overrides: Partial<ReplConfig>): Promise<ReplCo
   const filteredOverrides = Object.fromEntries(
     Object.entries(overrides).filter(([_, v]) => v !== undefined)
   );
-  return { ...config, ...filteredOverrides };
+  const merged = { ...config, ...filteredOverrides };
+
+  // Keep branded model identity consistent unless user explicitly overrides it.
+  if (!filteredOverrides.openaiModel && !process.env.OPENAI_MODEL) {
+    merged.openaiModel = DEFAULT_OPENAI_MODEL;
+  }
+
+  // Reuse main auth token for AI router unless explicitly overridden.
+  // Priority: aiRouterApiKey (lano_...) > aiRouterAuthToken > authToken
+  if (!merged.aiRouterAuthToken && !merged.aiRouterApiKey && merged.authToken) {
+    merged.aiRouterAuthToken = merged.authToken;
+  }
+
+  return merged;
 }

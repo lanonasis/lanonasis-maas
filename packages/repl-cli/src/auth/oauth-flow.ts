@@ -16,6 +16,7 @@ export interface OAuthConfig {
   clientId: string;
   scope: string;
   callbackPort?: number;
+  openBrowser?: boolean;
 }
 
 export interface TokenResponse {
@@ -36,6 +37,7 @@ const DEFAULT_CONFIG: OAuthConfig = {
   clientId: 'lanonasis-repl-cli',
   scope: 'memories:read memories:write mcp:connect api:access',
   callbackPort: 8899,
+  openBrowser: true,
 };
 
 /**
@@ -209,18 +211,30 @@ export async function performOAuthLogin(
   console.log(chalk.gray('Authorization URL:'));
   console.log(chalk.gray(authUrl.substring(0, 80) + '...\n'));
 
+  if (process.env.SSH_CONNECTION || process.env.SSH_TTY) {
+    console.log(chalk.yellow('Detected SSH session.'));
+    console.log(chalk.gray(`If auth runs in a local browser, forward callback port first:`));
+    console.log(chalk.gray(`  ssh -L ${port}:localhost:${port} <server>`));
+    console.log('');
+  }
+
   // Start callback server
   const callbackPromise = startCallbackServer(port, state);
 
-  // Open browser
-  console.log(chalk.yellow('Opening browser for authentication...'));
-  console.log(chalk.gray(`If browser doesn't open, visit:\n${authUrl}\n`));
+  // Open browser unless explicitly disabled.
+  if (config.openBrowser !== false) {
+    console.log(chalk.yellow('Opening browser for authentication...'));
+    console.log(chalk.gray(`If browser doesn't open, visit:\n${authUrl}\n`));
 
-  try {
-    await open(authUrl);
-  } catch {
-    console.log(chalk.yellow('Could not open browser automatically.'));
-    console.log(chalk.yellow('Please open the URL above manually.\n'));
+    try {
+      await open(authUrl);
+    } catch {
+      console.log(chalk.yellow('Could not open browser automatically.'));
+      console.log(chalk.yellow('Please open the URL above manually.\n'));
+    }
+  } else {
+    console.log(chalk.yellow('Auto-open disabled.'));
+    console.log(chalk.yellow(`Open this URL manually:\n${authUrl}\n`));
   }
 
   console.log(chalk.cyan('Waiting for authentication...'));

@@ -356,31 +356,69 @@ export class MCPClient {
         const jitter = cappedDelay * 0.25 * (Math.random() - 0.5);
         return Math.round(cappedDelay + jitter);
     }
+    async resolveAuthCredential() {
+        const authMethod = String(this.config.get('authMethod') || '').toLowerCase();
+        const token = this.config.get('token');
+        const vendorKey = await this.config.getVendorKeyAsync();
+        if (authMethod === 'vendor_key' && typeof vendorKey === 'string' && vendorKey.trim().length > 0) {
+            return { value: vendorKey.trim(), source: 'vendor_key' };
+        }
+        if ((authMethod === 'oauth' || authMethod === 'oauth2' || authMethod === 'jwt') &&
+            typeof token === 'string' &&
+            token.trim().length > 0) {
+            return { value: token.trim(), source: 'token' };
+        }
+        if (typeof token === 'string' && token.trim().length > 0) {
+            return { value: token.trim(), source: 'token' };
+        }
+        if (typeof vendorKey === 'string' && vendorKey.trim().length > 0) {
+            return { value: vendorKey.trim(), source: 'vendor_key' };
+        }
+        const envKey = process.env.LANONASIS_API_KEY;
+        if (typeof envKey === 'string' && envKey.trim().length > 0) {
+            return { value: envKey.trim(), source: 'env' };
+        }
+        return null;
+    }
+    buildAuthHeaders(auth) {
+        const headers = {};
+        const value = auth.value.trim();
+        if (!value) {
+            return headers;
+        }
+        if (auth.source === 'vendor_key' || value.startsWith('lano_')) {
+            headers['X-API-Key'] = value;
+            headers['X-Auth-Method'] = 'vendor_key';
+            headers['X-Project-Scope'] = 'lanonasis-maas';
+            return headers;
+        }
+        if (value.toLowerCase().startsWith('bearer ')) {
+            headers['Authorization'] = value;
+            headers['X-Auth-Method'] = 'jwt';
+            headers['X-Project-Scope'] = 'lanonasis-maas';
+            return headers;
+        }
+        headers['Authorization'] = `Bearer ${value}`;
+        headers['X-Auth-Method'] = 'jwt';
+        headers['X-Project-Scope'] = 'lanonasis-maas';
+        return headers;
+    }
     /**
      * Validate authentication credentials before attempting MCP connection
      */
     async validateAuthBeforeConnect() {
-        const token = this.config.get('token');
-        const vendorKey = await this.config.getVendorKeyAsync();
-        // Check if we have any authentication credentials
-        if (!token && !vendorKey) {
+        const auth = await this.resolveAuthCredential();
+        if (!auth) {
             throw new Error('AUTHENTICATION_REQUIRED: No authentication credentials found. Run "lanonasis auth login" first.');
         }
-        // If we have a token, check if it's expired or needs refresh
-        if (token) {
-            try {
-                await this.validateAndRefreshToken(token);
+        await this.config.refreshTokenIfNeeded();
+        const verification = await this.config.verifyCurrentCredentialsWithServer();
+        if (!verification.valid) {
+            const reason = verification.reason || 'Credential verification failed';
+            if (verification.method === 'none') {
+                throw new Error(`AUTHENTICATION_REQUIRED: ${reason}`);
             }
-            catch (error) {
-                throw new Error(`AUTHENTICATION_INVALID: ${error instanceof Error ? error.message : 'Token validation failed'}`);
-            }
-        }
-        // If we have a vendor key, ensure it is valid (non-empty)
-        if (vendorKey && !token) {
-            const validationResult = this.config.validateVendorKeyFormat(vendorKey);
-            if (validationResult !== true) {
-                throw new Error(`AUTHENTICATION_INVALID: ${typeof validationResult === 'string' ? validationResult : 'Vendor key is invalid'}`);
-            }
+            throw new Error(`AUTHENTICATION_INVALID: ${reason}`);
         }
     }
     /**
@@ -460,12 +498,10 @@ export class MCPClient {
     async initializeSSE(serverUrl) {
         // Use the proper SSE endpoint from config
         const sseUrl = this.config.getMCPSSEUrl() ?? `${serverUrl}/events`;
-        const token = this.config.get('token');
-        const vendorKey = await this.config.getVendorKeyAsync();
-        const authKey = token || vendorKey || process.env.LANONASIS_API_KEY;
-        if (authKey) {
+        const auth = await this.resolveAuthCredential();
+        if (auth) {
             // EventSource doesn't support headers directly, append token to URL
-            this.sseConnection = new EventSource(`${sseUrl}?token=${encodeURIComponent(authKey)}`);
+            this.sseConnection = new EventSource(`${sseUrl}?token=${encodeURIComponent(auth.value)}`);
             this.sseConnection.onmessage = (event) => {
                 try {
                     const data = JSON.parse(event.data);
@@ -479,7 +515,11 @@ export class MCPClient {
                 }
             };
             this.sseConnection.onerror = () => {
-                console.error(chalk.yellow('⚠️  SSE connection error (will retry)'));
+                if (process.env.CLI_VERBOSE === 'true') {
+                    console.error(chalk.yellow('⚠️  SSE connection error (stream disabled for this session)'));
+                }
+                this.sseConnection?.close();
+                this.sseConnection = null;
             };
         }
     }
@@ -487,12 +527,11 @@ export class MCPClient {
      * Initialize WebSocket connection for enterprise MCP server
      */
     async initializeWebSocket(wsUrl) {
-        const token = this.config.get('token');
-        const vendorKey = await this.config.getVendorKeyAsync();
-        const authKey = token || vendorKey || process.env.LANONASIS_API_KEY;
-        if (!authKey) {
+        const auth = await this.resolveAuthCredential();
+        if (!auth) {
             throw new Error('API key required for WebSocket mode. Set LANONASIS_API_KEY or login first.');
         }
+        const wsHeaders = this.buildAuthHeaders(auth);
         return new Promise((resolve, reject) => {
             try {
                 // Close existing connection if any
@@ -502,10 +541,7 @@ export class MCPClient {
                 }
                 // Create new WebSocket connection with authentication
                 this.wsConnection = new WebSocket(wsUrl, [], {
-                    headers: {
-                        'Authorization': `Bearer ${authKey}`,
-                        'X-API-Key': authKey
-                    }
+                    headers: wsHeaders
                 });
                 this.wsConnection.on('open', () => {
                     console.log(chalk.green('✅ Connected to MCP WebSocket server'));
@@ -653,19 +689,14 @@ export class MCPClient {
      */
     async checkRemoteHealth(serverUrl) {
         const apiUrl = serverUrl ?? this.config.getMCPRestUrl() ?? 'https://mcp.lanonasis.com/api/v1';
-        const token = this.config.get('token');
-        const vendorKey = await this.config.getVendorKeyAsync();
-        const authKey = token || vendorKey || process.env.LANONASIS_API_KEY;
-        if (!authKey) {
+        const auth = await this.resolveAuthCredential();
+        if (!auth) {
             throw new Error('No authentication token available');
         }
         try {
             const axios = (await import('axios')).default;
             await axios.get(`${apiUrl}/health`, {
-                headers: {
-                    'Authorization': `Bearer ${authKey}`,
-                    'X-API-Key': authKey
-                },
+                headers: this.buildAuthHeaders(auth),
                 timeout: 5000
             });
         }
@@ -786,10 +817,8 @@ export class MCPClient {
      */
     async callRemoteTool(toolName, args) {
         const apiUrl = this.config.getMCPRestUrl() ?? 'https://mcp.lanonasis.com/api/v1';
-        const token = this.config.get('token');
-        const vendorKey = await this.config.getVendorKeyAsync();
-        const authKey = token || vendorKey || process.env.LANONASIS_API_KEY;
-        if (!authKey) {
+        const auth = await this.resolveAuthCredential();
+        if (!auth) {
             throw new Error('Authentication required. Run "lanonasis auth login" first.');
         }
         // Map MCP tool names to REST API endpoints
@@ -845,8 +874,7 @@ export class MCPClient {
                 method: mapping.method,
                 url: `${apiUrl}${endpoint}`,
                 headers: {
-                    'Authorization': `Bearer ${authKey}`,
-                    'X-API-Key': authKey,
+                    ...this.buildAuthHeaders(auth),
                     'Content-Type': 'application/json'
                 },
                 data: mapping.transform ? mapping.transform(args) : undefined,

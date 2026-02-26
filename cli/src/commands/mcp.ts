@@ -5,9 +5,55 @@ import { table } from 'table';
 import { getMCPClient } from '../utils/mcp-client.js';
 import { EnhancedMCPClient } from '../mcp/client/enhanced-client.js';
 import { CLIConfig } from '../utils/config.js';
+import { apiClient, MemoryEntry } from '../utils/api.js';
 import WebSocket from 'ws';
 import { dirname, join } from 'path';
 import { createConnectionManager } from '../ux/index.js';
+
+type MCPMemorySearchResult = {
+  id: string;
+  title: string;
+  memory_type?: string;
+  similarity_score: number;
+  content: string;
+};
+
+const tokenizeQuery = (input: string): string[] =>
+  input
+    .toLowerCase()
+    .split(/[^a-z0-9]+/g)
+    .map((token) => token.trim())
+    .filter((token) => token.length >= 2);
+
+const lexicalScore = (query: string, memory: MemoryEntry): number => {
+  const tokens = tokenizeQuery(query);
+  if (tokens.length === 0) return 0;
+
+  const haystack = `${memory.title || ''} ${memory.content || ''} ${(memory.tags || []).join(' ')}`.toLowerCase();
+  const hits = tokens.filter((token) => haystack.includes(token)).length;
+  if (hits === 0) return 0;
+
+  const ratio = hits / tokens.length;
+  return Math.max(0.35, Math.min(0.69, Number((ratio * 0.65).toFixed(3))));
+};
+
+const fallbackMemorySearch = async (query: string, limit: number): Promise<MCPMemorySearchResult[]> => {
+  const candidateLimit = Math.min(Math.max(limit * 8, 50), 200);
+  const memoriesResult = await apiClient.getMemories({ page: 1, limit: candidateLimit });
+  const candidates = (memoriesResult.memories || memoriesResult.data || []) as MemoryEntry[];
+
+  return candidates
+    .map((memory) => ({
+      id: memory.id,
+      title: memory.title,
+      memory_type: memory.memory_type,
+      similarity_score: lexicalScore(query, memory),
+      content: memory.content || ''
+    }))
+    .filter((memory) => memory.similarity_score > 0)
+    .sort((a, b) => b.similarity_score - a.similarity_score)
+    .slice(0, limit);
+};
 
 /**
  * Register MCP-related CLI commands (mcp and mcp-server) on a Commander program.
@@ -495,15 +541,20 @@ export function mcpCommands(program: Command) {
 
   memory.command('search')
     .description('Search memories via MCP')
-    .argument('<query>', 'Search query')
+    .argument('<query...>', 'Search query')
     .option('-l, --limit <number>', 'Maximum results', '10')
     .option('-t, --threshold <number>', 'Similarity threshold (0-1)', '0.55')
-    .action(async (query, options) => {
+    .action(async (queryParts, options) => {
+      const query = Array.isArray(queryParts) ? queryParts.join(' ').trim() : String(queryParts || '').trim();
+      if (!query) {
+        console.error(chalk.red('Search query is required'));
+        process.exit(1);
+      }
+
       const spinner = ora('Searching memories via MCP...').start();
+      const client = getMCPClient();
 
       try {
-        const client = getMCPClient();
-
         if (!client.isConnectedToServer()) {
           spinner.info('Not connected. Attempting auto-connect...');
           const config = new CLIConfig();
@@ -511,13 +562,37 @@ export function mcpCommands(program: Command) {
           await client.connect({ useRemote });
         }
 
-        const results = await client.callTool('memory_search_memories', {
-          query,
-          limit: parseInt(options.limit),
-          threshold: parseFloat(options.threshold)
-        });
+        const limit = parseInt(options.limit);
+        const threshold = parseFloat(options.threshold);
+        let results: MCPMemorySearchResult[] = [];
+        let usedLexicalFallback = false;
 
-        spinner.succeed(`Found ${results.length} memories`);
+        try {
+          const rawResult = await client.callTool('memory_search_memories', {
+            query,
+            limit,
+            threshold
+          });
+
+          results = Array.isArray(rawResult)
+            ? rawResult as MCPMemorySearchResult[]
+            : Array.isArray((rawResult as any)?.results)
+              ? (rawResult as any).results
+              : Array.isArray((rawResult as any)?.result)
+                ? (rawResult as any).result
+                : [];
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          if (/vector dimensions|hybrid search failed|memory search failed/i.test(message)) {
+            spinner.info('Semantic search unavailable in MCP path, using lexical fallback...');
+            results = await fallbackMemorySearch(query, limit);
+            usedLexicalFallback = true;
+          } else {
+            throw error;
+          }
+        }
+
+        spinner.succeed(`Found ${results.length} memories${usedLexicalFallback ? ' (lexical fallback)' : ''}`);
 
         if (results.length === 0) {
           console.log(chalk.yellow('\nNo memories found matching your query'));
@@ -535,6 +610,10 @@ export function mcpCommands(program: Command) {
       } catch (error) {
         spinner.fail(`Search failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
         process.exit(1);
+      } finally {
+        if (client.isConnectedToServer()) {
+          await client.disconnect().catch(() => {});
+        }
       }
     });
 

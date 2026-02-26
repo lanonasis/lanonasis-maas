@@ -112,6 +112,8 @@ export declare class MCPClient {
      * Calculate exponential backoff delay with jitter
      */
     private exponentialBackoff;
+    private resolveAuthCredential;
+    private buildAuthHeaders;
     /**
      * Validate authentication credentials before attempting MCP connection
      */

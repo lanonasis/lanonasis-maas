@@ -821,7 +821,7 @@ async function handleCredentialsFlow(options, config) {
         }
         // Store JWT token for API authentication
         await config.setToken(authToken);
-        await config.set('authMethod', 'jwt');
+        await config.setAndSave('authMethod', 'jwt');
         spinner.succeed('Login successful');
         console.log();
         console.log(chalk.green('✓ Authenticated successfully'));

@@ -670,13 +670,18 @@ export function memoryCommands(program) {
     program
         .command('search')
         .description('Search memories using semantic search')
-        .argument('<query>', 'search query')
+        .argument('<query...>', 'search query')
         .option('-l, --limit <limit>', 'number of results', '20')
         .option('--threshold <threshold>', 'similarity threshold (0-1)', '0.55')
         .option('--type <types>', 'filter by memory types (comma-separated)')
         .option('--tags <tags>', 'filter by tags (comma-separated)')
-        .action(async (query, options) => {
+        .action(async (queryParts, options) => {
         try {
+            const query = Array.isArray(queryParts) ? queryParts.join(' ').trim() : String(queryParts || '').trim();
+            if (!query) {
+                console.error(chalk.red('✖ Search query is required'));
+                process.exit(1);
+            }
             const spinner = ora(`Searching for "${query}"...`).start();
             const requestedThreshold = clampThreshold(parseFloat(options.threshold || '0.55'));
             const searchOptions = {
@@ -694,20 +699,27 @@ export function memoryCommands(program) {
             let results = [];
             let thresholdUsed = requestedThreshold;
             let searchStrategy = 'semantic';
+            let semanticSearchError = null;
             for (const threshold of thresholdPlan) {
-                const attempt = await apiClient.searchMemories(query, {
-                    ...searchOptions,
-                    threshold,
-                });
-                const attemptResults = (attempt.results || attempt.data || []);
-                result = attempt;
-                if (attemptResults.length > 0) {
-                    results = attemptResults;
-                    thresholdUsed = threshold;
-                    const attemptStrategy = attempt.search_strategy;
-                    searchStrategy = typeof attemptStrategy === 'string'
-                        ? attemptStrategy
-                        : 'semantic';
+                try {
+                    const attempt = await apiClient.searchMemories(query, {
+                        ...searchOptions,
+                        threshold,
+                    });
+                    const attemptResults = (attempt.results || attempt.data || []);
+                    result = attempt;
+                    if (attemptResults.length > 0) {
+                        results = attemptResults;
+                        thresholdUsed = threshold;
+                        const attemptStrategy = attempt.search_strategy;
+                        searchStrategy = typeof attemptStrategy === 'string'
+                            ? attemptStrategy
+                            : 'semantic';
+                        break;
+                    }
+                }
+                catch (error) {
+                    semanticSearchError = error instanceof Error ? error.message : 'Unknown semantic search error';
                     break;
                 }
             }
@@ -721,11 +733,19 @@ export function memoryCommands(program) {
             spinner.stop();
             if (results.length === 0) {
                 console.log(chalk.yellow('No memories found matching your search'));
+                if (semanticSearchError) {
+                    console.log(chalk.gray(`Semantic search error: ${semanticSearchError}`));
+                }
                 console.log(chalk.gray(`Tried thresholds: ${thresholdPlan.map((t) => t.toFixed(2)).join(', ')}`));
                 return;
             }
-            console.log(chalk.blue.bold(`\n🔍 Search Results (${result.total_results || results.length} found)`));
-            console.log(chalk.gray(`Query: "${query}" | Search time: ${result.search_time_ms || 0}ms`));
+            if (semanticSearchError && searchStrategy === 'cli_lexical_fallback') {
+                console.log(chalk.yellow(`⚠ Semantic search unavailable, using lexical fallback (${semanticSearchError})`));
+            }
+            const totalResults = typeof result?.total_results === 'number' ? result.total_results : results.length;
+            const searchTimeMs = typeof result?.search_time_ms === 'number' ? result.search_time_ms : 0;
+            console.log(chalk.blue.bold(`\n🔍 Search Results (${totalResults} found)`));
+            console.log(chalk.gray(`Query: "${query}" | Search time: ${searchTimeMs}ms`));
             if (Math.abs(thresholdUsed - requestedThreshold) > 0.0001) {
                 console.log(chalk.gray(`No matches at ${requestedThreshold.toFixed(2)}; used adaptive threshold ${thresholdUsed.toFixed(2)}`));
             }

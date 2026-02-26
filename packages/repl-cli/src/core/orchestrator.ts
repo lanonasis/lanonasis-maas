@@ -12,6 +12,8 @@ import {
 
 // Onasis AI Router client
 import { AIRouterClient } from './ai-router-client';
+import type { L0Config } from '../config/types.js';
+import { DEFAULT_OPENAI_MODEL } from '../config/constants.js';
 
 export interface OrchestratorConfig {
   apiUrl: string;
@@ -20,6 +22,8 @@ export interface OrchestratorConfig {
   model?: string;
   aiRouterUrl?: string;
   aiRouterAuthToken?: string;
+  aiRouterApiKey?: string; // Dedicated API key for AI Router (lano_...)
+  l0?: L0Config;
   userContext?: {
     name?: string;
     projects?: string[];
@@ -41,7 +45,7 @@ export interface OrchestratorResponse {
     relevance?: number;
   }>;
   action?: {
-    type: 'create' | 'search' | 'list' | 'get' | 'delete' | 'optimize_prompt';
+    type: 'create' | 'update' | 'search' | 'list' | 'get' | 'delete' | 'optimize_prompt';
     params: Record<string, any>;
   };
   context?: any;
@@ -57,8 +61,48 @@ export class NaturalLanguageOrchestrator {
   private contextInitialized: boolean = false;
 
   // VortexAI L0 - Universal Work Orchestrator for broader capabilities
-  private l0Orchestrator: L0Orchestrator;
+  private l0Orchestrator?: L0Orchestrator;
+  private l0Config: Required<Pick<L0Config, 'enabled' | 'enableCampaigns' | 'enableTrends' | 'enableContentCreation'>>;
   private aiRouterClient?: AIRouterClient;
+
+  private formatError(error: unknown): string {
+    if (error instanceof Error && error.message) return error.message;
+    if (typeof error === 'string') return error;
+    try {
+      return JSON.stringify(error);
+    } catch {
+      return String(error);
+    }
+  }
+
+  private resolveOpenAIModel(): string {
+    const selected = (this.model || '').trim();
+    // Branded alias for the default router-first experience.
+    if (!selected || /^l[-\s]?zero$/i.test(selected)) {
+      return process.env.OPENAI_FALLBACK_MODEL || 'gpt-4o-mini';
+    }
+    return selected;
+  }
+
+  private isCampaignIntent(lowerInput: string): boolean {
+    return /campaign|launch|marketing|tiktok|instagram|viral/.test(lowerInput);
+  }
+
+  private isTrendIntent(lowerInput: string): boolean {
+    return /trend|trending|hashtag|viral/.test(lowerInput);
+  }
+
+  private isContentIntent(lowerInput: string): boolean {
+    return /content|calendar|copy|caption|script|post/.test(lowerInput);
+  }
+
+  private shouldUseL0(lowerInput: string): boolean {
+    if (!this.l0Config.enabled || !this.l0Orchestrator) return false;
+    if (this.isCampaignIntent(lowerInput)) return this.l0Config.enableCampaigns;
+    if (this.isTrendIntent(lowerInput)) return this.l0Config.enableTrends;
+    if (this.isContentIntent(lowerInput)) return this.l0Config.enableContentCreation;
+    return true;
+  }
 
   constructor(config: OrchestratorConfig) {
     this.client = createMemoryClient({
@@ -74,20 +118,31 @@ export class NaturalLanguageOrchestrator {
       timeout: 30000
     });
 
-    // Initialize L0 with all plugins including memory services
-    this.l0Orchestrator = new L0Orchestrator(
-      createPluginManager({ includeBuiltins: true, includeMemoryServices: true })
-    );
+    this.l0Config = {
+      enabled: config.l0?.enabled !== false,
+      enableCampaigns: config.l0?.enableCampaigns !== false,
+      enableTrends: config.l0?.enableTrends !== false,
+      enableContentCreation: config.l0?.enableContentCreation !== false,
+    };
+
+    if (this.l0Config.enabled) {
+      // Initialize L0 with all plugins including memory services
+      this.l0Orchestrator = new L0Orchestrator(
+        createPluginManager({ includeBuiltins: true, includeMemoryServices: true })
+      );
+    }
 
     this.openaiApiKey = config.openaiApiKey || process.env.OPENAI_API_KEY
-    this.model = config.model || process.env.OPENAI_MODEL || 'gpt-4-turbo-preview';
+    this.model = config.model || process.env.OPENAI_MODEL || DEFAULT_OPENAI_MODEL;
     this.userContext = config.userContext;
 
     // Initialize AI Router client if URL provided
+    // Priority: aiRouterApiKey (lano_...) > aiRouterAuthToken
     if (config.aiRouterUrl) {
+      const routerKey = config.aiRouterApiKey || config.aiRouterAuthToken;
       this.aiRouterClient = new AIRouterClient({
         baseUrl: config.aiRouterUrl,
-        authToken: config.aiRouterAuthToken,
+        authToken: routerKey,
         defaultUseCase: 'repl-nlp',
       });
     }
@@ -182,7 +237,7 @@ export class NaturalLanguageOrchestrator {
       ? `\n\nActive Projects: ${userContext.projects.join(', ')}`
       : '';
     
-    return `You are LZero, the intelligent AI assistant for LanOnasis Memory Service${userName}. You are part of the LanOnasis ecosystem - a unified AI-driven platform powering financial, lifestyle, and digital infrastructure tools.
+    return `You are LZero, the context-aware memory assistant for LanOnasis Memory Service${userName}. You are part of the LanOnasis ecosystem - a unified AI-driven platform powering financial, lifestyle, and digital infrastructure tools.
 
 Your role is to be a helpful, conversational, and context-aware assistant that helps users manage their knowledge and memories through natural language interactions.
 
@@ -190,6 +245,7 @@ ${projects}
 
 Your capabilities:
 - Create memories: When users want to save information, preferences, notes, or knowledge
+- Update memories: When users want to edit titles, content, types, or tags
 - Search memories: When users want to find information using semantic search
 - List memories: When users want to see what's stored
 - Get specific memories: When users reference a specific memory by ID or context
@@ -255,8 +311,8 @@ Remember: You are LZero - be helpful, conversational, and make the experience fe
       content: userMessage
     });
 
-    // If no OpenAI key, fall back to pattern matching with context awareness
-    if (!this.openaiApiKey) {
+    // If no AI backend is available, fall back to pattern matching.
+    if (!this.aiRouterClient && !this.openaiApiKey) {
       const response = await this.fallbackProcessor(input, relevantContext);
       // Add to history for context continuity
       this.conversationHistory.push({
@@ -294,15 +350,19 @@ Remember: You are LZero - be helpful, conversational, and make the experience fe
       spinner.stop();
 
       // Log the actual error for debugging
-      const errorMessage = (error instanceof Error && error.message) ? error.message : String(error);
+      const errorMessage = this.formatError(error);
 
       // Check for specific error types to provide better feedback
-      if (errorMessage.includes('401') || errorMessage.includes('Unauthorized')) {
-        console.log(chalk.yellow('\n⚠️  OpenAI API key may be invalid or expired.'));
+      if (errorMessage.includes('401') || errorMessage.includes('Unauthorized') || errorMessage.includes('AUTH_REQUIRED')) {
+        console.log(chalk.yellow('\n⚠️  AI Router authentication failed.'));
+        console.log(chalk.gray('  The AI Router (ai.vortexcore.app) requires a valid API key.'));
+        console.log(chalk.gray('  Set AI_ROUTER_API_KEY env var or use --ai-router-key option.'));
+        console.log(chalk.gray('  Falling back to pattern matching...\n'));
       } else if (errorMessage.includes('429') || errorMessage.includes('rate limit')) {
         console.log(chalk.yellow('\n⚠️  Rate limited. Please wait a moment.'));
       } else if (errorMessage.includes('timeout') || errorMessage.includes('ECONNREFUSED') || errorMessage.includes('network')) {
-        console.log(chalk.yellow('\n⚠️  Network issue connecting to OpenAI.'));
+        console.log(chalk.yellow('\n⚠️  Network issue connecting to AI service.'));
+        console.log(chalk.gray('  Falling back to pattern matching...\n'));
       }
 
       // Fall back to basic processing with personality and context
@@ -336,6 +396,33 @@ Remember: You are LZero - be helpful, conversational, and make the experience fe
               tags: { type: 'array', items: { type: 'string' }, description: 'Tags for categorization' }
             },
             required: ['title', 'content']
+          }
+        }
+      },
+      {
+        type: 'function',
+        function: {
+          name: 'update_memory',
+          description: 'Update an existing memory entry',
+          parameters: {
+            type: 'object',
+            properties: {
+              id: { type: 'string', description: 'Memory ID to update' },
+              title: { type: 'string', description: 'Updated title' },
+              content: { type: 'string', description: 'Updated content' },
+              memory_type: {
+                type: 'string',
+                enum: ['context', 'project', 'knowledge', 'reference', 'personal', 'workflow'],
+                description: 'Updated memory type'
+              },
+              tags: { type: 'array', items: { type: 'string' }, description: 'Updated tags' },
+              status: {
+                type: 'string',
+                enum: ['active', 'archived', 'draft', 'deleted'],
+                description: 'Updated memory status'
+              }
+            },
+            required: ['id']
           }
         }
       },
@@ -449,7 +536,7 @@ Remember: You are LZero - be helpful, conversational, and make the experience fe
           'Authorization': `Bearer ${this.openaiApiKey}`
         },
         body: JSON.stringify({
-          model: this.model,
+          model: this.resolveOpenAIModel(),
           messages: this.conversationHistory,
           tools,
           tool_choice: toolChoice,
@@ -472,8 +559,9 @@ Remember: You are LZero - be helpful, conversational, and make the experience fe
     }
 
     // Map function/tool names to internal action types
-    const actionMap: Record<string, 'create' | 'search' | 'list' | 'get' | 'delete' | 'optimize_prompt'> = {
+    const actionMap: Record<string, 'create' | 'update' | 'search' | 'list' | 'get' | 'delete' | 'optimize_prompt'> = {
       'create_memory': 'create',
+      'update_memory': 'update',
       'search_memories': 'search',
       'list_memories': 'list',
       'get_memory': 'get',
@@ -525,6 +613,7 @@ Remember: You are LZero - be helpful, conversational, and make the experience fe
   private getDefaultResponse(functionName: string): string {
     const responses: Record<string, string> = {
       'create_memory': 'Creating that memory for you...',
+      'update_memory': 'Updating that memory for you...',
       'search_memories': 'Searching your memories...',
       'list_memories': 'Fetching your recent memories...',
       'get_memory': 'Retrieving that memory...',
@@ -590,6 +679,40 @@ Remember: You are LZero - be helpful, conversational, and make the experience fe
       };
     }
 
+    if (lowerInput.includes('update') || lowerInput.includes('edit') || lowerInput.includes('revise')) {
+      const idMatch = input.match(/[a-f0-9-]{36}/i);
+      if (!idMatch) {
+        return {
+          response: `I can update it for you, ${greeting}, but I need the memory ID.\n\n💡 Tip: Run "list" to get IDs, then say: "update <id> --content=..."`,
+          mainAnswer: `I can update it for you, ${greeting}, but I need the memory ID.`
+        };
+      }
+
+      const normalized = input
+        .replace(idMatch[0], '')
+        .replace(/^(update|edit|revise)\s+/i, '')
+        .trim();
+
+      if (!normalized) {
+        return {
+          response: `Got the ID. What should I change in that memory?`,
+          mainAnswer: `Got the ID. What should I change in that memory?`
+        };
+      }
+
+      return {
+        response: `✏️ Updating that memory now...`,
+        mainAnswer: `✏️ Updating that memory now...`,
+        action: {
+          type: 'update',
+          params: {
+            id: idMatch[0],
+            content: normalized
+          }
+        }
+      };
+    }
+
     if (lowerInput.includes('search') || lowerInput.includes('find') || lowerInput.includes('what do i know') || lowerInput.includes('look for') || lowerInput.includes('where is')) {
       // Extract search query
       const query = input.replace(/^(search|find|look for|where is|what do i know about)\s+/i, '').replace(/\?$/, '');
@@ -647,53 +770,49 @@ Remember: You are LZero - be helpful, conversational, and make the experience fe
     // Help patterns
     if (lowerInput.includes('help') || lowerInput === '?' || lowerInput.includes('what can you do')) {
       return {
-        response: `Hey ${greeting}! 🌪️ I'm LZero, your universal work orchestrator. Here's what I can do:
+        response: `Hey ${greeting}! 🌪️ I'm LZero, your context-aware memory assistant. Here's what I can do:
 
 ✨ **Memory & Knowledge**
    "Remember that API key is xyz123"
+   "Update memory <id> with new content"
    "What do I know about TypeScript?"
    "Show my memories"
+   "Search project docs --type=project"
 
-🎯 **Campaigns & Marketing**
-   "Create a viral TikTok campaign"
-   "Plan a product launch campaign"
+🛠️ **Prompt Optimization**
+   "Please refine this prompt: ..."
 
-📝 **Content Creation**
-   "Create content strategy"
-   "Plan my content calendar"
-
-📈 **Analytics & Trends**
-   "Analyze trending hashtags"
-   "Show me current trends"
-
-🛠️ **Development**
-   "Debug this issue"
-   "Plan testing strategy"
+⚡ **Optional L0 Orchestration**
+   "Create a campaign plan"
+   "Analyze trends"
+   "Build content workflow"
 
 💡 **Pro Tips:**
    • Just talk naturally - I understand intent!
-   • Powered by VortexAI L0 for universal orchestration
+   • Powered by memory-client actions first
    • Your memories make me context-aware`,
-        mainAnswer: `I'm LZero, your universal work orchestrator!`
+        mainAnswer: `I'm LZero, your context-aware memory assistant!`
       };
     }
 
     // Route to VortexAI L0 for broader orchestration (campaigns, content, trends, etc.)
-    try {
-      const l0Response = await this.l0Orchestrator.query(input);
+    if (this.shouldUseL0(lowerInput) && this.l0Orchestrator) {
+      try {
+        const l0Response = await this.l0Orchestrator.query(input);
 
-      // If L0 handled it with a meaningful response (not general fallback), use it
-      if (l0Response && l0Response.type !== 'help' && l0Response.message) {
-        return this.convertL0Response(l0Response, greeting);
+        // If L0 handled it with a meaningful response (not general fallback), use it
+        if (l0Response && l0Response.type !== 'help' && l0Response.message) {
+          return this.convertL0Response(l0Response, greeting);
+        }
+      } catch (error) {
+        // L0 failed, continue to conversational fallback
       }
-    } catch (error) {
-      // L0 failed, continue to conversational fallback
     }
 
     // Conversational responses for truly unknown input
     const conversationalResponses = [
-      `Hmm, I'm not quite sure what you mean, ${greeting}. Could you rephrase that?\n\n💡 I can help you: save information, search memories, orchestrate campaigns, or analyze trends.`,
-      `I want to help, ${greeting}, but I'm not sure how to handle that request.\n\nTry saying things like:\n• "Remember that..."\n• "Search for..."\n• "Create a viral campaign"`,
+      `Hmm, I'm not quite sure what you mean, ${greeting}. Could you rephrase that?\n\n💡 I can help you save information, update memories, search memories, and list your knowledge.`,
+      `I want to help, ${greeting}, but I'm not sure how to handle that request.\n\nTry saying things like:\n• "Remember that..."\n• "Update memory <id> ..."\n• "Search for..."`,
       `That's interesting, ${greeting}! But I'm not sure how to act on it.\n\n🤔 Did you want me to save this as a memory? Just say "remember that" followed by what you want to save.`,
     ];
 
@@ -751,6 +870,14 @@ Remember: You are LZero - be helpful, conversational, and make the experience fe
             tags: action.params.tags || []
           });
 
+        case 'update': {
+          const { id, ...updates } = action.params;
+          if (!id) {
+            return { error: 'Missing memory id for update action.' };
+          }
+          return await this.client.updateMemory(id, updates);
+        }
+
         case 'search':
           const searchResult = await this.client.searchMemories({
             query: action.params.query || '',
@@ -799,7 +926,7 @@ Remember: You are LZero - be helpful, conversational, and make the experience fe
       }
     } catch (error) {
       // Return error object instead of throwing - keeps REPL alive
-      const errorMessage = (error instanceof Error && error.message) ? error.message : String(error);
+      const errorMessage = this.formatError(error);
 
       // Provide helpful context based on error type
       if (errorMessage.includes('401') || errorMessage.includes('Unauthorized')) {
@@ -863,7 +990,7 @@ Format your response as JSON with:
             'Authorization': `Bearer ${this.openaiApiKey}`
           },
           body: JSON.stringify({
-            model: this.model,
+            model: this.resolveOpenAIModel(),
             messages: [
               { role: 'system', content: 'You are an expert at optimizing AI prompts. Always respond with valid JSON.' },
               { role: 'user', content: optimizationPrompt }
@@ -905,7 +1032,7 @@ Format your response as JSON with:
       }
     } catch (error) {
       return {
-        error: error instanceof Error ? error.message : 'Failed to optimize prompt'
+        error: this.formatError(error) || 'Failed to optimize prompt'
       };
     }
   }
