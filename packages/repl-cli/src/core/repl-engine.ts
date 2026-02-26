@@ -18,6 +18,16 @@ export class ReplEngine {
   private sigintHandler?: () => void; // Track SIGINT handler for cleanup
   private errorHandlersInstalled: boolean = false; // Track global error handlers
 
+  private formatError(error: unknown): string {
+    if (error instanceof Error && error.message) return error.message;
+    if (typeof error === 'string') return error;
+    try {
+      return JSON.stringify(error);
+    } catch {
+      return String(error);
+    }
+  }
+
   constructor(private config: ReplConfig) {
     this.rl = readline.createInterface({
       input: process.stdin,
@@ -39,6 +49,10 @@ export class ReplEngine {
       authToken: config.authToken,
       openaiApiKey: config.openaiApiKey,
       model: config.openaiModel,
+      aiRouterUrl: config.aiRouterUrl,
+      aiRouterAuthToken: config.aiRouterAuthToken || config.authToken,
+      aiRouterApiKey: config.aiRouterApiKey,
+      l0: config.l0,
       userContext: config.userContext
     });
 
@@ -48,6 +62,7 @@ export class ReplEngine {
   private registerCommands() {
     // Memory commands
     this.registry.register('create', (args, ctx) => this.memoryCommands.create(args, ctx));
+    this.registry.register('update', (args, ctx) => this.memoryCommands.update(args, ctx), ['edit']);
     this.registry.register('search', (args, ctx) => this.memoryCommands.search(args, ctx));
     this.registry.register('list', (args, ctx) => this.memoryCommands.list(args, ctx));
     this.registry.register('get', (args, ctx) => this.memoryCommands.get(args, ctx));
@@ -124,22 +139,42 @@ export class ReplEngine {
 
     // Wrap readline handler with proper error handling to prevent crashes
     this.rl.on('line', async (line) => {
+      const lineTrimmed = line.trim();
+      if (!lineTrimmed) {
+        if (this.running) this.rl.prompt();
+        return;
+      }
+      
       try {
-        await this.handleCommand(line.trim());
+        await this.handleCommand(lineTrimmed);
       } catch (error) {
         // Catch any unhandled errors and keep the REPL alive
-        console.error(chalk.red('\n⚠️  Unexpected error:'), error instanceof Error && error.message ? error.message : String(error));
+        console.error(chalk.red('\n⚠️  Unexpected error:'), this.formatError(error));
         console.log(chalk.gray('The REPL is still running. Try again or type "help" for assistance.\n'));
       }
-      if (this.running) this.rl.prompt();
+      
+      // Always re-prompt if still running - this ensures the REPL stays alive
+      if (this.running) {
+        try {
+          this.rl.prompt();
+        } catch (promptError) {
+          // If prompt fails, stdin might be closed - try to recover
+          console.log(chalk.yellow('\n⚠️  Input stream issue, attempting to recover...'));
+          // Don't exit - let the user try again
+        }
+      }
     });
 
     this.rl.on('close', () => {
-      // Only exit if intentionally closed, not from errors
-      if (this.running) {
+      // Only exit if explicitly stopped via stop() method
+      // Don't exit on stdin close (e.g., when using pipes or Ctrl+D)
+      // The calling code will handle re-prompting if needed
+      if (!this.running) {
         console.log(chalk.yellow('\n👋 Goodbye!'));
         process.exit(0);
       }
+      // If running is still true but stdin closed, just re-create the interface
+      // This handles edge cases like terminal disconnect
     });
 
     // Handle input errors gracefully (e.g., pipe closed)
@@ -179,7 +214,7 @@ export class ReplEngine {
 
     // Handle unhandled promise rejections without crashing
     process.on('unhandledRejection', (reason) => {
-      const message = reason instanceof Error ? reason.message : String(reason);
+      const message = this.formatError(reason);
       console.error(chalk.red('\n⚠️  Unhandled promise rejection:'), message);
       console.log(chalk.gray('The REPL recovered from an error. You can continue.\n'));
       if (this.running) this.rl.prompt();
@@ -207,7 +242,7 @@ export class ReplEngine {
         await this.routeCommand(firstWord, args);
       }
     } catch (error) {
-      console.error(chalk.red('Error:'), error instanceof Error && error.message ? error.message : String(error));
+      console.error(chalk.red('Error:'), this.formatError(error));
     }
   }
 
@@ -217,7 +252,7 @@ export class ReplEngine {
       response = await this.orchestrator.processNaturalLanguage(input);
     } catch (error) {
       // If orchestrator fails completely, provide a helpful fallback
-      console.error(chalk.red('\n⚠️  Could not process your request:'), error instanceof Error && error.message ? error.message : String(error));
+      console.error(chalk.red('\n⚠️  Could not process your request:'), this.formatError(error));
       console.log(chalk.cyan('\n💡 LZero: ') + chalk.white("I'm having trouble connecting to my brain right now. Let me try to help anyway..."));
       console.log(chalk.gray('\nYou can try:'));
       console.log(chalk.gray('  • Using direct commands: create, search, list, get, delete'));
@@ -350,7 +385,13 @@ export class ReplEngine {
             }
           }
         } else if (result?.error) {
-          console.log(chalk.red(`Error: ${result.error}`));
+          const errorText =
+            typeof result.error === 'string'
+              ? result.error
+              : (result.error && typeof result.error.message === 'string')
+                ? result.error.message
+                : JSON.stringify(result.error);
+          console.log(chalk.red(`Error: ${errorText}`));
         }
       }
       
@@ -367,7 +408,7 @@ export class ReplEngine {
       }
     } catch (error) {
       // Catch action execution errors but keep REPL alive
-      console.error(chalk.red('\n⚠️  Error executing action:'), error instanceof Error && error.message ? error.message : String(error));
+      console.error(chalk.red('\n⚠️  Error executing action:'), this.formatError(error));
       console.log(chalk.cyan('💡 LZero: ') + chalk.gray("Something went wrong, but I'm still here! Try rephrasing or use a direct command.\n"));
     }
   }
@@ -414,8 +455,9 @@ export class ReplEngine {
 
     console.log(chalk.yellow('\n⚙️  Direct Commands:'));
     console.log(chalk.white('  Memory Operations:'));
-    console.log(chalk.gray('    create <title> <content>  - Create a memory'));
-    console.log(chalk.gray('    search <query>           - Search memories'));
+    console.log(chalk.gray('    create <title> <content>                - Create a memory'));
+    console.log(chalk.gray('    update <id> [--content=...] [--type=...] - Update a memory'));
+    console.log(chalk.gray('    search <query> [--type=<type>]          - Search memories'));
     console.log(chalk.gray('    list [limit]            - List recent memories'));
     console.log(chalk.gray('    get <id>                - Get a specific memory'));
     console.log(chalk.gray('    delete <id>             - Delete a memory'));
@@ -430,7 +472,7 @@ export class ReplEngine {
     console.log(chalk.gray('    exit, quit, q           - Exit REPL'));
 
     console.log(chalk.yellow('\n💡 Tips:'));
-    console.log(chalk.gray('  • Natural language works best with OpenAI API key configured'));
+    console.log(chalk.gray('  • Natural language uses Onasis AI Router by default (OpenAI key optional)'));
     console.log(chalk.gray('  • Use "nl off" to disable NL mode and use commands only'));
     console.log(chalk.gray('  • Use "reset" to clear conversation context'));
     console.log(chalk.cyan('\n━'.repeat(50) + '\n'));

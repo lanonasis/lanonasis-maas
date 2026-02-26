@@ -18,6 +18,9 @@
     "paths": {
       "@lanonasis/memory-client": [
         "../memory-client/src"
+      ],
+      "@lanonasis/oauth-client": [
+        "./node_modules/@lanonasis/oauth-client/dist/index.d.ts"
       ]
     },
     "declaration": true,

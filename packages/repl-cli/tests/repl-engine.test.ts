@@ -30,6 +30,7 @@ describe('ReplEngine', () => {
     const commands = engine['registry'].getCommands();
     expect(commands.length).toBeGreaterThan(0);
     expect(commands).toContain('create');
+    expect(commands).toContain('update');
     expect(commands).toContain('search');
     expect(commands).toContain('help');
     expect(commands).toContain('exit');
@@ -55,6 +56,25 @@ describe('ReplEngine', () => {
     expect(engine['orchestrator']['userContext']).toEqual({
       name: 'Test User',
       projects: ['project1', 'project2']
+    });
+  });
+
+  it('should initialize orchestrator with l0 config', () => {
+    const l0Config = {
+      ...config,
+      l0: {
+        enabled: true,
+        enableCampaigns: false,
+        enableTrends: true,
+        enableContentCreation: false
+      }
+    };
+    const engine = new ReplEngine(l0Config);
+    expect(engine['orchestrator']['l0Config']).toEqual({
+      enabled: true,
+      enableCampaigns: false,
+      enableTrends: true,
+      enableContentCreation: false
     });
   });
 });

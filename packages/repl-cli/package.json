@@ -1,6 +1,6 @@
 {
   "name": "@lanonasis/repl-cli",
-  "version": "0.9.1",
+  "version": "0.9.3",
   "type": "module",
   "description": "Intelligent REPL for LanOnasis Memory Service - Natural language interactive assistant with AI orchestration",
   "main": "dist/index.js",
@@ -57,7 +57,7 @@
   "dependencies": {
     "@lanonasis/memory-client": "^2.2.0",
     "@lanonasis/oauth-client": "^2.0.0",
-    "vortexai-l0": "file:../../../vortexai-l0",
+    "vortexai-l0": "^1.2.2",
     "@modelcontextprotocol/sdk": "^1.25.3",
     "chalk": "^5.5.0",
     "commander": "^12.1.0",

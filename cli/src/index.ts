@@ -104,7 +104,14 @@ program
                      actionCommand.parent?.name?.() === 'mcp-server';
     const isConfigFlow = actionCommand.name() === 'config' ||
       actionCommand.parent?.name?.() === 'config';
-    if (!forceDirectApi && !isMcpFlow && !isConfigFlow && !['init', 'auth', 'login', 'health', 'status'].includes(actionCommand.name())) {
+    // Memory, topic, org, and key commands use the direct REST API — skip MCP auto-connect
+    const isDirectApiFlow = actionCommand.name() === 'memory' ||
+      actionCommand.parent?.name?.() === 'memory' ||
+      actionCommand.name() === 'topic' ||
+      actionCommand.parent?.name?.() === 'topic' ||
+      actionCommand.name() === 'org' ||
+      actionCommand.parent?.name?.() === 'org';
+    if (!forceDirectApi && !isMcpFlow && !isConfigFlow && !isDirectApiFlow && !['init', 'auth', 'login', 'health', 'status'].includes(actionCommand.name())) {
       try {
         const client = getMCPClient();
         if (!client.isConnectedToServer()) {

@@ -2,6 +2,7 @@ import {
   type MemoryClient,
   type MemoryEntry,
   type MemorySearchResult,
+  type UpdateMemoryRequest,
   createMemoryClient
 } from '@lanonasis/memory-client';
 import chalk from 'chalk';
@@ -17,7 +18,15 @@ const VALID_MEMORY_TYPES = [
   'workflow'
 ] as const;
 
+const VALID_MEMORY_STATUSES = [
+  'active',
+  'archived',
+  'draft',
+  'deleted'
+] as const;
+
 type MemoryType = (typeof VALID_MEMORY_TYPES)[number];
+type MemoryStatus = (typeof VALID_MEMORY_STATUSES)[number];
 
 export class MemoryCommands {
   private client: MemoryClient | null = null;
@@ -104,11 +113,107 @@ export class MemoryCommands {
       spinner.fail(chalk.red(`Failed: ${error instanceof Error && error.message ? error.message : String(error)}`));
     }
   }
+
+  async update(args: string[], context: CommandContext) {
+    const id = args[0];
+    if (!id) {
+      console.log(chalk.yellow('Usage: update <id> [--title=...] [--content=...] [--type=<type>] [--status=<status>] [--tags=tag1,tag2]'));
+      return;
+    }
+
+    const updates: UpdateMemoryRequest = {};
+    const positionalContent: string[] = [];
+
+    for (let i = 1; i < args.length; i++) {
+      const arg = args[i];
+      if (arg.startsWith('--title=')) {
+        updates.title = arg.substring(8).trim();
+      } else if (arg.startsWith('--content=')) {
+        updates.content = arg.substring(10).trim();
+      } else if (arg.startsWith('--type=')) {
+        const candidate = arg.substring(7) as MemoryType;
+        if ((VALID_MEMORY_TYPES as readonly string[]).includes(candidate)) {
+          updates.memory_type = candidate;
+        } else {
+          console.log(
+            chalk.yellow(
+              `Warning: Invalid memory type "${candidate}". Ignoring.\n` +
+              `Valid types: ${VALID_MEMORY_TYPES.join(', ')}`
+            )
+          );
+        }
+      } else if (arg.startsWith('--status=')) {
+        const candidate = arg.substring(9) as MemoryStatus;
+        if ((VALID_MEMORY_STATUSES as readonly string[]).includes(candidate)) {
+          updates.status = candidate;
+        } else {
+          console.log(
+            chalk.yellow(
+              `Warning: Invalid status "${candidate}". Ignoring.\n` +
+              `Valid statuses: ${VALID_MEMORY_STATUSES.join(', ')}`
+            )
+          );
+        }
+      } else if (arg.startsWith('--tags=')) {
+        updates.tags = arg.substring(7).split(',').map(t => t.trim()).filter(Boolean);
+      } else {
+        positionalContent.push(arg);
+      }
+    }
+
+    // Convenience path: treat trailing non-flag args as content.
+    if (!updates.content && positionalContent.length > 0) {
+      updates.content = positionalContent.join(' ');
+    }
+
+    if (Object.keys(updates).length === 0) {
+      console.log(chalk.yellow('Nothing to update. Provide at least one update field.'));
+      console.log(chalk.gray('Example: update <id> --content=New notes --type=project'));
+      return;
+    }
+
+    const spinner = ora('Updating memory...').start();
+    try {
+      const client = this.getClient(context);
+      const result = await client.updateMemory(id, updates);
+      if (result.error) {
+        spinner.fail(chalk.red(`Update failed: ${result.error}`));
+        return;
+      }
+      if (result.data) {
+        spinner.succeed(chalk.green(`Memory updated: ${result.data.id}`));
+        context.lastResult = result.data;
+      }
+    } catch (error) {
+      spinner.fail(chalk.red(`Update failed: ${error instanceof Error && error.message ? error.message : String(error)}`));
+    }
+  }
   
   async search(args: string[], context: CommandContext) {
-    const query = args.join(' ');
+    let memoryTypeFilter: MemoryType | undefined;
+    const queryParts: string[] = [];
+
+    for (const arg of args) {
+      if (arg.startsWith('--type=')) {
+        const candidate = arg.substring(7) as MemoryType;
+        if ((VALID_MEMORY_TYPES as readonly string[]).includes(candidate)) {
+          memoryTypeFilter = candidate;
+        } else {
+          console.log(
+            chalk.yellow(
+              `Warning: Invalid memory type "${candidate}". Ignoring type filter.\n` +
+              `Valid types: ${VALID_MEMORY_TYPES.join(', ')}`
+            )
+          );
+        }
+      } else {
+        queryParts.push(arg);
+      }
+    }
+
+    const query = queryParts.join(' ');
     if (!query) {
-      console.log(chalk.yellow('Usage: search <query>'));
+      console.log(chalk.yellow('Usage: search <query> [--type=<type>]'));
       return;
     }
     
@@ -117,6 +222,7 @@ export class MemoryCommands {
       const client = this.getClient(context);
       const result = await client.searchMemories({
         query,
+        memory_types: memoryTypeFilter ? [memoryTypeFilter] : undefined,
         status: 'active',
         limit: 20,
         threshold: 0.7

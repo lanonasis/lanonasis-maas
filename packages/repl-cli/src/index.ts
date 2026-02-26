@@ -40,15 +40,16 @@ try {
 program
   .name('onasis-repl')
   .description('LanOnasis Interactive Memory Assistant')
-  .version(version);
+  .version(version, '-v, --version', 'output the version number');
 
 program
   .command('start', { isDefault: true })
   .description('Start the REPL session')
   .option('--mcp', 'Use local MCP mode', false)
   .option('--api <url>', 'Override API URL')
+  .option('--ai-router <url>', 'Override AI router URL')
   .option('--token <token>', 'Authentication token')
-  .option('--model <model>', 'OpenAI model to use (e.g., gpt-4-turbo-preview, gpt-4, gpt-3.5-turbo)')
+  .option('--model <model>', 'Model label/override (default: L-Zero)')
   .action(async (options) => {
     // Try to get stored token if not provided
     let authToken = options.token;
@@ -59,6 +60,7 @@ program
     const config = await loadConfig({
       useMCP: options.mcp || false,
       apiUrl: options.api,
+      aiRouterUrl: options.aiRouter,
       authToken: authToken || undefined,
       openaiModel: options.model
     });
@@ -71,6 +73,8 @@ program
   .command('login')
   .description('Authenticate with Lan Onasis using OAuth 2.1')
   .option('--auth-url <url>', 'Override auth server URL', 'https://auth.lanonasis.com')
+  .option('--callback-port <port>', 'OAuth callback port', '8899')
+  .option('--no-open', 'Do not auto-open browser')
   .option('--lonasis', 'Login with Lonasis (Supabase OAuth via auth.connectionpoint.tech)')
   .option('--otp', 'Passwordless login with OTP (magic link)')
   .action(async (options) => {
@@ -172,6 +176,8 @@ program
         authBaseUrl,
         clientId,
         scope,
+        callbackPort: Number(options.callbackPort) || 8899,
+        openBrowser: options.open !== false,
       });
 
       // Save credentials
@@ -190,7 +196,13 @@ program
       console.log(chalk.gray(`Scope: ${tokens.scope || 'default'}`));
       console.log(chalk.cyan('\nRun `onasis-repl start` to begin your session.\n'));
     } catch (error) {
-      console.error(chalk.red('Login failed:'), error instanceof Error ? error.message : error);
+      const message = error instanceof Error ? error.message : String(error);
+      console.error(chalk.red('Login failed:'), message);
+      if (message.includes('Error sending magic link email')) {
+        console.log(chalk.yellow('\nOTP delivery failed at auth backend.'));
+        console.log(chalk.gray('Verify SMTP/provider settings in auth service, then retry.'));
+        console.log(chalk.gray('As fallback, use: onasis-repl login --auth-url https://auth.lanonasis.com'));
+      }
       process.exit(1);
     }
   });
@@ -275,6 +287,7 @@ program
       authToken: config.authToken ? '***' + config.authToken.slice(-4) : undefined,
       vendorKey: config.vendorKey ? '***' + config.vendorKey.slice(-4) : undefined,
       openaiApiKey: config.openaiApiKey ? '***' + config.openaiApiKey.slice(-4) : undefined,
+      aiRouterAuthToken: config.aiRouterAuthToken ? '***' + config.aiRouterAuthToken.slice(-4) : undefined,
     };
     console.log(JSON.stringify(safeConfig, null, 2));
   });

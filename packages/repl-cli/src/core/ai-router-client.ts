@@ -69,7 +69,19 @@ export class AIRouterClient {
     };
 
     if (this.config.authToken) {
-      headers['Authorization'] = `Bearer ${this.config.authToken}`;
+      const token = this.config.authToken.trim();
+      // `lano_...` keys must be sent as X-API-Key, not Bearer.
+      // OAuth tokens (long JWT-like strings) should be sent as Bearer
+      if (token.startsWith('lano_')) {
+        headers['X-API-Key'] = token;
+      } else if (token.toLowerCase().startsWith('bearer ')) {
+        headers['Authorization'] = token;
+      } else if (token.includes('.') && token.length > 100) {
+        // Likely an OAuth JWT token - use Bearer
+        headers['Authorization'] = `Bearer ${token}`;
+      } else {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
     }
 
     if (request.use_case) {

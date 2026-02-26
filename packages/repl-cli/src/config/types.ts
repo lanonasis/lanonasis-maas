@@ -32,6 +32,7 @@ export interface ReplConfig {
   openaiModel?: string;
   aiRouterUrl?: string;
   aiRouterAuthToken?: string;
+  aiRouterApiKey?: string; // Dedicated API key for AI Router (lano_...)
   historyFile: string;
   maxHistorySize: number;
   // User profile and preferences

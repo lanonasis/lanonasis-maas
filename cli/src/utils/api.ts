@@ -416,27 +416,29 @@ export class APIClient {
         return remapped;
       }
 
-      // Memory CRUD/search endpoints should always use the API gateway path.
       const forceDirectApiRetry = (config as AxiosRequestConfig & { __forceDirectApiGatewayRetry?: boolean })
         .__forceDirectApiGatewayRetry === true;
-      const forceDirectApi = forceApiFromEnv || forceApiFromConfig || isMemoryEndpoint || forceDirectApiRetry;
+      // NOTE: isMemoryEndpoint is intentionally NOT in forceDirectApi.
+      // api.lanonasis.com is the vendor AI proxy, NOT the memory service.
+      // Memory operations must go to mcp.lanonasis.com.
+      const forceDirectApi = forceApiFromEnv || forceApiFromConfig || forceDirectApiRetry;
       const prefersTokenAuth = Boolean(token) && (authMethod === 'jwt' || authMethod === 'oauth' || authMethod === 'oauth2');
       const useVendorKeyAuth = Boolean(vendorKey) && !prefersTokenAuth;
 
       // Determine the correct API base URL:
       // - Auth endpoints -> auth.lanonasis.com
-      // - JWT auth (no vendor key) -> mcp.lanonasis.com (supports JWT tokens)
-      // - Vendor key auth -> api.lanonasis.com (requires vendor key)
+      // - Memory/MCP operations (JWT or vendor key) -> mcp.lanonasis.com (the memory service)
+      // - Other direct API calls -> api.lanonasis.com (vendor AI proxy)
       let apiBaseUrl: string;
-      const useMcpServer = !forceDirectApi && prefersTokenAuth && !useVendorKeyAuth;
+      const useMcpServer = !forceDirectApi && !isAuthEndpoint && (prefersTokenAuth || useVendorKeyAuth || isMemoryEndpoint);
 
       if (isAuthEndpoint) {
         apiBaseUrl = discoveredServices?.auth_base || 'https://auth.lanonasis.com';
       } else if (forceDirectApi) {
-        // Force direct REST API mode to bypass MCP routing for troubleshooting.
+        // Explicit force: direct to api.lanonasis.com for troubleshooting.
         apiBaseUrl = this.config.getApiUrl();
       } else if (useMcpServer) {
-        // JWT/OAuth tokens work with mcp.lanonasis.com
+        // Memory service lives at mcp.lanonasis.com — accepts JWT, OAuth, and vendor keys.
         apiBaseUrl = 'https://mcp.lanonasis.com/api/v1';
       } else {
         apiBaseUrl = this.config.getApiUrl();
@@ -455,9 +457,7 @@ export class APIClient {
       }
 
       // Enhanced Authentication Support
-      // Even in forced direct-API mode, prefer bearer token auth when available.
-      // This avoids accidentally sending an OAuth access token as X-API-Key (we store it
-      // in secure storage for MCP/WebSocket usage), which can cause 401s.
+      // In forced direct-API mode, prefer bearer token auth when available.
       const preferVendorKeyInDirectApiMode = forceDirectApi && Boolean(vendorKey) && !prefersTokenAuth;
       if (preferVendorKeyInDirectApiMode) {
         // Vendor key authentication (validated server-side)

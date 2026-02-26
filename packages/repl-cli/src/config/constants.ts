@@ -18,6 +18,7 @@ export const HISTORY_FILE = join(CONFIG_DIR, 'repl-history.txt');
 
 // Default API URL
 export const DEFAULT_API_URL = 'https://api.lanonasis.com';
+export const DEFAULT_AI_ROUTER_URL = 'https://ai.vortexcore.app';
 
 // Default OAuth settings
 export const DEFAULT_AUTH_URL = 'https://auth.lanonasis.com';
@@ -30,8 +31,8 @@ export const MCP_CONNECTION_TIMEOUT = 10000;
 export const MCP_TOOL_CALL_TIMEOUT = 30000;
 export const OAUTH_CALLBACK_TIMEOUT = 5 * 60 * 1000; // 5 minutes
 
-// OpenAI defaults
-export const DEFAULT_OPENAI_MODEL = 'gpt-4-turbo-preview';
+// Model defaults
+export const DEFAULT_OPENAI_MODEL = 'L-Zero';
 
 // History settings
 export const DEFAULT_MAX_HISTORY_SIZE = 1000;

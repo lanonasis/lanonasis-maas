@@ -957,7 +957,7 @@ async function handleCredentialsFlow(options: LoginOptions, config: CLIConfig): 
 
     // Store JWT token for API authentication
     await config.setToken(authToken);
-    await config.set('authMethod', 'jwt');
+    await config.setAndSave('authMethod', 'jwt');
 
     spinner.succeed('Login successful');
 

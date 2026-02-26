@@ -36,7 +36,8 @@ export class SystemCommands {
     console.log(chalk.gray('═'.repeat(40)));
     console.log(chalk.yellow('Memory Operations:'));
     console.log('  create <title> <content>  - Create a memory');
-    console.log('  search <query>           - Search memories');
+    console.log('  update <id> [options]    - Update a memory');
+    console.log('  search <query> [--type]  - Search memories');
     console.log('  list [limit]            - List recent memories');
     console.log('  get <id>                - Get a specific memory');
     console.log('  delete <id>             - Delete a memory');

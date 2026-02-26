@@ -670,15 +670,17 @@ export class CLIConfig {
         return !!this.config.manualEndpointOverrides;
     }
     /**
-     * Clears the in-memory auth cache and removes the `lastValidated` timestamp.
-     * Called after a definitive 401 from the memory API so that the next
-     * `isAuthenticated()` call performs a fresh server verification rather than
-     * returning a stale cached result.
+     * Clears the in-memory auth cache so that the next `isAuthenticated()` call
+     * performs a fresh server verification rather than returning a stale cached result.
+     *
+     * NOTE: `lastValidated` is intentionally NOT deleted here. Each auth path
+     * (vendor_key, token) already correctly rejects 401 responses without relying
+     * on `lastValidated`. Deleting it would destroy the offline grace period
+     * (7-day for vendor keys, 24-hour for JWT tokens), causing auth failures
+     * on transient network errors even when credentials are valid.
      */
     async invalidateAuthCache() {
         this.authCheckCache = null;
-        delete this.config.lastValidated;
-        await this.save().catch(() => { });
     }
     async clearManualEndpointOverrides() {
         delete this.config.manualEndpointOverrides;
@@ -1382,8 +1384,25 @@ export class CLIConfig {
             'wss://mcp.lanonasis.com/ws';
     }
     getMCPRestUrl() {
-        return this.config.discoveredServices?.mcp_base ||
-            'https://mcp.lanonasis.com/api/v1';
+        const configured = this.config.mcpServerUrl;
+        if (typeof configured === 'string' && configured.trim().length > 0) {
+            return configured.trim();
+        }
+        const discoveredMcpBase = this.config.discoveredServices?.mcp_base;
+        if (typeof discoveredMcpBase === 'string' && discoveredMcpBase.trim().length > 0) {
+            const normalizedMcpBase = discoveredMcpBase.trim().replace(/\/$/, '');
+            const normalizedMemoryBase = (this.config.discoveredServices?.memory_base || '')
+                .toString()
+                .trim()
+                .replace(/\/$/, '');
+            // Guard against service-discovery payloads that map MCP REST to the memory API host.
+            const pointsToMemoryBase = normalizedMemoryBase.length > 0 &&
+                normalizedMcpBase.replace(/\/api\/v1$/, '') === normalizedMemoryBase;
+            if (!pointsToMemoryBase) {
+                return normalizedMcpBase;
+            }
+        }
+        return 'https://mcp.lanonasis.com/api/v1';
     }
     getMCPSSEUrl() {
         return this.config.discoveredServices?.mcp_sse_base ||
