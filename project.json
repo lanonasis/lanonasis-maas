@@ -1,0 +1,10 @@
+{
+  "name": "lanonasis-maas",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "apps/lanonasis-maas/src",
+  "projectType": "application",
+  "tags": [
+    "scope:memory",
+    "type:service"
+  ]
+}
