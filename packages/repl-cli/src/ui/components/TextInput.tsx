@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Text, useInput } from 'ink';
 
 interface TextInputProps {
@@ -50,12 +50,14 @@ export const TextInput: React.FC<TextInputProps> = ({
     );
   }
 
-  // Simple display without cursor positioning for now
-  // Full cursor support would require more complex logic
+  const left = displayValue.slice(0, cursorOffset);
+  const right = displayValue.slice(cursorOffset);
+
   return (
     <Text color={focus ? 'white' : 'gray'}>
-      {displayValue}
+      {left}
       {focus && <Text color="green">█</Text>}
+      {right}
     </Text>
   );
 };

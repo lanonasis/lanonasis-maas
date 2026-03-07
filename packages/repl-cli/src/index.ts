@@ -22,6 +22,10 @@ import { quickHealthCheck } from './core/health-check.js';
 
 // Dynamic import for Ink dashboard (ESM compatibility)
 const renderDashboard = async (config: any) => {
+  if (!process.stdout.isTTY || !process.stdin.isTTY) {
+    throw new Error('Dashboard mode requires an interactive terminal (TTY).');
+  }
+
   const { render } = await import('ink');
   const { DashboardApp } = await import('./ui/DashboardApp.js');
   const React = await import('react');
