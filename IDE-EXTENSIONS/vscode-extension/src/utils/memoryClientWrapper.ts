@@ -5,16 +5,14 @@ import type {
   CLICapabilities
 } from '@lanonasis/memory-client/node';
 
-let nodeModule: any = null;
+type NodeMemoryModule = typeof import('@lanonasis/memory-client/node');
+let nodeModulePromise: Promise<NodeMemoryModule> | null = null;
 
-async function importNodeModule(): Promise<{
-  EnhancedMemoryClient: typeof EnhancedMemoryClient,
-  createNodeMemoryClient: (config: EnhancedMemoryClientConfig) => Promise<EnhancedMemoryClient>
-}> {
-  if (!nodeModule) {
-    nodeModule = await import('@lanonasis/memory-client/node');
+async function importNodeModule(): Promise<NodeMemoryModule> {
+  if (!nodeModulePromise) {
+    nodeModulePromise = import('@lanonasis/memory-client/node');
   }
-  return nodeModule;
+  return nodeModulePromise;
 }
 
 export async function createNodeMemoryClient(config: EnhancedMemoryClientConfig): Promise<EnhancedMemoryClient> {

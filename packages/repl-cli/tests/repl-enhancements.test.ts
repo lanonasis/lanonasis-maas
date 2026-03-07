@@ -135,6 +135,10 @@ describe('ReplEngine Enhancements - History, Completion, Multi-line', () => {
       expect(engine['isIncompleteInput']("create 'test' \"content\"")).toBe(false);
     });
 
+    it('should allow apostrophes in natural language input', () => {
+      expect(engine['isIncompleteInput']("what's in my memory")).toBe(false);
+    });
+
     it('should handle empty input', () => {
       expect(engine['isIncompleteInput']('')).toBe(false);
     });
