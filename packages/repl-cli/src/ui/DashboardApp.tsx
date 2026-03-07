@@ -16,7 +16,7 @@ interface Memory {
   tags?: string[];
   created_at?: string;
   updated_at?: string;
-  similarity?: number;
+  similarity_score?: number;
 }
 
 type View = 'list' | 'search' | 'detail' | 'help';
@@ -47,10 +47,19 @@ export const DashboardApp: React.FC<DashboardAppProps> = ({ config }) => {
     setConnectionStatus('connecting');
     try {
       const result = await client.listMemories({ limit: 50 });
+      if (result.error) {
+        setConnectionStatus('disconnected');
+        setError(typeof result.error === 'string' ? result.error : 'Failed to fetch memories');
+        return;
+      }
+
       if (result.data?.data) {
         setMemories(result.data.data);
         setConnectionStatus('connected');
         setError(null);
+      } else {
+        setConnectionStatus('disconnected');
+        setError('No data received from server');
       }
     } catch (err) {
       setConnectionStatus('disconnected');
@@ -115,14 +124,20 @@ export const DashboardApp: React.FC<DashboardAppProps> = ({ config }) => {
         limit: 20,
         threshold: 0.5
       });
-      
+
+      if (result.error) {
+        setError(typeof result.error === 'string' ? result.error : 'Search failed');
+        return;
+      }
+
       if (result.data?.results) {
         setMemories(result.data.results.map((r: any) => ({
           ...r,
-          similarity: r.similarity
+          similarity_score: r.similarity_score
         })));
         setSelectedIndex(0);
         setView('list');
+        setError(null);
       }
     } catch (err) {
       setError('Search failed');

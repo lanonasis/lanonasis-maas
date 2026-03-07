@@ -1,5 +1,5 @@
 import React from 'react';
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { render } from 'ink-testing-library';
 import { MemoryList } from '../src/ui/components/MemoryList';
 import { MemoryDetail } from '../src/ui/components/MemoryDetail';
@@ -65,7 +65,7 @@ describe('Dashboard Components', () => {
         content: 'This is the content of test memory 1',
         memory_type: 'context',
         tags: ['test', 'memory'],
-        similarity: 0.95,
+        similarity_score: 0.95,
       },
       {
         id: 'test-2',
@@ -73,7 +73,7 @@ describe('Dashboard Components', () => {
         content: 'This is the content of test memory 2',
         memory_type: 'project',
         tags: ['project'],
-        similarity: 0.85,
+        similarity_score: 0.85,
       },
     ];
 
@@ -196,7 +196,7 @@ describe('Dashboard Components', () => {
       );
       
       const frame = lastFrame();
-      expect(frame).toContain('test-uuid');
+      expect(frame).toContain('ID: test-uui...');
     });
 
     it('should show tags', () => {
@@ -228,6 +228,28 @@ describe('Dashboard Components', () => {
       expect(frame).toContain('Back');
       expect(frame).toContain('Edit');
       expect(frame).toContain('Delete');
+    });
+
+    it('should trigger detail shortcuts from keyboard input', () => {
+      const onBack = vi.fn();
+      const onEdit = vi.fn();
+      const onDelete = vi.fn();
+      const { stdin } = render(
+        <MemoryDetail
+          memory={mockMemory}
+          onBack={onBack}
+          onEdit={onEdit}
+          onDelete={onDelete}
+        />
+      );
+
+      stdin.write('e');
+      stdin.write('d');
+      stdin.write('q');
+
+      expect(onEdit).toHaveBeenCalledTimes(1);
+      expect(onDelete).toHaveBeenCalledTimes(1);
+      expect(onBack).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -274,6 +296,16 @@ describe('Dashboard Components', () => {
       expect(frame).toContain('ESC');
       expect(frame).toContain('q');
       expect(frame).toContain('close');
+    });
+
+    it('should close on keyboard shortcuts', () => {
+      const onClose = vi.fn();
+      const { stdin } = render(
+        <HelpOverlay onClose={onClose} />
+      );
+
+      stdin.write('q');
+      expect(onClose).toHaveBeenCalledTimes(1);
     });
   });
 });

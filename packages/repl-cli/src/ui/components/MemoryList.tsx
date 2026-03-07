@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { Box, Text, useInput } from 'ink';
 
 interface Memory {
@@ -8,7 +8,7 @@ interface Memory {
   memory_type: string;
   tags?: string[];
   created_at?: string;
-  similarity?: number;
+  similarity_score?: number;
 }
 
 interface MemoryListProps {
@@ -31,7 +31,7 @@ export const MemoryList: React.FC<MemoryListProps> = ({
       onSelect(Math.max(0, selectedIndex - 1));
     } else if (key.downArrow) {
       onSelect(Math.min(memories.length - 1, selectedIndex + 1));
-    } else if (key.return) {
+    } else if (key.return && view !== 'search') {
       if (memories[selectedIndex]) {
         onSelectMemory(memories[selectedIndex]);
       }
@@ -79,8 +79,8 @@ export const MemoryList: React.FC<MemoryListProps> = ({
       <Box flexDirection="column" flexGrow={1} overflow="hidden">
         {memories.slice(0, 20).map((memory, index) => {
           const isSelected = index === selectedIndex;
-          const relevance = memory.similarity 
-            ? Math.round(memory.similarity * 100) 
+          const relevance = typeof memory.similarity_score === 'number'
+            ? Math.round(memory.similarity_score * 100)
             : null;
 
           return (
@@ -103,7 +103,7 @@ export const MemoryList: React.FC<MemoryListProps> = ({
               
               <Box flexDirection="row" gap={1} marginLeft={2}>
                 <Text 
-                  color={isSelected ? 'gray' : 'dim'} 
+                  color={isSelected ? 'gray' : 'white'} 
                   dimColor={!isSelected}
                   wrap="truncate-end"
                 >
