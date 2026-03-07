@@ -19,6 +19,15 @@ import {
   loadCredentials
 } from './auth/credentials.js';
 
+// Dynamic import for Ink dashboard (ESM compatibility)
+const renderDashboard = async (config: any) => {
+  const { render } = await import('ink');
+  const { DashboardApp } = await import('./ui/DashboardApp.js');
+  const React = await import('react');
+  
+  render(React.createElement(DashboardApp, { config }));
+};
+
 const program = new Command();
 
 import { readFileSync } from 'fs';
@@ -50,6 +59,8 @@ program
   .option('--ai-router <url>', 'Override AI router URL')
   .option('--token <token>', 'Authentication token')
   .option('--model <model>', 'Model label/override (default: L-Zero)')
+  .option('--dashboard', 'Use the interactive dashboard UI (Ink-based)', false)
+  .option('--classic', 'Use the classic REPL mode (default if no flags)', false)
   .action(async (options) => {
     // Try to get stored token if not provided
     let authToken = options.token;
@@ -65,8 +76,15 @@ program
       openaiModel: options.model
     });
 
-    const repl = new ReplEngine(config);
-    await repl.start();
+    // Use dashboard if explicitly requested or if terminal supports it
+    if (options.dashboard) {
+      console.log(chalk.cyan('🎨 Starting LZero Dashboard...'));
+      await renderDashboard(config);
+    } else {
+      // Classic REPL mode
+      const repl = new ReplEngine(config);
+      await repl.start();
+    }
   });
 
 program
@@ -273,6 +291,31 @@ program
     }
 
     console.log('');
+  });
+
+program
+  .command('dashboard')
+  .alias('dash')
+  .description('Launch the interactive dashboard UI')
+  .option('--mcp', 'Use local MCP mode', false)
+  .option('--api <url>', 'Override API URL')
+  .option('--token <token>', 'Authentication token')
+  .action(async (options) => {
+    let authToken = options.token;
+    if (!authToken) {
+      authToken = await getValidToken(refreshAccessToken);
+    }
+
+    const config = await loadConfig({
+      useMCP: options.mcp || false,
+      apiUrl: options.api,
+      authToken: authToken || undefined,
+    });
+
+    console.log(chalk.cyan('🎨 Starting LZero Dashboard...'));
+    console.log(chalk.gray('Press ? for help, q to quit\n'));
+    
+    await renderDashboard(config);
   });
 
 program
