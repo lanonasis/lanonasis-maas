@@ -24,6 +24,63 @@ const registerSchema = z.object({
   organization_name: z.string().optional()
 });
 
+function defaultWorkspaceName(email: string): string {
+  const localPart = email.split('@')[0] || 'user';
+  return `${localPart}'s Workspace`;
+}
+
+async function ensureOrganizationForUser(
+  userId: string,
+  email: string,
+  organizationName?: string
+): Promise<string> {
+  const { data: existingUser, error: userError } = await supabase
+    .from('users')
+    .select('organization_id')
+    .eq('id', userId)
+    .single();
+
+  if (userError || !existingUser) {
+    throw new Error('Failed to resolve newly registered user');
+  }
+
+  if (existingUser.organization_id) {
+    return existingUser.organization_id;
+  }
+
+  const workspaceName = organizationName?.trim() || defaultWorkspaceName(email);
+  const { data: orgData, error: orgError } = await supabase
+    .from('organizations')
+    .insert({
+      name: workspaceName,
+      owner_id: userId,
+      plan: 'free',
+      created_at: new Date().toISOString()
+    })
+    .select()
+    .single();
+
+  if (orgError || !orgData) {
+    throw new Error('Failed to create organization for user');
+  }
+
+  const { error: updateError } = await supabase
+    .from('users')
+    .update({ organization_id: orgData.id })
+    .eq('id', userId);
+
+  if (updateError) {
+    await supabase
+      .from('organizations')
+      .delete()
+      .eq('id', orgData.id);
+
+    throw new Error('Failed to associate user with organization');
+  }
+
+  return orgData.id;
+}
+
 /**
  * @swagger
  * /auth/login:
@@ -88,6 +145,18 @@ router.post('/login', async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
+    if (!userData.organization_id) {
+      logger.warn('Login blocked because user has no organization assignment', {
+        userId: data.user.id,
+        email: data.user.email
+      });
+      res.status(403).json({
+        error: 'organization_required',
+        message: 'User account is missing organization assignment'
+      });
+      return;
+    }
+
     // Create JWT token for API access
     const token = jwt.sign(
       {
@@ -110,7 +179,7 @@ router.post('/login', async (req: Request, res: Response): Promise<void> => {
       user: {
         id: data.user.id,
         email: data.user.email,
-        organization_id: userData?.organization_id || null,
+        organization_id: userData.organization_id,
         role: userData?.role || 'user',
         plan: userData?.plan || 'free',
         created_at: data.user.created_at,
@@ -196,47 +265,24 @@ router.post('/register', async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    // Create organization if name provided
-    if (organization_name) {
-      const { data: orgData, error: orgError } = await supabase
-        .from('organizations')
-        .insert({
-          name: organization_name,
-          owner_id: data.user.id,
-          plan: 'free',
-          created_at: new Date().toISOString()
-        })
-        .select()
-        .single();
-
-      if (!orgError && orgData) {
-        // Update user with organization_id
-        const { error: updateError } = await supabase
-          .from('users')
-          .update({ organization_id: orgData.id })
-          .eq('id', data.user.id);
-
-        if (updateError) {
-          logger.error('Failed to update user with organization_id:', {
-            userId: data.user.id,
-            organizationId: orgData.id,
-            error: updateError.message,
-            code: updateError.code
-          });
-          
-          // Try to clean up the created organization
-          await supabase
-            .from('organizations')
-            .delete()
-            .eq('id', orgData.id);
-          
-          res.status(500).json({
-            error: 'Registration failed',
-            message: 'Failed to associate user with organization'
-          });
-          return;
-        }
-      }
+    let organizationId: string;
+    try {
+      organizationId = await ensureOrganizationForUser(
+        data.user.id,
+        data.user.email,
+        organization_name
+      );
+    } catch (organizationError) {
+      logger.error('Failed to ensure organization for registered user', {
+        userId: data.user.id,
+        email: data.user.email,
+        error: organizationError instanceof Error ? organizationError.message : organizationError
+      });
+      res.status(500).json({
+        error: 'Registration failed',
+        message: 'Failed to associate user with organization'
+      });
+      return;
     }
 
     // Create JWT token
@@ -244,6 +290,7 @@ router.post('/register', async (req: Request, res: Response): Promise<void> => {
       {
         userId: data.user.id,
         email: data.user.email,
+        organizationId,
         role: 'user',
         plan: 'free'
       },
@@ -260,7 +307,7 @@ router.post('/register', async (req: Request, res: Response): Promise<void> => {
       user: {
         id: data.user.id,
         email: data.user.email,
-        organization_id: null,
+        organization_id: organizationId,
         role: 'user',
         plan: 'free',
         created_at: data.user.created_at,
