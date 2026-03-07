@@ -18,6 +18,7 @@ import {
   getValidToken,
   loadCredentials
 } from './auth/credentials.js';
+import { quickHealthCheck } from './core/health-check.js';
 
 // Dynamic import for Ink dashboard (ESM compatibility)
 const renderDashboard = async (config: any) => {
@@ -316,6 +317,63 @@ program
     console.log(chalk.gray('Press ? for help, q to quit\n'));
     
     await renderDashboard(config);
+  });
+
+program
+  .command('health')
+  .alias('status')
+  .description('Check AI endpoint health and fallback status')
+  .option('--watch', 'Continuously monitor health', false)
+  .option('--interval <ms>', 'Check interval in ms (default: 30000)', '30000')
+  .action(async (options) => {
+    const config = await loadConfig({});
+    
+    console.log(chalk.cyan('\n🔍 LZero AI Endpoint Health Check\n'));
+    
+    const results = await quickHealthCheck({
+      aiRouterUrl: config.aiRouterUrl,
+      openaiApiKey: config.openaiApiKey,
+      apiUrl: config.apiUrl,
+    });
+
+    // Display results
+    const { default: AIEndpointHealthCheck } = await import('./core/health-check.js');
+    const checker = new AIEndpointHealthCheck([]);
+    console.log(checker.formatResults(results));
+
+    // Show best endpoint
+    const best = results.find(r => r.status === 'healthy' || r.status === 'degraded');
+    if (best) {
+      console.log(chalk.green(`✓ Active endpoint: ${best.endpoint}`));
+      if (best.fallbackAvailable) {
+        console.log(chalk.gray('  Fallback available if needed\n'));
+      }
+    } else {
+      console.log(chalk.yellow('⚠ Using local fallback processor\n'));
+    }
+
+    // Continuous monitoring mode
+    if (options.watch) {
+      console.log(chalk.cyan(`\n👁 Watching... (interval: ${options.interval}ms)`));
+      console.log(chalk.gray('Press Ctrl+C to stop\n'));
+
+      const interval = setInterval(async () => {
+        const newResults = await quickHealthCheck({
+          aiRouterUrl: config.aiRouterUrl,
+          openaiApiKey: config.openaiApiKey,
+          apiUrl: config.apiUrl,
+        });
+        console.clear();
+        console.log(checker.formatResults(newResults));
+        console.log(chalk.gray(`\nLast updated: ${new Date().toLocaleTimeString()}`));
+      }, parseInt(options.interval));
+
+      process.on('SIGINT', () => {
+        clearInterval(interval);
+        console.log(chalk.yellow('\n\n👋 Health check stopped\n'));
+        process.exit(0);
+      });
+    }
   });
 
 program
