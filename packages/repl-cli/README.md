@@ -7,9 +7,10 @@ Intelligent REPL (Read-Eval-Print Loop) for LanOnasis Memory Service - Natural l
 
 ## ✨ Features
 
+- 🎨 **Interactive Dashboard** - Beautiful Ink-based TUI with keyboard navigation
 - 🧠 **Natural Language Interface** - Talk naturally to your memory system
 - 🤖 **LZero AI Orchestration** - Enhanced OpenAI-powered intent understanding with personalization
-- 🚀 **Interactive REPL** - Dual-mode: natural language OR commands
+- 🚀 **Interactive REPL** - Dual-mode: natural language OR commands with history & completion
 - 🔍 **Enhanced Semantic Search** - AI-powered memory search with main answer + additional context
 - 💾 **Full Memory Operations** - Create, search, list, get, and delete
 - ✨ **Prompt Optimization** - Refine and enhance prompts for better AI results
@@ -21,6 +22,9 @@ Intelligent REPL (Read-Eval-Print Loop) for LanOnasis Memory Service - Natural l
 - 🔐 **Multiple Auth Methods** - API keys, tokens, vendor keys
 - 📝 **Config Persistence** - Settings saved between sessions
 - 💬 **Context Awareness** - Maintains conversation history
+- 📜 **Command History** - Navigate previous commands with arrow keys
+- 🔑 **Tab Completion** - Auto-complete commands with Tab key
+- 📖 **Multi-line Input** - Support for multi-line text input
 
 ## 📦 Installation
 
@@ -46,7 +50,24 @@ lrepl --version
 
 ## 🚀 Quick Start
 
-### Start REPL
+### Start Interactive Dashboard (New! 🎨)
+
+```bash
+# Launch the beautiful Ink-based dashboard
+lrepl dashboard
+
+# Or use the --dashboard flag
+lrepl start --dashboard
+```
+
+The dashboard provides:
+- **Visual memory browser** with keyboard navigation
+- **Real-time semantic search**
+- **Memory detail view** with full content
+- **Status bar** showing connection and stats
+- **Help overlay** with keyboard shortcuts
+
+### Start Classic REPL
 
 ```bash
 # Using onasis-repl command
