@@ -40,14 +40,15 @@ export class AIEndpointHealthCheck {
   async checkEndpoint(endpoint: EndpointConfig): Promise<HealthCheckResult> {
     const startTime = Date.now();
     const timeout = endpoint.timeout || 5000;
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeout);
 
     try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), timeout);
+      let response: Response | undefined;
 
       // For AI Router
       if (endpoint.type === 'router') {
-        const response = await fetch(`${endpoint.url}/health`, {
+        response = await fetch(`${endpoint.url}/health`, {
           method: 'GET',
           signal: controller.signal,
         }).catch(() => 
@@ -58,7 +59,6 @@ export class AIEndpointHealthCheck {
           })
         );
 
-        clearTimeout(timeoutId);
         const latency = Date.now() - startTime;
 
         if (response.ok || response.status === 405) { // 405 is ok for HEAD on some endpoints
@@ -75,7 +75,7 @@ export class AIEndpointHealthCheck {
 
       // For OpenAI API
       if (endpoint.type === 'openai') {
-        const response = await fetch('https://api.openai.com/v1/models', {
+        response = await fetch('https://api.openai.com/v1/models', {
           method: 'GET',
           headers: {
             'Authorization': `Bearer ${process.env.OPENAI_API_KEY || 'dummy'}`,
@@ -83,7 +83,6 @@ export class AIEndpointHealthCheck {
           signal: controller.signal,
         });
 
-        clearTimeout(timeoutId);
         const latency = Date.now() - startTime;
 
         // 401 is expected if key is invalid, but endpoint is healthy
@@ -101,12 +100,11 @@ export class AIEndpointHealthCheck {
 
       // Local/L0 endpoints
       if (endpoint.type === 'local') {
-        const response = await fetch(endpoint.url, {
+        response = await fetch(endpoint.url, {
           method: 'HEAD',
           signal: controller.signal,
         });
 
-        clearTimeout(timeoutId);
         const latency = Date.now() - startTime;
 
         if (response.ok || response.status === 405) {
@@ -119,6 +117,10 @@ export class AIEndpointHealthCheck {
             lastChecked: new Date(),
           };
         }
+      }
+
+      if (!response) {
+        throw new Error(`Unknown endpoint type: ${endpoint.type}`);
       }
 
       throw new Error(`HTTP ${response.status}`);
@@ -135,6 +137,8 @@ export class AIEndpointHealthCheck {
         fallbackAvailable: this.hasFallback(endpoint),
         lastChecked: new Date(),
       };
+    } finally {
+      clearTimeout(timeoutId);
     }
   }
 
@@ -203,15 +207,15 @@ export class AIEndpointHealthCheck {
         unknown: chalk.gray('?'),
       }[result.status];
 
-      const statusColor = {
-        healthy: 'green',
-        degraded: 'yellow',
-        unhealthy: 'red',
-        unknown: 'gray',
+      const statusFormatter = {
+        healthy: chalk.green,
+        degraded: chalk.yellow,
+        unhealthy: chalk.red,
+        unknown: chalk.gray,
       }[result.status];
 
       lines.push(`\n${statusIcon} ${chalk.bold(result.endpoint)}`);
-      lines.push(`  Status: ${chalk[statusColor as keyof typeof chalk](result.status)}`);
+      lines.push(`  Status: ${statusFormatter(result.status)}`);
       lines.push(`  Latency: ${result.latency}ms`);
       lines.push(`  Message: ${chalk.gray(result.message)}`);
       
