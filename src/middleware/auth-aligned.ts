@@ -253,6 +253,19 @@ export const alignedAuthMiddleware = async (
           (typeof decodedObj.org_id === 'string' ? decodedObj.org_id : undefined) ||
           userData?.organization_id;
         const orgResolution = await resolveOrganizationId(rawOrgId, userId);
+        if (!orgResolution.organizationId) {
+          logger.warn(`[${req.id}] JWT resolved without organization context`, {
+            userId,
+            rawOrgId,
+            source: orgResolution.source
+          });
+          res.status(403).json(createErrorEnvelope(req,
+            'Organization context is required',
+            'AuthError',
+            'ORGANIZATION_REQUIRED'
+          ));
+          return;
+        }
 
         const alignedUser: UnifiedUser = {
           // JWTPayload properties (from JWT claims)
@@ -356,6 +369,14 @@ export async function authenticateApiKey(apiKey: string): Promise<AlignedUser | 
 
     // Resolve organization ID intelligently (handles missing/invalid org IDs)
     const orgResolution = await resolveOrganizationId(userData?.organization_id, keyRecord.user_id);
+    if (!orgResolution.organizationId) {
+      logger.warn('API key rejected due to missing organization context', {
+        keyId: keyRecord.id,
+        userId: keyRecord.user_id,
+        source: orgResolution.source
+      });
+      return null;
+    }
 
     const unifiedUser: UnifiedUser = {
       // JWTPayload properties

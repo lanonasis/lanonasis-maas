@@ -160,16 +160,19 @@ router.post('/emergency/bootstrap-admin', async (req, res) => {
     const { data: apiKeyData, error: apiKeyError } = await supabase
       .from('api_keys')
       .insert({
+        user_id: userId,
         organization_id: organizationId,
         name: 'Emergency Bootstrap Key',
+        key: apiKey,
         key_hash: hashedKey,
-        key_prefix: apiKey.substring(0, 12) + '...',
-        scopes: ['read', 'write', 'admin'], // Full access
-        project_scope: 'lanonasis-maas', // Set project scope
-        created_by: userId,
+        service: 'lanonasis-maas',
+        access_level: 'admin',
+        permissions: ['legacy.full_access'],
+        description: 'Emergency bootstrap key created for auth recovery',
         expires_at: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(), // 1 year
         created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        updated_at: new Date().toISOString(),
+        is_active: true
       })
       .select()
       .single();

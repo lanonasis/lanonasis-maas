@@ -196,7 +196,11 @@ export const centralAuth = async (req: Request, res: Response, next: NextFunctio
       console.log(`[${req.id}] Authenticating with API key`);
       const keyData = await validateApiKey(apiKey);
 
-      const organizationId = keyData.organization_id || keyData.user_id;
+      const organizationId = keyData.organization_id;
+
+      if (!organizationId) {
+        throw createAuthError('API key is not bound to an organization', 'ORG_REQUIRED', 403);
+      }
 
       req.user = {
         id: keyData.user_id,
