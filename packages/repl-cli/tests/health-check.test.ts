@@ -80,6 +80,18 @@ describe('AIEndpointHealthCheck', () => {
       
       expect(result.status).toBe('healthy');
     });
+
+    it('should report unknown endpoint types as unhealthy instead of throwing', async () => {
+      const result = await checker['checkEndpoint']({
+        name: 'Unsupported',
+        url: 'https://invalid.example.com',
+        type: 'unsupported' as any,
+        priority: 99,
+      });
+
+      expect(result.status).toBe('unhealthy');
+      expect(result.message).toContain('Unknown endpoint type');
+    });
   });
 
   describe('checkAllEndpoints', () => {

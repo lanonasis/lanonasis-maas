@@ -90,33 +90,96 @@ export class ReplEngine {
     
     // Explicit continuation with backslash
     if (trimmed.endsWith('\\')) return true;
-    
-    // Check for unclosed quotes
-    const singleQuotes = (input.match(/'/g) || []).length;
-    const doubleQuotes = (input.match(/"/g) || []).length;
-    const backticks = (input.match(/`/g) || []).length;
-    
-    if (singleQuotes % 2 !== 0) return true;
-    if (doubleQuotes % 2 !== 0) return true;
-    if (backticks % 2 !== 0) return true;
-    
-    // Check for unclosed braces, brackets, parentheses
-    const openBraces = (input.match(/\{/g) || []).length;
-    const closeBraces = (input.match(/\}/g) || []).length;
-    const openBrackets = (input.match(/\[/g) || []).length;
-    const closeBrackets = (input.match(/\]/g) || []).length;
-    const openParens = (input.match(/\(/g) || []).length;
-    const closeParens = (input.match(/\)/g) || []).length;
-    
-    if (openBraces !== closeBraces) return true;
-    if (openBrackets !== closeBrackets) return true;
-    if (openParens !== closeParens) return true;
-    
-    // Check for markdown code blocks
-    const codeBlockOpens = (input.match(/```/g) || []).length;
-    if (codeBlockOpens % 2 !== 0) return true;
-    
-    return false;
+
+    let inSingleQuote = false;
+    let inDoubleQuote = false;
+    let inBacktick = false;
+    let inCodeBlock = false;
+    let escaped = false;
+    let openBraces = 0;
+    let openBrackets = 0;
+    let openParens = 0;
+
+    for (let i = 0; i < input.length; i++) {
+      const char = input[i];
+
+      if (!inSingleQuote && !inDoubleQuote && !inBacktick && input.startsWith('```', i)) {
+        inCodeBlock = !inCodeBlock;
+        i += 2;
+        escaped = false;
+        continue;
+      }
+
+      if (inCodeBlock) {
+        continue;
+      }
+
+      if (escaped) {
+        escaped = false;
+        continue;
+      }
+
+      if ((inSingleQuote || inDoubleQuote || inBacktick) && char === '\\') {
+        escaped = true;
+        continue;
+      }
+
+      if (inSingleQuote) {
+        if (char === '\'') {
+          inSingleQuote = false;
+        }
+        continue;
+      }
+
+      if (inDoubleQuote) {
+        if (char === '"') {
+          inDoubleQuote = false;
+        }
+        continue;
+      }
+
+      if (inBacktick) {
+        if (char === '`') {
+          inBacktick = false;
+        }
+        continue;
+      }
+
+      if (char === '\'') {
+        const prev = input[i - 1];
+        const next = input[i + 1];
+        const isApostrophe = Boolean(prev && next && /[A-Za-z0-9]/.test(prev) && /[A-Za-z0-9]/.test(next));
+        if (!isApostrophe) {
+          inSingleQuote = true;
+        }
+        continue;
+      }
+
+      if (char === '"') {
+        inDoubleQuote = true;
+        continue;
+      }
+
+      if (char === '`') {
+        inBacktick = true;
+        continue;
+      }
+
+      if (char === '{') openBraces++;
+      if (char === '}') openBraces--;
+      if (char === '[') openBrackets++;
+      if (char === ']') openBrackets--;
+      if (char === '(') openParens++;
+      if (char === ')') openParens--;
+    }
+
+    return inSingleQuote ||
+      inDoubleQuote ||
+      inBacktick ||
+      inCodeBlock ||
+      openBraces !== 0 ||
+      openBrackets !== 0 ||
+      openParens !== 0;
   }
 
   private registerCommands() {

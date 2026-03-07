@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Box, Text, useInput } from 'ink';
 import TextInput from './TextInput';
 
@@ -17,8 +17,6 @@ export const SearchBox: React.FC<SearchBoxProps> = ({
   onExit,
   isSearching
 }) => {
-  const [isFocused, setIsFocused] = useState(true);
-
   useInput((input, key) => {
     if (key.escape) {
       onExit();
@@ -30,7 +28,7 @@ export const SearchBox: React.FC<SearchBoxProps> = ({
   return (
     <Box
       borderStyle="round"
-      borderColor={isFocused ? 'green' : 'gray'}
+      borderColor="green"
       paddingX={1}
       flexDirection="column"
     >
@@ -50,15 +48,15 @@ export const SearchBox: React.FC<SearchBoxProps> = ({
           value={query}
           onChange={onChange}
           placeholder="Type to search your memories..."
-          focus={isFocused}
+          focus
         />
       </Box>
 
       <Box flexDirection="row" gap={2} marginTop={1}>
-        <Text color="dim" dimColor>
+        <Text color="gray" dimColor>
           Press Enter to search
         </Text>
-        <Text color="dim" dimColor>
+        <Text color="gray" dimColor>
           ESC to cancel
         </Text>
       </Box>
