@@ -398,6 +398,10 @@ export class ReplEngine {
     // Add to history (avoid duplicates of the last command)
     if (this.inputHistory.length === 0 || this.inputHistory[this.inputHistory.length - 1] !== input) {
       this.inputHistory.push(input);
+      // Trim history to configured maximum size
+      if (this.inputHistory.length > this.config.maxHistorySize) {
+        this.inputHistory = this.inputHistory.slice(-this.config.maxHistorySize);
+      }
     }
     
     try {
