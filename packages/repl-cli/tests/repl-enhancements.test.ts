@@ -39,12 +39,15 @@ describe('ReplEngine Enhancements - History, Completion, Multi-line', () => {
       expect(engine['inputHistory'].filter(cmd => cmd === 'list').length).toBe(2);
     });
 
-    it('should maintain history up to 1000 commands', () => {
-      // Simulate adding 1005 commands
-      for (let i = 0; i < 1005; i++) {
-        engine['inputHistory'].push(`command ${i}`);
+    it('should maintain history up to maxHistorySize commands', async () => {
+      // Mock handleCommand to avoid real network calls — we're testing history trimming only
+      vi.spyOn(engine as any, 'handleCommand').mockResolvedValue(undefined);
+      vi.spyOn(engine as any, 'rl', 'get').mockReturnValue({ prompt: vi.fn() });
+
+      for (let i = 0; i < 105; i++) {
+        await engine['processInput'](`unique command ${i}`);
       }
-      expect(engine['inputHistory'].length).toBe(1005);
+      expect(engine['inputHistory'].length).toBeLessThanOrEqual(config.maxHistorySize);
     });
   });
 
