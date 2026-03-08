@@ -358,22 +358,34 @@ program
 
     // Continuous monitoring mode
     if (options.watch) {
-      console.log(chalk.cyan(`\n👁 Watching... (interval: ${options.interval}ms)`));
+      const rawInterval = parseInt(options.interval, 10);
+      const intervalMs = Number.isNaN(rawInterval) || rawInterval < 5000
+        ? 30000  // default: 30s minimum
+        : rawInterval;
+
+      console.log(chalk.cyan(`\n👁 Watching... (interval: ${intervalMs}ms)`));
       console.log(chalk.gray('Press Ctrl+C to stop\n'));
 
-      const interval = setInterval(async () => {
-        const newResults = await quickHealthCheck({
-          aiRouterUrl: config.aiRouterUrl,
-          openaiApiKey: config.openaiApiKey,
-          apiUrl: config.apiUrl,
-        });
-        console.clear();
-        console.log(checker.formatResults(newResults));
-        console.log(chalk.gray(`\nLast updated: ${new Date().toLocaleTimeString()}`));
-      }, parseInt(options.interval));
+      let isRunning = false;
+      const timer = setInterval(async () => {
+        if (isRunning) return;
+        isRunning = true;
+        try {
+          const newResults = await quickHealthCheck({
+            aiRouterUrl: config.aiRouterUrl,
+            openaiApiKey: config.openaiApiKey,
+            apiUrl: config.apiUrl,
+          });
+          console.clear();
+          console.log(checker.formatResults(newResults));
+          console.log(chalk.gray(`\nLast updated: ${new Date().toLocaleTimeString()}`));
+        } finally {
+          isRunning = false;
+        }
+      }, intervalMs);
 
       process.on('SIGINT', () => {
-        clearInterval(interval);
+        clearInterval(timer);
         console.log(chalk.yellow('\n\n👋 Health check stopped\n'));
         process.exit(0);
       });
