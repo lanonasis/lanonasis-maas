@@ -260,8 +260,34 @@ describe('AIEndpointHealthCheck', () => {
       ];
 
       const formatted = checker.formatResults(results);
-      
+
       expect(formatted).toContain('No healthy endpoints');
+    });
+
+    it('should show degraded warning when all endpoints are degraded', () => {
+      const results = [
+        {
+          endpoint: 'Slow Endpoint 1',
+          status: 'degraded' as const,
+          latency: 1500,
+          message: 'Slow response',
+          fallbackAvailable: true,
+          lastChecked: new Date(),
+        },
+        {
+          endpoint: 'Slow Endpoint 2',
+          status: 'degraded' as const,
+          latency: 2000,
+          message: 'Slow response',
+          fallbackAvailable: false,
+          lastChecked: new Date(),
+        },
+      ];
+
+      const formatted = checker.formatResults(results);
+
+      expect(formatted).toContain('degraded');
+      expect(formatted).not.toContain('All endpoints healthy');
     });
   });
 
