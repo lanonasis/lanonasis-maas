@@ -41,6 +41,7 @@ export const DashboardApp: React.FC<DashboardAppProps> = ({ config }) => {
   const [isSearching, setIsSearching] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<'connected' | 'disconnected' | 'connecting'>('connecting');
   const [error, setError] = useState<string | null>(null);
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
 
   // Fetch memories on mount
   const fetchMemories = useCallback(async () => {
@@ -90,6 +91,17 @@ export const DashboardApp: React.FC<DashboardAppProps> = ({ config }) => {
         setView('search');
       } else if (input === 'r') {
         fetchMemories();
+      } else if (input === 'l') {
+        setView('list');
+      } else if (input === 'c') {
+        setStatusMessage('Create memory: coming soon');
+        setTimeout(() => setStatusMessage(null), 3000);
+      } else if (input === 'e') {
+        setStatusMessage('Edit memory: coming soon');
+        setTimeout(() => setStatusMessage(null), 3000);
+      } else if (input === 'd') {
+        setStatusMessage('Delete memory: coming soon');
+        setTimeout(() => setStatusMessage(null), 3000);
       } else if (input === 'q') {
         exit();
       }
@@ -149,9 +161,13 @@ export const DashboardApp: React.FC<DashboardAppProps> = ({ config }) => {
   // Handle memory deletion
   const handleDelete = async () => {
     if (!selectedMemory) return;
-    
+
     try {
-      await client.deleteMemory(selectedMemory.id);
+      const result = await client.deleteMemory(selectedMemory.id);
+      if (result && (result as any).error) {
+        setError(`Failed to delete memory: ${(result as any).error}`);
+        return;
+      }
       setView('list');
       setSelectedMemory(null);
       await fetchMemories();
@@ -176,7 +192,7 @@ export const DashboardApp: React.FC<DashboardAppProps> = ({ config }) => {
             setView('list');
             setSelectedMemory(null);
           }}
-          onEdit={() => {/* TODO: Implement edit */}}
+          onEdit={() => setError('Edit coming soon — use the CLI: lrepl update <id>')}
           onDelete={handleDelete}
         />
       );
@@ -235,6 +251,15 @@ export const DashboardApp: React.FC<DashboardAppProps> = ({ config }) => {
         <Box marginBottom={1}>
           <Text color="red" bold>
             ⚠️ {error}
+          </Text>
+        </Box>
+      )}
+
+      {/* Status message display */}
+      {statusMessage && (
+        <Box marginBottom={1}>
+          <Text color="yellow">
+            ℹ {statusMessage}
           </Text>
         </Box>
       )}
