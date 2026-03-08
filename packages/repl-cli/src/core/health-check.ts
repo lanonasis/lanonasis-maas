@@ -29,9 +29,11 @@ export class AIEndpointHealthCheck {
   private results: Map<string, HealthCheckResult> = new Map();
   private checkInterval?: NodeJS.Timeout;
   private spinner?: Ora;
+  private openaiApiKey?: string;
 
-  constructor(endpoints: EndpointConfig[]) {
+  constructor(endpoints: EndpointConfig[], openaiApiKey?: string) {
     this.endpoints = endpoints.sort((a, b) => a.priority - b.priority);
+    this.openaiApiKey = openaiApiKey;
   }
 
   /**
@@ -78,7 +80,7 @@ export class AIEndpointHealthCheck {
         response = await fetch('https://api.openai.com/v1/models', {
           method: 'GET',
           headers: {
-            'Authorization': `Bearer ${process.env.OPENAI_API_KEY || 'dummy'}`,
+            'Authorization': `Bearer ${this.openaiApiKey || process.env.OPENAI_API_KEY || 'dummy'}`,
           },
           signal: controller.signal,
         });
@@ -225,12 +227,15 @@ export class AIEndpointHealthCheck {
     }
 
     lines.push('\n' + chalk.gray('─'.repeat(60)));
-    
+
     const healthyCount = results.filter(r => r.status === 'healthy').length;
+    const degradedCount = results.filter(r => r.status === 'degraded').length;
     const unhealthyCount = results.filter(r => r.status === 'unhealthy').length;
-    
-    if (unhealthyCount === 0) {
+
+    if (unhealthyCount === 0 && degradedCount === 0) {
       lines.push(chalk.green(`\n✓ All endpoints healthy (${healthyCount}/${results.length})\n`));
+    } else if (unhealthyCount === 0 && degradedCount > 0) {
+      lines.push(chalk.yellow(`\n⚠ ${degradedCount} endpoint(s) degraded — system functional but slow\n`));
     } else if (healthyCount > 0) {
       lines.push(chalk.yellow(`\n⚠ ${healthyCount} healthy, ${unhealthyCount} unhealthy (fallback active)\n`));
     } else {
@@ -307,7 +312,7 @@ export async function quickHealthCheck(config: {
     timeout: 2000,
   });
 
-  const healthCheck = new AIEndpointHealthCheck(endpoints);
+  const healthCheck = new AIEndpointHealthCheck(endpoints, config.openaiApiKey);
   return healthCheck.checkAllEndpoints(true);
 }
 
