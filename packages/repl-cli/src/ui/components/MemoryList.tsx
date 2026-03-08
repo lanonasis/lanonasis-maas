@@ -27,10 +27,13 @@ export const MemoryList: React.FC<MemoryListProps> = ({
   view
 }) => {
   useInput((input, key) => {
+    if (memories.length === 0) return;
+    const displayCount = Math.min(memories.length, 20);
     if (key.upArrow) {
       onSelect(Math.max(0, selectedIndex - 1));
     } else if (key.downArrow) {
-      onSelect(Math.min(memories.length - 1, selectedIndex + 1));
+      const newIndexDown = Math.min(displayCount - 1, selectedIndex + 1);
+      onSelect(Math.max(0, newIndexDown));
     } else if (key.return && view !== 'search') {
       if (memories[selectedIndex]) {
         onSelectMemory(memories[selectedIndex]);
@@ -94,7 +97,7 @@ export const MemoryList: React.FC<MemoryListProps> = ({
                 <Text color={isSelected ? 'white' : 'cyan'} bold={isSelected}>
                   {isSelected ? '▶' : ' '} {memory.title}
                 </Text>
-                {relevance && (
+                {relevance !== undefined && relevance !== null && (
                   <Text color={isSelected ? 'yellow' : 'green'}>
                     ({relevance}%)
                   </Text>

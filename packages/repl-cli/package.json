@@ -58,12 +58,9 @@
     "@lanonasis/memory-client": "^2.2.0",
     "@lanonasis/oauth-client": "^2.0.0",
     "@modelcontextprotocol/sdk": "^1.25.3",
-    "@types/figlet": "^1.7.0",
-    "@types/react": "^19.2.14",
     "chalk": "^5.5.0",
     "commander": "^12.1.0",
     "dotenv": "^17.2.1",
-    "figlet": "^1.10.0",
     "ink": "^6.8.0",
     "inquirer": "^12.9.3",
     "open": "^10.1.0",
@@ -75,7 +72,9 @@
     "zod": "^3.24.4"
   },
   "devDependencies": {
+    "@types/figlet": "^1.7.0",
     "@types/node": "^22.10.2",
+    "@types/react": "^19.2.14",
     "ink-testing-library": "^4.0.0",
     "tsup": "^8.0.2",
     "typescript": "^5.7.2",
