@@ -53,6 +53,7 @@ export interface MemoryEntry {
   memory_type: MemoryType;
   tags: string[];
   topic_id?: string | null;
+  topic_key?: string | null;
   user_id: string;
   organization_id: string;
   metadata?: Record<string, unknown>;
@@ -118,6 +119,7 @@ export const createMemorySchema = z.object({
   memory_type: z.enum(['context', 'project', 'knowledge', 'reference', 'personal', 'workflow']).default('context'),
   tags: z.array(z.string().min(1).max(50)).max(10).default([]),
   topic_id: z.string().uuid().optional(),
+  topic_key: z.string().min(1).max(100).optional(),
   metadata: z.record(z.unknown()).optional()
 });
 
@@ -159,6 +161,7 @@ export const updateMemorySchema = z.object({
   memory_type: z.enum(['context', 'project', 'knowledge', 'reference', 'personal', 'workflow']).optional(),
   tags: z.array(z.string().min(1).max(50)).max(10).optional(),
   topic_id: z.string().uuid().nullable().optional(),
+  topic_key: z.string().min(1).max(100).optional(),
   metadata: z.record(z.unknown()).optional()
 });
 
@@ -203,8 +206,11 @@ export const searchMemorySchema = z.object({
   memory_types: z.array(z.enum(['context', 'project', 'knowledge', 'reference', 'personal', 'workflow'])).optional(),
   tags: z.array(z.string()).optional(),
   topic_id: z.string().uuid().optional(),
+  topic_key: z.string().min(1).max(100).optional(),
   limit: z.number().int().min(1).max(100).default(20),
-  threshold: z.number().min(0).max(1).default(0.7)
+  threshold: z.number().min(0).max(1).default(0.7),
+  include_deleted: z.boolean().optional(),
+  response_mode: z.enum(['full', 'compact', 'timeline']).optional()
 });
 
 /**

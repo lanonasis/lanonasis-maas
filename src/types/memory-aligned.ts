@@ -75,6 +75,7 @@ export interface MemoryEntry {
   last_accessed?: string;
   user_id: string;
   topic_id?: string;
+  topic_key?: string;
   project_ref?: string;
   tags: string[];
   metadata?: Record<string, unknown>;
@@ -181,6 +182,7 @@ export const createMemorySchema = z.object({
   summary: z.string().max(1000).optional(),
   memory_type: z.enum(['conversation', 'knowledge', 'project', 'context', 'reference']).default('context'),
   topic_id: z.string().uuid().optional(),
+  topic_key: z.string().min(1).max(100).optional(),
   project_ref: z.string().max(100).optional(),
   tags: z.array(z.string().min(1).max(50)).max(20).default([]),
   metadata: z.record(z.unknown()).optional()
@@ -235,6 +237,7 @@ export const updateMemorySchema = z.object({
   memory_type: z.enum(['conversation', 'knowledge', 'project', 'context', 'reference']).optional(),
   status: z.enum(['active', 'archived', 'draft', 'deleted']).optional(),
   topic_id: z.string().uuid().nullable().optional(),
+  topic_key: z.string().min(1).max(100).optional(),
   project_ref: z.string().max(100).nullable().optional(),
   tags: z.array(z.string().min(1).max(50)).max(20).optional(),
   metadata: z.record(z.unknown()).optional()
@@ -287,10 +290,13 @@ export const searchMemorySchema = z.object({
   memory_types: z.array(z.enum(['conversation', 'knowledge', 'project', 'context', 'reference'])).optional(),
   tags: z.array(z.string()).optional(),
   topic_id: z.string().uuid().optional(),
+  topic_key: z.string().min(1).max(100).optional(),
   project_ref: z.string().optional(),
   status: z.enum(['active', 'archived', 'draft', 'deleted']).default('active'),
   limit: z.number().int().min(1).max(100).default(20),
-  threshold: z.number().min(0).max(1).default(0.7)
+  threshold: z.number().min(0).max(1).default(0.7),
+  include_deleted: z.boolean().optional(),
+  response_mode: z.enum(['full', 'compact', 'timeline']).optional()
 });
 
 /**
