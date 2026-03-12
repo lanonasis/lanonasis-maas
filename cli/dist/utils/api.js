@@ -66,12 +66,23 @@ export class APIClient {
         if (!requestUrl.startsWith('/api/v1/memories'))
             return false;
         const message = String(error?.response?.data?.message || error?.response?.data?.error || '');
-        if (!/invalid jwt/i.test(message))
+        const indicatesRouteShapeDrift = /invalid jwt|missing authorization header|authentication required/i.test(message);
+        if (!indicatesRouteShapeDrift)
             return false;
         const authMethod = String(this.config.get('authMethod') || '');
         const token = this.config.getToken();
         const hasOpaqueToken = Boolean(token) && token.split('.').length !== 3;
-        return hasOpaqueToken || authMethod === 'oauth' || authMethod === 'oauth2';
+        const hasVendorKey = this.config.hasVendorKey();
+        return hasVendorKey || hasOpaqueToken || authMethod === 'oauth' || authMethod === 'oauth2';
+    }
+    shouldUsePostListFallback(error) {
+        const status = Number(error?.response?.status || 0);
+        if (status === 405)
+            return true;
+        if (status !== 401)
+            return false;
+        const message = String(error?.response?.data?.message || error?.response?.data?.error || '');
+        return /missing authorization header|authentication required/i.test(message);
     }
     getSupabaseFunctionsBaseUrl() {
         const discoveredServices = this.config.get('discoveredServices');
@@ -363,7 +374,7 @@ export class APIClient {
         }
         catch (error) {
             // Backward-compatible fallback: newer API contracts may reject GET list.
-            if (error?.response?.status === 405) {
+            if (this.shouldUsePostListFallback(error)) {
                 const limit = Number(params.limit || 20);
                 const page = Number(params.page || 1);
                 const offset = Number(params.offset ?? Math.max(0, (page - 1) * limit));
