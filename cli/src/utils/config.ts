@@ -1420,6 +1420,13 @@ export class CLIConfig {
     }
 
     try {
+      // Vendor-key sessions should never attempt token refresh.
+      // Some environments retain stale token/refresh_token fields from older logins,
+      // which can otherwise trip dead refresh routes during normal memory commands.
+      if (String(this.config.authMethod || '').toLowerCase() === 'vendor_key') {
+        return;
+      }
+
       // OAuth token refresh (opaque tokens + refresh_token + token_expires_at)
       if (this.config.authMethod === 'oauth') {
         const refreshToken = this.get<string>('refresh_token');
