@@ -257,7 +257,7 @@ export class APIClient {
 
   private shouldRetryViaSupabaseMemoryFunctions(error: any): boolean {
     const status = Number(error?.response?.status || 0);
-    if (status !== 401) return false;
+    if (status !== 401 && status !== 404) return false;
 
     const cfg = (error?.config || {}) as AxiosRequestConfig & {
       __retriedViaSupabaseMemoryFunctions?: boolean;
@@ -269,11 +269,28 @@ export class APIClient {
     if (baseURL.includes('supabase.co')) return false;
 
     const requestUrl = String(cfg.url || '');
-    if (!requestUrl.startsWith('/api/v1/memories')) return false;
+    const normalizedRequestUrl = requestUrl.startsWith('/memory')
+      ? this.normalizeMcpPathToApi(requestUrl)
+      : requestUrl;
+    if (!normalizedRequestUrl.startsWith('/api/v1/memories')) return false;
 
-    const message = String(error?.response?.data?.message || error?.response?.data?.error || '');
-    const indicatesRouteShapeDrift = /invalid jwt|missing authorization header|authentication required/i.test(message);
-    if (!indicatesRouteShapeDrift) return false;
+    const errorData = error?.response?.data;
+    const responseText = typeof errorData === 'string'
+      ? errorData
+      : `${errorData?.message || ''} ${errorData?.error || ''}`;
+
+    if (status === 401) {
+      const indicatesRouteShapeDrift = /invalid jwt|missing authorization header|authentication required|token is not active or has expired/i
+        .test(responseText);
+      if (!indicatesRouteShapeDrift) return false;
+    }
+
+    if (status === 404) {
+      const isGetByIdRequest = /^\/api\/v1\/memories\/[^/?#]+$/.test(normalizedRequestUrl);
+      const indicatesMissingMcpGetRoute = /cannot get \/api\/v1\/memory\/|cannot get \/memory\/|route[_ -]?not[_ -]?found/i
+        .test(responseText.toLowerCase());
+      if (!isGetByIdRequest || !indicatesMissingMcpGetRoute) return false;
+    }
 
     const authMethod = String(this.config.get<string>('authMethod') || '');
     const token = this.config.getToken();
@@ -301,7 +318,10 @@ export class APIClient {
     ];
 
     for (const candidate of candidates) {
-      if (typeof candidate === 'string' && candidate.includes('supabase.co')) {
+      if (typeof candidate === 'string'
+        && candidate.includes('supabase.co')
+        && !candidate.includes('your-project.supabase.co')
+        && !candidate.includes('<project-ref>.supabase.co')) {
         return candidate.replace(/\/$/, '');
       }
     }
@@ -315,7 +335,10 @@ export class APIClient {
     vendorKey?: string
   ): InternalAxiosRequestConfig {
     const method = String(config.method || 'get').toLowerCase();
-    const url = String(config.url || '');
+    const rawUrl = String(config.url || '');
+    const url = rawUrl.startsWith('/memory')
+      ? this.normalizeMcpPathToApi(rawUrl)
+      : rawUrl;
 
     const mapped = config;
     mapped.baseURL = this.getSupabaseFunctionsBaseUrl();
@@ -416,14 +439,17 @@ export class APIClient {
       const useSupabaseMemoryFunctions = (config as AxiosRequestConfig & {
         __useSupabaseMemoryFunctions?: boolean;
       }).__useSupabaseMemoryFunctions === true;
-      const isMemoryEndpoint = typeof config.url === 'string' && config.url.startsWith('/api/v1/memories');
+      const normalizedMemoryUrl = typeof config.url === 'string'
+        ? this.normalizeMcpPathToApi(config.url)
+        : '';
+      const isMemoryEndpoint = normalizedMemoryUrl.startsWith('/api/v1/memories');
       const forceApiFromEnv = process.env.LANONASIS_FORCE_API === 'true'
         || process.env.CLI_FORCE_API === 'true'
         || process.env.ONASIS_FORCE_API === 'true';
       const forceApiFromConfig = this.config.get<boolean>('forceApi') === true
         || this.config.get<string>('connectionTransport') === 'api';
 
-      if (useSupabaseMemoryFunctions && typeof config.url === 'string' && config.url.startsWith('/api/v1/memories')) {
+      if (useSupabaseMemoryFunctions && isMemoryEndpoint) {
         const remapped = this.mapMemoryApiRouteToSupabaseFunctions(config, token || undefined, vendorKey || undefined);
         if (process.env.CLI_VERBOSE === 'true') {
           const requestId = randomUUID();
