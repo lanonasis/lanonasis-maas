@@ -510,7 +510,7 @@ export class MCPClient {
       return headers;
     }
 
-    if (auth.source === 'vendor_key' || value.startsWith('lano_')) {
+    if (auth.source === 'vendor_key' || value.startsWith('lano_') || value.startsWith('lms_')) {
       headers['X-API-Key'] = value;
       headers['X-Auth-Method'] = 'vendor_key';
       headers['X-Project-Scope'] = 'lanonasis-maas';

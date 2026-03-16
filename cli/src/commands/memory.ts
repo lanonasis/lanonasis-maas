@@ -409,8 +409,11 @@ const createIntelligenceTransport = async (): Promise<IntelligenceTransport> => 
   const authToken = config.getToken();
   const apiKey = await config.getVendorKeyAsync();
   const apiUrl = `${config.getApiUrl().replace(/\/$/, '')}/api/v1`;
+  const authMethod = config.getAuthMethod();
 
-  if (authToken) {
+  // When vendor_key is explicitly set, skip JWT even if a token exists in storage.
+  // JWT validates against auth-gateway's DB; vendor keys validate against mcp-core's DB.
+  if (authToken && authMethod !== 'vendor_key') {
     return {
       mode: 'sdk',
       client: new MemoryIntelligenceClient({
@@ -423,7 +426,7 @@ const createIntelligenceTransport = async (): Promise<IntelligenceTransport> => 
   }
 
   if (apiKey) {
-    if (apiKey.startsWith('lano_')) {
+    if (apiKey.startsWith('lano_') || apiKey.startsWith('lms_')) {
       return {
         mode: 'sdk',
         client: new MemoryIntelligenceClient({
@@ -435,7 +438,7 @@ const createIntelligenceTransport = async (): Promise<IntelligenceTransport> => 
       };
     }
 
-    // Legacy non-lano key path: use CLI API client auth middleware directly.
+    // Legacy key path: use CLI API client auth middleware directly.
     return { mode: 'api' };
   }
 

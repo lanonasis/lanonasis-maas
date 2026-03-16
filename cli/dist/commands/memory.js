@@ -209,7 +209,10 @@ const createIntelligenceTransport = async () => {
     const authToken = config.getToken();
     const apiKey = await config.getVendorKeyAsync();
     const apiUrl = `${config.getApiUrl().replace(/\/$/, '')}/api/v1`;
-    if (authToken) {
+    const authMethod = config.getAuthMethod();
+    // When vendor_key is explicitly set, skip JWT even if a token exists in storage.
+    // JWT validates against auth-gateway's DB; vendor keys validate against mcp-core's DB.
+    if (authToken && authMethod !== 'vendor_key') {
         return {
             mode: 'sdk',
             client: new MemoryIntelligenceClient({
@@ -221,7 +224,7 @@ const createIntelligenceTransport = async () => {
         };
     }
     if (apiKey) {
-        if (apiKey.startsWith('lano_')) {
+        if (apiKey.startsWith('lano_') || apiKey.startsWith('lms_')) {
             return {
                 mode: 'sdk',
                 client: new MemoryIntelligenceClient({
@@ -232,7 +235,7 @@ const createIntelligenceTransport = async () => {
                 }),
             };
         }
-        // Legacy non-lano key path: use CLI API client auth middleware directly.
+        // Legacy key path: use CLI API client auth middleware directly.
         return { mode: 'api' };
     }
     throw new Error('Authentication required. Run "lanonasis auth login" first.');

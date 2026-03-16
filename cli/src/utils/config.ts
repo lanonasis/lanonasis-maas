@@ -1092,6 +1092,10 @@ export class CLIConfig {
     return this.config.token;
   }
 
+  getAuthMethod(): string | undefined {
+    return this.config.authMethod;
+  }
+
   async getCurrentUser(): Promise<UserProfile | undefined> {
     return this.config.user;
   }
