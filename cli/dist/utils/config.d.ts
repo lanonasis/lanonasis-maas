@@ -115,6 +115,7 @@ export declare class CLIConfig {
     setApiUrl(url: string): Promise<void>;
     setToken(token: string): Promise<void>;
     getToken(): string | undefined;
+    getAuthMethod(): string | undefined;
     getCurrentUser(): Promise<UserProfile | undefined>;
     isAuthenticated(): Promise<boolean>;
     logout(): Promise<void>;

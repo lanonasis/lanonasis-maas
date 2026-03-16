@@ -896,6 +896,9 @@ export class CLIConfig {
     getToken() {
         return this.config.token;
     }
+    getAuthMethod() {
+        return this.config.authMethod;
+    }
     async getCurrentUser() {
         return this.config.user;
     }
