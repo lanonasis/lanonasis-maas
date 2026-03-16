@@ -230,8 +230,26 @@ export class APIClient {
     const status = error?.response?.status;
     const errorData = error?.response?.data;
     const message = `${errorData?.error || ''} ${errorData?.message || ''}`.toLowerCase();
+    const rawRequestUrl = String(error?.config?.url || '');
+    const requestPath = (() => {
+      try {
+        if (/^https?:\/\//i.test(rawRequestUrl)) {
+          return new URL(rawRequestUrl).pathname;
+        }
+      } catch {
+        // Fall back to the raw URL if URL parsing fails.
+      }
+      return rawRequestUrl;
+    })();
+    const normalizedRequestUrl = requestPath.startsWith('/memory')
+      ? this.normalizeMcpPathToApi(requestPath)
+      : requestPath;
 
     if (status === 405) {
+      return true;
+    }
+
+    if (status === 404 && /^\/api\/v1\/memories\/[^/?#]+$/.test(normalizedRequestUrl)) {
       return true;
     }
 
@@ -832,7 +850,7 @@ export class APIClient {
       const response = await this.client.put(`/api/v1/memories/${id}`, data);
       return this.normalizeMemoryEntry(response.data);
     } catch (error: any) {
-      if (this.shouldUseLegacyMemoryRpcFallback(error)) {
+      if (this.shouldUseLegacyMemoryRpcFallback(error) || error?.response?.status === 404) {
         const fallback = await this.client.post('/api/v1/memory/update', {
           id,
           ...data
@@ -850,7 +868,7 @@ export class APIClient {
     try {
       await this.client.delete(`/api/v1/memories/${id}`);
     } catch (error: any) {
-      if (this.shouldUseLegacyMemoryRpcFallback(error)) {
+      if (this.shouldUseLegacyMemoryRpcFallback(error) || error?.response?.status === 404) {
         await this.client.post('/api/v1/memory/delete', { id });
         return;
       }
