@@ -13,6 +13,7 @@ export default {
     '<rootDir>/src/**/__tests__/**/*.test.ts',
     '<rootDir>/src/**/*.test.ts',
     '<rootDir>/tests/**/*.test.js',
+    '<rootDir>/test/**/*.test.ts',
   ],
   collectCoverageFrom: [
     'src/**/*.ts',
