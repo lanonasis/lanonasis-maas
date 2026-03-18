@@ -23,7 +23,7 @@ interface WorkflowStep {
   action: string;
   tool: string;
   status: 'pending' | 'running' | 'completed' | 'failed';
-  result?: any;
+  result?: unknown;
   execution_time?: number;
   error?: string;
 }
@@ -37,7 +37,7 @@ interface Workflow {
   estimated_duration?: number;
   started_at?: string;
   completed_at?: string;
-  results?: any;
+  results?: unknown;
   next_actions?: string[];
 }
 
