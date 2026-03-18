@@ -473,6 +473,13 @@ export class MCPClient {
     const authMethod = String(this.config.get<string>('authMethod') || '').toLowerCase();
     const token = this.config.get<string>('token');
     const vendorKey = await this.config.getVendorKeyAsync();
+    const isLikelyHashedCredential = typeof vendorKey === 'string' && /^[a-f0-9]{64}$/i.test(vendorKey.trim());
+
+    if (authMethod === 'vendor_key' && isLikelyHashedCredential) {
+      throw new Error(
+        'AUTHENTICATION_INVALID: Stored vendor key is in legacy hashed format. Run "lanonasis auth login --vendor-key <your-key>" to refresh secure storage.'
+      );
+    }
 
     if (authMethod === 'vendor_key' && typeof vendorKey === 'string' && vendorKey.trim().length > 0) {
       return { value: vendorKey.trim(), source: 'vendor_key' };

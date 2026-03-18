@@ -50,6 +50,8 @@ export declare class CLIConfig {
     private readonly AUTH_CACHE_TTL;
     private apiKeyStorage;
     private vendorKeyCache?;
+    private isLegacyHashedCredential;
+    private getLegacyHashedVendorKeyReason;
     constructor();
     /**
      * Overrides the configuration storage directory. Primarily used for tests.
