@@ -438,8 +438,16 @@ const createIntelligenceTransport = async (): Promise<IntelligenceTransport> => 
       };
     }
 
-    // Legacy key path: use CLI API client auth middleware directly.
-    return { mode: 'api' };
+    // Pre-hashed key (64 hex chars from oauth-client normalizeApiKey): inject via header.
+    // The edge functions accept pre-hashed keys after the auth.ts shared utility update.
+    return {
+      mode: 'sdk',
+      client: new MemoryIntelligenceClient({
+        apiUrl,
+        allowMissingAuth: true,
+        headers: { 'X-API-Key': apiKey },
+      }),
+    };
   }
 
   throw new Error('Authentication required. Run "lanonasis auth login" first.');
