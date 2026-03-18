@@ -83,6 +83,14 @@ export class CLIConfig {
   private apiKeyStorage: ApiKeyStorage;
   private vendorKeyCache?: string;
 
+  private isLegacyHashedCredential(value: unknown): value is string {
+    return typeof value === 'string' && /^[a-f0-9]{64}$/i.test(value.trim());
+  }
+
+  private getLegacyHashedVendorKeyReason(): string {
+    return 'Stored vendor key is in legacy hashed format. Run "lanonasis auth login --vendor-key <your-key>" to refresh secure storage.';
+  }
+
   constructor() {
     this.configDir = path.join(os.homedir(), '.maas');
     this.configPath = path.join(this.configDir, 'config.json');
@@ -797,6 +805,14 @@ export class CLIConfig {
     const token = this.getToken();
     const vendorKey = await this.getVendorKeyAsync();
 
+    if (this.config.authMethod === 'vendor_key' && this.isLegacyHashedCredential(vendorKey)) {
+      return {
+        valid: false,
+        method: 'vendor_key',
+        reason: this.getLegacyHashedVendorKeyReason()
+      };
+    }
+
     if (this.config.authMethod === 'vendor_key' && vendorKey) {
       return this.verifyVendorKeyWithAuthGateway(vendorKey);
     }
@@ -1111,6 +1127,14 @@ export class CLIConfig {
       const vendorKey = await this.getVendorKeyAsync();
       if (!vendorKey) return false;
 
+      if (this.isLegacyHashedCredential(vendorKey)) {
+        if (process.env.CLI_VERBOSE === 'true') {
+          console.warn(`⚠️  ${this.getLegacyHashedVendorKeyReason()}`);
+        }
+        this.authCheckCache = { isValid: false, timestamp: Date.now() };
+        return false;
+      }
+
       // Check in-memory cache first (5-minute TTL)
       if (this.authCheckCache && (Date.now() - this.authCheckCache.timestamp) < this.AUTH_CACHE_TTL) {
         return this.authCheckCache.isValid;
@@ -1355,6 +1379,8 @@ export class CLIConfig {
     this.vendorKeyCache = undefined;
     this.config.vendorKey = undefined;
     this.config.authMethod = undefined;
+    this.config.refresh_token = undefined;
+    this.config.token_expires_at = undefined;
     try {
       await this.apiKeyStorage.initialize();
       // ApiKeyStorage may implement clear() to remove encrypted secrets
@@ -1501,14 +1527,6 @@ export class CLIConfig {
           this.config.token_expires_at = Date.now() + (expiresIn * 1000);
         }
 
-        // Keep the encrypted "vendor key" in sync for MCP/WebSocket clients that use X-API-Key.
-        // This does not change authMethod away from oauth (setVendorKey guards against that).
-        try {
-          await this.setVendorKey(accessToken);
-        } catch {
-          // Non-fatal: bearer token refresh still helps API calls.
-        }
-
         await this.save().catch(() => {});
         return;
       }
@@ -1565,9 +1583,21 @@ export class CLIConfig {
     this.config.user = undefined;
     this.config.authMethod = undefined;
     this.config.tokenExpiry = undefined;
+    this.config.refresh_token = undefined;
+    this.config.token_expires_at = undefined;
     this.config.lastValidated = undefined;
     this.config.authFailureCount = 0;
     this.config.lastAuthFailure = undefined;
+    this.vendorKeyCache = undefined;
+    try {
+      await this.apiKeyStorage.initialize();
+      const storage: any = this.apiKeyStorage;
+      if (typeof storage.clear === 'function') {
+        await storage.clear();
+      }
+    } catch {
+      // Ignore secure storage cleanup failures while invalidating credentials
+    }
     await this.save();
   }
 

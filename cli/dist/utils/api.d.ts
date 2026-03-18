@@ -185,6 +185,7 @@ export declare class APIClient {
     private config;
     /** When true, throw on 401/403 instead of printing+exiting (for callers that handle errors) */
     noExit: boolean;
+    private isLikelyHashedCredential;
     private normalizeMemoryEntry;
     private shouldUseLegacyMemoryRpcFallback;
     private shouldRetryViaApiGateway;

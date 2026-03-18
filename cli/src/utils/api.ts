@@ -205,6 +205,10 @@ export class APIClient {
   /** When true, throw on 401/403 instead of printing+exiting (for callers that handle errors) */
   noExit = false;
 
+  private isLikelyHashedCredential(value: unknown): value is string {
+    return typeof value === 'string' && /^[a-f0-9]{64}$/i.test(value.trim());
+  }
+
   private normalizeMemoryEntry(payload: unknown): MemoryEntry {
     // API responses are inconsistent across gateways:
     // - Some return the memory entry directly
@@ -487,6 +491,12 @@ export class APIClient {
       const forceDirectApi = forceApiFromEnv || forceApiFromConfig || forceDirectApiRetry;
       const prefersTokenAuth = Boolean(token) && (authMethod === 'jwt' || authMethod === 'oauth' || authMethod === 'oauth2');
       const useVendorKeyAuth = Boolean(vendorKey) && !prefersTokenAuth;
+
+      if (authMethod === 'vendor_key' && this.isLikelyHashedCredential(vendorKey)) {
+        throw new Error(
+          'Stored vendor key is in legacy hashed format. Run "lanonasis auth login --vendor-key <your-key>" to refresh secure storage.'
+        );
+      }
 
       // Determine the correct API base URL:
       // - Auth endpoints -> auth.lanonasis.com
