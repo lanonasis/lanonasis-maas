@@ -229,6 +229,13 @@ export class APIClient {
             const discoveredServices = this.config.get('discoveredServices');
             const authMethod = this.config.get('authMethod');
             const vendorKey = await this.config.getVendorKeyAsync();
+            if (authMethod === 'vendor_key' && this.isLikelyHashedCredential(vendorKey)) {
+                // Warn but do not block: server-side handles both raw and pre-hashed keys.
+                // Legacy hashed keys still work end-to-end. Auth status will prompt re-login.
+                if (process.env.CLI_VERBOSE === 'true') {
+                    console.warn('⚠️  Stored vendor key is in legacy hashed format. Run "lanonasis auth login --vendor-key <your-key>" to refresh.');
+                }
+            }
             const token = this.config.getToken();
             const useSupabaseMemoryFunctions = config.__useSupabaseMemoryFunctions === true;
             const normalizedMemoryUrl = typeof config.url === 'string'

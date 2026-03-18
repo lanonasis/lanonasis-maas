@@ -1292,6 +1292,8 @@ export class CLIConfig {
                 if (typeof expiresIn === 'number' && Number.isFinite(expiresIn)) {
                     this.config.token_expires_at = Date.now() + (expiresIn * 1000);
                 }
+                // Note: OAuth access tokens are NOT stored as vendor keys.
+                // Auth-centralization plan: keep OAuth and vendor-key credentials separate.
                 await this.save().catch(() => { });
                 return;
             }
