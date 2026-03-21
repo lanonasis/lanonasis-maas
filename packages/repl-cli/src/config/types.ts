@@ -48,9 +48,12 @@ export interface ReplConfig {
   };
 }
 
+import type { ReadLine } from 'readline';
+
 export interface CommandContext {
   mode: 'remote' | 'local';
   lastResult?: unknown;
   aliases: Map<string, string>;
+  readline?: ReadLine | null; // For spinner coordination
   config: ReplConfig;
 }

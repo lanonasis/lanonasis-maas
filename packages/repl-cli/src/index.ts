@@ -4,6 +4,14 @@ import { Command } from 'commander';
 import { ReplEngine } from './core/repl-engine.js';
 import { loadConfig } from './config/loader.js';
 import chalk from 'chalk';
+
+// Install global error handlers
+process.on('unhandledRejection', (reason) => {
+  console.error(chalk.red('Unhandled promise rejection:'), reason);
+});
+process.on('uncaughtException', (error) => {
+  console.error(chalk.red('Uncaught exception:'), error);
+});
 import { MagicLinkFlow } from '@lanonasis/oauth-client';
 import {
   performOAuthLogin,
@@ -18,20 +26,6 @@ import {
   getValidToken,
   loadCredentials
 } from './auth/credentials.js';
-import { quickHealthCheck } from './core/health-check.js';
-
-// Dynamic import for Ink dashboard (ESM compatibility)
-const renderDashboard = async (config: any) => {
-  if (!process.stdout.isTTY || !process.stdin.isTTY) {
-    throw new Error('Dashboard mode requires an interactive terminal (TTY).');
-  }
-
-  const { render } = await import('ink');
-  const { DashboardApp } = await import('./ui/DashboardApp.js');
-  const React = await import('react');
-  
-  render(React.createElement(DashboardApp, { config }));
-};
 
 const program = new Command();
 
@@ -64,8 +58,6 @@ program
   .option('--ai-router <url>', 'Override AI router URL')
   .option('--token <token>', 'Authentication token')
   .option('--model <model>', 'Model label/override (default: L-Zero)')
-  .option('--dashboard', 'Use the interactive dashboard UI (Ink-based)', false)
-  .option('--classic', 'Use the classic REPL mode (default if no flags)', false)
   .action(async (options) => {
     // Try to get stored token if not provided
     let authToken = options.token;
@@ -81,15 +73,8 @@ program
       openaiModel: options.model
     });
 
-    // Use dashboard if explicitly requested or if terminal supports it
-    if (options.dashboard) {
-      console.log(chalk.cyan('🎨 Starting LZero Dashboard...'));
-      await renderDashboard(config);
-    } else {
-      // Classic REPL mode
-      const repl = new ReplEngine(config);
-      await repl.start();
-    }
+    const repl = new ReplEngine(config);
+    await repl.start();
   });
 
 program
@@ -296,100 +281,6 @@ program
     }
 
     console.log('');
-  });
-
-program
-  .command('dashboard')
-  .alias('dash')
-  .description('Launch the interactive dashboard UI')
-  .option('--mcp', 'Use local MCP mode', false)
-  .option('--api <url>', 'Override API URL')
-  .option('--token <token>', 'Authentication token')
-  .action(async (options) => {
-    let authToken = options.token;
-    if (!authToken) {
-      authToken = await getValidToken(refreshAccessToken);
-    }
-
-    const config = await loadConfig({
-      useMCP: options.mcp || false,
-      apiUrl: options.api,
-      authToken: authToken || undefined,
-    });
-
-    console.log(chalk.cyan('🎨 Starting LZero Dashboard...'));
-    console.log(chalk.gray('Press ? for help, q to quit\n'));
-    
-    await renderDashboard(config);
-  });
-
-program
-  .command('health')
-  .alias('status')
-  .description('Check AI endpoint health and fallback status')
-  .option('--watch', 'Continuously monitor health', false)
-  .option('--interval <ms>', 'Check interval in ms (default: 30000)', '30000')
-  .action(async (options) => {
-    const config = await loadConfig({});
-    
-    console.log(chalk.cyan('\n🔍 LZero AI Endpoint Health Check\n'));
-    
-    const results = await quickHealthCheck({
-      aiRouterUrl: config.aiRouterUrl,
-      openaiApiKey: config.openaiApiKey,
-      apiUrl: config.apiUrl,
-    });
-
-    // Display results
-    const { default: AIEndpointHealthCheck } = await import('./core/health-check.js');
-    const checker = new AIEndpointHealthCheck([]);
-    console.log(checker.formatResults(results));
-
-    // Show best endpoint
-    const best = results.find(r => r.status === 'healthy' || r.status === 'degraded');
-    if (best) {
-      console.log(chalk.green(`✓ Active endpoint: ${best.endpoint}`));
-      if (best.fallbackAvailable) {
-        console.log(chalk.gray('  Fallback available if needed\n'));
-      }
-    } else {
-      console.log(chalk.yellow('⚠ Using local fallback processor\n'));
-    }
-
-    // Continuous monitoring mode
-    if (options.watch) {
-      const rawInterval = parseInt(options.interval, 10);
-      const intervalMs = Number.isNaN(rawInterval) || rawInterval < 5000
-        ? 30000  // default: 30s minimum
-        : rawInterval;
-
-      console.log(chalk.cyan(`\n👁 Watching... (interval: ${intervalMs}ms)`));
-      console.log(chalk.gray('Press Ctrl+C to stop\n'));
-
-      let isRunning = false;
-      const timer = setInterval(async () => {
-        if (isRunning) return;
-        isRunning = true;
-        try {
-          const newResults = await quickHealthCheck({
-            aiRouterUrl: config.aiRouterUrl,
-            openaiApiKey: config.openaiApiKey,
-            apiUrl: config.apiUrl,
-          });
-          console.clear();
-          console.log(checker.formatResults(newResults));
-          console.log(chalk.gray(`\nLast updated: ${new Date().toLocaleTimeString()}`));
-        } finally {
-          isRunning = false;
-        }
-      }, intervalMs);
-
-      process.on('SIGINT', () => {
-        clearInterval(timer);
-        console.log(chalk.yellow('\n\n👋 Health check stopped\n'));
-        process.exit(0);
-      });
-    }
   });
 
 program
