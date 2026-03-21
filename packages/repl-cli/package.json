@@ -1,6 +1,6 @@
 {
   "name": "@lanonasis/repl-cli",
-  "version": "0.9.3",
+  "version": "1.0.0",
   "type": "module",
   "description": "Intelligent REPL for LanOnasis Memory Service - Natural language interactive assistant with AI orchestration",
   "main": "dist/index.js",
