@@ -303,6 +303,8 @@ export class ReplEngine {
     console.log(chalk.gray('   • Command: create <title> <content>'));
     console.log(chalk.gray('   • History: Press ↑↓ arrows to navigate past commands'));
     console.log(chalk.gray('   • Complete: Press Tab for command completion'));
+    console.log(chalk.gray('   • Multi-line: Leave quotes/braces open for continuation'));
+    console.log(chalk.gray('   • Health: Run "lrepl health" to check AI endpoints'));
     console.log(chalk.gray('   • Type "help" for all commands\n'));
 
     this.safePrompt();

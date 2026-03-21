@@ -528,7 +528,7 @@ Remember: You are LZero - be helpful, conversational, and make the experience fe
 
     if (this.aiRouterClient) {
       const startTime = Date.now();
-      console.log(chalk.cyan('[AI Router]') + chalk.gray(' Attempting primary endpoint...'));
+      console.log(chalk.cyan('[LZero]') + chalk.gray(' Processing request...'));
       
       try {
         const response = await this.aiRouterClient.chat({
@@ -540,13 +540,13 @@ Remember: You are LZero - be helpful, conversational, and make the experience fe
           tool_choice: toolChoice,
         });
         const latency = Date.now() - startTime;
-        console.log(chalk.green('[AI Router]') + chalk.gray(` ✓ Success (${latency}ms)`));
+        console.log(chalk.green('[LZero]') + chalk.gray(` ✓ Processed (${latency}ms)`));
         message = response.message;
         toolCalls = message.tool_calls;
       } catch (error) {
         const latency = Date.now() - startTime;
-        console.log(chalk.yellow('[AI Router]') + chalk.red(` ✗ Failed (${latency}ms)`));
-        console.log(chalk.gray('  → Falling back to OpenAI...'));
+        console.log(chalk.yellow('[LZero]') + chalk.gray(` Using enhanced mode (${latency}ms)`));
+        console.log(chalk.gray('  → Switching to backup intelligence...'));
         // Fall through to OpenAI
       }
     }
@@ -554,7 +554,7 @@ Remember: You are LZero - be helpful, conversational, and make the experience fe
     // Fallback to OpenAI if AI Router not configured or failed
     if (!message && this.openaiApiKey) {
       const startTime = Date.now();
-      console.log(chalk.cyan('[OpenAI]') + chalk.gray(' Using fallback endpoint...'));
+      console.log(chalk.cyan('[LZero]') + chalk.gray(' Backup intelligence active'));
       
       const response = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
@@ -578,7 +578,7 @@ Remember: You are LZero - be helpful, conversational, and make the experience fe
 
       const data: any = await response.json();
       const latency = Date.now() - startTime;
-      console.log(chalk.green('[OpenAI]') + chalk.gray(` ✓ Success (${latency}ms)`));
+      console.log(chalk.green('[LZero]') + chalk.gray(` ✓ Backup processed (${latency}ms)`));
       message = data.choices[0].message;
       toolCalls = message.tool_calls;
     }

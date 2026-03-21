@@ -13,8 +13,8 @@ onasis-repl start 2>&1 | tee session.log
 ```
 
 **Look for:**
-- ✅ `[AI Router] ✓ Success (XXms)` - Router working!
-- ⚠️ `[AI Router] ✗ Failed` → `[OpenAI]` - Fallback triggered
+- ✅ `[LZero] ✓ Processed (XXms)` - Router working!
+- ⚠️ `[LZero] Using enhanced mode` → `[OpenAI]` - Fallback triggered
 - ⚠️ `Falling back to pattern matching` - Both failed
 
 ### 3. Check Logs
@@ -23,8 +23,8 @@ onasis-repl start 2>&1 | tee session.log
 grep -i "router\|fallback\|failed" session.log
 
 # Count success vs fallback
-echo "AI Router Success: $(grep -c '\[AI Router\] ✓' session.log)"
-echo "OpenAI Fallback: $(grep -c '\[OpenAI\]' session.log)"
+echo "LZero Primary: $(grep -c '\[LZero\] ✓ Processed' session.log)"
+echo "LZero Backup: $(grep -c 'Backup' session.log)"
 echo "Pattern Matching: $(grep -c 'pattern matching' session.log)"
 ```
 
@@ -67,7 +67,7 @@ onasis-repl start
 ```bash
 onasis-repl start --ai-router http://invalid
 > "Hello"
-# Should show: [AI Router] ✗ Failed → [OpenAI]
+# Should show: [LZero] Using enhanced mode → [OpenAI]
 ```
 
 ### Test 3: Force Local Fallback
@@ -139,7 +139,7 @@ Hey there! 👋 I'm LZero, your memory assistant...
 
 💭 What do I know about TypeScript?
 [AI Router] Attempting primary endpoint...
-[AI Router] ✗ Failed (5000ms)
+[LZero] Using enhanced mode (5000ms)
   → Falling back to OpenAI...
 [OpenAI] Using fallback endpoint...
 [OpenAI] ✓ Success (890ms)
