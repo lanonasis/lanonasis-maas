@@ -1,8 +1,6 @@
 import * as vscode from 'vscode';
 import { SecureApiKeyService, StoredCredential } from '@lanonasis/ide-extension-core';
 import type {
-  CoreMemoryClient as CoreMemoryClientType,
-  CoreMemoryClientConfig,
   PaginatedResponse,
   CreateMemoryRequest,
   CreateMemoryRequest as SDKCreateMemoryRequest,
@@ -16,7 +14,6 @@ import type {
   UserMemoryStats,
   UserMemoryStats as SDKUserMemoryStats,
   MemoryType,
-  ApiResponse,
 } from '@lanonasis/memory-client';
 
 type ApiErrorResponse = { message?: string };
@@ -31,24 +28,76 @@ function getErrorMessage(error: ApiErrorResponse | string | undefined, fallback:
 }
 import { IEnhancedMemoryService, MemoryServiceCapabilities } from './IMemoryService';
 
-// Type aliases for backwards compatibility with legacy code
-type EnhancedMemoryClientType = CoreMemoryClientType;
-type EnhancedMemoryClientConfig = CoreMemoryClientConfig;
+interface EnhancedMemoryClientConfig {
+  apiUrl: string;
+  apiKey?: string;
+  authToken?: string;
+  timeout?: number;
+  retry?: {
+    maxRetries?: number;
+    retryDelay?: number;
+    backoff?: 'linear' | 'exponential';
+  };
+  headers?: Record<string, string>;
+  preferCLI?: boolean;
+  enableMCP?: boolean;
+  cliDetectionTimeout?: number;
+  fallbackToAPI?: boolean;
+  minCLIVersion?: string;
+  verbose?: boolean;
+  userId?: string;
+  organizationId?: string;
+}
 
-// Stub for missing OperationResult - use ApiResponse pattern
-interface OperationResult<T> extends ApiResponse<T> {
+interface OperationResult<T> {
+  data?: T;
+  error?: ApiErrorResponse | string;
   source?: 'cli' | 'api';
   mcpUsed?: boolean;
 }
 
-// Connection capabilities for HTTP-based CoreMemoryClient
-// Note: CLI/MCP features are NOT supported by CoreMemoryClient (HTTP-only)
-interface ConnectionCapabilities {
+interface CLICapabilities {
+  cliAvailable: boolean;
+  mcpSupport: boolean;
   authenticated: boolean;
-  connectionMode: 'http';  // CoreMemoryClient only supports HTTP
+  goldenContract: boolean;
+  version?: string;
 }
 
-type MemoryClientModule = typeof import('@lanonasis/memory-client');
+interface EnhancedMemoryClientType {
+  getCapabilities(): Promise<CLICapabilities>;
+  healthCheck(): Promise<OperationResult<{ status: string; timestamp: string }>>;
+  createMemory(memory: SDKCreateMemoryRequest): Promise<OperationResult<SDKMemoryEntry>>;
+  updateMemory(id: string, memory: SDKUpdateMemoryRequest): Promise<OperationResult<SDKMemoryEntry>>;
+  searchMemories(request: SDKSearchMemoryRequest): Promise<OperationResult<{ results: SDKMemorySearchResult[] }>>;
+  getMemory(id: string): Promise<OperationResult<SDKMemoryEntry>>;
+  listMemories(options: {
+    page?: number;
+    limit?: number;
+    memory_type?: string;
+    topic_id?: string;
+    project_ref?: string;
+    status?: string;
+    tags?: string[];
+    sort?: string;
+    order?: 'asc' | 'desc';
+  }): Promise<OperationResult<PaginatedResponse<SDKMemoryEntry>>>;
+  deleteMemory(id: string): Promise<OperationResult<unknown>>;
+  getMemoryStats(): Promise<OperationResult<SDKUserMemoryStats>>;
+}
+
+interface ConnectionCapabilities {
+  authenticated: boolean;
+  cliAvailable: boolean;
+  mcpSupport: boolean;
+  goldenContract: boolean;
+  version?: string;
+  connectionMode: 'http' | 'cli' | 'cli+mcp';
+}
+
+interface MemoryClientModule {
+  createNodeMemoryClient(config: EnhancedMemoryClientConfig): Promise<EnhancedMemoryClientType>;
+}
 type SDKMemoryType = SDKCreateMemoryRequest['memory_type'];
 
 let cachedMemoryClientModule: MemoryClientModule | undefined;
@@ -60,9 +109,9 @@ function getMemoryClientModule(): MemoryClientModule | undefined {
     attemptedMemoryClientLoad = true;
     try {
       // eslint-disable-next-line @typescript-eslint/no-require-imports
-      cachedMemoryClientModule = require('@lanonasis/memory-client') as MemoryClientModule;
+      cachedMemoryClientModule = require('@lanonasis/memory-client/node') as MemoryClientModule;
     } catch (error) {
-      console.warn('[EnhancedMemoryService] @lanonasis/memory-client not available. Falling back to basic service.', error);
+      console.warn('[EnhancedMemoryService] @lanonasis/memory-client/node not available. Falling back to basic service.', error);
       cachedMemoryClientModule = undefined;
     }
   }
@@ -83,7 +132,7 @@ export class EnhancedMemoryService implements IEnhancedMemoryService {
     const sdkModule = getMemoryClientModule();
 
     if (!sdkModule) {
-      throw new Error('@lanonasis/memory-client module not available');
+      throw new Error('@lanonasis/memory-client/node module not available');
     }
 
     this.sdk = sdkModule;
@@ -102,7 +151,7 @@ export class EnhancedMemoryService implements IEnhancedMemoryService {
   }
 
   private async initializeClient(): Promise<void> {
-    const { CoreMemoryClient } = this.sdk;
+    const { createNodeMemoryClient } = this.sdk;
     const credential = await this.secureApiKeyService.getStoredCredentials();
 
     if (!credential) {
@@ -123,9 +172,12 @@ export class EnhancedMemoryService implements IEnhancedMemoryService {
         this.config.get<string>('gatewayUrl', 'https://api.lanonasis.com') :
         apiUrl;
 
-      // Note: CLI detection is no longer supported in CoreMemoryClient
-      // The client uses HTTP API directly
       const verbose = this.config.get<boolean>('verboseLogging', false);
+      clientConfig.preferCLI = this.config.get<boolean>('preferCLI', true);
+      clientConfig.enableMCP = this.config.get<boolean>('enableMCP', true);
+      clientConfig.cliDetectionTimeout = this.config.get<number>('cliDetectionTimeout', 2000);
+      clientConfig.fallbackToAPI = true;
+      clientConfig.verbose = verbose;
 
       // Performance warning: verbose logging in production (show only once per session)
       if (verbose && process.env.NODE_ENV === 'production' && !verboseLoggingWarningShown) {
@@ -136,9 +188,7 @@ export class EnhancedMemoryService implements IEnhancedMemoryService {
         );
       }
 
-      this.client = new CoreMemoryClient(clientConfig);
-
-      // Detect capabilities (CoreMemoryClient is ready immediately, no initialize needed)
+      this.client = await createNodeMemoryClient(clientConfig);
       this.connectionCapabilities = await this.detectCapabilities();
 
       this.updateStatusBar(true, this.getConnectionStatus());
@@ -155,22 +205,32 @@ export class EnhancedMemoryService implements IEnhancedMemoryService {
     if (!this.client) {
       return {
         authenticated: false,
+        cliAvailable: false,
+        mcpSupport: false,
+        goldenContract: false,
         connectionMode: 'http'
       };
     }
 
     try {
-      // Test API connection with a health check
+      const cliCapabilities = await this.client.getCapabilities();
       const healthResult = await this.client.healthCheck();
-
-      // CoreMemoryClient uses pure HTTP API only
       return {
         authenticated: healthResult.error === undefined,
-        connectionMode: 'http'
+        cliAvailable: cliCapabilities.cliAvailable,
+        mcpSupport: cliCapabilities.mcpSupport,
+        goldenContract: cliCapabilities.goldenContract,
+        version: cliCapabilities.version,
+        connectionMode: cliCapabilities.cliAvailable
+          ? (cliCapabilities.mcpSupport ? 'cli+mcp' : 'cli')
+          : 'http'
       };
     } catch {
       return {
         authenticated: false,
+        cliAvailable: false,
+        mcpSupport: false,
+        goldenContract: false,
         connectionMode: 'http'
       };
     }
@@ -178,9 +238,10 @@ export class EnhancedMemoryService implements IEnhancedMemoryService {
 
   private getConnectionStatus(): string {
     if (!this.connectionCapabilities) return 'Unknown';
-
-    // CoreMemoryClient is HTTP-only, display accurate status
-    return this.connectionCapabilities.authenticated ? 'HTTP API' : 'Disconnected';
+    if (!this.connectionCapabilities.authenticated) return 'Disconnected';
+    if (this.connectionCapabilities.connectionMode === 'cli+mcp') return 'CLI+MCP';
+    if (this.connectionCapabilities.connectionMode === 'cli') return 'CLI';
+    return 'HTTP API';
   }
 
   private updateStatusBar(connected: boolean, status: string): void {
@@ -212,23 +273,24 @@ export class EnhancedMemoryService implements IEnhancedMemoryService {
   public getCapabilities(): MemoryServiceCapabilities | null {
     if (!this.connectionCapabilities) return null;
 
-    // Return capabilities in expected interface format
-    // Note: CLI features are not available with CoreMemoryClient (HTTP-only)
     return {
-      cliAvailable: false,
-      mcpSupport: false,
+      cliAvailable: this.connectionCapabilities.cliAvailable,
+      mcpSupport: this.connectionCapabilities.mcpSupport,
       authenticated: this.connectionCapabilities.authenticated,
-      goldenContract: false
+      goldenContract: this.connectionCapabilities.goldenContract,
+      version: this.connectionCapabilities.version,
+      activeTransport: this.connectionCapabilities.connectionMode === 'http' ? 'http-only' : undefined,
+      connectionHealth: this.connectionCapabilities.authenticated ? 'healthy' : 'disconnected'
     };
   }
 
   public async testConnection(apiKey?: string): Promise<void> {
-    const { CoreMemoryClient } = this.sdk;
+    const { createNodeMemoryClient } = this.sdk;
     let testClient = this.client;
 
     if (apiKey) {
       const config = this.buildClientConfigFromCredential({ type: 'apiKey', token: apiKey });
-      testClient = new CoreMemoryClient(config);
+      testClient = await createNodeMemoryClient(config);
     }
 
     if (!testClient) {
@@ -238,7 +300,7 @@ export class EnhancedMemoryService implements IEnhancedMemoryService {
       }
 
       const config = this.buildClientConfigFromCredential(credential);
-      testClient = new CoreMemoryClient(config);
+      testClient = await createNodeMemoryClient(config);
     }
 
     // Test with enhanced client - this will try CLI first, then fallback to API
@@ -436,12 +498,19 @@ export class EnhancedMemoryService implements IEnhancedMemoryService {
 
     const details = [
       `Connection Mode: ${caps.connectionMode.toUpperCase()}`,
-      `Authenticated: ${caps.authenticated ? '✅' : '❌'}`
+      `Authenticated: ${caps.authenticated ? '✅' : '❌'}`,
+      `CLI Available: ${caps.cliAvailable ? '✅' : '❌'}`,
+      `MCP Support: ${caps.mcpSupport ? '✅' : '❌'}`,
+      `Golden Contract: ${caps.goldenContract ? '✅' : '❌'}`
     ];
 
     const message = `Lanonasis Memory Connection Status:\n\n${details.join('\n')}`;
 
-    if (caps.authenticated) {
+    if (caps.authenticated && caps.cliAvailable) {
+      vscode.window.showInformationMessage(
+        `${message}\n\nConnected via ${this.getConnectionStatus()}.`
+      );
+    } else if (caps.authenticated) {
       vscode.window.showInformationMessage(
         `${message}\n\nConnected via HTTP API.`
       );
@@ -513,7 +582,7 @@ export class EnhancedMemoryService implements IEnhancedMemoryService {
   }
 
   private buildClientConfigFromCredential(credential: StoredCredential): EnhancedMemoryClientConfig & { userId?: string; organizationId?: string } {
-    // Build config manually (ConfigPresets no longer available in CoreMemoryClient)
+    // Build config manually so the extension can use the Node client without relying on runtime presets.
     const vscodeConfig = vscode.workspace.getConfiguration('lanonasis');
     const apiUrl = vscodeConfig.get<string>('apiUrl', 'https://api.lanonasis.com');
 

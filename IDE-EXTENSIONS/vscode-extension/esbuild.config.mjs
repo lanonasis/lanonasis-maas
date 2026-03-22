@@ -53,6 +53,7 @@ async function buildExtension() {
       'electron', // Electron APIs (Cursor adapter)
       '@lanonasis/ide-extension-core', // Built separately in monorepo
       '@lanonasis/memory-client', // Runtime dependency, not bundled in extension build
+      '@lanonasis/memory-client/node', // Node-enhanced runtime dependency
     ],
     // Resolve path aliases from tsconfig and local packages
     alias: {

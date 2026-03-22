@@ -34,6 +34,9 @@ export class ReplEngine {
       output: process.stdout,
       prompt: chalk.cyan('💭 ')
     });
+    
+    // Expose readline interface globally so orchestrator can pause/resume around spinners
+    (global as any).rlInterface = this.rl;
 
     this.context = {
       mode: config.useMCP ? 'local' : 'remote',
