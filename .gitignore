@@ -107,3 +107,8 @@ package-lock.json
 
 # Local MCP server directory
 mcp-server/
+
+# Local IDE/agent settings (per-machine, not shared)
+.claude/settings.local.json
+.cursor/settings.local.json
+.windsurf/settings.local.json
