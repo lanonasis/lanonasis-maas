@@ -1,0 +1,229 @@
+{
+  "id": "recall-forge",
+  "kind": "memory",
+  "name": "RecallForge",
+  "version": "1.0.0",
+  "description": "Secret-safe memory and context engine for OpenClaw. Fills both memory and contextEngine slots with tiered semantic recall, credential redaction (30+ patterns), and prompt injection protection.",
+  "uiHints": {
+    "apiKey": {
+      "label": "LanOnasis API Key",
+      "sensitive": true,
+      "placeholder": "lan_...",
+      "help": "API key from LanOnasis dashboard (or use ${LANONASIS_API_KEY})"
+    },
+    "baseUrl": {
+      "label": "API Base URL",
+      "advanced": true,
+      "placeholder": "https://api.lanonasis.com"
+    },
+    "projectId": {
+      "label": "Project ID",
+      "help": "Dedicated project per OpenClaw install (or use ${LANONASIS_PROJECT_ID})"
+    },
+    "agentId": {
+      "label": "Agent ID",
+      "help": "Tags memories with this agent_id (default: main)"
+    },
+    "autoRecall": {
+      "label": "Auto-Recall",
+      "help": "Inject relevant memories before each session"
+    },
+    "recallMode": {
+      "label": "Recall Mode",
+      "help": "auto: inject memories automatically on each session start. ondemand: disable auto-injection \u2014 use memory_search manually instead. Recommended for Ollama and small-context models."
+    },
+    "maxRecallChars": {
+      "label": "Max Recall Chars",
+      "advanced": true,
+      "placeholder": "1500",
+      "help": "Hard cap on total injected recall characters. Default: 1500. Ollama / small-context users should set 400\u2013600."
+    },
+    "captureMode": {
+      "label": "Capture Mode",
+      "help": "auto: capture all, hybrid: stricter, explicit: manual only"
+    },
+    "localFallback": {
+      "label": "Local Fallback",
+      "help": "Write Markdown copies to workspace/memory/"
+    },
+    "searchThreshold": {
+      "label": "Search Threshold",
+      "advanced": true,
+      "placeholder": "0.75"
+    },
+    "dedupeThreshold": {
+      "label": "Dedup Threshold",
+      "advanced": true,
+      "placeholder": "0.985",
+      "help": "Similarity threshold used by memory_store duplicate detection"
+    },
+    "maxRecallResults": {
+      "label": "Max Recall Results",
+      "advanced": true,
+      "placeholder": "5"
+    },
+    "memoryMode": {
+      "label": "Memory Mode",
+      "help": "remote: cloud only, local: filesystem only, hybrid: both with cloud primary"
+    },
+    "sharedNamespace": {
+      "label": "Shared Namespace",
+      "help": "Namespace for cross-agent shared memory (leave empty to disable shared recall)"
+    },
+    "syncMode": {
+      "label": "Sync Mode",
+      "advanced": true,
+      "help": "realtime: immediate writes, batch: deferred, manual: explicit only"
+    },
+    "queueOnFailure": {
+      "label": "Queue On Failure",
+      "advanced": true,
+      "help": "Queue writes locally when cloud API is unavailable"
+    },
+    "autoIndexOnFirstUse": {
+      "label": "Auto-Index On First Use",
+      "advanced": true,
+      "help": "Bootstrap agent memory index on first session"
+    },
+    "extractSourceFormats": {
+      "label": "Extract Source Formats",
+      "advanced": true,
+      "help": "Formats accepted by the extract CLI (openclaw-session, markdown, sqlite, etc.)"
+    },
+    "embeddingProvider": {
+      "label": "Embedding Provider",
+      "advanced": true,
+      "help": "Provider for vector embeddings (e.g. openai, ollama, lanonasis)"
+    },
+    "embeddingModel": {
+      "label": "Embedding Model",
+      "advanced": true,
+      "help": "Model name for store-time embeddings (e.g. text-embedding-3-small, nomic-embed-text)"
+    },
+    "queryEmbeddingModel": {
+      "label": "Query Embedding Model",
+      "advanced": true,
+      "help": "Model for query-time embeddings (defaults to embeddingModel if unset)"
+    },
+    "embeddingDimensions": {
+      "label": "Embedding Dimensions",
+      "advanced": true,
+      "help": "Vector dimension count (0 = provider default)"
+    },
+    "embeddingProfileId": {
+      "label": "Embedding Profile ID",
+      "advanced": true,
+      "help": "Stamped into stored metadata for mismatch detection"
+    }
+  },
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "apiKey": {
+        "type": "string"
+      },
+      "baseUrl": {
+        "type": "string"
+      },
+      "projectId": {
+        "type": "string"
+      },
+      "agentId": {
+        "type": "string"
+      },
+      "autoRecall": {
+        "type": "boolean"
+      },
+      "recallMode": {
+        "type": "string",
+        "enum": [
+          "auto",
+          "ondemand"
+        ]
+      },
+      "maxRecallChars": {
+        "type": "number",
+        "minimum": 100
+      },
+      "captureMode": {
+        "type": "string",
+        "enum": [
+          "auto",
+          "explicit",
+          "hybrid"
+        ]
+      },
+      "localFallback": {
+        "type": "boolean"
+      },
+      "searchThreshold": {
+        "type": "number",
+        "minimum": 0,
+        "maximum": 1
+      },
+      "dedupeThreshold": {
+        "type": "number",
+        "minimum": 0,
+        "maximum": 1
+      },
+      "maxRecallResults": {
+        "type": "number",
+        "minimum": 1,
+        "maximum": 20
+      },
+      "memoryMode": {
+        "type": "string",
+        "enum": [
+          "remote",
+          "local",
+          "hybrid"
+        ]
+      },
+      "sharedNamespace": {
+        "type": "string"
+      },
+      "syncMode": {
+        "type": "string",
+        "enum": [
+          "realtime",
+          "batch",
+          "manual"
+        ]
+      },
+      "queueOnFailure": {
+        "type": "boolean"
+      },
+      "autoIndexOnFirstUse": {
+        "type": "boolean"
+      },
+      "extractSourceFormats": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "embeddingProvider": {
+        "type": "string"
+      },
+      "embeddingModel": {
+        "type": "string"
+      },
+      "queryEmbeddingModel": {
+        "type": "string"
+      },
+      "embeddingDimensions": {
+        "type": "number",
+        "minimum": 0
+      },
+      "embeddingProfileId": {
+        "type": "string"
+      }
+    },
+    "required": []
+  },
+  "slots": [
+    "memory",
+    "contextEngine"
+  ]
+}
