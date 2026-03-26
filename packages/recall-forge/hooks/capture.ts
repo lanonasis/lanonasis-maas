@@ -119,7 +119,7 @@ export function createCaptureHook(
 
       // 5. Cap and create memories
       const captured = toCapture.slice(0, cap);
-      const channel = "webchat"; // TODO: get from event metadata
+      const channel = cfg.defaultChannel;
 
       const safeCaptured: string[] = [];
       for (const text of captured) {
@@ -202,7 +202,7 @@ export function createCompactionCaptureHook(
 
       // 4. Cap at 3
       const toCapture = filtered.slice(0, 3);
-      const channel = "webchat";
+      const channel = cfg.defaultChannel;
 
       // 5. Create memories
       for (const text of toCapture) {

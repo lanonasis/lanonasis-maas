@@ -304,10 +304,10 @@ export class LanonasisClient {
   private projectId: string;
   private cache: Map<string, CacheEntry<unknown>>;
   private rateLimit: RateLimitState;
-  private readonly CACHE_TTL_MS = 60_000; // 60s
-  private readonly CACHE_MAX_SIZE = 50;
-  private readonly RATE_LIMIT_WINDOW_MS = 60_000; // 1 min
-  private readonly RATE_LIMIT_MAX_REQ = 60;
+  private readonly CACHE_TTL_MS: number;
+  private readonly CACHE_MAX_SIZE: number;
+  private readonly RATE_LIMIT_WINDOW_MS: number;
+  private readonly RATE_LIMIT_MAX_REQ: number;
 
   constructor(cfg: LanonasisConfig) {
     if (!cfg.projectId) {
@@ -318,6 +318,10 @@ export class LanonasisClient {
     this.projectId = cfg.projectId;
     this.cache = new Map();
     this.rateLimit = { timestamps: [] };
+    this.CACHE_TTL_MS = cfg.cacheTtlMs;
+    this.CACHE_MAX_SIZE = cfg.cacheMaxSize;
+    this.RATE_LIMIT_WINDOW_MS = cfg.rateLimitWindowMs;
+    this.RATE_LIMIT_MAX_REQ = cfg.rateLimitMaxReq;
   }
 
   // LRU Cache helpers

@@ -29,6 +29,11 @@ function createClient() {
     privacyMode: "mask",
     privacyLocale: "US",
     privacyNotifyUrl: "",
+    defaultChannel: "openclaw",
+    cacheTtlMs: 60_000,
+    cacheMaxSize: 50,
+    rateLimitMaxReq: 60,
+    rateLimitWindowMs: 60_000,
   });
 }
 
