@@ -1,5 +1,5 @@
 // CLI subcommand for JSONL extraction
-// Usage: openclaw lanonasis extract <file> [options]
+// Usage: openclaw recall extract <file> [options]
 
 import type { LanonasisClient } from "../client.js";
 import type { LanonasisConfig } from "../config.js";

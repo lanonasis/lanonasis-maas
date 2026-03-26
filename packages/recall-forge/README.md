@@ -42,15 +42,57 @@ Agent runs
     │
     ▼
 [memory] capture hook (agent_end / before_compaction)
-    │   Secret redaction (same 30+ patterns)
+    │
+    ├─ Privacy Guard — Stage 1: secret-redactor (30 patterns — always-on)
+    ├─ Privacy Guard — Stage 2: privacy-sdk PII detection/masking
+    │     SSN, email, credit card, IBAN, passport, DOB, phone, IP...
+    │     Confidence threshold: 0.85 | Luhn + area-code validation
+    │     GDPR / CCPA / HIPAA / PCI-DSS compliance tagging
+    │
     │   Capture filter (removes low-signal content)
-    │   Type detection + tag extraction
+    │   Type detection + tag extraction + privacy tags
     │   Vector dedup (0.985 threshold)
+    │   Privacy metadata written to memory.metadata
     ▼
 Memory stored in LanOnasis MaaS
+    │
+    ├─ [if localFallback] workspace/memory/YYYY-MM-DD.md (already sanitized)
+    └─ [if privacyNotifyUrl] webhook POST — privacy.intervention event
+         (action, piiTypes, regulations, timestamp — never content)
 ```
 
 The recall hook (`before_agent_start`) and contextEngine are two separate integration surfaces. The recall hook is passive and event-driven. The contextEngine is active — OpenClaw calls `buildContext()` whenever it needs to assemble context, giving RecallForge a direct seat in prompt construction.
+
+### Privacy Shield — What Gets Protected and Where You See It
+
+Every memory that passes through a write path is scanned. When an intervention occurs:
+
+**On the stored memory** (visible in `openclaw recall list` and `openclaw recall get <id>`):
+```
+Tags:     pii:email  privacy:redacted  compliant:gdpr
+Metadata: privacy.action = "redacted+masked"
+          privacy.piiTypes = ["email"]
+          privacy.regulations = ["GDPR", "CCPA"]
+```
+
+**In the daily audit log** (`workspace/memory/privacy/YYYY-MM-DD.md`):
+```markdown
+| Time     | Action          | Secrets | PII Types | Sensitivity | Regulations |
+|----------|-----------------|---------|-----------|-------------|-------------|
+| 14:23:01 | redacted+masked | 1       | email     | high        | GDPR, CCPA  |
+```
+
+**Via webhook** (if `privacyNotifyUrl` is set):
+```json
+{
+  "event": "privacy.intervention",
+  "plugin": "recall-forge",
+  "action": "redacted+masked",
+  "piiTypes": ["email"],
+  "regulations": ["GDPR", "CCPA"],
+  "timestamp": "2026-03-26T14:23:01Z"
+}
+```
 
 ## What Gets Redacted
 
@@ -143,6 +185,9 @@ Or in `~/.openclaw/openclaw.json`:
 | `embeddingProvider` | — | Provider for vector embeddings (e.g. `openai`, `ollama`) |
 | `embeddingModel` | — | Embedding model name (e.g. `text-embedding-3-small`) |
 | `embeddingProfileId` | — | Stamped into stored memories for mismatch detection |
+| `privacyMode` | `mask` | PII protection: `mask` (detect + mask), `detect` (scan + tag only), `off` (credentials only) |
+| `privacyLocale` | `US` | PII locale hint: `US`, `UK`, `EU`, `DE`, `FR`, `JP`, `AU`, `CA` |
+| `privacyNotifyUrl` | — | Webhook URL for out-of-band privacy intervention events |
 
 ## Context Window Management
 
@@ -169,14 +214,14 @@ cat "$(openclaw plugins path recall-forge)/setup/heartbeat-memory.md" >> ~/.open
 ## CLI
 
 ```bash
-openclaw lanonasis status
-openclaw lanonasis create --title "Title" --content "Content"
-openclaw lanonasis get <id-or-prefix>
-openclaw lanonasis update <id-or-prefix> --title "Updated"
-openclaw lanonasis delete <id-or-prefix> --force
-openclaw lanonasis search "query" --threshold 0.7 --type knowledge --tags alpha,beta
-openclaw lanonasis list --page 1 --sort created_at --order desc
-openclaw lanonasis stats
+openclaw recall status
+openclaw recall create --title "Title" --content "Content"
+openclaw recall get <id-or-prefix>
+openclaw recall update <id-or-prefix> --title "Updated"
+openclaw recall delete <id-or-prefix> --force
+openclaw recall search "query" --threshold 0.7 --type knowledge --tags alpha,beta
+openclaw recall list --page 1 --sort created_at --order desc
+openclaw recall stats
 ```
 
 The CLI accepts full UUIDs or unambiguous 8+ character prefixes for `get`, `update`, and `delete`.
@@ -197,9 +242,9 @@ Import memories from existing session logs, Markdown docs, or SQLite databases. 
 - `sqlite` — `.sqlite` / `.db` files, reads the OpenClaw `chunks` table
 
 ```bash
-openclaw lanonasis extract ~/.openclaw/agents/main/sessions/sample.jsonl --dry-run
-openclaw lanonasis extract ~/.openclaw/workspace/SOUL.md --dry-run
-openclaw lanonasis extract ~/.openclaw/memory/main.sqlite --dry-run
+openclaw recall extract ~/.openclaw/agents/main/sessions/sample.jsonl --dry-run
+openclaw recall extract ~/.openclaw/workspace/SOUL.md --dry-run
+openclaw recall extract ~/.openclaw/memory/main.sqlite --dry-run
 ```
 
 ## Agent Tools
@@ -239,7 +284,7 @@ For local testing without publishing:
 cd apps/lanonasis-maas/packages/recall-forge
 npm run build
 openclaw plugins install "$(pwd)" --link --force
-openclaw lanonasis status
+openclaw recall status
 ```
 
 ## Publish

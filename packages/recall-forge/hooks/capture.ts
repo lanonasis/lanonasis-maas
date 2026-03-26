@@ -5,6 +5,8 @@ import { detectMemoryType } from "../enrichment/type-detector.js";
 import { extractTags } from "../enrichment/tag-extractor.js";
 import { shouldCapture } from "../enrichment/capture-filter.js";
 import type { LocalFallbackWriter } from "./local-fallback.js";
+import type { PrivacyGuard, PrivacyReport } from "../privacy/privacy-guard.js";
+import type { PrivacyLogWriter } from "../privacy/privacy-log.js";
 
 // Extract text content from message (handles string and content blocks)
 function extractMessageText(msg: Record<string, unknown>): string[] {
@@ -43,26 +45,37 @@ function createMemoryParams(
   text: string,
   cfg: LanonasisConfig,
   channel: string,
-): LanCreateParams {
-  const type = detectMemoryType(text);
-  const tags = extractTags(text);
-  const title = text.slice(0, 80).replace(/\s+/g, " ").trim();
+  guard?: PrivacyGuard,
+): { params: LanCreateParams; safeContent: string } {
+  const guardResult = guard ? guard.process(text) : { content: text, report: null };
+  const safeContent = guardResult.content;
+
+  const type = detectMemoryType(safeContent);
+  const baseTags = extractTags(safeContent);
+  const privacyTags = guardResult.report && guard ? guard.tagsFrom(guardResult.report) : [];
+  const tags = [...new Set([...baseTags, ...privacyTags])];
+  const title = safeContent.slice(0, 80).replace(/\s+/g, " ").trim();
 
   // Route knowledge/project/reference to shared namespace when configured
   const isShared = cfg.sharedNamespace && SHARED_TYPES.has(type);
+  const privacyMeta = guardResult.report && guard ? guard.metaFrom(guardResult.report) : undefined;
 
   return {
-    title,
-    content: text,
-    type,
-    tags,
-    metadata: {
-      agent_id: cfg.agentId,
-      source: "openclaw",
-      channel,
-      captured_at: new Date().toISOString(),
-      ...(isShared ? { namespace: cfg.sharedNamespace } : {}),
-      ...embeddingProfileMeta(cfg),
+    safeContent,
+    params: {
+      title,
+      content: safeContent,
+      type,
+      tags,
+      metadata: {
+        agent_id: cfg.agentId,
+        source: "openclaw",
+        channel,
+        captured_at: new Date().toISOString(),
+        ...(isShared ? { namespace: cfg.sharedNamespace } : {}),
+        ...embeddingProfileMeta(cfg),
+        ...privacyMeta,
+      },
     },
   };
 }
@@ -72,6 +85,8 @@ export function createCaptureHook(
   cfg: LanonasisConfig,
   logger: { info(msg: string): void; warn(msg: string): void },
   fallback: LocalFallbackWriter,
+  guard?: PrivacyGuard,
+  privacyLog?: PrivacyLogWriter,
 ) {
   return async (event: {
     messages: unknown[];
@@ -106,16 +121,32 @@ export function createCaptureHook(
       const captured = toCapture.slice(0, cap);
       const channel = "webchat"; // TODO: get from event metadata
 
+      const safeCaptured: string[] = [];
       for (const text of captured) {
-        const params = createMemoryParams(text, cfg, channel);
+        const { params, safeContent } = createMemoryParams(text, cfg, channel, guard);
+        safeCaptured.push(safeContent);
         await client.createMemory(params);
+        if (privacyLog && params.metadata?.privacy) {
+          // Extract the report from metadata for logging — reconstruct minimal shape
+          const p = params.metadata.privacy as Record<string, unknown>;
+          await privacyLog.write({
+            secretsFound: (p.secretsFound as number) ?? 0,
+            secretTypes: (p.secretTypes as string[]) ?? [],
+            piiFound: !!(p.piiTypes),
+            piiTypes: (p.piiTypes as string[]) ?? [],
+            piiSensitivity: (p.piiSensitivity as PrivacyReport["piiSensitivity"]) ?? "none",
+            regulations: (p.regulations as string[]) ?? [],
+            action: p.action as PrivacyReport["action"],
+            timestamp: p.timestamp as string,
+          });
+        }
       }
 
-      // 6. Local fallback (single append)
-      if (cfg.localFallback && captured.length > 0) {
-        const combined = captured.join("\n\n---\n\n");
+      // 6. Local fallback (single append — uses already-sanitized content)
+      if (cfg.localFallback && safeCaptured.length > 0) {
+        const combined = safeCaptured.join("\n\n---\n\n");
         await fallback.writeMemory(
-          `Captured ${captured.length} memories`,
+          `Captured ${safeCaptured.length} memories`,
           combined,
         );
       }
@@ -131,6 +162,7 @@ export function createCompactionCaptureHook(
   client: LanonasisClient,
   cfg: LanonasisConfig,
   logger: { info(msg: string): void; warn(msg: string): void },
+  guard?: PrivacyGuard,
 ) {
   return async (event: {
     messageCount: number;
@@ -174,7 +206,7 @@ export function createCompactionCaptureHook(
 
       // 5. Create memories
       for (const text of toCapture) {
-        const params = createMemoryParams(text, cfg, channel);
+        const { params } = createMemoryParams(text, cfg, channel, guard);
         await client.createMemory(params);
       }
     } catch (err) {

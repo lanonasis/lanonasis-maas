@@ -3,6 +3,7 @@ export type CaptureMode = "auto" | "explicit" | "hybrid";
 export type MemoryMode = "remote" | "local" | "hybrid";
 export type SyncMode = "realtime" | "batch" | "manual";
 export type RecallMode = "auto" | "ondemand";
+export type PrivacyMode = "off" | "detect" | "mask";
 
 export type LanonasisConfig = {
   apiKey: string;
@@ -30,6 +31,10 @@ export type LanonasisConfig = {
   queryEmbeddingModel: string;
   embeddingDimensions: number;
   embeddingProfileId: string;
+  // Phase 6 — privacy guard
+  privacyMode: PrivacyMode;
+  privacyLocale: string;
+  privacyNotifyUrl: string;
 };
 
 const DEFAULTS: LanonasisConfig = {
@@ -58,6 +63,10 @@ const DEFAULTS: LanonasisConfig = {
   queryEmbeddingModel: "",
   embeddingDimensions: 0,
   embeddingProfileId: "",
+  // Phase 6
+  privacyMode: "mask" as PrivacyMode,
+  privacyLocale: "US",
+  privacyNotifyUrl: "",
 };
 
 // Resolve ${ENV_VAR} references in string values
@@ -144,6 +153,14 @@ export const lanonasisConfigSchema = {
       queryEmbeddingModel: resolveStringSetting(raw.queryEmbeddingModel, undefined, (raw.embeddingModel as string) ?? DEFAULTS.queryEmbeddingModel),
       embeddingDimensions: typeof raw.embeddingDimensions === "number" ? raw.embeddingDimensions : DEFAULTS.embeddingDimensions,
       embeddingProfileId: resolveStringSetting(raw.embeddingProfileId, "LANONASIS_EMBEDDING_PROFILE_ID", DEFAULTS.embeddingProfileId),
+      // Phase 6: privacy guard
+      privacyMode: (() => {
+        const v = raw.privacyMode as PrivacyMode;
+        const valid: PrivacyMode[] = ["off", "detect", "mask"];
+        return valid.includes(v) ? v : DEFAULTS.privacyMode;
+      })(),
+      privacyLocale: resolveStringSetting(raw.privacyLocale, "LANONASIS_PRIVACY_LOCALE", DEFAULTS.privacyLocale),
+      privacyNotifyUrl: resolveStringSetting(raw.privacyNotifyUrl, "LANONASIS_PRIVACY_NOTIFY_URL", DEFAULTS.privacyNotifyUrl),
     };
   },
 };

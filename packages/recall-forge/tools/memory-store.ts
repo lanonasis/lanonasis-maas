@@ -8,6 +8,7 @@ import type {
 import type { LanonasisConfig } from "../config.js";
 import { detectMemoryType } from "../enrichment/type-detector.js";
 import { extractTags } from "../enrichment/tag-extractor.js";
+import type { PrivacyGuard } from "../privacy/privacy-guard.js";
 
 const MEMORY_TYPES: LanMemoryType[] = [
   "context",
@@ -65,6 +66,7 @@ export function registerMemoryStoreTool(
   api: OpenClawPluginApi,
   client: LanonasisClient,
   cfg: LanonasisConfig,
+  guard?: PrivacyGuard,
 ) {
   api.registerTool({
     name: "memory_store",
@@ -139,20 +141,30 @@ export function registerMemoryStoreTool(
           throw new Error("Content is required when creating a memory.");
         }
 
+        // Run privacy guard — stage 1: redact credentials, stage 2: mask PII
+        const guardResult = guard ? guard.process(content) : null;
+        const safeContent = guardResult ? guardResult.content : content;
+
         // Auto-generate if absent
         if (!title) {
-          title = content.slice(0, 80).replace(/\s+/g, " ").trim();
+          title = safeContent.slice(0, 80).replace(/\s+/g, " ").trim();
         }
         if (!type) {
-          type = detectMemoryType(content);
+          type = detectMemoryType(safeContent);
         }
         if (!tags || tags.length === 0) {
-          tags = extractTags(content);
+          const baseTags = extractTags(safeContent);
+          const privacyTags = guardResult && guard ? guard.tagsFrom(guardResult.report) : [];
+          tags = [...new Set([...baseTags, ...privacyTags])];
+        } else if (guardResult && guard) {
+          // Merge privacy tags with caller-supplied tags
+          const privacyTags = guard.tagsFrom(guardResult.report);
+          tags = [...new Set([...tags, ...privacyTags])];
         }
 
         // Dedup check using configurable threshold
         const existing = await client.searchMemories({
-          query: content,
+          query: safeContent,
           threshold: cfg.dedupeThreshold,
           limit: 1,
         });
@@ -174,16 +186,18 @@ export function registerMemoryStoreTool(
           };
         }
 
-        // Create memory
+        // Create memory (with sanitized content + privacy metadata)
+        const privacyMeta = guardResult && guard ? guard.metaFrom(guardResult.report) : undefined;
         const memory = await client.createMemory({
           title,
-          content,
+          content: safeContent,
           type: type as any,
           tags,
           metadata: {
             agent_id: cfg.agentId,
             source: "openclaw",
             captured_at: new Date().toISOString(),
+            ...privacyMeta,
           },
         });
 

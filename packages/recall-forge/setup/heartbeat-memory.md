@@ -9,7 +9,7 @@ Paste this section into your workspace HEARTBEAT.md to add periodic MaaS health 
 Check LanOnasis MaaS connectivity and memory stats:
 
 ```
-openclaw lanonasis status
+openclaw recall status
 ```
 
 Expected: `Status: ok | v1.0.0 | project: <project-id>`
@@ -25,7 +25,7 @@ If status returns an error:
 ### Memory Stats Check
 
 ```
-openclaw lanonasis stats
+openclaw recall stats
 ```
 
 Monitor for:
