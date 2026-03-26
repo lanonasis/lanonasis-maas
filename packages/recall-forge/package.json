@@ -20,7 +20,8 @@
     "dist/",
     "openclaw.plugin.json",
     "SETUP.md",
-    "setup/"
+    "setup/",
+    ".claw/"
   ],
   "dependencies": {
     "@lanonasis/privacy-sdk": "^1.0.0",

@@ -301,5 +301,15 @@
   "slots": [
     "memory",
     "contextEngine"
-  ]
+  ],
+  "skills": [
+    ".claw/skills"
+  ],
+  "metadata": {
+    "openclaw": {
+      "requires": {
+        "config": ["apiKey", "projectId"]
+      }
+    }
+  }
 }
