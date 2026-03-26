@@ -106,7 +106,8 @@ const plugin: OpenClawPlugin = {
 
     // 3a. Privacy guard — two-stage pipeline: credential stripping + PII masking
     //     privacyMode: 'mask' (default) | 'detect' (scan only) | 'off' (credentials only)
-    const guard = new PrivacyGuard(cfg);
+    //     logger passed so webhook failures are surfaced as warnings rather than silently dropped
+    const guard = new PrivacyGuard(cfg, api.logger);
     const privacyLog = cfg.localFallback ? new PrivacyLogWriter(api.resolvePath) : undefined;
 
     // 4. Recall hook — injects relevant memories before each session (passive, event-driven)

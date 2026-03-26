@@ -42,11 +42,13 @@ export class PrivacyGuard {
   private mode: PrivacyMode;
   private locale: string;
   private notifyUrl: string;
+  private logger?: { warn(msg: string): void };
 
-  constructor(cfg: LanonasisConfig) {
+  constructor(cfg: LanonasisConfig, logger?: { warn(msg: string): void }) {
     this.mode = (cfg.privacyMode as PrivacyMode) ?? "mask";
     this.locale = cfg.privacyLocale ?? "US";
     this.notifyUrl = cfg.privacyNotifyUrl ?? "";
+    this.logger = logger;
     this.sdk = new PrivacySDK({
       enableMasking: true,
       enableAutoDetect: true,
@@ -143,6 +145,11 @@ export class PrivacyGuard {
         regulations: report.regulations,
         timestamp: report.timestamp,
       }),
-    }).catch(() => { /* silently drop — notification failure never affects memory write */ });
+    }).catch((err) => {
+      if (this.logger) {
+        const msg = err instanceof Error ? err.message : "unknown";
+        this.logger.warn(`[recall-forge] privacy webhook failed: ${msg}`);
+      }
+    });
   }
 }

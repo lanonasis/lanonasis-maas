@@ -35,6 +35,12 @@ export type LanonasisConfig = {
   privacyMode: PrivacyMode;
   privacyLocale: string;
   privacyNotifyUrl: string;
+  // Phase 7 — client tuning
+  defaultChannel: string;
+  cacheTtlMs: number;
+  cacheMaxSize: number;
+  rateLimitMaxReq: number;
+  rateLimitWindowMs: number;
 };
 
 const DEFAULTS: LanonasisConfig = {
@@ -67,6 +73,12 @@ const DEFAULTS: LanonasisConfig = {
   privacyMode: "mask" as PrivacyMode,
   privacyLocale: "US",
   privacyNotifyUrl: "",
+  // Phase 7
+  defaultChannel: "openclaw",
+  cacheTtlMs: 60_000,
+  cacheMaxSize: 50,
+  rateLimitMaxReq: 60,
+  rateLimitWindowMs: 60_000,
 };
 
 // Resolve ${ENV_VAR} references in string values
@@ -161,6 +173,12 @@ export const lanonasisConfigSchema = {
       })(),
       privacyLocale: resolveStringSetting(raw.privacyLocale, "LANONASIS_PRIVACY_LOCALE", DEFAULTS.privacyLocale),
       privacyNotifyUrl: resolveStringSetting(raw.privacyNotifyUrl, "LANONASIS_PRIVACY_NOTIFY_URL", DEFAULTS.privacyNotifyUrl),
+      // Phase 7: client tuning
+      defaultChannel: resolveStringSetting(raw.defaultChannel, "LANONASIS_DEFAULT_CHANNEL", DEFAULTS.defaultChannel),
+      cacheTtlMs: typeof raw.cacheTtlMs === "number" && raw.cacheTtlMs > 0 ? raw.cacheTtlMs : DEFAULTS.cacheTtlMs,
+      cacheMaxSize: typeof raw.cacheMaxSize === "number" && raw.cacheMaxSize > 0 ? raw.cacheMaxSize : DEFAULTS.cacheMaxSize,
+      rateLimitMaxReq: typeof raw.rateLimitMaxReq === "number" && raw.rateLimitMaxReq > 0 ? raw.rateLimitMaxReq : DEFAULTS.rateLimitMaxReq,
+      rateLimitWindowMs: typeof raw.rateLimitWindowMs === "number" && raw.rateLimitWindowMs > 0 ? raw.rateLimitWindowMs : DEFAULTS.rateLimitWindowMs,
     };
   },
 };
