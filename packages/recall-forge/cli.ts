@@ -32,8 +32,9 @@ export function registerCli(
   api.registerCli(
     ({ program }: { program: any }) => {
       const cmd = program
-        .command("lanonasis")
-        .description("LanOnasis memory commands");
+        .command("recall")
+        .alias("lrf")
+        .description("RecallForge memory commands (alias: lrf)");
 
       // status
       cmd
@@ -195,6 +196,6 @@ export function registerCli(
       // extract — JSONL extraction with secret redaction
       registerExtractCli(cmd, getRuntime);
     },
-    { commands: ["lanonasis"] },
+    { commands: ["recall", "lrf"] },
   );
 }

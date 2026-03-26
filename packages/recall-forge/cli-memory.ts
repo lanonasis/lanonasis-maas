@@ -50,7 +50,7 @@ async function runDelete(
     }
     if (!options.force) {
       throw new Error(
-        "Deletion requires --force. Re-run as `openclaw lanonasis delete <id> --force`.",
+        "Deletion requires --force. Re-run as `openclaw recall delete <id> --force`.",
       );
     }
 

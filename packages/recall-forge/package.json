@@ -1,7 +1,7 @@
 {
   "name": "@lanonasis/recall-forge",
-  "version": "1.0.0",
-  "description": "RecallForge \u2014 secret-safe memory and context engine plugin for OpenClaw. Fills both memory and contextEngine slots with tiered semantic recall, 30+ pattern credential redaction, and prompt injection protection.",
+  "version": "1.1.0",
+  "description": "RecallForge — secret-safe memory and context engine plugin for OpenClaw. Fills both memory and contextEngine slots with tiered semantic recall, 30+ pattern credential redaction, and prompt injection protection.",
   "type": "module",
   "license": "MIT",
   "engines": {
@@ -23,6 +23,7 @@
     "setup/"
   ],
   "dependencies": {
+    "@lanonasis/privacy-sdk": "^1.0.0",
     "undici": "^7.24.5"
   },
   "peerDependencies": {

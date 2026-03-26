@@ -26,6 +26,9 @@ function createClient() {
     queryEmbeddingModel: "",
     embeddingDimensions: 0,
     embeddingProfileId: "",
+    privacyMode: "mask",
+    privacyLocale: "US",
+    privacyNotifyUrl: "",
   });
 }
 

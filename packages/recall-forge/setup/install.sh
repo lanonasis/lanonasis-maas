@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# install.sh — Activate the memory-lanonasis OpenClaw plugin
+# install.sh — Activate the recall-forge OpenClaw plugin
 # Run from the monorepo root or the plugin directory.
 #
 # Prerequisites:
@@ -15,11 +15,11 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PLUGIN_DIR="$(dirname "$SCRIPT_DIR")"
 OPENCLAW_DIR="$HOME/.openclaw"
 EXTENSIONS_DIR="$OPENCLAW_DIR/extensions"
-LINK_NAME="memory-lanonasis"
+LINK_NAME="recall-forge"
 CONFIG_FILE="$OPENCLAW_DIR/openclaw.json"
 
 # --- Preflight ---
-echo "=== memory-lanonasis plugin installer ==="
+echo "=== recall-forge plugin installer ==="
 echo ""
 
 if ! command -v openclaw &>/dev/null; then
@@ -77,10 +77,10 @@ if ! command -v jq &>/dev/null; then
   echo ""
   cat <<'MANUAL_CONFIG'
   "plugins": {
-    "allow": ["memory-lanonasis"],
-    "slots": { "memory": "memory-lanonasis" },
+    "allow": ["recall-forge"],
+    "slots": { "memory": "recall-forge" },
     "entries": {
-      "memory-lanonasis": {
+      "recall-forge": {
         "enabled": true,
         "config": {
           "apiKey": "YOUR_LANONASIS_API_KEY",
@@ -106,7 +106,7 @@ else
   EXISTING=$(cat "$CONFIG_FILE" 2>/dev/null || echo '{}')
 
   # Check if plugin already configured
-  if echo "$EXISTING" | jq -e '.plugins.entries["memory-lanonasis"]' &>/dev/null; then
+  if echo "$EXISTING" | jq -e '.plugins.entries["recall-forge"]' &>/dev/null; then
     echo "   Plugin already configured in openclaw.json — skipping merge."
   else
     # Prompt for credentials
@@ -123,9 +123,9 @@ else
 
     # Merge plugin config
     UPDATED=$(echo "$EXISTING" | jq --arg key "$API_KEY" --arg pid "$PROJECT_ID" '
-      .plugins.allow = ((.plugins.allow // []) + ["memory-lanonasis"] | unique) |
-      .plugins.slots.memory = "memory-lanonasis" |
-      .plugins.entries["memory-lanonasis"] = {
+      .plugins.allow = ((.plugins.allow // []) + ["recall-forge"] | unique) |
+      .plugins.slots.memory = "recall-forge" |
+      .plugins.entries["recall-forge"] = {
         "enabled": true,
         "config": {
           "apiKey": $key,
@@ -161,19 +161,19 @@ fi
 # --- Step 5: Verify ---
 echo ""
 echo "5. Verifying..."
-if openclaw lanonasis status 2>/dev/null; then
+if openclaw recall status 2>/dev/null; then
   echo ""
   echo "=== Plugin activated successfully ==="
 else
-  echo "   Verification skipped — run 'openclaw lanonasis status' manually after setup."
+  echo "   Verification skipped — run 'openclaw recall status' manually after setup."
 fi
 
 echo ""
 echo "=== Installation complete ==="
 echo ""
 echo "Next steps:"
-echo "  1. Verify: openclaw lanonasis status"
-echo "  2. Test:   openclaw lanonasis list"
+echo "  1. Verify: openclaw recall status"
+echo "  2. Test:   openclaw recall list"
 echo "  3. Append AGENTS.md snippet to your workspace"
 echo "  4. Append HEARTBEAT.md snippet for health monitoring"
 echo ""
