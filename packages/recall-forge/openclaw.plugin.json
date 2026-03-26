@@ -2,8 +2,8 @@
   "id": "recall-forge",
   "kind": "memory",
   "name": "RecallForge",
-  "version": "1.0.0",
-  "description": "Secret-safe memory and context engine for OpenClaw. Fills both memory and contextEngine slots with tiered semantic recall, credential redaction (30+ patterns), and prompt injection protection.",
+  "version": "1.1.0",
+  "description": "Secret-safe memory and context engine for OpenClaw. Fills both memory and contextEngine slots with tiered semantic recall, credential redaction (30+ patterns), PII masking, and prompt injection protection.",
   "uiHints": {
     "apiKey": {
       "label": "LanOnasis API Key",
@@ -114,6 +114,53 @@
       "label": "Embedding Profile ID",
       "advanced": true,
       "help": "Stamped into stored metadata for mismatch detection"
+    },
+    "privacyMode": {
+      "label": "Privacy Mode",
+      "help": "off: credentials only, detect: scan PII and tag (no masking), mask: redact credentials + mask PII (default)"
+    },
+    "privacyLocale": {
+      "label": "Privacy Locale",
+      "advanced": true,
+      "placeholder": "US",
+      "help": "Locale used for PII detection rules (US, GB, EU, etc.)"
+    },
+    "privacyNotifyUrl": {
+      "label": "Privacy Notify URL",
+      "advanced": true,
+      "sensitive": true,
+      "placeholder": "https://...",
+      "help": "Webhook endpoint for privacy intervention events (fire-and-forget). Leave empty to disable."
+    },
+    "defaultChannel": {
+      "label": "Default Channel",
+      "advanced": true,
+      "placeholder": "openclaw",
+      "help": "Channel identifier stored in captured memory metadata (or use ${LANONASIS_DEFAULT_CHANNEL})"
+    },
+    "cacheTtlMs": {
+      "label": "Cache TTL (ms)",
+      "advanced": true,
+      "placeholder": "60000",
+      "help": "Client-side search/list cache TTL in milliseconds (default: 60000)"
+    },
+    "cacheMaxSize": {
+      "label": "Cache Max Size",
+      "advanced": true,
+      "placeholder": "50",
+      "help": "Maximum number of cached responses (default: 50)"
+    },
+    "rateLimitMaxReq": {
+      "label": "Rate Limit Max Requests",
+      "advanced": true,
+      "placeholder": "60",
+      "help": "Maximum API requests per rate limit window (default: 60)"
+    },
+    "rateLimitWindowMs": {
+      "label": "Rate Limit Window (ms)",
+      "advanced": true,
+      "placeholder": "60000",
+      "help": "Rate limit rolling window in milliseconds (default: 60000)"
     }
   },
   "configSchema": {
@@ -218,6 +265,35 @@
       },
       "embeddingProfileId": {
         "type": "string"
+      },
+      "privacyMode": {
+        "type": "string",
+        "enum": ["off", "detect", "mask"]
+      },
+      "privacyLocale": {
+        "type": "string"
+      },
+      "privacyNotifyUrl": {
+        "type": "string"
+      },
+      "defaultChannel": {
+        "type": "string"
+      },
+      "cacheTtlMs": {
+        "type": "number",
+        "minimum": 1000
+      },
+      "cacheMaxSize": {
+        "type": "number",
+        "minimum": 1
+      },
+      "rateLimitMaxReq": {
+        "type": "number",
+        "minimum": 1
+      },
+      "rateLimitWindowMs": {
+        "type": "number",
+        "minimum": 1000
       }
     },
     "required": []
