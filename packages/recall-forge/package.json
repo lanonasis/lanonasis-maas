@@ -24,7 +24,7 @@
   ],
   "dependencies": {
     "@lanonasis/privacy-sdk": "^1.0.0",
-    "undici": "^7.24.5"
+    "undici": "^7.24.6"
   },
   "peerDependencies": {
     "openclaw": "latest"
@@ -52,11 +52,11 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/thefixer3x/lan-onasis-monorepo.git",
-    "directory": "packages/openclaw-plugin"
+    "directory": "packages/recall-forge"
   },
-  "homepage": "https://github.com/thefixer3x/lan-onasis-monorepo/tree/main/packages/openclaw-plugin",
+  "homepage": "https://github.com/lanonasis/lanonasis-maas/tree/main/packages/recall-forge#readme",
   "bugs": {
-    "url": "https://github.com/thefixer3x/lan-onasis-monorepo/issues"
+    "url": "https://github.com/lanonasis/lanonasis-maas/issues"
   },
   "publishConfig": {
     "access": "public"
