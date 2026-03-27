@@ -21,12 +21,45 @@ export class CLIConfig {
     getLegacyHashedVendorKeyReason() {
         return 'Stored vendor key is in legacy hashed format. Run "lanonasis auth login --vendor-key <your-key>" to refresh secure storage.';
     }
+    normalizeOptionalString(value) {
+        if (typeof value === 'string') {
+            const trimmed = value.trim();
+            return trimmed.length > 0 ? trimmed : undefined;
+        }
+        if (value === null || value === undefined) {
+            return undefined;
+        }
+        return String(value);
+    }
+    extractOrganizationId(source) {
+        return this.normalizeOptionalString(source.organization_id)
+            ?? this.normalizeOptionalString(source.organizationId);
+    }
+    buildUserProfile(source, existing) {
+        const email = this.normalizeOptionalString(source.email) ?? existing?.email ?? '';
+        const organization_id = this.extractOrganizationId(source) ?? existing?.organization_id ?? '';
+        const role = this.normalizeOptionalString(source.role) ?? existing?.role ?? '';
+        const plan = this.normalizeOptionalString(source.plan) ?? existing?.plan ?? '';
+        if (!email && !organization_id && !role && !plan) {
+            return existing;
+        }
+        return {
+            email,
+            organization_id,
+            role,
+            plan
+        };
+    }
     constructor() {
         this.configDir = path.join(os.homedir(), '.maas');
         this.configPath = path.join(this.configDir, 'config.json');
         this.lockFile = path.join(this.configDir, 'config.lock');
-        // Initialize secure storage for vendor keys using oauth-client's ApiKeyStorage
-        this.apiKeyStorage = new ApiKeyStorage();
+    }
+    getApiKeyStorage() {
+        if (!this.apiKeyStorage) {
+            this.apiKeyStorage = new ApiKeyStorage();
+        }
+        return this.apiKeyStorage;
     }
     /**
      * Overrides the configuration storage directory. Primarily used for tests.
@@ -723,8 +756,9 @@ export class CLIConfig {
         }
         // Initialize and store using ApiKeyStorage from @lanonasis/oauth-client
         // This handles encryption automatically (AES-256-GCM with machine-derived key)
-        await this.apiKeyStorage.initialize();
-        await this.apiKeyStorage.store({
+        const apiKeyStorage = this.getApiKeyStorage();
+        await apiKeyStorage.initialize();
+        await apiKeyStorage.store({
             apiKey: trimmedKey,
             organizationId: this.config.user?.organization_id,
             userId: this.config.user?.email,
@@ -848,8 +882,9 @@ export class CLIConfig {
      */
     async getVendorKeyAsync() {
         try {
-            await this.apiKeyStorage.initialize();
-            const stored = await this.apiKeyStorage.retrieve();
+            const apiKeyStorage = this.getApiKeyStorage();
+            await apiKeyStorage.initialize();
+            const stored = await apiKeyStorage.retrieve();
             if (stored) {
                 this.vendorKeyCache = stored.apiKey;
                 return this.vendorKeyCache;
@@ -891,12 +926,7 @@ export class CLIConfig {
                 this.config.tokenExpiry = decoded.exp;
             }
             // Store user info
-            this.config.user = {
-                email: String(decoded.email || ''),
-                organization_id: String(decoded.organizationId || ''),
-                role: String(decoded.role || ''),
-                plan: String(decoded.plan || '')
-            };
+            this.config.user = this.buildUserProfile(decoded, this.config.user);
         }
         catch {
             // Invalid token, don't store user info or expiry
@@ -914,6 +944,23 @@ export class CLIConfig {
     }
     async getCurrentUser() {
         return this.config.user;
+    }
+    async updateCurrentUserProfile(profile) {
+        const nextUser = this.buildUserProfile(profile, this.config.user);
+        if (!nextUser) {
+            return;
+        }
+        const currentUser = this.config.user;
+        const changed = !currentUser
+            || currentUser.email !== nextUser.email
+            || currentUser.organization_id !== nextUser.organization_id
+            || currentUser.role !== nextUser.role
+            || currentUser.plan !== nextUser.plan;
+        if (!changed) {
+            return;
+        }
+        this.config.user = nextUser;
+        await this.save();
     }
     async isAuthenticated() {
         // Attempt refresh for OAuth sessions before checks (prevents intermittent auth dropouts).
@@ -1169,9 +1216,10 @@ export class CLIConfig {
         this.config.refresh_token = undefined;
         this.config.token_expires_at = undefined;
         try {
-            await this.apiKeyStorage.initialize();
+            const apiKeyStorage = this.getApiKeyStorage();
+            await apiKeyStorage.initialize();
             // ApiKeyStorage may implement clear() to remove encrypted secrets
-            const storage = this.apiKeyStorage;
+            const storage = apiKeyStorage;
             if (typeof storage.clear === 'function') {
                 await storage.clear();
             }
@@ -1292,8 +1340,6 @@ export class CLIConfig {
                 if (typeof expiresIn === 'number' && Number.isFinite(expiresIn)) {
                     this.config.token_expires_at = Date.now() + (expiresIn * 1000);
                 }
-                // Note: OAuth access tokens are NOT stored as vendor keys.
-                // Auth-centralization plan: keep OAuth and vendor-key credentials separate.
                 await this.save().catch(() => { });
                 return;
             }
@@ -1350,8 +1396,9 @@ export class CLIConfig {
         this.config.lastAuthFailure = undefined;
         this.vendorKeyCache = undefined;
         try {
-            await this.apiKeyStorage.initialize();
-            const storage = this.apiKeyStorage;
+            const apiKeyStorage = this.getApiKeyStorage();
+            await apiKeyStorage.initialize();
+            const storage = apiKeyStorage;
             if (typeof storage.clear === 'function') {
                 await storage.clear();
             }

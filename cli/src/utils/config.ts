@@ -80,7 +80,7 @@ export class CLIConfig {
   private static readonly CONFIG_VERSION = '1.0.0';
   private authCheckCache: { isValid: boolean; timestamp: number } | null = null;
   private readonly AUTH_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
-  private apiKeyStorage: ApiKeyStorage;
+  private apiKeyStorage?: ApiKeyStorage;
   private vendorKeyCache?: string;
 
   private isLegacyHashedCredential(value: unknown): value is string {
@@ -91,12 +91,57 @@ export class CLIConfig {
     return 'Stored vendor key is in legacy hashed format. Run "lanonasis auth login --vendor-key <your-key>" to refresh secure storage.';
   }
 
+  private normalizeOptionalString(value: unknown): string | undefined {
+    if (typeof value === 'string') {
+      const trimmed = value.trim();
+      return trimmed.length > 0 ? trimmed : undefined;
+    }
+
+    if (value === null || value === undefined) {
+      return undefined;
+    }
+
+    return String(value);
+  }
+
+  private extractOrganizationId(source: Record<string, unknown>): string | undefined {
+    return this.normalizeOptionalString(source.organization_id)
+      ?? this.normalizeOptionalString(source.organizationId);
+  }
+
+  private buildUserProfile(
+    source: Record<string, unknown>,
+    existing?: UserProfile
+  ): UserProfile | undefined {
+    const email = this.normalizeOptionalString(source.email) ?? existing?.email ?? '';
+    const organization_id = this.extractOrganizationId(source) ?? existing?.organization_id ?? '';
+    const role = this.normalizeOptionalString(source.role) ?? existing?.role ?? '';
+    const plan = this.normalizeOptionalString(source.plan) ?? existing?.plan ?? '';
+
+    if (!email && !organization_id && !role && !plan) {
+      return existing;
+    }
+
+    return {
+      email,
+      organization_id,
+      role,
+      plan
+    };
+  }
+
   constructor() {
     this.configDir = path.join(os.homedir(), '.maas');
     this.configPath = path.join(this.configDir, 'config.json');
     this.lockFile = path.join(this.configDir, 'config.lock');
-    // Initialize secure storage for vendor keys using oauth-client's ApiKeyStorage
-    this.apiKeyStorage = new ApiKeyStorage();
+  }
+
+  private getApiKeyStorage(): ApiKeyStorage {
+    if (!this.apiKeyStorage) {
+      this.apiKeyStorage = new ApiKeyStorage();
+    }
+
+    return this.apiKeyStorage;
   }
 
   /**
@@ -913,8 +958,9 @@ export class CLIConfig {
 
     // Initialize and store using ApiKeyStorage from @lanonasis/oauth-client
     // This handles encryption automatically (AES-256-GCM with machine-derived key)
-    await this.apiKeyStorage.initialize();
-    await this.apiKeyStorage.store({
+    const apiKeyStorage = this.getApiKeyStorage();
+    await apiKeyStorage.initialize();
+    await apiKeyStorage.store({
       apiKey: trimmedKey,
       organizationId: this.config.user?.organization_id,
       userId: this.config.user?.email,
@@ -1038,8 +1084,9 @@ export class CLIConfig {
    */
   async getVendorKeyAsync(): Promise<string | undefined> {
     try {
-      await this.apiKeyStorage.initialize();
-      const stored = await this.apiKeyStorage.retrieve();
+      const apiKeyStorage = this.getApiKeyStorage();
+      await apiKeyStorage.initialize();
+      const stored = await apiKeyStorage.retrieve();
       if (stored) {
         this.vendorKeyCache = stored.apiKey;
         return this.vendorKeyCache;
@@ -1088,12 +1135,7 @@ export class CLIConfig {
       }
 
       // Store user info
-      this.config.user = {
-        email: String(decoded.email || ''),
-        organization_id: String(decoded.organizationId || ''),
-        role: String(decoded.role || ''),
-        plan: String(decoded.plan || '')
-      };
+      this.config.user = this.buildUserProfile(decoded, this.config.user);
     } catch {
       // Invalid token, don't store user info or expiry
       this.config.tokenExpiry = undefined;
@@ -1114,6 +1156,27 @@ export class CLIConfig {
 
   async getCurrentUser(): Promise<UserProfile | undefined> {
     return this.config.user;
+  }
+
+  async updateCurrentUserProfile(profile: Record<string, unknown>): Promise<void> {
+    const nextUser = this.buildUserProfile(profile, this.config.user);
+    if (!nextUser) {
+      return;
+    }
+
+    const currentUser = this.config.user;
+    const changed = !currentUser
+      || currentUser.email !== nextUser.email
+      || currentUser.organization_id !== nextUser.organization_id
+      || currentUser.role !== nextUser.role
+      || currentUser.plan !== nextUser.plan;
+
+    if (!changed) {
+      return;
+    }
+
+    this.config.user = nextUser;
+    await this.save();
   }
 
   async isAuthenticated(): Promise<boolean> {
@@ -1382,9 +1445,10 @@ export class CLIConfig {
     this.config.refresh_token = undefined;
     this.config.token_expires_at = undefined;
     try {
-      await this.apiKeyStorage.initialize();
+      const apiKeyStorage = this.getApiKeyStorage();
+      await apiKeyStorage.initialize();
       // ApiKeyStorage may implement clear() to remove encrypted secrets
-      const storage: any = this.apiKeyStorage;
+      const storage: any = apiKeyStorage;
       if (typeof storage.clear === 'function') {
         await storage.clear();
       }
@@ -1590,8 +1654,9 @@ export class CLIConfig {
     this.config.lastAuthFailure = undefined;
     this.vendorKeyCache = undefined;
     try {
-      await this.apiKeyStorage.initialize();
-      const storage: any = this.apiKeyStorage;
+      const apiKeyStorage = this.getApiKeyStorage();
+      await apiKeyStorage.initialize();
+      const storage: any = apiKeyStorage;
       if (typeof storage.clear === 'function') {
         await storage.clear();
       }

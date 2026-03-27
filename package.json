@@ -55,7 +55,7 @@
   "license": "MIT",
   "dependencies": {
     "@genkit-ai/mcp": "^1.25.0",
-    "@lanonasis/oauth-client": "npm:@lanonasis/oauth-client@2.0.0",
+    "@lanonasis/oauth-client": "npm:@lanonasis/oauth-client@2.0.4",
     "@lanonasis/security-sdk": "^1.0.3",
     "@netlify/functions": "^2.8.2",
     "@supabase/supabase-js": "^2.56.1",
@@ -111,5 +111,13 @@
   },
   "engines": {
     "node": ">=18.0.0"
+  },
+  "overrides": {
+    "anymatch": {
+      "picomatch": "^2.3.2"
+    },
+    "micromatch": {
+      "picomatch": "^2.3.2"
+    }
   }
 }

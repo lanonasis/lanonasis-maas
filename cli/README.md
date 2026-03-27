@@ -1,11 +1,11 @@
-# @lanonasis/cli v3.9.7 - OAuth PKCE Auth & whoami
+# @lanonasis/cli v3.9.11 - Stable Stats & Cleaner Startup
 
 [![NPM Version](https://img.shields.io/npm/v/@lanonasis/cli)](https://www.npmjs.com/package/@lanonasis/cli)
 [![Downloads](https://img.shields.io/npm/dt/@lanonasis/cli)](https://www.npmjs.com/package/@lanonasis/cli)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Golden Contract](https://img.shields.io/badge/Onasis--Core-v0.1%20Compliant-gold)](https://api.lanonasis.com/.well-known/onasis.json)
 
-🎉 **NEW IN v3.9.7**: Full OAuth PKCE session support across CLI and API gateway. New `onasis whoami` command. `auth status` now shows live user profile and probes real memory API access. Seven auth verification fixes eliminate false-positive "Authenticated: Yes" reports.
+🎉 **NEW IN v3.9.11**: `onasis memory stats` now handles wrapped/partial backend responses without crashing, vendor key secure storage is lazy-loaded so unrelated commands no longer trigger noisy fallback warnings, and the bundled `@lanonasis/oauth-client` is updated to `2.0.4` for the ESM-safe keychain loader fix.
 
 ## 🚀 Quick Start
 

@@ -169,7 +169,10 @@ export interface UserProfile {
     email: string;
     name: string | null;
     avatar_url: string | null;
+    organization_id?: string | null;
+    organizationId?: string | null;
     role: string;
+    plan?: string | null;
     provider: string | null;
     project_scope: string | null;
     platform: string | null;
@@ -187,6 +190,8 @@ export declare class APIClient {
     noExit: boolean;
     private isLikelyHashedCredential;
     private normalizeMemoryEntry;
+    private tryNormalizeMemoryEntry;
+    private normalizeMemoryStats;
     private shouldUseLegacyMemoryRpcFallback;
     private shouldRetryViaApiGateway;
     private shouldRetryViaSupabaseMemoryFunctions;

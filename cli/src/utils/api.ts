@@ -116,6 +116,15 @@ export interface MemoryStats {
   recent_memories: MemoryEntry[];
 }
 
+const MEMORY_TYPES: readonly MemoryType[] = [
+  'context',
+  'project',
+  'knowledge',
+  'reference',
+  'personal',
+  'workflow'
+];
+
 export interface BulkDeleteRequest {
   memory_ids: string[];
 }
@@ -190,7 +199,10 @@ export interface UserProfile {
   email: string;
   name: string | null;
   avatar_url: string | null;
+  organization_id?: string | null;
+  organizationId?: string | null;
   role: string;
+  plan?: string | null;
   provider: string | null;
   project_scope: string | null;
   platform: string | null;
@@ -228,6 +240,64 @@ export class APIClient {
       }
     }
     return payload as MemoryEntry;
+  }
+
+  private tryNormalizeMemoryEntry(payload: unknown): MemoryEntry | undefined {
+    if (!payload || typeof payload !== 'object') {
+      return undefined;
+    }
+
+    const normalized = this.normalizeMemoryEntry(payload) as unknown;
+    if (!normalized || typeof normalized !== 'object') {
+      return undefined;
+    }
+
+    const normalizedRecord = normalized as Record<string, unknown>;
+    return typeof normalizedRecord.id === 'string' ? normalized as MemoryEntry : undefined;
+  }
+
+  private normalizeMemoryStats(payload: unknown): MemoryStats {
+    if (!payload || typeof payload !== 'object') {
+      throw new Error('Memory stats endpoint returned an invalid response.');
+    }
+
+    const envelope = payload as Record<string, unknown>;
+    const rawStats =
+      envelope.data && typeof envelope.data === 'object' && !Array.isArray(envelope.data)
+        ? envelope.data as Record<string, unknown>
+        : envelope;
+
+    const rawByType =
+      rawStats.memories_by_type && typeof rawStats.memories_by_type === 'object' && !Array.isArray(rawStats.memories_by_type)
+        ? rawStats.memories_by_type as Record<string, unknown>
+        : rawStats.by_type && typeof rawStats.by_type === 'object' && !Array.isArray(rawStats.by_type)
+          ? rawStats.by_type as Record<string, unknown>
+          : {};
+
+    const memoriesByType = MEMORY_TYPES.reduce((accumulator, memoryType) => {
+      const value = rawByType[memoryType];
+      accumulator[memoryType] = typeof value === 'number' ? value : 0;
+      return accumulator;
+    }, {} as Record<MemoryType, number>);
+
+    const recentMemories = Array.isArray(rawStats.recent_memories)
+      ? rawStats.recent_memories
+        .map((entry) => this.tryNormalizeMemoryEntry(entry))
+        .filter((entry): entry is MemoryEntry => entry !== undefined)
+      : [];
+
+    const totalMemories = typeof rawStats.total_memories === 'number'
+      ? rawStats.total_memories
+      : Object.values(memoriesByType).reduce((sum, count) => sum + count, 0);
+
+    return {
+      total_memories: totalMemories,
+      memories_by_type: memoriesByType,
+      total_size_bytes: typeof rawStats.total_size_bytes === 'number' ? rawStats.total_size_bytes : 0,
+      avg_access_count: typeof rawStats.avg_access_count === 'number' ? rawStats.avg_access_count : 0,
+      most_accessed_memory: this.tryNormalizeMemoryEntry(rawStats.most_accessed_memory),
+      recent_memories: recentMemories
+    };
   }
 
   private shouldUseLegacyMemoryRpcFallback(error: any): boolean {
@@ -896,7 +966,7 @@ export class APIClient {
 
   async getMemoryStats(): Promise<MemoryStats> {
     const response = await this.client.get('/api/v1/memories/stats');
-    return response.data;
+    return this.normalizeMemoryStats(response.data);
   }
 
   async bulkDeleteMemories(memoryIds: string[]): Promise<BulkDeleteResponse> {

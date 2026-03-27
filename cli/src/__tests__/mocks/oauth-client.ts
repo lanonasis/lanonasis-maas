@@ -1,6 +1,10 @@
 let storedKey: { apiKey: string } | undefined;
+let constructorCount = 0;
 
 export class ApiKeyStorage {
+  constructor() {
+    constructorCount += 1;
+  }
 
   async initialize(): Promise<void> {
     // Keep stored data stable across initialize() calls in a test process.
@@ -18,4 +22,13 @@ export class ApiKeyStorage {
   async clear(): Promise<void> {
     storedKey = undefined;
   }
+}
+
+export function __resetMockApiKeyStorage(): void {
+  storedKey = undefined;
+  constructorCount = 0;
+}
+
+export function __getMockApiKeyStorageConstructorCount(): number {
+  return constructorCount;
 }
