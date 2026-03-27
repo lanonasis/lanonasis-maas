@@ -2,6 +2,14 @@ import axios from 'axios';
 import chalk from 'chalk';
 import { randomUUID } from 'crypto';
 import { CLIConfig } from './config.js';
+const MEMORY_TYPES = [
+    'context',
+    'project',
+    'knowledge',
+    'reference',
+    'personal',
+    'workflow'
+];
 export class APIClient {
     client;
     config;
@@ -29,6 +37,52 @@ export class APIClient {
             }
         }
         return payload;
+    }
+    tryNormalizeMemoryEntry(payload) {
+        if (!payload || typeof payload !== 'object') {
+            return undefined;
+        }
+        const normalized = this.normalizeMemoryEntry(payload);
+        if (!normalized || typeof normalized !== 'object') {
+            return undefined;
+        }
+        const normalizedRecord = normalized;
+        return typeof normalizedRecord.id === 'string' ? normalized : undefined;
+    }
+    normalizeMemoryStats(payload) {
+        if (!payload || typeof payload !== 'object') {
+            throw new Error('Memory stats endpoint returned an invalid response.');
+        }
+        const envelope = payload;
+        const rawStats = envelope.data && typeof envelope.data === 'object' && !Array.isArray(envelope.data)
+            ? envelope.data
+            : envelope;
+        const rawByType = rawStats.memories_by_type && typeof rawStats.memories_by_type === 'object' && !Array.isArray(rawStats.memories_by_type)
+            ? rawStats.memories_by_type
+            : rawStats.by_type && typeof rawStats.by_type === 'object' && !Array.isArray(rawStats.by_type)
+                ? rawStats.by_type
+                : {};
+        const memoriesByType = MEMORY_TYPES.reduce((accumulator, memoryType) => {
+            const value = rawByType[memoryType];
+            accumulator[memoryType] = typeof value === 'number' ? value : 0;
+            return accumulator;
+        }, {});
+        const recentMemories = Array.isArray(rawStats.recent_memories)
+            ? rawStats.recent_memories
+                .map((entry) => this.tryNormalizeMemoryEntry(entry))
+                .filter((entry) => entry !== undefined)
+            : [];
+        const totalMemories = typeof rawStats.total_memories === 'number'
+            ? rawStats.total_memories
+            : Object.values(memoriesByType).reduce((sum, count) => sum + count, 0);
+        return {
+            total_memories: totalMemories,
+            memories_by_type: memoriesByType,
+            total_size_bytes: typeof rawStats.total_size_bytes === 'number' ? rawStats.total_size_bytes : 0,
+            avg_access_count: typeof rawStats.avg_access_count === 'number' ? rawStats.avg_access_count : 0,
+            most_accessed_memory: this.tryNormalizeMemoryEntry(rawStats.most_accessed_memory),
+            recent_memories: recentMemories
+        };
     }
     shouldUseLegacyMemoryRpcFallback(error) {
         const status = error?.response?.status;
@@ -229,13 +283,6 @@ export class APIClient {
             const discoveredServices = this.config.get('discoveredServices');
             const authMethod = this.config.get('authMethod');
             const vendorKey = await this.config.getVendorKeyAsync();
-            if (authMethod === 'vendor_key' && this.isLikelyHashedCredential(vendorKey)) {
-                // Warn but do not block: server-side handles both raw and pre-hashed keys.
-                // Legacy hashed keys still work end-to-end. Auth status will prompt re-login.
-                if (process.env.CLI_VERBOSE === 'true') {
-                    console.warn('⚠️  Stored vendor key is in legacy hashed format. Run "lanonasis auth login --vendor-key <your-key>" to refresh.');
-                }
-            }
             const token = this.config.getToken();
             const useSupabaseMemoryFunctions = config.__useSupabaseMemoryFunctions === true;
             const normalizedMemoryUrl = typeof config.url === 'string'
@@ -632,7 +679,7 @@ export class APIClient {
     }
     async getMemoryStats() {
         const response = await this.client.get('/api/v1/memories/stats');
-        return response.data;
+        return this.normalizeMemoryStats(response.data);
     }
     async bulkDeleteMemories(memoryIds) {
         const response = await this.client.post('/api/v1/memories/bulk/delete', {

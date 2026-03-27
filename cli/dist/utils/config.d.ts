@@ -48,11 +48,15 @@ export declare class CLIConfig {
     private static readonly CONFIG_VERSION;
     private authCheckCache;
     private readonly AUTH_CACHE_TTL;
-    private apiKeyStorage;
+    private apiKeyStorage?;
     private vendorKeyCache?;
     private isLegacyHashedCredential;
     private getLegacyHashedVendorKeyReason;
+    private normalizeOptionalString;
+    private extractOrganizationId;
+    private buildUserProfile;
     constructor();
+    private getApiKeyStorage;
     /**
      * Overrides the configuration storage directory. Primarily used for tests.
      */
@@ -119,6 +123,7 @@ export declare class CLIConfig {
     getToken(): string | undefined;
     getAuthMethod(): string | undefined;
     getCurrentUser(): Promise<UserProfile | undefined>;
+    updateCurrentUserProfile(profile: Record<string, unknown>): Promise<void>;
     isAuthenticated(): Promise<boolean>;
     logout(): Promise<void>;
     clear(): Promise<void>;

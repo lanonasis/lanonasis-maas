@@ -362,11 +362,7 @@ export class MCPClient {
         const vendorKey = await this.config.getVendorKeyAsync();
         const isLikelyHashedCredential = typeof vendorKey === 'string' && /^[a-f0-9]{64}$/i.test(vendorKey.trim());
         if (authMethod === 'vendor_key' && isLikelyHashedCredential) {
-            // Warn but do not block: server-side handles pre-hashed keys.
-            // Auth status will prompt re-login via config detection.
-            if (process.env.CLI_VERBOSE === 'true') {
-                console.warn('⚠️  Stored vendor key is in legacy hashed format. Run "lanonasis auth login --vendor-key <your-key>" to refresh.');
-            }
+            throw new Error('AUTHENTICATION_INVALID: Stored vendor key is in legacy hashed format. Run "lanonasis auth login --vendor-key <your-key>" to refresh secure storage.');
         }
         if (authMethod === 'vendor_key' && typeof vendorKey === 'string' && vendorKey.trim().length > 0) {
             return { value: vendorKey.trim(), source: 'vendor_key' };
