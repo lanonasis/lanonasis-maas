@@ -26,8 +26,11 @@ export function shouldCapture(
     return false;
   }
 
-  // Rule 2: No <relevant-memories> tag
-  if (text.includes("<relevant-memories>")) {
+  // Rule 2: No injected recall wrappers from legacy or current formats
+  if (
+    text.includes("<relevant-memories>")
+    || text.includes("CONTEXT BLOCK START")
+  ) {
     return false;
   }
 

@@ -4,7 +4,6 @@ import type { OpenClawPluginApi, OpenClawPlugin } from "./plugin-sdk-stub.js";
 import { lanonasisConfigSchema } from "./config.js";
 import { LanonasisClient } from "./client.js";
 import { LocalFallbackWriter } from "./hooks/local-fallback.js";
-import { createRecallHook } from "./hooks/recall.js";
 import { createContextEngine } from "./hooks/context-engine.js";
 import { createCaptureHook, createCompactionCaptureHook } from "./hooks/capture.js";
 import { registerMemorySearchTool } from "./tools/memory-search.js";
@@ -110,31 +109,25 @@ const plugin: OpenClawPlugin = {
     const guard = new PrivacyGuard(cfg, api.logger);
     const privacyLog = cfg.localFallback ? new PrivacyLogWriter(api.resolvePath) : undefined;
 
-    // 4. Recall hook — injects relevant memories before each session (passive, event-driven)
-    //    recallMode "ondemand" disables auto-injection; tools still available for manual recall
-    if (cfg.autoRecall && cfg.recallMode !== "ondemand") {
-      api.on("before_agent_start", createRecallHook(client, cfg));
-    }
-
-    // 5. Context engine — fills plugins.slots.contextEngine (active, on-demand)
+    // 4. Context engine — fills plugins.slots.contextEngine (active, on-demand)
     //    OpenClaw calls buildContext() whenever it needs to assemble agent context.
     //    Secret-redacted tiered recall with prompt injection protection.
     api.registerContextEngine(createContextEngine(client, cfg));
 
-    // 6. Capture hooks — auto/hybrid modes only (explicit = agent calls memory_store directly)
+    // 5. Capture hooks — auto/hybrid modes only (explicit = agent calls memory_store directly)
     if (cfg.captureMode !== "explicit") {
       api.on("agent_end", createCaptureHook(client, cfg, api.logger, fallback, guard, privacyLog));
       api.on("before_compaction", createCompactionCaptureHook(client, cfg, api.logger, guard));
     }
 
-    // 7. Agent tools — always registered regardless of captureMode
+    // 6. Agent tools — always registered regardless of captureMode
     registerMemorySearchTool(api, client, cfg);
     registerMemoryGetTool(api, client);
     registerMemoryStoreTool(api, client, cfg, guard);
     registerMemoryForgetTool(api, client);
 
     const sharedLabel = cfg.sharedNamespace ? `shared: ${cfg.sharedNamespace}` : "shared: off";
-    const recallStatus = cfg.autoRecall && cfg.recallMode !== "ondemand" ? "active" : cfg.recallMode === "ondemand" ? "ondemand" : "off";
+    const recallStatus = cfg.autoRecall && cfg.recallMode !== "ondemand" ? "contextEngine" : cfg.recallMode === "ondemand" ? "ondemand" : "off";
     api.logger.info(
       `[recall-forge] Ready — slots: memory+contextEngine | mode: ${cfg.captureMode} | memory: ${cfg.memoryMode} | recall: ${recallStatus} | ${sharedLabel} | fallback: ${cfg.localFallback} | privacy: ${cfg.privacyMode} | project: ${cfg.projectId}`,
     );
