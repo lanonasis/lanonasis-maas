@@ -37,7 +37,11 @@
     "workspace:install": "npm ci && npm ci --prefix cli && npm ci --prefix packages/lanonasis-sdk",
     "workspace:build": "npm run build && npm run build --prefix cli && npm run build --prefix packages/lanonasis-sdk",
     "workspace:test": "npm run test && npm run test --prefix packages/lanonasis-sdk",
-    "workspace:lint": "npm run lint && npm run lint --prefix cli && npm run lint --prefix packages/lanonasis-sdk"
+    "workspace:lint": "npm run lint && npm run lint --prefix cli && npm run lint --prefix packages/lanonasis-sdk",
+    "package:claude-memory:install": "npm install --prefix packages/claude-memory",
+    "package:claude-memory:build": "npm run build --prefix packages/claude-memory",
+    "package:claude-memory:test": "npm run test --prefix packages/claude-memory",
+    "package:claude-memory:typecheck": "npm run typecheck --prefix packages/claude-memory"
   },
   "keywords": [
     "memory",
