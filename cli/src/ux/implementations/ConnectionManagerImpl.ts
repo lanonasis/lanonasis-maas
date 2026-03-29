@@ -66,9 +66,19 @@ export class ConnectionManagerImpl implements ConnectionManager {
       // Load persisted configuration first
       await this.loadConfig();
 
-      // First, try to detect the server path
+      // Prefer a configured path only if the file exists (ignore stale machine-specific commits)
       const configuredPath = this.config.localServerPath?.trim();
-      const serverPath = configuredPath || (await this.detectServerPath());
+      let serverPath: string | null = null;
+      if (configuredPath) {
+        try {
+          await fs.access(configuredPath);
+          serverPath = configuredPath;
+        } catch {
+          serverPath = await this.detectServerPath();
+        }
+      } else {
+        serverPath = await this.detectServerPath();
+      }
       if (!serverPath) {
         return {
           success: false,
