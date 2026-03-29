@@ -1,0 +1,9 @@
+{"role":"user","content":"Can you help me set up the MaaS API client? I need it to work with Node v24."}
+{"role":"assistant","content":"I'll help set that up. Let me check the existing implementation first."}
+{"role":"assistant","content":"I found the issue — Node v24's native fetch ignores setGlobalDispatcher. The fix is to use undici's fetch directly with an explicit IPv4 dispatcher: `new Agent({ connect: { family: 4 } })`."}
+{"role":"user","content":"That worked. We should always use undici for this project, never native fetch."}
+{"role":"assistant","content":"Noted. I've updated the client to use undici fetch everywhere. This is a Node v24-specific issue that affects all IPv4 connections."}
+{"role":"user","content":"Try using the standard POST endpoint for creating memories."}
+{"role":"assistant","content":"That endpoint returned a 404. The API routes POST /api/v1/memory to memory-create but GET /api/v1/memory doesn't exist. We need to use /api/v1/memory/list for listing."}
+{"role":"user","content":"OK pivot to using /api/v1/memory/list then."}
+{"role":"assistant","content":"Switched to /api/v1/memory/list. Working now. Also discovered the API returns `memory_type` not `type` in the response — we need to always use `m.memory_type ?? m.type` for compatibility."}
