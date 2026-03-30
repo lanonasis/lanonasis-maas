@@ -148,9 +148,15 @@ interface BehaviorSuggestOptions extends JsonOutputOption {
 
 interface BehaviorActionInput {
   tool: string;
+  parameters?: Record<string, unknown>;
   params?: Record<string, unknown>;
+  outcome: 'success' | 'partial' | 'failed';
   timestamp?: string;
   duration_ms?: number;
+}
+
+interface BehaviorCompletedStepInput {
+  tool?: string;
 }
 
 interface IntelligenceTransport {
@@ -273,13 +279,22 @@ const ensureBehaviorActions = (
       throw new Error(`${fieldName}[${index}].tool is required`);
     }
 
-    const parsed: BehaviorActionInput = { tool };
+    const outcome = typeof entry.outcome === 'string' ? entry.outcome.trim() : '';
+    if (!['success', 'partial', 'failed'].includes(outcome)) {
+      throw new Error(`${fieldName}[${index}].outcome must be success, partial, or failed`);
+    }
 
-    if (entry.params !== undefined) {
-      if (!isPlainObject(entry.params)) {
-        throw new Error(`${fieldName}[${index}].params must be a JSON object`);
+    const parsed: BehaviorActionInput = {
+      tool,
+      outcome: outcome as BehaviorActionInput['outcome'],
+    };
+
+    const rawParameters = entry.parameters ?? entry.params;
+    if (rawParameters !== undefined) {
+      if (!isPlainObject(rawParameters)) {
+        throw new Error(`${fieldName}[${index}].parameters must be a JSON object`);
       }
-      parsed.params = entry.params;
+      parsed.parameters = rawParameters;
     }
 
     if (entry.timestamp !== undefined) {
@@ -301,6 +316,41 @@ const ensureBehaviorActions = (
     }
 
     return parsed;
+  });
+};
+
+const ensureCompletedSteps = (
+  value: unknown,
+  fieldName: string
+): string[] => {
+  if (value === undefined) {
+    return [];
+  }
+
+  if (!Array.isArray(value)) {
+    throw new Error(`${fieldName} must be a JSON array`);
+  }
+
+  return value.map((entry, index) => {
+    if (typeof entry === 'string') {
+      const normalized = entry.trim();
+      if (!normalized) {
+        throw new Error(`${fieldName}[${index}] must be a non-empty string`);
+      }
+      return normalized;
+    }
+
+    if (isPlainObject(entry)) {
+      const tool = typeof (entry as BehaviorCompletedStepInput).tool === 'string'
+        ? (entry as BehaviorCompletedStepInput).tool?.trim()
+        : '';
+      if (!tool) {
+        throw new Error(`${fieldName}[${index}].tool must be a non-empty string`);
+      }
+      return tool;
+    }
+
+    throw new Error(`${fieldName}[${index}] must be a string or an object with a tool field`);
   });
 };
 
@@ -1563,7 +1613,7 @@ export function memoryCommands(program: Command): void {
     .description('Suggest next actions from learned behavior patterns')
     .requiredOption('--task <text>', 'Current task description')
     .option('--state <json>', 'Additional current state JSON object')
-    .option('--completed-steps <json>', 'Completed steps JSON array')
+    .option('--completed-steps <json>', 'Completed steps JSON array (strings preferred)')
     .option('--max-suggestions <number>', 'Maximum suggestions', '3')
     .option('--json', 'Output raw JSON payload')
     .action(async (options: BehaviorSuggestOptions & { task: string }) => {
@@ -1575,9 +1625,7 @@ export function memoryCommands(program: Command): void {
         const parsedState = parseJsonOption<unknown>(options.state, '--state');
         const state = ensureJsonObject(parsedState, '--state') || {};
         const parsedCompletedSteps = parseJsonOption<unknown>(options.completedSteps, '--completed-steps');
-        const completedSteps = parsedCompletedSteps === undefined
-          ? undefined
-          : ensureBehaviorActions(parsedCompletedSteps, '--completed-steps', { allowEmpty: true });
+        const completedSteps = ensureCompletedSteps(parsedCompletedSteps, '--completed-steps');
 
         const result = await postIntelligenceEndpoint<Record<string, unknown>>(
           transport,

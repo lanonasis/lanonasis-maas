@@ -439,6 +439,12 @@ export function mcpCommands(program) {
             if (options.args) {
                 try {
                     args = JSON.parse(options.args);
+                    // Validate that args is a plain object (not array or primitive)
+                    if (typeof args !== 'object' || args === null || Array.isArray(args)) {
+                        spinner.fail('Arguments must be a JSON object, not an array or primitive value');
+                        console.log(chalk.yellow('Example: --args \'{"key": "value"}\''));
+                        process.exit(1);
+                    }
                 }
                 catch {
                     spinner.fail('Invalid JSON arguments');
