@@ -117,8 +117,9 @@ projectsCommand
         projectData = { ...projectData, ...answers };
       }
 
-      const project = await apiClient.post('/api-keys/projects', projectData);
-      
+      const projectRes = await apiClient.post(`${AUTH_API_KEYS_BASE}/projects`, projectData);
+      const project = unwrapApiResponse<any>(projectRes);
+
       console.log(chalk.green('✅ Project created successfully!'));
       console.log(chalk.blue(`Project ID: ${project.id}`));
       console.log(chalk.blue(`Name: ${project.name}`));
@@ -138,14 +139,14 @@ projectsCommand
   .option('--json', 'Output as JSON')
   .action(async (options) => {
     try {
-      const projects = await apiClient.get('/api-keys/projects');
+      const projects = unwrapApiResponse<any[]>(await apiClient.get(`${AUTH_API_KEYS_BASE}/projects`));
 
       if (options.json) {
         console.log(JSON.stringify(projects, null, 2));
         return;
       }
 
-      if (projects.length === 0) {
+      if (!Array.isArray(projects) || projects.length === 0) {
         console.log(chalk.yellow('No projects found'));
         return;
       }
@@ -665,8 +666,8 @@ mcpCommand
         delete toolData.maxSessionDuration;
       }
 
-      const tool = await apiClient.post('/api-keys/mcp/tools', toolData);
-      
+      const tool = unwrapApiResponse<any>(await apiClient.post(`${AUTH_API_KEYS_BASE}/mcp/tools`, toolData));
+
       console.log(colors.success('🤖 MCP tool registered successfully!'));
       console.log(colors.info('━'.repeat(50)));
       console.log(`${colors.highlight('Tool ID:')} ${colors.primary(tool.toolId)}`);
@@ -686,14 +687,14 @@ mcpCommand
   .option('--json', 'Output as JSON')
   .action(async (options) => {
     try {
-      const tools = await apiClient.get('/api-keys/mcp/tools');
+      const tools = unwrapApiResponse<any[]>(await apiClient.get(`${AUTH_API_KEYS_BASE}/mcp/tools`));
 
       if (options.json) {
         console.log(JSON.stringify(tools, null, 2));
         return;
       }
 
-      if (tools.length === 0) {
+      if (!Array.isArray(tools) || tools.length === 0) {
         console.log(colors.warning('⚠️  No MCP tools found'));
         console.log(colors.muted('Run: lanonasis api-keys mcp register-tool'));
         return;
@@ -755,8 +756,9 @@ mcpCommand
       if (options.interactive || !requestData.toolId || !requestData.organizationId || 
           requestData.keyNames.length === 0 || !requestData.environment || !requestData.justification) {
         
-        const tools = await apiClient.get('/api-keys/mcp/tools');
-        
+        const mcpTools = unwrapApiResponse<any[]>(await apiClient.get(`${AUTH_API_KEYS_BASE}/mcp/tools`));
+        const tools = Array.isArray(mcpTools) ? mcpTools : [];
+
         const answers = await inquirer.prompt([
           {
             type: 'select',
@@ -809,8 +811,8 @@ mcpCommand
         requestData = { ...requestData, ...answers };
       }
 
-      const response = await apiClient.post('/api-keys/mcp/request-access', requestData);
-      
+      const response = unwrapApiResponse<any>(await apiClient.post(`${AUTH_API_KEYS_BASE}/mcp/request-access`, requestData));
+
       console.log(colors.success('🔐 Access request created successfully!'));
       console.log(colors.info('━'.repeat(50)));
       console.log(`${colors.highlight('Request ID:')} ${colors.primary(response.requestId)}`);
@@ -838,24 +840,24 @@ analyticsCommand
   .option('--json', 'Output as JSON')
   .action(async (options) => {
     try {
-      let url = '/api-keys/analytics/usage';
+      let url = `${AUTH_API_KEYS_BASE}/analytics/usage`;
       const params = new URLSearchParams();
-      
+
       if (options.keyId) params.append('keyId', options.keyId);
       if (options.days) params.append('days', options.days);
-      
+
       if (params.toString()) {
         url += `?${params.toString()}`;
       }
 
-      const analytics = await apiClient.get(url);
+      const analytics = unwrapApiResponse<any[]>(await apiClient.get(url));
 
       if (options.json) {
         console.log(JSON.stringify(analytics, null, 2));
         return;
       }
 
-      if (analytics.length === 0) {
+      if (!Array.isArray(analytics) || analytics.length === 0) {
         console.log(chalk.yellow('No usage data found'));
         return;
       }
@@ -894,19 +896,19 @@ analyticsCommand
   .option('--json', 'Output as JSON')
   .action(async (options) => {
     try {
-      let url = '/api-keys/analytics/security-events';
+      let url = `${AUTH_API_KEYS_BASE}/analytics/security-events`;
       if (options.severity) {
         url += `?severity=${options.severity}`;
       }
 
-      const events = await apiClient.get(url);
+      const events = unwrapApiResponse<any[]>(await apiClient.get(url));
 
       if (options.json) {
         console.log(JSON.stringify(events, null, 2));
         return;
       }
 
-      if (events.length === 0) {
+      if (!Array.isArray(events) || events.length === 0) {
         console.log(colors.success('✅ No security events found'));
         return;
       }
