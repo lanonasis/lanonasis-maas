@@ -137,7 +137,7 @@ if (typeof args !== 'object' || args === null || Array.isArray(args)) {
 
 ## Additional Context: Field Shape Mismatch
 
-While not fixed in this PR (marked as blocking dependency for P3), the analysis revealed that the CLI `api-keys` commands are shaped for **project stored secrets** (V-Secure style), not **platform API keys**:
+While not fixed in this PR (marked as blocking dependency for P3), the analysis revealed that the CLI `api-keys` commands are shaped for **project-stored secrets** (V-Secure style), not **platform API keys**:
 
 **Current CLI Fields** (Project Secrets):
 - `keyType`, `environment`, `projectId`, `accessLevel`, `tags`, `expiresAt`, `rotationFrequency`
@@ -214,7 +214,7 @@ The drift analysis also identified that the Capstone page contains stale assumpt
 
 ## Commit Message
 
-```
+```text
 fix(cli): align api-keys endpoints and fix response handling
 
 Three critical drift issues fixed:
