@@ -131,7 +131,6 @@ describe('ReplEngine Enhancements - History, Completion, Multi-line', () => {
 
     it('should handle nested structures', () => {
       expect(engine['isIncompleteInput']('create {"key": ["value"]}')).toBe(false);
-      expect(engine['isIncompleteInput']('create {"key": ["value"]}')).toBe(false);
     });
 
     it('should handle balanced quotes', () => {
