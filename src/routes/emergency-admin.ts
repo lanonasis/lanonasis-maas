@@ -163,7 +163,6 @@ router.post('/emergency/bootstrap-admin', async (req, res) => {
         user_id: userId,
         organization_id: organizationId,
         name: 'Emergency Bootstrap Key',
-        key: apiKey,
         key_hash: hashedKey,
         service: 'lanonasis-maas',
         access_level: 'admin',

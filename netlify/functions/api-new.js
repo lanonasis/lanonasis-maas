@@ -178,11 +178,8 @@ app.use(async (req, res, next) => {
       } else if (apiKey.startsWith('sk_') || apiKey.includes('sk_live_') || apiKey.includes('pk_live_onasis_')) {
         console.warn(`[${req.id}] Legacy API key rejected - env-based admin/default org fallback is disabled`);
         return res.status(401).json(createErrorEnvelope(req, 'Legacy API keys are disabled until they are migrated to database-backed validation', 'AuthError', 'LEGACY_KEY_DISABLED'));
-      } else {
-        console.warn(`[${req.id}] Invalid API key format`);
-        return res.status(401).json(createErrorEnvelope(req, 'Invalid API key format', 'AuthError', 'INVALID_API_KEY'));
       }
-      
+
       return next();
     }
 

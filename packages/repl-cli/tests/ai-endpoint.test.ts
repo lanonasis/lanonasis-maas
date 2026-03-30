@@ -5,8 +5,11 @@ import { OrchestratorConfig } from '../src/core/orchestrator';
 describe('AI Endpoint Health & Fallback', () => {
   let config: OrchestratorConfig;
   let orchestrator: NaturalLanguageOrchestrator;
+  let _origFallbackModel: string | undefined;
 
   beforeEach(() => {
+    _origFallbackModel = process.env.OPENAI_FALLBACK_MODEL;
+    process.env.OPENAI_FALLBACK_MODEL = '';
     config = {
       apiUrl: 'http://localhost:3000',
       authToken: 'test-token',
@@ -19,6 +22,7 @@ describe('AI Endpoint Health & Fallback', () => {
   });
 
   afterEach(() => {
+    process.env.OPENAI_FALLBACK_MODEL = _origFallbackModel;
     vi.restoreAllMocks();
   });
 

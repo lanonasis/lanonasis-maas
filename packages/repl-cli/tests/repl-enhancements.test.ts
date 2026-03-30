@@ -21,21 +21,21 @@ describe('ReplEngine Enhancements - History, Completion, Multi-line', () => {
       expect(engine['inputHistory']).toEqual([]);
     });
 
-    it('should add commands to history', () => {
-      engine['processInput']('search typescript');
+    it('should add commands to history', async () => {
+      await engine['processInput']('search typescript');
       expect(engine['inputHistory']).toContain('search typescript');
     });
 
-    it('should avoid duplicate consecutive commands', () => {
-      engine['processInput']('list');
-      engine['processInput']('list');
+    it('should avoid duplicate consecutive commands', async () => {
+      await engine['processInput']('list');
+      await engine['processInput']('list');
       expect(engine['inputHistory'].filter(cmd => cmd === 'list').length).toBe(1);
     });
 
-    it('should allow same command if not consecutive', () => {
-      engine['processInput']('list');
-      engine['processInput']('search test');
-      engine['processInput']('list');
+    it('should allow same command if not consecutive', async () => {
+      await engine['processInput']('list');
+      await engine['processInput']('search test');
+      await engine['processInput']('list');
       expect(engine['inputHistory'].filter(cmd => cmd === 'list').length).toBe(2);
     });
 

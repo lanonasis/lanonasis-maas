@@ -1,3 +1,5 @@
+import type { ReadLine } from 'readline';
+
 export interface UserProfile {
   name?: string;
   email?: string;
@@ -47,8 +49,6 @@ export interface ReplConfig {
     preferences?: Record<string, any>;
   };
 }
-
-import type { ReadLine } from 'readline';
 
 export interface CommandContext {
   mode: 'remote' | 'local';

@@ -3,6 +3,7 @@ import { AIEndpointHealthCheck, quickHealthCheck } from '../src/core/health-chec
 
 describe('AIEndpointHealthCheck', () => {
   let checker: AIEndpointHealthCheck;
+  let _origFetch: typeof global.fetch;
   const mockEndpoints = [
     {
       name: 'Primary Router',
@@ -21,11 +22,13 @@ describe('AIEndpointHealthCheck', () => {
   ];
 
   beforeEach(() => {
+    _origFetch = global.fetch;
     checker = new AIEndpointHealthCheck(mockEndpoints);
     global.fetch = vi.fn();
   });
 
   afterEach(() => {
+    global.fetch = _origFetch;
     vi.restoreAllMocks();
   });
 
@@ -307,11 +310,15 @@ describe('AIEndpointHealthCheck', () => {
 });
 
 describe('quickHealthCheck', () => {
+  let _origFetch: typeof global.fetch;
+
   beforeEach(() => {
+    _origFetch = global.fetch;
     global.fetch = vi.fn();
   });
 
   afterEach(() => {
+    global.fetch = _origFetch;
     vi.restoreAllMocks();
   });
 

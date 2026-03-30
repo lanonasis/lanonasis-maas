@@ -88,7 +88,7 @@ lrepl
 
 ## 🏗️ Architecture
 
-```
+```text
 src/ui/
 ├── DashboardApp.tsx          # Main dashboard container
 ├── components/
