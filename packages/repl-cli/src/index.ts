@@ -11,6 +11,7 @@ process.on('unhandledRejection', (reason) => {
 });
 process.on('uncaughtException', (error) => {
   console.error(chalk.red('Uncaught exception:'), error);
+  process.exit(1);
 });
 import { MagicLinkFlow } from '@lanonasis/oauth-client';
 import {

@@ -238,27 +238,29 @@ export class ReplEngine {
         return;
       }
       
-      // Filter if search term provided
-      const filtered = searchTerm 
-        ? history.filter((cmd, idx) => 
-            cmd.toLowerCase().includes(searchTerm) || 
-            (idx + 1).toString().includes(searchTerm)
-          )
-        : history;
-      
+      // Filter if search term provided, preserving original index
+      const filtered = searchTerm
+        ? history
+            .map((cmd, originalIndex) => ({ cmd, originalIndex }))
+            .filter(({ cmd, originalIndex }) =>
+              cmd.toLowerCase().includes(searchTerm) ||
+              (originalIndex + 1).toString().includes(searchTerm)
+            )
+        : history.map((cmd, originalIndex) => ({ cmd, originalIndex }));
+
       if (filtered.length === 0) {
         console.log(chalk.gray(`No commands matching "${searchTerm}" found.`));
         return;
       }
-      
+
       console.log(chalk.cyan(`\n📜 Command History (${filtered.length} commands):\n`));
-      
+
       // Show last 50 commands by default, or filtered results
       const toShow = searchTerm ? filtered : filtered.slice(-50);
-      
-      toShow.forEach((cmd, idx) => {
-        const displayIndex = searchTerm 
-          ? history.indexOf(cmd) + 1 
+
+      toShow.forEach(({ cmd, originalIndex }, idx) => {
+        const displayIndex = searchTerm
+          ? originalIndex + 1
           : filtered.length - toShow.length + idx + 1;
         const truncated = cmd.length > 70 ? cmd.substring(0, 67) + '...' : cmd;
         console.log(chalk.gray(`  ${displayIndex.toString().padStart(3)}  ${truncated}`));
@@ -315,7 +317,7 @@ export class ReplEngine {
       (async () => {
         // Handle multi-line input mode
         if (this.isMultilineMode) {
-          this.multilineBuffer += '\n' + line;
+          this.multilineBuffer += '\n' + line.replace(/\s*\\$/, '');
           
           // Check if input is now complete
           if (!this.isIncompleteInput(this.multilineBuffer)) {
@@ -344,7 +346,7 @@ export class ReplEngine {
         // Check if this is the start of a multi-line input
         if (this.isIncompleteInput(lineTrimmed)) {
           this.isMultilineMode = true;
-          this.multilineBuffer = lineTrimmed;
+          this.multilineBuffer = lineTrimmed.replace(/\s*\\$/, '');
           this.rl.setPrompt(chalk.cyan('... '));
           this.rl.prompt();
           return;
