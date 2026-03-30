@@ -103,12 +103,20 @@ const ensureBehaviorActions = (value, fieldName, options = {}) => {
         if (!tool) {
             throw new Error(`${fieldName}[${index}].tool is required`);
         }
-        const parsed = { tool };
-        if (entry.params !== undefined) {
-            if (!isPlainObject(entry.params)) {
-                throw new Error(`${fieldName}[${index}].params must be a JSON object`);
+        const outcome = typeof entry.outcome === 'string' ? entry.outcome.trim() : '';
+        if (!['success', 'partial', 'failed'].includes(outcome)) {
+            throw new Error(`${fieldName}[${index}].outcome must be success, partial, or failed`);
+        }
+        const parsed = {
+            tool,
+            outcome: outcome,
+        };
+        const rawParameters = entry.parameters ?? entry.params;
+        if (rawParameters !== undefined) {
+            if (!isPlainObject(rawParameters)) {
+                throw new Error(`${fieldName}[${index}].parameters must be a JSON object`);
             }
-            parsed.params = entry.params;
+            parsed.parameters = rawParameters;
         }
         if (entry.timestamp !== undefined) {
             if (typeof entry.timestamp !== 'string' || !entry.timestamp.trim()) {
@@ -125,6 +133,33 @@ const ensureBehaviorActions = (value, fieldName, options = {}) => {
             parsed.duration_ms = entry.duration_ms;
         }
         return parsed;
+    });
+};
+const ensureCompletedSteps = (value, fieldName) => {
+    if (value === undefined) {
+        return [];
+    }
+    if (!Array.isArray(value)) {
+        throw new Error(`${fieldName} must be a JSON array`);
+    }
+    return value.map((entry, index) => {
+        if (typeof entry === 'string') {
+            const normalized = entry.trim();
+            if (!normalized) {
+                throw new Error(`${fieldName}[${index}] must be a non-empty string`);
+            }
+            return normalized;
+        }
+        if (isPlainObject(entry)) {
+            const tool = typeof entry.tool === 'string'
+                ? entry.tool?.trim()
+                : '';
+            if (!tool) {
+                throw new Error(`${fieldName}[${index}].tool must be a non-empty string`);
+            }
+            return tool;
+        }
+        throw new Error(`${fieldName}[${index}] must be a string or an object with a tool field`);
     });
 };
 const clampThreshold = (value) => {
@@ -1215,7 +1250,7 @@ export function memoryCommands(program) {
         .description('Suggest next actions from learned behavior patterns')
         .requiredOption('--task <text>', 'Current task description')
         .option('--state <json>', 'Additional current state JSON object')
-        .option('--completed-steps <json>', 'Completed steps JSON array')
+        .option('--completed-steps <json>', 'Completed steps JSON array (strings preferred)')
         .option('--max-suggestions <number>', 'Maximum suggestions', '3')
         .option('--json', 'Output raw JSON payload')
         .action(async (options) => {
@@ -1226,9 +1261,7 @@ export function memoryCommands(program) {
             const parsedState = parseJsonOption(options.state, '--state');
             const state = ensureJsonObject(parsedState, '--state') || {};
             const parsedCompletedSteps = parseJsonOption(options.completedSteps, '--completed-steps');
-            const completedSteps = parsedCompletedSteps === undefined
-                ? undefined
-                : ensureBehaviorActions(parsedCompletedSteps, '--completed-steps', { allowEmpty: true });
+            const completedSteps = ensureCompletedSteps(parsedCompletedSteps, '--completed-steps');
             const result = await postIntelligenceEndpoint(transport, '/intelligence/behavior-suggest', {
                 user_id: userId,
                 current_state: {
