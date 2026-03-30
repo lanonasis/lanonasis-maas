@@ -5,6 +5,7 @@ import { CommandRegistry } from '../commands/registry.js';
 import { MemoryCommands } from '../commands/memory-commands.js';
 import { SystemCommands } from '../commands/system-commands.js';
 import { NaturalLanguageOrchestrator } from './orchestrator.js';
+import { pauseReadline, resumeReadline } from '../utils/spinner-utils.js';
 
 export class ReplEngine {
   private rl: readline.Interface;
@@ -17,6 +18,12 @@ export class ReplEngine {
   private nlMode: boolean = true; // Natural language mode enabled by default
   private sigintHandler?: () => void; // Track SIGINT handler for cleanup
   private errorHandlersInstalled: boolean = false; // Track global error handlers
+  private closeHandled: boolean = false; // Track if close event was handled
+  
+  // Enhanced input handling (concierge features)
+  private inputHistory: string[] = []; // Command history for this session
+  private multilineBuffer: string = ''; // Buffer for multi-line input
+  private isMultilineMode: boolean = false; // Track if we're in multiline mode
 
   private formatError(error: unknown): string {
     if (error instanceof Error && error.message) return error.message;
@@ -32,7 +39,9 @@ export class ReplEngine {
     this.rl = readline.createInterface({
       input: process.stdin,
       output: process.stdout,
-      prompt: chalk.cyan('💭 ')
+      prompt: chalk.cyan('💭 '),
+      historySize: this.config.maxHistorySize ?? 1000,
+      completer: this.createCompleter.bind(this), // Enable tab completion
     });
     
     // Expose readline interface globally so orchestrator can pause/resume around spinners
@@ -41,7 +50,8 @@ export class ReplEngine {
     this.context = {
       mode: config.useMCP ? 'local' : 'remote',
       aliases: new Map(),
-      config: this.config
+      config: this.config,
+      readline: this.rl  // Pass readline for spinner coordination
     };
 
     this.registry = new CommandRegistry();
@@ -62,6 +72,119 @@ export class ReplEngine {
     this.registerCommands();
   }
   
+  /**
+   * Create a tab completer for readline
+   * Provides completion for all registered commands and aliases
+   */
+  private createCompleter(line: string): [string[], string] {
+    // Build completion list from registered commands and aliases
+    const commands = this.registry.getCommands();
+    const aliases = Array.from(this.registry.getAliases().keys());
+    const allCommands = [...commands, ...aliases];
+    
+    const hits = allCommands.filter(c => c.startsWith(line.toLowerCase()));
+    return [hits.length ? hits : allCommands, line];
+  }
+  
+  /**
+   * Check if input appears to be incomplete (multi-line)
+   * Detects unclosed quotes, braces, brackets, and explicit continuations
+   */
+  private isIncompleteInput(input: string): boolean {
+    const trimmed = input.trim();
+    
+    // Explicit continuation with backslash
+    if (trimmed.endsWith('\\')) return true;
+
+    let inSingleQuote = false;
+    let inDoubleQuote = false;
+    let inBacktick = false;
+    let inCodeBlock = false;
+    let escaped = false;
+    let openBraces = 0;
+    let openBrackets = 0;
+    let openParens = 0;
+
+    for (let i = 0; i < input.length; i++) {
+      const char = input[i];
+
+      if (!inSingleQuote && !inDoubleQuote && !inBacktick && input.startsWith('```', i)) {
+        inCodeBlock = !inCodeBlock;
+        i += 2;
+        escaped = false;
+        continue;
+      }
+
+      if (inCodeBlock) {
+        continue;
+      }
+
+      if (escaped) {
+        escaped = false;
+        continue;
+      }
+
+      if ((inSingleQuote || inDoubleQuote || inBacktick) && char === '\\') {
+        escaped = true;
+        continue;
+      }
+
+      if (inSingleQuote) {
+        if (char === '\'') {
+          inSingleQuote = false;
+        }
+        continue;
+      }
+
+      if (inDoubleQuote) {
+        if (char === '"') {
+          inDoubleQuote = false;
+        }
+        continue;
+      }
+
+      if (inBacktick) {
+        if (char === '`') {
+          inBacktick = false;
+        }
+        continue;
+      }
+
+      if (char === '\'') {
+        const prev = input[i - 1];
+        const next = input[i + 1];
+        const isApostrophe = Boolean(prev && next && /[A-Za-z0-9]/.test(prev) && /[A-Za-z0-9]/.test(next));
+        if (!isApostrophe) {
+          inSingleQuote = true;
+        }
+        continue;
+      }
+
+      if (char === '"') {
+        inDoubleQuote = true;
+        continue;
+      }
+
+      if (char === '`') {
+        inBacktick = true;
+        continue;
+      }
+
+      if (char === '{') openBraces++;
+      if (char === '}') openBraces--;
+      if (char === '[') openBrackets++;
+      if (char === ']') openBrackets--;
+      if (char === '(') openParens++;
+      if (char === ')') openParens--;
+    }
+
+    return inSingleQuote ||
+      inDoubleQuote ||
+      inBacktick ||
+      inCodeBlock ||
+      openBraces > 0 || openBrackets > 0 || openParens > 0;
+  }
+
   private registerCommands() {
     // Memory commands
     this.registry.register('create', (args, ctx) => this.memoryCommands.create(args, ctx));
@@ -104,6 +227,52 @@ export class ReplEngine {
       this.orchestrator.clearHistory();
       console.log(chalk.green('✨ Conversation history cleared'));
     });
+    
+    // History command - show command history (concierge feature)
+    this.registry.register('history', async (args) => {
+      const searchTerm = args.join(' ').toLowerCase();
+      const history = this.inputHistory;
+      
+      if (history.length === 0) {
+        console.log(chalk.gray('No commands in history yet.'));
+        return;
+      }
+      
+      // Filter if search term provided, preserving original index
+      const filtered = searchTerm
+        ? history
+            .map((cmd, originalIndex) => ({ cmd, originalIndex }))
+            .filter(({ cmd, originalIndex }) =>
+              cmd.toLowerCase().includes(searchTerm) ||
+              (originalIndex + 1).toString().includes(searchTerm)
+            )
+        : history.map((cmd, originalIndex) => ({ cmd, originalIndex }));
+
+      if (filtered.length === 0) {
+        console.log(chalk.gray(`No commands matching "${searchTerm}" found.`));
+        return;
+      }
+
+      console.log(chalk.cyan(`\n📜 Command History (${filtered.length} commands):\n`));
+
+      // Show last 50 commands by default, or filtered results
+      const toShow = searchTerm ? filtered : filtered.slice(-50);
+
+      toShow.forEach(({ cmd, originalIndex }, idx) => {
+        const displayIndex = searchTerm
+          ? originalIndex + 1
+          : filtered.length - toShow.length + idx + 1;
+        const truncated = cmd.length > 70 ? cmd.substring(0, 67) + '...' : cmd;
+        console.log(chalk.gray(`  ${displayIndex.toString().padStart(3)}  ${truncated}`));
+      });
+      
+      if (!searchTerm && history.length > 50) {
+        console.log(chalk.gray(`\n  ... and ${history.length - 50} more commands`));
+        console.log(chalk.gray('  Use "history <search>" to filter\n'));
+      } else {
+        console.log('');
+      }
+    }, ['hist']);
   }
   
   async start() {
@@ -121,10 +290,8 @@ export class ReplEngine {
     console.log(chalk.cyan('━'.repeat(50)));
     console.log(chalk.gray(`Mode: ${this.context.mode} | API: ${this.config.apiUrl || 'https://api.lanonasis.com'}`));
     console.log(chalk.gray(`Natural Language: ${this.nlMode ? chalk.green('ON') : chalk.yellow('OFF')}`));
-    // Show L0/LZero status (vendor details hidden from users)
     const l0Enabled = this.config.l0?.enabled !== false;
     console.log(chalk.gray(`LZero Orchestrator: ${l0Enabled ? chalk.green('ACTIVE') : chalk.yellow('OFF')}`));
-    // Show user profile if available
     const userName = this.config.userProfile?.name || this.config.userContext?.name;
     const userEmail = this.config.userProfile?.email;
     if (userEmail) {
@@ -136,94 +303,157 @@ export class ReplEngine {
     console.log(chalk.gray('   • Natural: "What do I know about my projects?"'));
     console.log(chalk.gray('   • Natural: "Please refine this prompt: ..."'));
     console.log(chalk.gray('   • Command: create <title> <content>'));
+    console.log(chalk.gray('   • History: Press ↑↓ arrows to navigate past commands'));
+    console.log(chalk.gray('   • Complete: Press Tab for command completion'));
+    console.log(chalk.gray('   • Multi-line: Leave quotes/braces open for continuation'));
+    console.log(chalk.gray('   • Health: Run "lrepl health" to check AI endpoints'));
     console.log(chalk.gray('   • Type "help" for all commands\n'));
 
-    this.rl.prompt();
+    this.safePrompt();
 
-    // Wrap readline handler with proper error handling to prevent crashes
-    this.rl.on('line', async (line) => {
-      const lineTrimmed = line.trim();
-      if (!lineTrimmed) {
-        if (this.running) this.rl.prompt();
-        return;
-      }
-      
-      try {
-        await this.handleCommand(lineTrimmed);
-      } catch (error) {
-        // Catch any unhandled errors and keep the REPL alive
-        console.error(chalk.red('\n⚠️  Unexpected error:'), this.formatError(error));
-        console.log(chalk.gray('The REPL is still running. Try again or type "help" for assistance.\n'));
-      }
-      
-      // Always re-prompt if still running - this ensures the REPL stays alive
-      if (this.running) {
-        try {
-          this.rl.prompt();
-        } catch (promptError) {
-          // If prompt fails, stdin might be closed - try to recover
-          console.log(chalk.yellow('\n⚠️  Input stream issue, attempting to recover...'));
-          // Don't exit - let the user try again
+    // Wrap readline handler with proper error handling
+    this.rl.on('line', (line) => {
+      // Wrap async logic in IIFE with proper error handling
+      (async () => {
+        // Handle multi-line input mode
+        if (this.isMultilineMode) {
+          this.multilineBuffer += '\n' + line.replace(/\s*\\$/, '');
+          
+          // Check if input is now complete
+          if (!this.isIncompleteInput(this.multilineBuffer)) {
+            const completeInput = this.multilineBuffer.trim();
+            this.isMultilineMode = false;
+            this.multilineBuffer = '';
+            this.rl.setPrompt(chalk.cyan('💭 '));
+            
+            // Process the complete multi-line input
+            await this.processInput(completeInput);
+          } else {
+            // Continue multi-line mode
+            this.rl.setPrompt(chalk.cyan('... '));
+            this.rl.prompt();
+          }
+          return;
         }
-      }
+        
+        // Normal single-line processing
+        const lineTrimmed = line.trim();
+        if (!lineTrimmed) {
+          if (this.running) this.safePrompt();
+          return;
+        }
+        
+        // Check if this is the start of a multi-line input
+        if (this.isIncompleteInput(lineTrimmed)) {
+          this.isMultilineMode = true;
+          this.multilineBuffer = lineTrimmed.replace(/\s*\\$/, '');
+          this.rl.setPrompt(chalk.cyan('... '));
+          this.rl.prompt();
+          return;
+        }
+        
+        await this.processInput(lineTrimmed);
+      })().catch((err) => {
+        console.error(chalk.red('\n⚠️  Critical error in line handler:'), this.formatError(err));
+        if (this.running) this.safePrompt();
+      });
     });
 
     this.rl.on('close', () => {
-      // Only exit if explicitly stopped via stop() method
-      // Don't exit on stdin close (e.g., when using pipes or Ctrl+D)
-      // The calling code will handle re-prompting if needed
+      // Prevent double-handling of close event
+      if (this.closeHandled) return;
+      this.closeHandled = true;
+      
       if (!this.running) {
         console.log(chalk.yellow('\n👋 Goodbye!'));
         process.exit(0);
       }
-      // If running is still true but stdin closed, just re-create the interface
-      // This handles edge cases like terminal disconnect
     });
 
-    // Handle input errors gracefully (e.g., pipe closed)
     this.rl.on('error', (err) => {
       console.error(chalk.red('\n⚠️  Input error:'), err.message);
       if (this.running) {
         console.log(chalk.gray('Attempting to continue...\n'));
-        this.rl.prompt();
+        this.safePrompt();
       }
     });
 
-    // Handle Ctrl+C gracefully - remove any existing handler first to prevent memory leaks
+    // Handle Ctrl+C gracefully
     if (this.sigintHandler) {
       process.removeListener('SIGINT', this.sigintHandler);
     }
     this.sigintHandler = () => {
+      // If in multiline mode, cancel it
+      if (this.isMultilineMode) {
+        console.log(chalk.yellow('\n\n✗ Multi-line input cancelled'));
+        this.isMultilineMode = false;
+        this.multilineBuffer = '';
+        this.rl.setPrompt(chalk.cyan('💭 '));
+        this.rl.prompt();
+        return;
+      }
+      
       console.log(chalk.yellow('\n👋 Goodbye!'));
       this.stop();
-      process.exit(0);
     };
     process.on('SIGINT', this.sigintHandler);
   }
 
-  /**
-   * Install global error handlers to prevent the REPL from crashing
-   * on unhandled exceptions or promise rejections
-   */
   private installGlobalErrorHandlers() {
     if (this.errorHandlersInstalled) return;
 
-    // Handle uncaught exceptions without crashing
     process.on('uncaughtException', (error) => {
       console.error(chalk.red('\n⚠️  Uncaught exception:'), error.message);
       console.log(chalk.gray('The REPL recovered from an error. You can continue.\n'));
-      if (this.running) this.rl.prompt();
+      if (this.running) this.safePrompt();
     });
 
-    // Handle unhandled promise rejections without crashing
     process.on('unhandledRejection', (reason) => {
       const message = this.formatError(reason);
       console.error(chalk.red('\n⚠️  Unhandled promise rejection:'), message);
       console.log(chalk.gray('The REPL recovered from an error. You can continue.\n'));
-      if (this.running) this.rl.prompt();
+      if (this.running) this.safePrompt();
     });
 
     this.errorHandlersInstalled = true;
+  }
+  
+  /**
+   * Safely prompt the user, checking if the stream is still valid
+   */
+  private safePrompt(): void {
+    if (this.running && this.rl.input && !(this.rl.input as any).destroyed) {
+      try {
+        this.rl.prompt();
+      } catch (promptError) {
+        // Silently fail - stream may be closing
+      }
+    }
+  }
+  
+  /**
+   * Process a single (or completed multi-line) input
+   */
+  private async processInput(input: string) {
+    // Add to history (avoid duplicates)
+    if (this.inputHistory.length === 0 || this.inputHistory[this.inputHistory.length - 1] !== input) {
+      this.inputHistory.push(input);
+      const maxHistorySize = this.config.maxHistorySize ?? 1000;
+    if (this.inputHistory.length > maxHistorySize) {
+        this.inputHistory = this.inputHistory.slice(-maxHistorySize);
+      }
+    }
+    
+    try {
+      await this.handleCommand(input);
+    } catch (error) {
+      console.error(chalk.red('\n⚠️  Unexpected error:'), this.formatError(error));
+      console.log(chalk.gray('The REPL is still running. Try again or type "help" for assistance.\n'));
+    }
+    
+    if (this.running) {
+      this.safePrompt();
+    }
   }
   
   private async handleCommand(input: string) {
@@ -233,15 +463,12 @@ export class ReplEngine {
     const knownCommands = this.registry.getCommands();
     const aliases = this.registry.getAliases();
 
-    // Check if this is a known command
     const isCommand = knownCommands.includes(firstWord) || aliases.has(firstWord);
 
     try {
-      // If natural language mode is ON and input is not a known command, use orchestrator
       if (this.nlMode && !isCommand) {
         await this.handleNaturalLanguage(input);
       } else {
-        // Use traditional command routing
         await this.routeCommand(firstWord, args);
       }
     } catch (error) {
@@ -250,11 +477,13 @@ export class ReplEngine {
   }
 
   private async handleNaturalLanguage(input: string) {
+    // CRITICAL FIX: Pause readline before processing to prevent spinner interference
+    pauseReadline(this.rl);
+    
     let response;
     try {
       response = await this.orchestrator.processNaturalLanguage(input);
     } catch (error) {
-      // If orchestrator fails completely, provide a helpful fallback
       console.error(chalk.red('\n⚠️  Could not process your request:'), this.formatError(error));
       console.log(chalk.cyan('\n💡 LZero: ') + chalk.white("I'm having trouble connecting to my brain right now. Let me try to help anyway..."));
       console.log(chalk.gray('\nYou can try:'));
@@ -262,20 +491,20 @@ export class ReplEngine {
       console.log(chalk.gray('  • Checking your network connection'));
       console.log(chalk.gray('  • Running "status" to check configuration\n'));
       return;
+    } finally {
+      // CRITICAL FIX: Always resume readline after processing
+      resumeReadline(this.rl, false);
     }
 
     try {
-      // Display main answer first
       const mainAnswer = response.mainAnswer || response.response;
       if (mainAnswer) {
         console.log(chalk.white(`\n${mainAnswer}\n`));
       }
 
-      // If there's an action, execute it
       if (response.action) {
         const result = await this.orchestrator.executeAction(response.action);
 
-        // Display results based on action type
         if (result && !result.error) {
           switch (response.action.type) {
             case 'create': {
@@ -287,11 +516,9 @@ export class ReplEngine {
             }
 
             case 'search': {
-              // Enhanced search results with main answer + additional context
               if (result.enhanced) {
                 const { mainResult, additionalResults } = result.enhanced;
                 
-                // Main result (most relevant)
                 if (mainResult) {
                   console.log(chalk.cyan(`\n━━━ Primary Result ━━━`));
                   console.log(chalk.white(`Title: ${mainResult.title}`));
@@ -301,7 +528,6 @@ export class ReplEngine {
                   }
                 }
                 
-                // Additional context
                 if (additionalResults && additionalResults.length > 0) {
                   console.log(chalk.cyan(`\n📚 Related Context:\n`));
                   additionalResults.forEach((r: any, i: number) => {
@@ -315,7 +541,6 @@ export class ReplEngine {
                 
                 this.context.lastResult = [mainResult, ...additionalResults];
               } else {
-                // Fallback to original format
                 const searchResults = result.data?.results || [];
                 if (searchResults.length === 0) {
                   console.log(chalk.gray('No results found'));
@@ -398,7 +623,6 @@ export class ReplEngine {
         }
       }
       
-      // Display additional context if available
       if (response.additionalContext && response.additionalContext.length > 0) {
         console.log(chalk.cyan(`\n📚 Additional Information:\n`));
         response.additionalContext.forEach((ctx, i) => {
@@ -410,7 +634,6 @@ export class ReplEngine {
         });
       }
     } catch (error) {
-      // Catch action execution errors but keep REPL alive
       console.error(chalk.red('\n⚠️  Error executing action:'), this.formatError(error));
       console.log(chalk.cyan('💡 LZero: ') + chalk.gray("Something went wrong, but I'm still here! Try rephrasing or use a direct command.\n"));
     }
@@ -432,12 +655,10 @@ export class ReplEngine {
   }
 
   private async fetchUserContext() {
-    // Initialize orchestrator context - this loads user preferences from memories
-    // This makes the assistant context-aware, knowing the user's stored information
     try {
       await this.orchestrator.initializeContext();
     } catch (error) {
-      // Silently fail - context loading is optional but enhances the experience
+      // Silently fail
     }
   }
 
@@ -471,6 +692,7 @@ export class ReplEngine {
     console.log(chalk.gray('    mode <remote|local>     - Switch operation mode'));
     console.log(chalk.gray('    status                  - Show current status'));
     console.log(chalk.gray('    clear                   - Clear screen'));
+    console.log(chalk.gray('    history [search]        - Show command history (with optional filter)'));
     console.log(chalk.gray('    help, ?, h              - Show this help'));
     console.log(chalk.gray('    exit, quit, q           - Exit REPL'));
 
@@ -478,20 +700,22 @@ export class ReplEngine {
     console.log(chalk.gray('  • Natural language uses Onasis AI Router by default (OpenAI key optional)'));
     console.log(chalk.gray('  • Use "nl off" to disable NL mode and use commands only'));
     console.log(chalk.gray('  • Use "reset" to clear conversation context'));
+    console.log(chalk.gray('  • Press ↑/↓ arrows to navigate command history'));
+    console.log(chalk.gray('  • Press Tab for command completion'));
+    console.log(chalk.gray('  • For multi-line input, leave quotes/brackets open'));
     console.log(chalk.cyan('\n━'.repeat(50) + '\n'));
   }
   
   stop() {
     this.running = false;
+    this.closeHandled = true;
     this.rl.close();
 
-    // Clean up SIGINT handler to prevent memory leaks
     if (this.sigintHandler) {
       process.removeListener('SIGINT', this.sigintHandler);
       this.sigintHandler = undefined;
     }
 
-    // Clear conversation history on stop (user is logging out/exiting)
     this.orchestrator.clearHistory();
   }
 }

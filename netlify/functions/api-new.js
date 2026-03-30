@@ -173,47 +173,13 @@ app.use(async (req, res, next) => {
       
       // Validate vendor API key format (pk_*.sk_* or legacy sk_*)
       if (apiKey.includes('pk_') && apiKey.includes('.sk_')) {
-        // New vendor key format - should be looked up in database
-        // For now, use vendor-specific org from env or reject
-        const vendorOrgId = process.env.VENDOR_ORG_ID || process.env.DEFAULT_ORG_ID;
-        if (!vendorOrgId) {
-          console.warn(`[${req.id}] Vendor API key rejected - VENDOR_ORG_ID/DEFAULT_ORG_ID not configured`);
-          return res.status(401).json(createErrorEnvelope(req, 'Vendor API keys require org configuration', 'AuthError', 'VENDOR_ORG_NOT_CONFIGURED'));
-        }
-
-        const [keyId, keySecret] = apiKey.split('.');
-        req.user = {
-          userId: 'vendor_' + keyId.replace('pk_', ''),
-          organizationId: vendorOrgId,
-          plan: 'enterprise',
-          role: 'vendor',
-          auth_type: 'vendor_api_key',
-          vendor: vendor || 'unknown'
-        };
-        console.log(`[${req.id}] Vendor API key authentication successful`);
+        console.warn(`[${req.id}] Vendor API key rejected - database-backed validation is required`);
+        return res.status(401).json(createErrorEnvelope(req, 'Vendor API keys must be validated against a trusted backend identity store', 'AuthError', 'VENDOR_KEY_VALIDATION_REQUIRED'));
       } else if (apiKey.startsWith('sk_') || apiKey.includes('sk_live_') || apiKey.includes('pk_live_onasis_')) {
-        // Legacy API key format - use env vars, reject if not configured
-        const legacyUserId = process.env.ADMIN_USER_ID;
-        const legacyOrgId = process.env.DEFAULT_ORG_ID;
-
-        if (!legacyUserId || !legacyOrgId) {
-          console.warn(`[${req.id}] Legacy API key rejected - ADMIN_USER_ID/DEFAULT_ORG_ID not configured`);
-          return res.status(401).json(createErrorEnvelope(req, 'Legacy API keys are deprecated. Please use a proper API key.', 'AuthError', 'LEGACY_KEY_DEPRECATED'));
-        }
-
-        req.user = {
-          userId: legacyUserId,
-          organizationId: legacyOrgId,
-          plan: 'enterprise',
-          role: 'admin',
-          auth_type: 'legacy_api_key'
-        };
-        console.log(`[${req.id}] Legacy API key authentication successful (using env-configured IDs)`);
-      } else {
-        console.warn(`[${req.id}] Invalid API key format`);
-        return res.status(401).json(createErrorEnvelope(req, 'Invalid API key format', 'AuthError', 'INVALID_API_KEY'));
+        console.warn(`[${req.id}] Legacy API key rejected - env-based admin/default org fallback is disabled`);
+        return res.status(401).json(createErrorEnvelope(req, 'Legacy API keys are disabled until they are migrated to database-backed validation', 'AuthError', 'LEGACY_KEY_DISABLED'));
       }
-      
+
       return next();
     }
 

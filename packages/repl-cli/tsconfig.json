@@ -6,7 +6,7 @@
       "ES2022",
       "DOM"
     ],
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
     "strict": true,
@@ -15,6 +15,7 @@
     "resolveJsonModule": true,
     "outDir": "./dist",
     "rootDir": "../..",
+    "jsx": "react-jsx",
     "paths": {
       "@lanonasis/memory-client": [
         "../memory-client/src"
