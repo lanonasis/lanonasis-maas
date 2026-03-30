@@ -4,6 +4,15 @@ import { Command } from 'commander';
 import { ReplEngine } from './core/repl-engine.js';
 import { loadConfig } from './config/loader.js';
 import chalk from 'chalk';
+
+// Install global error handlers
+process.on('unhandledRejection', (reason) => {
+  console.error(chalk.red('Unhandled promise rejection:'), reason);
+});
+process.on('uncaughtException', (error) => {
+  console.error(chalk.red('Uncaught exception:'), error);
+  process.exit(1);
+});
 import { MagicLinkFlow } from '@lanonasis/oauth-client';
 import {
   performOAuthLogin,

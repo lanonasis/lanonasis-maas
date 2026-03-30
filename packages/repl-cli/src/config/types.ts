@@ -1,3 +1,5 @@
+import type { ReadLine } from 'readline';
+
 export interface UserProfile {
   name?: string;
   email?: string;
@@ -52,5 +54,6 @@ export interface CommandContext {
   mode: 'remote' | 'local';
   lastResult?: unknown;
   aliases: Map<string, string>;
+  readline?: ReadLine | null; // For spinner coordination
   config: ReplConfig;
 }

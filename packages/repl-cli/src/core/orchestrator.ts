@@ -527,6 +527,9 @@ Remember: You are LZero - be helpful, conversational, and make the experience fe
     let toolCalls: any[] | undefined;
 
     if (this.aiRouterClient) {
+      const startTime = Date.now();
+      console.log(chalk.cyan('[LZero]') + chalk.gray(' Processing request...'));
+      
       try {
         const response = await this.aiRouterClient.chat({
           messages: this.conversationHistory,
@@ -536,16 +539,23 @@ Remember: You are LZero - be helpful, conversational, and make the experience fe
           max_tokens: maxTokens,
           tool_choice: toolChoice,
         });
+        const latency = Date.now() - startTime;
+        console.log(chalk.green('[LZero]') + chalk.gray(` ✓ Processed (${latency}ms)`));
         message = response.message;
         toolCalls = message.tool_calls;
       } catch (error) {
-        console.error('AI Router request failed, falling back to OpenAI:', error);
+        const latency = Date.now() - startTime;
+        console.log(chalk.yellow('[LZero]') + chalk.gray(` Using enhanced mode (${latency}ms)`));
+        console.log(chalk.gray('  → Switching to backup intelligence...'));
         // Fall through to OpenAI
       }
     }
 
     // Fallback to OpenAI if AI Router not configured or failed
     if (!message && this.openaiApiKey) {
+      const startTime = Date.now();
+      console.log(chalk.cyan('[LZero]') + chalk.gray(' Backup intelligence active'));
+      
       const response = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
         headers: {
@@ -567,6 +577,8 @@ Remember: You are LZero - be helpful, conversational, and make the experience fe
       }
 
       const data: any = await response.json();
+      const latency = Date.now() - startTime;
+      console.log(chalk.green('[LZero]') + chalk.gray(` ✓ Backup processed (${latency}ms)`));
       message = data.choices[0].message;
       toolCalls = message.tool_calls;
     }
