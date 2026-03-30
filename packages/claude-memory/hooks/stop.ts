@@ -94,6 +94,7 @@ function buildMemories(input: StopInput, opts: StopOptions): LanCreateParams[] {
       metadata: {
         source: "claude-code",
         hook: opts.hook,
+        key_context: "personal",
         session_id: input.session_id,
         agent_type: opts.agentType,
         chain_type: chain.type,
