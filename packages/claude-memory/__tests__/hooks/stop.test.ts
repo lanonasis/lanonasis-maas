@@ -160,7 +160,7 @@ describe("handleStop", () => {
       .digest("hex");
 
     expect(firstMemory.idempotency_key).toBe(expectedKey);
-    expect(firstMemory.metadata.key_context).toBeUndefined();
+    expect(firstMemory.metadata.key_context).toBe("personal");
   });
 
   it("spools memories when the client write fails", async () => {

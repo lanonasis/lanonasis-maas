@@ -113,15 +113,22 @@ export interface MemoryEntry {
  *             difficulty: "intermediate"
  *             last_updated: "2025-01-01"
  */
+const MEMORY_TYPE_ENUM = ['context', 'project', 'knowledge', 'reference', 'personal', 'workflow'] as const;
+
 export const createMemorySchema = z.object({
   title: z.string().min(1).max(200),
   content: z.string().min(1).max(50000),
-  memory_type: z.enum(['context', 'project', 'knowledge', 'reference', 'personal', 'workflow']).default('context'),
+  memory_type: z.enum(MEMORY_TYPE_ENUM).optional(),
+  type: z.enum(MEMORY_TYPE_ENUM).optional(), // SDK alias for memory_type
   tags: z.array(z.string().min(1).max(50)).max(10).default([]),
   topic_id: z.string().uuid().optional(),
   topic_key: z.string().min(1).max(100).optional(),
   metadata: z.record(z.unknown()).optional()
-});
+}).transform((data) => ({
+  ...data,
+  memory_type: data.memory_type ?? data.type ?? 'context',
+  type: undefined, // normalise — downstream only sees memory_type
+}));
 
 /**
  * @swagger
@@ -158,12 +165,17 @@ export const createMemorySchema = z.object({
 export const updateMemorySchema = z.object({
   title: z.string().min(1).max(200).optional(),
   content: z.string().min(1).max(50000).optional(),
-  memory_type: z.enum(['context', 'project', 'knowledge', 'reference', 'personal', 'workflow']).optional(),
+  memory_type: z.enum(MEMORY_TYPE_ENUM).optional(),
+  type: z.enum(MEMORY_TYPE_ENUM).optional(), // SDK alias for memory_type
   tags: z.array(z.string().min(1).max(50)).max(10).optional(),
   topic_id: z.string().uuid().nullable().optional(),
   topic_key: z.string().min(1).max(100).optional(),
   metadata: z.record(z.unknown()).optional()
-});
+}).transform((data) => ({
+  ...data,
+  memory_type: data.memory_type ?? data.type,
+  type: undefined,
+}));
 
 /**
  * @swagger

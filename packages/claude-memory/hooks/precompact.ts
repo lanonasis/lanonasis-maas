@@ -94,6 +94,7 @@ function buildMemories(
           metadata: {
             source: "claude-code-precompact",
             hook: "precompact",
+            key_context: "personal",
             session_id: input.session_id,
             agent_type: opts.agentType,
             chain_type: chain.type,

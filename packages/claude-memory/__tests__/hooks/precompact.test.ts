@@ -150,7 +150,7 @@ describe("handlePreCompact", () => {
       .digest("hex");
 
     expect(firstMemory.idempotency_key).toBe(expectedKey);
-    expect(firstMemory.metadata.key_context).toBeUndefined();
+    expect(firstMemory.metadata.key_context).toBe("personal");
   });
 
   it("prioritizes knowledge and project memories before other types", async () => {
