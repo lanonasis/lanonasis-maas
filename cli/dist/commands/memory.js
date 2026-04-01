@@ -22,6 +22,12 @@ const MEMORY_TYPE_CHOICES = [
     'personal',
     'workflow',
 ];
+const QUERY_SCOPE_CHOICES = [
+    'personal',
+    'team',
+    'organization',
+    'hybrid',
+];
 const coerceMemoryType = (value) => {
     if (typeof value !== 'string')
         return undefined;
@@ -33,6 +39,48 @@ const coerceMemoryType = (value) => {
         return normalized;
     }
     return undefined;
+};
+const coerceQueryScope = (value) => {
+    if (typeof value !== 'string')
+        return undefined;
+    const normalized = value.trim().toLowerCase();
+    if (QUERY_SCOPE_CHOICES.includes(normalized)) {
+        return normalized;
+    }
+    return undefined;
+};
+const parseMemoryTypesOption = (value) => {
+    if (!value?.trim())
+        return undefined;
+    const parsed = value
+        .split(',')
+        .map((entry) => coerceMemoryType(entry))
+        .filter((entry) => Boolean(entry));
+    if (parsed.length === 0) {
+        return undefined;
+    }
+    return [...new Set(parsed)];
+};
+const buildIntelligenceContextPayload = (options) => {
+    const payload = {};
+    if (options.organizationId?.trim()) {
+        payload.organization_id = options.organizationId.trim();
+    }
+    if (options.topicId?.trim()) {
+        payload.topic_id = options.topicId.trim();
+    }
+    if (options.scope) {
+        const scope = coerceQueryScope(options.scope);
+        if (!scope) {
+            throw new Error(`Invalid scope \"${options.scope}\". Expected one of: ${QUERY_SCOPE_CHOICES.join(', ')}`);
+        }
+        payload.query_scope = scope;
+    }
+    const memoryTypes = parseMemoryTypesOption(options.memoryTypes);
+    if (memoryTypes?.length) {
+        payload.memory_types = memoryTypes;
+    }
+    return payload;
 };
 const resolveInputMode = async () => {
     const config = new CLIConfig();
@@ -1015,13 +1063,21 @@ export function memoryCommands(program) {
     intelligence
         .command('health-check')
         .description('Run memory intelligence health check')
+        .option('--organization-id <id>', 'Optional organization context')
+        .option('--topic-id <id>', 'Optional topic context')
+        .option('--scope <scope>', `Optional query scope (${QUERY_SCOPE_CHOICES.join(', ')})`)
+        .option('--memory-types <types>', `Optional comma-separated memory types (${MEMORY_TYPE_CHOICES.join(', ')})`)
         .option('--json', 'Output raw JSON payload')
         .action(async (options) => {
         try {
             const spinner = ora('Running intelligence health check...').start();
             const transport = await createIntelligenceTransport();
             const userId = await resolveCurrentUserId();
-            const result = await postIntelligenceEndpoint(transport, '/intelligence/health-check', { user_id: userId, response_format: 'json' });
+            const result = await postIntelligenceEndpoint(transport, '/intelligence/health-check', {
+                user_id: userId,
+                response_format: 'json',
+                ...buildIntelligenceContextPayload(options),
+            });
             spinner.stop();
             printIntelligenceResult('🩺 Intelligence Health Check', result, options);
         }
@@ -1036,6 +1092,9 @@ export function memoryCommands(program) {
         .description('Suggest tags for a memory')
         .argument('<memory-id>', 'Memory ID')
         .option('--max <number>', 'Maximum suggestions', '8')
+        .option('--organization-id <id>', 'Optional organization context')
+        .option('--topic-id <id>', 'Optional topic context')
+        .option('--scope <scope>', `Optional query scope (${QUERY_SCOPE_CHOICES.join(', ')})`)
         .option('--json', 'Output raw JSON payload')
         .action(async (memoryId, options) => {
         try {
@@ -1049,6 +1108,7 @@ export function memoryCommands(program) {
                 max_suggestions: maxSuggestions,
                 include_existing_tags: true,
                 response_format: 'json',
+                ...buildIntelligenceContextPayload(options),
             });
             spinner.stop();
             printIntelligenceResult('🏷️ Tag Suggestions', result, options);
@@ -1065,6 +1125,10 @@ export function memoryCommands(program) {
         .argument('<memory-id>', 'Source memory ID')
         .option('--limit <number>', 'Maximum related memories', '5')
         .option('--threshold <number>', 'Similarity threshold (0-1)', '0.7')
+        .option('--organization-id <id>', 'Optional organization context')
+        .option('--topic-id <id>', 'Optional topic context')
+        .option('--scope <scope>', `Optional query scope (${QUERY_SCOPE_CHOICES.join(', ')})`)
+        .option('--memory-types <types>', `Optional comma-separated candidate memory types (${MEMORY_TYPE_CHOICES.join(', ')})`)
         .option('--json', 'Output raw JSON payload')
         .action(async (memoryId, options) => {
         try {
@@ -1077,6 +1141,7 @@ export function memoryCommands(program) {
                 limit: Math.max(1, Math.min(20, parseInt(options.limit || '5', 10))),
                 similarity_threshold: Math.max(0, Math.min(1, parseFloat(options.threshold || '0.7'))),
                 response_format: 'json',
+                ...buildIntelligenceContextPayload(options),
             });
             spinner.stop();
             printIntelligenceResult('🔗 Related Memories', result, options);
@@ -1092,6 +1157,10 @@ export function memoryCommands(program) {
         .description('Detect duplicate memory entries')
         .option('--threshold <number>', 'Similarity threshold (0-1)', '0.88')
         .option('--max-pairs <number>', 'Maximum duplicate pairs to inspect', '100')
+        .option('--organization-id <id>', 'Optional organization context')
+        .option('--topic-id <id>', 'Optional topic context')
+        .option('--scope <scope>', `Optional query scope (${QUERY_SCOPE_CHOICES.join(', ')})`)
+        .option('--memory-types <types>', `Optional comma-separated memory types (${MEMORY_TYPE_CHOICES.join(', ')})`)
         .option('--json', 'Output raw JSON payload')
         .action(async (options) => {
         try {
@@ -1103,6 +1172,7 @@ export function memoryCommands(program) {
                 similarity_threshold: Math.max(0, Math.min(1, parseFloat(options.threshold || '0.88'))),
                 max_pairs: Math.max(10, Math.min(500, parseInt(options.maxPairs || '100', 10))),
                 response_format: 'json',
+                ...buildIntelligenceContextPayload(options),
             });
             spinner.stop();
             printIntelligenceResult('🧬 Duplicate Detection', result, options);
@@ -1119,6 +1189,10 @@ export function memoryCommands(program) {
         .option('--topic <topic>', 'Optional topic filter')
         .option('--type <type>', `Optional memory type filter (${MEMORY_TYPE_CHOICES.join(', ')})`)
         .option('--max-memories <number>', 'Maximum memories to analyze', '50')
+        .option('--organization-id <id>', 'Optional organization context')
+        .option('--topic-id <id>', 'Optional topic context')
+        .option('--scope <scope>', `Optional query scope (${QUERY_SCOPE_CHOICES.join(', ')})`)
+        .option('--memory-types <types>', `Optional comma-separated memory types (${MEMORY_TYPE_CHOICES.join(', ')})`)
         .option('--json', 'Output raw JSON payload')
         .action(async (options) => {
         try {
@@ -1135,6 +1209,7 @@ export function memoryCommands(program) {
                 memory_type: memoryType,
                 max_memories: Math.max(5, Math.min(200, parseInt(options.maxMemories || '50', 10))),
                 response_format: 'json',
+                ...buildIntelligenceContextPayload(options),
             });
             spinner.stop();
             printIntelligenceResult('💡 Memory Insights', result, options);
@@ -1149,6 +1224,10 @@ export function memoryCommands(program) {
         .command('analyze-patterns')
         .description('Analyze memory usage patterns')
         .option('--days <number>', 'Days to include in analysis', '30')
+        .option('--organization-id <id>', 'Optional organization context')
+        .option('--topic-id <id>', 'Optional topic context')
+        .option('--scope <scope>', `Optional query scope (${QUERY_SCOPE_CHOICES.join(', ')})`)
+        .option('--memory-types <types>', `Optional comma-separated memory types (${MEMORY_TYPE_CHOICES.join(', ')})`)
         .option('--json', 'Output raw JSON payload')
         .action(async (options) => {
         try {
@@ -1159,6 +1238,7 @@ export function memoryCommands(program) {
                 user_id: userId,
                 time_range_days: Math.max(1, Math.min(365, parseInt(options.days || '30', 10))),
                 response_format: 'json',
+                ...buildIntelligenceContextPayload(options),
             });
             spinner.stop();
             printIntelligenceResult('📈 Pattern Analysis', result, options);
