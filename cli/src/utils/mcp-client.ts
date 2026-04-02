@@ -585,24 +585,12 @@ export class MCPClient {
    * Refresh token if needed
    */
   private async refreshTokenIfNeeded(): Promise<void> {
-    const refreshToken = this.config.get<string>('refreshToken');
-
-    if (!refreshToken) {
-      throw new Error('No refresh token available. Please re-authenticate.');
-    }
-
     try {
-      const axios = (await import('axios')).default;
-      const authUrl = this.config.get<string>('authUrl') ?? 'https://api.lanonasis.com';
+      const previousToken = this.config.getToken();
+      await this.config.refreshTokenIfNeeded();
+      const currentToken = this.config.getToken();
 
-      const response = await axios.post(`${authUrl}/auth/refresh`, {
-        refresh_token: refreshToken
-      }, {
-        timeout: 10000
-      });
-
-      if (response.data.access_token) {
-        await this.config.setAndSave('token', response.data.access_token);
+      if (currentToken && currentToken !== previousToken) {
         console.log(chalk.green('✓ Token refreshed successfully'));
       }
     } catch {

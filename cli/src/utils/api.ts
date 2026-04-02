@@ -14,8 +14,11 @@ export interface AuthResponse {
     created_at: string;
     updated_at: string;
   };
-  token: string;
-  expires_at: string;
+  token?: string;
+  access_token?: string;
+  refresh_token?: string;
+  expires_in?: number;
+  expires_at?: string;
 }
 
 export interface RegisterRequest {
