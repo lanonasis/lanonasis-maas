@@ -950,8 +950,17 @@ async function handleCredentialsFlow(options: LoginOptions, config: CLIConfig): 
       console.log(chalk.dim(`   JWT received (length: ${authToken.length})`));
     }
 
+    const refreshToken = response.refresh_token;
+    const expiresIn = response.expires_in;
+
     // Store JWT token for API authentication
     await config.setToken(authToken);
+    if (typeof refreshToken === 'string' && refreshToken.length > 0) {
+      config.set('refresh_token', refreshToken);
+    }
+    if (typeof expiresIn === 'number' && Number.isFinite(expiresIn)) {
+      config.set('token_expires_at', Date.now() + (expiresIn * 1000));
+    }
     await config.setAndSave('authMethod', 'jwt');
 
     spinner.succeed('Login successful');

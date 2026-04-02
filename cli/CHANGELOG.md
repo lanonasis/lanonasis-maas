@@ -1,5 +1,17 @@
 # Changelog - @lanonasis/cli
 
+## [3.9.13] - 2026-04-02
+
+### 🐛 Bug Fixes
+
+- **JWT/password sessions now refresh through the real auth-gateway contract**: Expiring CLI sessions no longer call the nonexistent `/v1/auth/refresh` route. Refreshable JWT and OAuth sessions now use `POST /oauth/token` with `grant_type=refresh_token`, matching the live auth-gateway implementation.
+- **Password login now persists refresh metadata**: Username/password authentication now saves `refresh_token` and `token_expires_at` from the login response, so successful JWT sessions can actually refresh instead of silently falling back to re-login loops.
+- **MCP client refresh flow no longer drifts from the main CLI auth flow**: Removed the stale `/auth/refresh` path and incorrect `refreshToken` config key lookup in favor of the shared `CLIConfig.refreshTokenIfNeeded()` implementation.
+
+### 🔄 Dependency Updates
+
+- **Bundled `@lanonasis/mem-intel-sdk` updated to `2.1.0`**: Aligns the CLI with the newly published scoped intelligence query contract and predictive route support.
+
 ## [3.9.11] - 2026-03-27
 
 ### 🐛 Bug Fixes

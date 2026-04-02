@@ -1,11 +1,11 @@
-# @lanonasis/cli v3.9.11 - Stable Stats & Cleaner Startup
+# @lanonasis/cli v3.9.13 - Auth Refresh Reliability
 
 [![NPM Version](https://img.shields.io/npm/v/@lanonasis/cli)](https://www.npmjs.com/package/@lanonasis/cli)
 [![Downloads](https://img.shields.io/npm/dt/@lanonasis/cli)](https://www.npmjs.com/package/@lanonasis/cli)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Golden Contract](https://img.shields.io/badge/Onasis--Core-v0.1%20Compliant-gold)](https://api.lanonasis.com/.well-known/onasis.json)
 
-🎉 **NEW IN v3.9.11**: `onasis memory stats` now handles wrapped/partial backend responses without crashing, vendor key secure storage is lazy-loaded so unrelated commands no longer trigger noisy fallback warnings, and the bundled `@lanonasis/oauth-client` is updated to `2.0.4` for the ESM-safe keychain loader fix.
+🎉 **NEW IN v3.9.13**: JWT/password CLI sessions now refresh through the real auth-gateway OAuth token contract, password login persists refresh metadata correctly, the MCP client no longer uses stale refresh routes, and the bundled `@lanonasis/mem-intel-sdk` is updated to `2.1.0` for scoped intelligence query support.
 
 ## 🚀 Quick Start
 

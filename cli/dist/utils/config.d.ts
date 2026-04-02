@@ -27,6 +27,8 @@ interface CLIConfigData {
     lastManualEndpointUpdate?: string;
     vendorKey?: string | undefined;
     authMethod?: 'jwt' | 'vendor_key' | 'oauth' | 'oauth2' | undefined;
+    refresh_token?: string | undefined;
+    token_expires_at?: number | string | undefined;
     tokenExpiry?: number | undefined;
     lastValidated?: string | undefined;
     deviceId?: string;
@@ -130,6 +132,7 @@ export declare class CLIConfig {
     exists(): Promise<boolean>;
     validateStoredCredentials(): Promise<boolean>;
     refreshTokenIfNeeded(): Promise<void>;
+    private refreshViaOAuthTokenEndpoint;
     clearInvalidCredentials(): Promise<void>;
     incrementFailureCount(): Promise<void>;
     resetFailureCount(): Promise<void>;

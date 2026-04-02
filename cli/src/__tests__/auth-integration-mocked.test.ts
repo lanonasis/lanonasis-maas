@@ -176,6 +176,51 @@ describe('CLI Authentication Integration Tests (Mocked)', () => {
       const isAuthenticated = await config.isAuthenticated();
       expect(isAuthenticated).toBe(false);
     });
+
+    it('should refresh expiring jwt sessions through /oauth/token when refresh_token is stored', async () => {
+      const expiringToken = createTestJwt(Math.floor(Date.now() / 1000) + 120);
+      const refreshedToken = createTestJwt(Math.floor(Date.now() / 1000) + 3600);
+      const previousAuthBase = process.env.AUTH_BASE;
+
+      process.env.AUTH_BASE = 'https://auth.example.com';
+
+      try {
+        await config.setToken(expiringToken);
+        config.set('refresh_token', 'refresh-token-123');
+        config.set('discoveredServices', { auth_base: 'https://auth.example.com' });
+        (config as any).discoverServices = jest.fn().mockResolvedValue(undefined);
+
+        mockAxios.post.mockResolvedValueOnce({
+          data: {
+            access_token: refreshedToken,
+            refresh_token: 'refresh-token-456',
+            expires_in: 3600
+          }
+        });
+
+        await config.refreshTokenIfNeeded();
+
+        expect(mockAxios.post).toHaveBeenCalledWith(
+          'https://auth.example.com/oauth/token',
+          {
+            grant_type: 'refresh_token',
+            refresh_token: 'refresh-token-123',
+            client_id: 'lanonasis-cli'
+          },
+          expect.objectContaining({
+            headers: { 'Content-Type': 'application/json' },
+            timeout: 10000,
+            proxy: false
+          })
+        );
+        expect(config.getToken()).toBe(refreshedToken);
+        expect(config.get('authMethod')).toBe('jwt');
+        expect(config.get('refresh_token')).toBe('refresh-token-456');
+        expect(Number(config.get('token_expires_at'))).toBeGreaterThan(Date.now());
+      } finally {
+        process.env.AUTH_BASE = previousAuthBase;
+      }
+    });
   });
 
   describe('Credential Validation', () => {

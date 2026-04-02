@@ -41,6 +41,8 @@ interface CLIConfigData {
   // Enhanced Authentication
   vendorKey?: string | undefined; // Stored via ApiKeyStorage (encrypted automatically)
   authMethod?: 'jwt' | 'vendor_key' | 'oauth' | 'oauth2' | undefined;
+  refresh_token?: string | undefined;
+  token_expires_at?: number | string | undefined;
   // Enhanced authentication persistence
   tokenExpiry?: number | undefined;
   lastValidated?: string | undefined;
@@ -1521,9 +1523,10 @@ export class CLIConfig {
         return;
       }
 
+      const refreshToken = this.get<string>('refresh_token');
+
       // OAuth token refresh (opaque tokens + refresh_token + token_expires_at)
-      if (this.config.authMethod === 'oauth') {
-        const refreshToken = this.get<string>('refresh_token');
+      if (this.config.authMethod === 'oauth' || this.config.authMethod === 'oauth2') {
         if (!refreshToken) {
           return;
         }
@@ -1553,45 +1556,7 @@ export class CLIConfig {
         }
 
         await this.discoverServices();
-        const authBase = this.getDiscoveredApiUrl();
-
-        const resp = await axios.post(`${authBase}/oauth/token`, {
-          grant_type: 'refresh_token',
-          refresh_token: refreshToken,
-          client_id: 'lanonasis-cli'
-        }, {
-          headers: { 'Content-Type': 'application/json' },
-          timeout: 10000,
-          proxy: false
-        });
-
-        // Some gateways wrap responses as `{ data: { ... } }`.
-        const raw = (resp as any)?.data as unknown;
-        const payload =
-          raw && typeof raw === 'object' && (raw as any).data && typeof (raw as any).data === 'object'
-            ? (raw as any).data
-            : raw;
-
-        const accessToken = (payload as any)?.access_token ?? (payload as any)?.token;
-        const refreshedRefreshToken = (payload as any)?.refresh_token;
-        const expiresIn = (payload as any)?.expires_in;
-
-        if (typeof accessToken !== 'string' || accessToken.length === 0) {
-          throw new Error('Token refresh response missing access_token');
-        }
-
-        // setToken() assumes JWT by default; ensure authMethod stays oauth after storing.
-        await this.setToken(accessToken);
-        this.config.authMethod = 'oauth';
-
-        if (typeof refreshedRefreshToken === 'string' && refreshedRefreshToken.length > 0) {
-          this.config.refresh_token = refreshedRefreshToken;
-        }
-        if (typeof expiresIn === 'number' && Number.isFinite(expiresIn)) {
-          this.config.token_expires_at = Date.now() + (expiresIn * 1000);
-        }
-
-        await this.save().catch(() => {});
+        await this.refreshViaOAuthTokenEndpoint(refreshToken, this.getDiscoveredApiUrl(), 'oauth');
         return;
       }
 
@@ -1614,22 +1579,12 @@ export class CLIConfig {
 
       // Refresh if token expires within 5 minutes
       if (exp > 0 && (exp - now) < 300) {
-        // Import axios dynamically
-        await this.discoverServices();
-        const authBase = this.config.discoveredServices?.auth_base || 'https://auth.lanonasis.com';
-
-        // Attempt token refresh
-        const response = await axios.post(`${authBase}/v1/auth/refresh`, {}, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'X-Project-Scope': 'lanonasis-maas'
-          },
-          timeout: 10000
-        });
-
-        if (response.data.token) {
-          await this.setToken(response.data.token);
+        if (!refreshToken) {
+          return;
         }
+
+        await this.discoverServices();
+        await this.refreshViaOAuthTokenEndpoint(refreshToken, this.getDiscoveredApiUrl(), 'jwt');
       }
     } catch (err) {
       // If refresh fails, mark credentials as potentially invalid
@@ -1639,6 +1594,48 @@ export class CLIConfig {
         console.debug('Token refresh failed:', (err as Error).message);
       }
     }
+  }
+
+  private async refreshViaOAuthTokenEndpoint(
+    refreshToken: string,
+    authBase: string,
+    authMethod: 'jwt' | 'oauth'
+  ): Promise<void> {
+    const resp = await axios.post(`${authBase}/oauth/token`, {
+      grant_type: 'refresh_token',
+      refresh_token: refreshToken,
+      client_id: 'lanonasis-cli'
+    }, {
+      headers: { 'Content-Type': 'application/json' },
+      timeout: 10000,
+      proxy: false
+    });
+
+    const raw = (resp as any)?.data as unknown;
+    const payload =
+      raw && typeof raw === 'object' && (raw as any).data && typeof (raw as any).data === 'object'
+        ? (raw as any).data
+        : raw;
+
+    const accessToken = (payload as any)?.access_token ?? (payload as any)?.token;
+    const refreshedRefreshToken = (payload as any)?.refresh_token;
+    const expiresIn = (payload as any)?.expires_in;
+
+    if (typeof accessToken !== 'string' || accessToken.length === 0) {
+      throw new Error('Token refresh response missing access_token');
+    }
+
+    await this.setToken(accessToken);
+    this.config.authMethod = authMethod;
+
+    if (typeof refreshedRefreshToken === 'string' && refreshedRefreshToken.length > 0) {
+      this.config.refresh_token = refreshedRefreshToken;
+    }
+    if (typeof expiresIn === 'number' && Number.isFinite(expiresIn)) {
+      this.config.token_expires_at = Date.now() + (expiresIn * 1000);
+    }
+
+    await this.save().catch(() => {});
   }
 
   async clearInvalidCredentials(): Promise<void> {
