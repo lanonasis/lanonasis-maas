@@ -39,8 +39,8 @@ cd IDE-EXTENSIONS/vscode-extension
 
 ```bash
 cd IDE-EXTENSIONS/vscode-extension
-npm install -g vsce  # if not installed
-vsce package
+npm run package
+# Or use npm run package:pre-release for a marketplace pre-release build
 ```
 
 ## 🎨 Icon Specifications Met
