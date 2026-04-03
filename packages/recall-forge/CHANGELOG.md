@@ -4,6 +4,12 @@ All notable changes to `@lanonasis/recall-forge` will be documented in this file
 
 ---
 
+## Unreleased
+
+### Fixed
+
+- `getMemory()` now mirrors the `memory-lanonasis` get-specific compatibility fallback and only falls back to `GET /api/v1/memory/get?id=...` when the canonical plural route returns the current `400 Memory ID is required` validation drift
+
 ## 1.1.0 — 2026-03-26
 
 Privacy Guard — PII protection layer + wired secret redactor.
