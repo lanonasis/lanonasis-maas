@@ -170,6 +170,24 @@ async function checkConfiguration(
         const preferCLI = config.get<boolean>('preferCLI');
         const importCLIConfig = config.get<boolean>('importCLIConfig', true);
         const cliImportState = context.globalState.get<CLIConfigImportState>(CLI_CONFIG_IMPORT_STATE_KEY);
+        const deprecatedTransportSettings = [
+            {
+                key: 'transportPreference',
+                inspection: config.inspect<string>('transportPreference'),
+            },
+            {
+                key: 'websocketUrl',
+                inspection: config.inspect<string>('websocketUrl'),
+            },
+            {
+                key: 'enableRealtime',
+                inspection: config.inspect<boolean>('enableRealtime'),
+            },
+        ].filter(({ inspection }) =>
+            inspection?.globalValue !== undefined ||
+            inspection?.workspaceValue !== undefined ||
+            inspection?.workspaceFolderValue !== undefined
+        );
 
         outputChannel.appendLine(`  ✓ API URL: ${apiUrl}`);
         outputChannel.appendLine(`  ✓ Gateway URL: ${gatewayUrl}`);
@@ -177,6 +195,11 @@ async function checkConfiguration(
         outputChannel.appendLine(`  ✓ Enable MCP: ${enableMCP}`);
         outputChannel.appendLine(`  ✓ Prefer CLI: ${preferCLI}`);
         outputChannel.appendLine(`  ✓ Import CLI Config: ${importCLIConfig}`);
+        if (deprecatedTransportSettings.length > 0) {
+            outputChannel.appendLine(
+                `  ! Deprecated transport settings configured: ${deprecatedTransportSettings.map(({ key }) => key).join(', ')}`
+            );
+        }
 
         if (cliImportState) {
             outputChannel.appendLine(`  ✓ API URL Source: ${cliImportState.settingSources.apiUrl}`);
@@ -198,13 +221,21 @@ async function checkConfiguration(
             issues.push('Gateway mode enabled but Gateway URL not configured');
         }
 
+        if (deprecatedTransportSettings.length > 0) {
+            issues.push(
+                `Deprecated transport settings are configured but ignored by the active runtime: ${deprecatedTransportSettings.map(({ key }) => key).join(', ')}`
+            );
+        }
+
         if (issues.length > 0) {
             return {
                 category: 'Configuration',
                 status: 'warning',
                 message: 'Configuration issues detected',
                 details: issues.join('; '),
-                action: 'Check Settings'
+                action: deprecatedTransportSettings.length > 0
+                    ? 'Review deprecated settings'
+                    : 'Check Settings'
             };
         }
 

@@ -1,100 +1,64 @@
-# 🎯 Final Steps: Add Your VS Code Compliant Icons
+# Ready To Deploy
 
-## ✅ What's Ready
+## Current status
 
-- ✅ package.json configured perfectly
-- ✅ All icon references updated
-- ✅ VS Code guidelines compliance implemented
-- ✅ Tree view icons added for better discoverability
+The VS Code extension is **ready for a pre-release rollout**, not an immediate stable promotion.
 
-## 📥 What You Need to Do
+Use these source-of-truth docs:
 
-### 1. Save Your Two Icon Files
+- [`PUBLISH_CHECKLIST.md`](./PUBLISH_CHECKLIST.md)
+- [`docs/RELEASE_CERTIFICATION_MATRIX.md`](./docs/RELEASE_CERTIFICATION_MATRIX.md)
 
-You received two compliant icons from VS Code guidelines. Save them exactly as:
+## What is already verified
 
-```
-IDE-EXTENSIONS/vscode-extension/images/
-├── icon_128x128.png    # 128×128 marketplace icon (full logo)
-└── icon_L_24x24.png    # 24×24 activity bar icon (L symbol only)
-```
+- Packaging integrity passes through the current Nx/npm ship path
+- Stable and pre-release VSIX packaging succeed
+- The pre-release VSIX manifest carries `Microsoft.VisualStudio.Code.PreRelease=true`
+- Clean-profile install succeeds for the current pre-release artifact
+- Lint, runtime typecheck, test-surface typecheck, and unit tests all pass
 
-### 2. Verify Installation
+## What still requires manual certification
 
-Run the verification script:
+- Fresh-run activation in a real VS Code window
+- Upgrade install over an existing user profile
+- OAuth sign-in flow
+- API key entry flow
+- CLI-present import path from `~/.maas/config.json`
+- CLI-absent startup path
+- Offline queue behavior during network transitions
+
+## Transport stance for this release
+
+The extension-local transport settings are **deprecated for the current release line**:
+
+- `lanonasis.transportPreference`
+- `lanonasis.websocketUrl`
+- `lanonasis.enableRealtime`
+
+Those settings are ignored by the shipped runtime and are now surfaced as deprecated in settings plus diagnostics. The supported runtime path remains:
+
+- Gateway vs Direct API mode
+- CLI-aware memory client integration
+- MCP discovery/status
+- Offline queue and cache wrappers
+
+## Recommended rollout
+
+1. Build the pre-release artifact:
 
 ```bash
 cd IDE-EXTENSIONS/vscode-extension
-./check-icons.sh
+npm run package:pre-release
 ```
 
-### 3. Test the Extension
+2. Complete the manual certification items listed above.
 
-1. Open VS Code in the extension directory
-2. Press `F5` to launch extension development host
-3. Look for the Lanonasis icon in the Activity Bar
-4. Check that it adapts to light/dark themes
-
-### 4. Package for Distribution
+3. Publish pre-release first:
 
 ```bash
 cd IDE-EXTENSIONS/vscode-extension
-npm run package
-# Or use npm run package:pre-release for a marketplace pre-release build
+npx @vscode/vsce login LanOnasis
+npm run publish:pre-release
 ```
 
-## 🎨 Icon Specifications Met
-
-✅ **Activity Bar Icon (24×24)**:
-
-- Single-color design ✓
-- Adapts to light/dark themes ✓
-- Recognizable "L" symbol ✓
-- PNG format ✓
-
-✅ **Marketplace Icon (128×128)**:
-
-- High-resolution (128×128+) ✓
-- Includes full branding ✓
-- Professional appearance ✓
-- Single-color compliance ✓
-
-## 📋 Package.json Configuration
-
-```json
-{
-  "icon": "images/icon_128x128.png", // ✅ Marketplace
-  "contributes": {
-    "viewsContainers": {
-      "activitybar": [
-        {
-          "id": "lanonasis",
-          "title": "Lan Onasis",
-          "icon": "images/icon_L_24x24.png" // ✅ Activity Bar
-        }
-      ]
-    },
-    "views": {
-      "lanonasis": [
-        {
-          "type": "webview",
-          "id": "lanonasis.sidebar",
-          "icon": "images/icon_L_24x24.png" // ✅ Webview
-        },
-        {
-          "id": "lanonasisMemories",
-          "icon": "$(list-tree)" // ✅ Tree view
-        },
-        {
-          "id": "lanonasisApiKeys",
-          "icon": "$(key)" // ✅ API Keys
-        }
-      ]
-    }
-  }
-}
-```
-
-## 🚀 Ready to Ship!
-
-Once you add the two icon files, your extension will be fully compliant with VS Code's official guidelines and ready for marketplace publication! 🎉
+4. Promote to stable only after the pre-release line passes real-user/manual validation without auth, packaging, or activation regressions.

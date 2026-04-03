@@ -210,7 +210,7 @@ The remaining version work is now mostly about single-source constants and relea
 | P0 | Publish and test one canonical auth/config precedence contract across SecretStorage, VSCode settings, `~/.maas/config.json`, and any `~/.lanonasis/*` fallbacks. | shared auth/config + CLI + extension runtime | The biggest remaining risk is still "it works in one surface but not another." | `src/extension.ts:56-100`, `cli/src/utils/config.ts:135-163`, `packages/recall-forge/client.ts:8-15` |
 | P1 | Add an extension-facing intelligence adapter and ship command-palette actions first, then decide whether dedicated views are warranted. | extension runtime + intelligence SDK + CLI | The capability already exists in CLI/SDK; the extension needs a deliberate adapter, not a rewrite. | `cli/src/commands/memory.ts:1393-1765`, `packages/memory-intelligence-engine/mem-intelligence-sdk/src/core/client.ts:181-610` |
 | P1 | Decide whether CLI saved sessions should be integrated into the extension, or whether local chat sessions should be renamed/scoped so they are not confused with MaaS sessions. | extension runtime + CLI | Session terminology currently conflates two different concepts. | `src/hooks/useChatHistory.tsx:54-156`, `cli/src/commands/memory.ts:751-972` |
-| P1 | Either wire `TransportManager` into the active service path with visible fallback/health reporting, or remove/soft-hide transport settings until the runtime really uses them. | extension runtime | Partial wiring creates false expectations about realtime support. | `package.json:547-566`, `src/services/transports/TransportManager.ts:1-260`, `src/extension.ts:81-100` |
+| P1 | Keep transport settings soft-deprecated in settings/diagnostics and only revisit runtime integration if WebSocket transport becomes an explicit roadmap item. | extension runtime | The shipped runtime does not route through `TransportManager`, so deprecation is safer than implying support. | `package.json:547-566`, `src/utils/diagnostics.ts:161-221`, `src/services/transports/TransportManager.ts:1-260`, `src/extension.ts:81-100` |
 | P2 | Re-evaluate "missing UX" claims like visualizer/export needs in light of already-shipped capture, bulk, onboarding, diagnostics, and chat features. | extension runtime + docs/product | The old gap list overstated what was missing and understated what is already shipped. | `package.json:247-345`, `src/extension.ts:524-605`, `src/panels/MemorySidebarProvider.ts:438-505`, `src/chat/MemoryChatParticipant.ts:123-260` |
 
 ## Interface decisions this report recommends
@@ -255,8 +255,8 @@ The remaining version work is now mostly about single-source constants and relea
 ### Transport fallback
 
 1. Run with default settings and confirm the active path still uses `EnhancedMemoryService` plus offline wrappers.
-2. Toggle `transportPreference`, `websocketUrl`, and `enableRealtime` and confirm whether any user-visible runtime behavior changes.
-3. Only mark realtime as shipped after the runtime visibly routes through `TransportManager` or an equivalent active abstraction.
+2. Configure `transportPreference`, `websocketUrl`, or `enableRealtime` and confirm diagnostics warn that those deprecated settings are ignored by the active runtime.
+3. Only revisit realtime as shippable after the runtime visibly routes through `TransportManager` or an equivalent active abstraction.
 
 ## Bottom line
 
