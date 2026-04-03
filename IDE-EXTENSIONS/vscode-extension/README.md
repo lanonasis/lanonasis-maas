@@ -2,7 +2,7 @@
 
 **Transform your coding experience with intelligent memory management and secure authentication directly in VSCode.**
 
-## 🆕 New in v1.4.1 - Security & Authentication Enhancements
+## 🔐 Security & Authentication Enhancements
 
 ### 🔐 Secure Authentication
 - **OAuth2 with PKCE** - Secure browser-based authentication flow (Recommended)
@@ -25,7 +25,7 @@ Choose your preferred method when running **"Lanonasis: Authenticate"**:
 
 ### v1.3.2
 - **🌐 Web Extension Support** - Works in VS Code for Web (vscode.dev, github.dev)
-- **🔧 CLI v3.0.6 Integration** - Enhanced integration with @lanonasis/cli
+- **🔧 CLI Integration** - Enhanced integration with @lanonasis/cli for advanced features
 - **📦 Virtual Workspaces** - Full support for virtual workspaces
 
 ### v1.2.0
@@ -52,9 +52,9 @@ Choose your preferred method when running **"Lanonasis: Authenticate"**:
 ## 🚀 Getting Started
 
 ### Prerequisites
-- VS Code 1.99.0 or higher (Desktop or Web)
+- VS Code 1.74.0 or higher (Desktop or Web)
 - Lanonasis account (sign up at [auth.lanonasis.com](https://auth.lanonasis.com))
-- @lanonasis/cli v3.0.6+ (optional, for enhanced features)
+- Compatible @lanonasis/cli (optional, for enhanced features)
 - Internet connection for API access
 
 ### Quick Start
@@ -120,7 +120,7 @@ Choose your preferred method when running **"Lanonasis: Authenticate"**:
 - `lanonasis.defaultEnvironment` - Default environment for new keys (dev/staging/production)
 - `lanonasis.organizationId` - Your organization ID for team features
 
-### CLI Integration Settings (v3.0.6+)
+### CLI Integration Settings
 - `lanonasis.preferCLI` - Prefer CLI integration when available (default: true)
 - `lanonasis.enableMCP` - Enable Model Context Protocol channels (default: true)
 - `lanonasis.cliDetectionTimeout` - CLI detection timeout in ms (default: 2000)
@@ -143,7 +143,7 @@ Choose your preferred method when running **"Lanonasis: Authenticate"**:
 
 ## 📊 Commands
 
-### Authentication Commands (NEW in v1.4.1!)
+### Authentication Commands
 - `Lanonasis: Authenticate` - Configure OAuth or API key authentication
 - `Lanonasis: Configure Authentication` - Set up secure credentials
 - `Lanonasis: Check API Key Status` - Verify authentication status
@@ -164,7 +164,7 @@ Choose your preferred method when running **"Lanonasis: Authenticate"**:
 
 ## 🔐 Security
 
-### Credential Storage (v1.4.1+)
+### Credential Storage
 - **SecretStorage API** - Credentials stored in OS-level keychain
   - macOS: Keychain
   - Windows: Credential Manager
@@ -178,7 +178,7 @@ Choose your preferred method when running **"Lanonasis: Authenticate"**:
 - Support for key rotation and expiration
 - Audit trail for all key operations
 - TLS 1.3 encrypted communication
-- No plaintext storage of credentials
+- Credentials stored in OS-level secure storage (SecretStorage API); legacy plaintext settings are automatically migrated to secure storage
 
 ## 📞 Support
 

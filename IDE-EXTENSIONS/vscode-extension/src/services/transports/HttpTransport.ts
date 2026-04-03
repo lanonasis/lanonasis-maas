@@ -1,6 +1,12 @@
 /**
  * HTTP Transport Implementation
  * Provides HTTP-based communication with the MCP server
+ * 
+ * NOTE: This transport is part of the dormant TransportManager infrastructure.
+ * It is not currently instantiated by the shipped runtime (extension.ts).
+ * The active runtime uses @lanonasis/memory-client/node for transport.
+ * 
+ * TODO: Either integrate into active runtime or deprecate.
  */
 
 import {
@@ -36,7 +42,7 @@ export class HttpTransport implements ITransport {
     this.baseHeaders = {
       'Content-Type': 'application/json',
       'X-Client-Type': 'vscode-extension',
-      'X-Client-Version': '2.0.8',
+      'X-Client-Version': '2.1.1', // TODO: Sync with EXTENSION_VERSION if this becomes active
       'X-Project-Scope': 'lanonasis-maas',
       ...config.headers
     };

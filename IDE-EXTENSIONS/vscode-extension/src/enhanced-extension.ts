@@ -1,3 +1,16 @@
+/**
+ * @deprecated LEGACY/REFERENCE FILE - NOT THE SHIPPED ENTRYPOINT
+ * 
+ * This file is retained for reference only. The shipped extension entrypoint is
+ * src/extension.ts, which is bundled by esbuild.config.mjs (entryPoints: ['src/extension.ts']).
+ * 
+ * WARNING: This file uses the local SecureApiKeyService instead of the shared
+ * @lanonasis/ide-extension-core, and stores API keys in plaintext settings (line ~324).
+ * Do not activate this entrypoint in production builds.
+ * 
+ * Safe cleanup: Delete this file after verifying no documentation/tests depend on it.
+ */
+
 import * as vscode from 'vscode';
 import { EnhancedMemoryService } from './services/EnhancedMemoryService';
 import { SecureApiKeyService } from './services/SecureApiKeyService';

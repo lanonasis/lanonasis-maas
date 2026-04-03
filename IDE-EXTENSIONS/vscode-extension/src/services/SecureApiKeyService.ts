@@ -1,3 +1,18 @@
+/**
+ * @deprecated LEGACY AUTH SERVICE - RETAINED FOR COMPATIBILITY
+ * 
+ * WARNING: This local implementation is NOT used by the shipped runtime.
+ * The active runtime (src/extension.ts) uses SecureApiKeyService from
+ * @lanonasis/ide-extension-core (shared package).
+ * 
+ * This file is retained because:
+ * 1. src/enhanced-extension.ts (legacy entrypoint) imports it
+ * 2. __tests__/SecureApiKeyService.test.ts tests it
+ * 
+ * Safe cleanup: Delete after enhanced-extension.ts and related tests are removed.
+ * Do not use this service for new runtime paths.
+ */
+
 import * as vscode from 'vscode';
 import * as http from 'http';
 import * as crypto from 'crypto';

@@ -552,17 +552,17 @@
             "http"
           ],
           "default": "auto",
-          "markdownDescription": "Preferred transport mode. `auto` tries WebSocket first, then falls back to HTTP."
+          "markdownDescription": "**Experimental**: Preferred transport mode. Currently not fully integrated into the active runtime. `auto` tries WebSocket first, then falls back to HTTP."
         },
         "lanonasis.websocketUrl": {
           "type": "string",
           "default": "wss://mcp.lanonasis.com/ws",
-          "markdownDescription": "WebSocket MCP server URL for real-time communication."
+          "markdownDescription": "**Experimental**: WebSocket MCP server URL for real-time communication. Transport infrastructure exists but is not fully wired into the active runtime."
         },
         "lanonasis.enableRealtime": {
           "type": "boolean",
           "default": true,
-          "markdownDescription": "Enable real-time updates via WebSocket when available."
+          "markdownDescription": "**Experimental**: Enable real-time updates via WebSocket when available. Real-time infrastructure exists but is not fully integrated into the active runtime."
         },
         "lanonasis.cliDetectionTimeout": {
           "type": "number",

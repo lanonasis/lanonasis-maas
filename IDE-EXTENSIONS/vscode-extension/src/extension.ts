@@ -28,6 +28,10 @@ import { formatErrorLogs, getErrorLogs, logExtensionError } from './utils/errorL
 const MAX_GITHUB_ISSUE_BODY_LENGTH = 6000;
 const ALLOWED_PROTOCOLS = new Set(['http:', 'https:', 'wss:', 'ws:']);
 
+// TODO: Derive this from package.json for single source of truth
+// Extension version should match package.json version
+const EXTENSION_VERSION = '2.1.1';
+
 export async function activate(context: vscode.ExtensionContext) {
     console.log('Lanonasis Memory Extension is now active');
 
@@ -61,7 +65,7 @@ export async function activate(context: vscode.ExtensionContext) {
             extensionName: 'lanonasis-memory',
             extensionDisplayName: 'LanOnasis Memory Assistant',
             commandPrefix: 'lanonasis',
-            userAgent: `VSCode/${vscode.version} LanOnasis-Memory/2.0.9`
+            userAgent: `VSCode/${vscode.version} LanOnasis-Memory/${EXTENSION_VERSION}`
         }
     );
 
@@ -229,7 +233,7 @@ export async function activate(context: vscode.ExtensionContext) {
         const capabilities = memoryService.getCapabilities();
         if (capabilities?.cliAvailable && capabilities.goldenContract) {
             vscode.window.showInformationMessage(
-                '🚀 Lanonasis Memory: CLI v1.5.2+ detected! Enhanced performance active.',
+                '🚀 Lanonasis Memory: Compatible CLI detected. Enhanced performance active.',
                 'Show Details'
             ).then(selection => {
                 if (selection === 'Show Details') {
@@ -1097,7 +1101,7 @@ async function checkEnhancedAuthenticationStatus(enhancedService: EnhancedMemory
     const capabilities = enhancedService.getCapabilities();
     if (capabilities?.cliAvailable && capabilities.goldenContract) {
         vscode.window.showInformationMessage(
-            '🚀 Lanonasis Memory: CLI v1.5.2+ detected! Enhanced performance active.',
+            '🚀 Lanonasis Memory: Compatible CLI detected. Enhanced performance active.',
             'Show Details'
         ).then(selection => {
             if (selection === 'Show Details') {
@@ -1195,7 +1199,7 @@ Memories are automatically organized by type:
 - **Conversation**: Discussion notes and meeting summaries
 
 ### CLI Integration
-If you have \`@lanonasis/cli\` v3.0.6+ installed, you'll get:
+If you have a compatible \`@lanonasis/cli\` installed, you'll get:
 - ⚡ Faster performance
 - 🔄 Enhanced caching
 - 🚀 Advanced features
