@@ -209,4 +209,51 @@ describe("LanonasisClient", () => {
     );
     expect(memory.id).toBe("12345678-1234-1234-1234-1234567890ab");
   });
+
+  it("falls back to legacy get when the plural route returns the current 400 validation drift", async () => {
+    const client = createClient();
+    const requestOwner = client as unknown as {
+      request: (method: string, path: string, body?: unknown) => Promise<{
+        data: {
+          id: string;
+          title: string;
+          content: string;
+          type: string;
+        };
+      }>;
+    };
+    const requestSpy = vi
+      .spyOn(requestOwner, "request")
+      .mockRejectedValueOnce(
+        new Error(
+          'LanOnasis error (400): {"error":"Memory ID is required. Provide via path, query param (?id=), or body.","code":"VALIDATION_ERROR"}',
+        ),
+      )
+      .mockResolvedValueOnce({
+        data: {
+          id: "12345678-1234-1234-1234-1234567890ab",
+          title: "Stored",
+          content: "hello",
+          type: "context",
+        },
+      });
+
+    vi.spyOn(client, "resolveMemoryId").mockResolvedValue(
+      "12345678-1234-1234-1234-1234567890ab",
+    );
+
+    const memory = await client.getMemory("12345678");
+
+    expect(requestSpy).toHaveBeenNthCalledWith(
+      1,
+      "GET",
+      "/api/v1/memories/12345678-1234-1234-1234-1234567890ab",
+    );
+    expect(requestSpy).toHaveBeenNthCalledWith(
+      2,
+      "GET",
+      "/api/v1/memory/get?id=12345678-1234-1234-1234-1234567890ab",
+    );
+    expect(memory.id).toBe("12345678-1234-1234-1234-1234567890ab");
+  });
 });

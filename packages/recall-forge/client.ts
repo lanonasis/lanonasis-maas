@@ -464,6 +464,19 @@ export class LanonasisClient {
     return /\b404\b/.test(message) || /\b405\b/.test(message);
   }
 
+  private shouldUseLegacyGetFallback(error: unknown): boolean {
+    if (this.shouldUseCompatibilityFallback(error)) {
+      return true;
+    }
+
+    if (error instanceof LanonasisHttpError && error.status === 400) {
+      return /Memory ID is required/i.test(error.body);
+    }
+
+    const message = error instanceof Error ? error.message : String(error ?? "");
+    return /\b400\b/.test(message) && /Memory ID is required/i.test(message);
+  }
+
   private normalizeMemory(payload: unknown): LanMemory {
     const unwrapped = this.unwrap<unknown>(payload);
     if (!unwrapped || typeof unwrapped !== "object") {
@@ -752,7 +765,7 @@ export class LanonasisClient {
         `/api/v1/memories/${encodeURIComponent(resolvedId)}`,
       );
     } catch (error) {
-      if (!this.shouldUseCompatibilityFallback(error)) throw error;
+      if (!this.shouldUseLegacyGetFallback(error)) throw error;
       raw = await this.request<unknown>(
         "GET",
         `/api/v1/memory/get?id=${encodeURIComponent(resolvedId)}`,
