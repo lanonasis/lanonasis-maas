@@ -2,7 +2,18 @@
 
 **Date:** 2026-04-03  
 **Scope:** Low-risk, high-confidence alignment fixes  
-**Validation:** `npm run lint` passes (1 unrelated warning in MemoryCard.tsx)
+**Validation at time of pass:** `npm run lint` passed (there was 1 unrelated warning in `MemoryCard.tsx` at that time)
+
+## Postscript: Current Repo State
+
+Subsequent cleanup passes have already moved beyond this checkpoint:
+
+- `src/enhanced-extension.ts` has been deleted
+- `src/services/SecureApiKeyService.ts` has been deleted
+- `src/services/__tests__/SecureApiKeyService.test.ts` has been deleted
+- main runtime and test `tsc --noEmit` now pass
+- the extension has a first-class `typecheck` script and the Nx CI affected workflow runs `typecheck`
+- the old `MemoryCard.tsx` lint warning is gone
 
 ---
 
@@ -56,21 +67,13 @@
 
 ## 4. Legacy Markers Added
 
-### File: `src/enhanced-extension.ts`
+### Historical legacy-file markers
 
-Added header comment (lines 1-14):
-- Marks file as `@deprecated LEGACY/REFERENCE FILE`
-- Explicitly states it is NOT the shipped entrypoint
-- Warns about plaintext API key storage
-- Provides safe cleanup guidance
+The original alignment pass added deprecation headers to:
+- `src/enhanced-extension.ts`
+- `src/services/SecureApiKeyService.ts`
 
-### File: `src/services/SecureApiKeyService.ts`
-
-Added header comment (lines 1-15):
-- Marks file as `@deprecated LEGACY AUTH SERVICE`
-- States it is NOT used by shipped runtime
-- Explains why it is retained (enhanced-extension.ts and tests)
-- Provides safe cleanup guidance
+Those files have since been deleted in a later cleanup pass.
 
 ---
 
@@ -127,11 +130,11 @@ cd apps/lanonasis-maas/IDE-EXTENSIONS/vscode-extension
 npm run lint
 ```
 
-### Results
+### Results at time of pass
 - ✅ No new ESLint errors introduced
 - ✅ 1 pre-existing warning (unrelated: MemoryCard.tsx unused import)
 
-### Spot Checks
+### Spot Checks at time of pass
 - ✅ `v1.5.2+` no longer appears in active runtime
 - ✅ `v3.0.6+` no longer appears in active runtime
 - ✅ `EXTENSION_VERSION` constant used in extension.ts and EnhancedMemoryService.ts
@@ -150,8 +153,8 @@ npm run lint
 | `src/services/EnhancedMemoryService.ts` | Version constant, header version fix |
 | `src/services/transports/HttpTransport.ts` | Dormant marker, version fix |
 | `src/services/transports/WebSocketTransport.ts` | Dormant marker, version fix |
-| `src/enhanced-extension.ts` | Legacy header comment |
-| `src/services/SecureApiKeyService.ts` | Legacy header comment |
+| `src/enhanced-extension.ts` | Legacy header comment (historical, file later deleted) |
+| `src/services/SecureApiKeyService.ts` | Legacy header comment (historical, file later deleted) |
 | `package.json` | Transport settings marked experimental |
 | `README.md` | Stale version claims removed, VS Code engine version corrected (1.74.0), plaintext storage claim corrected |
 
@@ -159,9 +162,9 @@ npm run lint
 
 ## Remaining Work (Not in This Pass)
 
-The following were intentionally NOT done in this safe alignment pass:
+The following were intentionally NOT done in the original safe alignment pass:
 
-1. **Delete legacy files** (`enhanced-extension.ts`, `SecureApiKeyService.ts`) - Requires coordinated cleanup
+1. **Delete legacy files** (`enhanced-extension.ts`, `SecureApiKeyService.ts`) - Completed in a later cleanup pass
 2. **Unify EXTENSION_VERSION with package.json** - Requires build-time constant injection or dynamic import
 3. **Integrate TransportManager** - Requires architecture decision
 4. **Add intelligence UI** - Requires adding SDK dependency and product decision
@@ -169,4 +172,4 @@ The following were intentionally NOT done in this safe alignment pass:
 
 ---
 
-*Alignment pass complete. All changes are additive (comments, constants) or rephrasing (wording, versions). No destructive cleanup performed.*
+*Alignment pass complete. This document describes the original safe-alignment checkpoint; later cleanup passes deleted the legacy files and added stricter typecheck/CI enforcement.*

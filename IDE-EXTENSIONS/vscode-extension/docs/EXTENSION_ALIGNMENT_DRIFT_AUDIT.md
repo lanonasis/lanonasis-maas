@@ -9,44 +9,35 @@
 
 ## 1. Executive Summary
 
-This audit reveals **significant architectural drift** beyond the current-state analysis. While the extension's active runtime (`src/extension.ts`) is functional, it carries **duplicate auth implementations**, **dormant transport infrastructure**, **fragmented version identities**, and **unexposed intelligence capabilities**. The most critical finding is that **~900 lines of authentication code exist locally** despite a shared `@lanonasis/ide-extension-core` package providing the same functionality.
+This audit originally identified significant architectural drift beyond the current-state analysis. Since that first pass, the extension has already resolved the biggest source-level cleanup items: the duplicate local auth implementation and the dormant legacy entrypoint have been deleted, and strict runtime/test typecheck gates now pass. The main remaining drift is around dormant transport infrastructure, config precedence, intelligence exposure, and documentation lag.
 
 ### Critical Findings at a Glance
 
 | Severity | Count | Category |
 |----------|-------|----------|
-| 🔴 Critical | 4 | Duplicate auth, Version drift, Dormant transport, Legacy entrypoint |
-| 🟠 High | 6 | Stale CLI version refs, Unexposed intelligence, Config fragmentation, Client version drift |
-| 🟡 Medium | 5 | Documentation drift, Dead codepaths, Interface duplication, Test gaps |
+| 🔴 Critical | 1 | Dormant transport and contract ambiguity still affecting shipped expectations |
+| 🟠 High | 5 | Unexposed intelligence, Config fragmentation, Documentation lag, Remaining contract drift |
+| 🟡 Medium | 4 | Interface duplication, Feature-surface ambiguity, Cleanup follow-through |
 | 🟢 Low | 3 | Copy inconsistencies, Unused imports, Comment drift |
 
 ---
 
 ## 2. New Findings Beyond Current-State Report
 
-### 2.1 Critical: Duplicate SecureApiKeyService Implementation
+### 2.1 Resolved: Duplicate SecureApiKeyService Implementation Removed
 
-**Finding:** The extension maintains **two complete authentication implementations**:
+**Current State:** The extension no longer maintains two auth implementations in its source tree. The local duplicate and the legacy entrypoint that referenced it have been deleted.
 
-1. **Local implementation** (lines 1-902): `src/services/SecureApiKeyService.ts`
-2. **Shared core implementation** (lines 1-775): `packages/ide-extension-core/src/services/SecureApiKeyService.ts`
+1. **Shared core implementation** remains: `packages/ide-extension-core/src/services/SecureApiKeyService.ts`
+2. **Legacy local implementation** has been removed from the extension package
 
 **Evidence:**
 ```typescript
-// enhanced-extension.ts:3 - Uses LOCAL implementation
-import { SecureApiKeyService } from './services/SecureApiKeyService';
-
 // extension.ts:14 - Uses SHARED implementation
 import { SecureApiKeyService, createVSCodeAdapter } from '@lanonasis/ide-extension-core';
 ```
 
-**Impact:**
-- Maintenance burden: Bug fixes must be applied in two places
-- Behavior divergence risk: Local copy may drift from shared core fixes
-- Bundle size: ~902 lines of effectively dead code when using shared core
-- Confusion: Developers cannot determine which implementation is authoritative
-
-**Root Cause:** Legacy migration incomplete. `enhanced-extension.ts` (legacy entrypoint) was never updated to use shared core, and the local file was not deleted after shared core adoption.
+**Resolution:** Shared core is now the sole extension auth path.
 
 ---
 
@@ -74,72 +65,50 @@ The settings `transportPreference`, `websocketUrl`, and `enableRealtime` (`packa
 
 ---
 
-### 2.3 Critical: Legacy Entrypoint Still Functional (and Dangerous)
+### 2.3 Resolved: Legacy Entrypoint Removed
 
-**Finding:** `src/enhanced-extension.ts` is not merely "reference" code—it can **still be activated** if `package.json.main` were changed, and it uses the **local (duplicate) SecureApiKeyService**.
+**Current State:** `src/enhanced-extension.ts` has been deleted, so there is no second entrypoint-shaped source file left in the extension package.
 
-**Evidence:**
-```typescript
-// enhanced-extension.ts:21 - Uses local auth implementation
-const secureApiKeyService = new SecureApiKeyService(context, outputChannel);
-await secureApiKeyService.initialize();
-
-// enhanced-extension.ts:324-326 - Stores API key in CONFIG (insecure)
-const config = vscode.workspace.getConfiguration('lanonasis');
-await config.update('apiKey', apiKey, vscode.ConfigurationTarget.Global);
-```
-
-The legacy entrypoint **does not use secure storage** for the initial OAuth flow and stores API keys in plaintext settings.
-
-**Impact:**
-- Security regression risk: Build misconfiguration could activate insecure path
-- Maintenance confusion: Two entrypoints with divergent auth behavior
-- Documentation debt: README screenshots/docs may reference legacy UI
+**Resolution:** The source-level risk is gone; the remaining cleanup is documentary because several reports still describe the deleted file as pending work.
 
 ---
 
 ### 2.4 High: Fragmented Client Version Identity
 
-**Finding:** The extension reports **four different versions** across runtime components:
+**Current State:** Active runtime version drift has largely been resolved. The shipped runtime components now report `2.1.1`, and the dormant transport layer also uses `2.1.1` even though it remains unwired.
 
 | File | Line | Version |
 |------|------|---------|
 | `package.json` | 5 | `2.1.1` |
-| `extension.ts` | 64 | `LanOnasis-Memory/2.0.9` |
-| `SharedCoreIntegration.ts` | 47 | `LanOnasis-Memory/2.0.9` |
-| `EnhancedMemoryService.ts` | 600 | `X-Client-Version: 2.0.5` |
-| `HttpTransport.ts` | 39 | `X-Client-Version: 2.0.8` |
-| `WebSocketTransport.ts` | 77 | `X-Client-Version: 2.0.8` |
+| `extension.ts` | current | `LanOnasis-Memory/2.1.1` |
+| `SharedCoreIntegration.ts` | current | `LanOnasis-Memory/2.1.1` |
+| `EnhancedMemoryService.ts` | current | `X-Client-Version: 2.1.1` |
+| `HttpTransport.ts` | current | `X-Client-Version: 2.1.1` |
+| `WebSocketTransport.ts` | current | `X-Client-Version: 2.1.1` |
 
-**Impact:**
-- Debugging confusion: Backend cannot reliably identify client version
-- Analytics corruption: Usage metrics conflate multiple "versions"
-- Regression tracking: Cannot correlate issues to actual code version
+**Remaining issue:** keep the single source of truth wired through shared constants instead of repeated literals.
 
 ---
 
 ### 2.5 High: Stale CLI Version References
 
-**Finding:** Extension code references CLI `v1.5.2+` as the "enhanced" threshold, but the actual CLI is at `v3.9.13`.
+**Finding:** Historical runtime and README copy previously referenced CLI `v1.5.2+` and `v3.0.6+`, while the actual CLI is now `v3.9.13`. The shipped source has already been corrected to generic compatible wording, but historical reports still needed cleanup.
 
 **Evidence:**
 ```typescript
-// extension.ts:232
-'🚀 Lanonasis Memory: CLI v1.5.2+ detected! Enhanced performance active.'
-
-// enhanced-extension.ts:368
-🧠 Enhanced with CLI v1.5.2+ integration for better performance
+// Historical runtime copy before cleanup
+// Earlier source used stale CLI wording that has since been removed
 
 // cli/package.json:3
 "version": "3.9.13"
 ```
 
-**README adds more confusion:** References `v3.0.6+` as the "CLI Integration" version (`README.md:28,57,123`).
+**Current state:** Runtime and README now use compatible wording instead of a stale hard minimum.
 
 **Impact:**
-- User confusion: "Do I need 1.5.2, 3.0.6, or something else?"
-- Marketing drift: Extension claims compatibility thresholds that are meaningless
-- Testing gaps: CI likely doesn't test against "golden contract" CLI version
+- Historical user confusion: "Do I need 1.5.2, 3.0.6, or something else?"
+- Report drift: old audits can linger after code/docs are corrected
+- Testing gap remains: CI still does not prove one published minimum supported CLI version
 
 ---
 
@@ -207,7 +176,7 @@ if (legacyKey && legacyKey.trim().length > 0) {
 | Capability | Extension Runtime | Shared Package | CLI | Alignment State |
 |------------|-------------------|----------------|-----|-----------------|
 | **Auth (OAuth/API Key)** | Uses shared core | `@lanonasis/ide-extension-core` | Custom impl | ✅ **ALIGNED** (active runtime) |
-| **Auth (legacy)** | Local `SecureApiKeyService.ts` | ❌ None | ❌ None | 🔴 **DUPLICATED** |
+| **Auth (legacy)** | Removed from extension package | ❌ None | ❌ None | ✅ **RESOLVED** |
 | **Memory CRUD** | `EnhancedMemoryService` | `@lanonasis/memory-client` | `apiClient` | ✅ **ALIGNED** |
 | **Intelligence** | ❌ Not exposed | N/A (CLI dependency) | `@lanonasis/mem-intel-sdk` | 🟡 **NOT EXPOSED** |
 | **Behavior Learning** | ❌ Not exposed | N/A (CLI dependency) | `@lanonasis/mem-intel-sdk` | 🟡 **NOT EXPOSED** |
@@ -224,7 +193,7 @@ if (legacyKey && legacyKey.trim().length > 0) {
 | `@lanonasis/memory-client` | ✅ Used via `EnhancedMemoryService` | Clean |
 | `@lanonasis/ide-extension-core` | ✅ Used in active runtime | Clean |
 | `@lanonasis/mem-intel-sdk` | ❌ **Not a dependency** | **CLI-only capability** |
-| `@lanonasis/ide-extension-core` (local duplicate) | ⚠️ Used by `enhanced-extension.ts` | **Violation** |
+| `@lanonasis/ide-extension-core` (sole auth path) | ✅ Used in active runtime | **Aligned** |
 
 ---
 
@@ -234,16 +203,16 @@ if (legacyKey && legacyKey.trim().length > 0) {
 
 | ID | Issue | Location | Evidence |
 |----|-------|----------|----------|
-| C1 | **Duplicate SecureApiKeyService** | `src/services/SecureApiKeyService.ts:1-902` | Same functionality as `@lanonasis/ide-extension-core` |
+| C1 | **Duplicate SecureApiKeyService** | Resolved by deletion | Shared core is sole auth implementation |
 | C2 | **Dormant TransportManager** | `src/services/transports/TransportManager.ts:1-502` | Settings exist but runtime never instantiates |
-| C3 | **Legacy entrypoint security risk** | `src/enhanced-extension.ts:324` | Stores API keys in plaintext settings |
-| C4 | **Multiple version identities** | See section 2.4 | Package says 2.1.1, runtime says 2.0.9, transports say 2.0.8/2.0.5 |
+| C3 | **Legacy entrypoint security risk** | Resolved by deletion | Source-level risk removed |
+| C4 | **Multiple version identities** | Partially resolved | Active runtime now aligned; dormant transport literals still duplicated |
 
 ### 🟠 High (Fix in Next Sprint)
 
 | ID | Issue | Location | Evidence |
 |----|-------|----------|----------|
-| H1 | **Stale CLI version references** | `extension.ts:232`, `enhanced-extension.ts:368` | References v1.5.2+, actual CLI is v3.9.13 |
+| H1 | **Historical CLI version drift in docs/reporting** | Docs still mention older thresholds | Runtime copy now uses compatible wording |
 | H2 | **Intelligence features absent** | `package.json:44-263` (commands) | CLI has 10+ intelligence commands, extension has 0 |
 | H3 | **Config precedence undocumented** | `MemoryService.ts:19-37` | SecretStorage, settings, CLI config, ~/.lanonasis all possible |
 | H4 | **MCP discovery doesn't integrate** | `extension.ts:38-54` | Discovers server but never routes requests through it |
@@ -254,8 +223,8 @@ if (legacyKey && legacyKey.trim().length > 0) {
 
 | ID | Issue | Location | Evidence |
 |----|-------|----------|----------|
-| M1 | **README version claims** | `README.md:5,28,57,123` | Claims v1.4.1, references CLI v3.0.6+ |
-| M2 | **Dead imports in legacy** | `enhanced-extension.ts` | Imports local services that duplicate shared core |
+| M1 | **Historical doc/report version claims** | Older docs and changelog notes | Current README is aligned, but historical reports still mention older CLI/version wording |
+| M2 | **Dead imports in legacy** | Resolved by deletion | No legacy entrypoint remains |
 | M3 | **Interface duplication** | `IMemoryService.ts:1-46` | Duplicates SDK interface types locally |
 | M4 | **User-agent inconsistency** | `extension.ts:64`, `SharedCoreIntegration.ts:47` | Same string hardcoded in two places |
 | M5 | **Comment drift** | `extension.ts:16-17` | "Unused error recovery utils" - still imported? |
@@ -276,9 +245,9 @@ if (legacyKey && legacyKey.trim().length > 0) {
 
 | File/Module | Lines | Reason | Action |
 |-------------|-------|--------|--------|
-| `src/services/SecureApiKeyService.ts` | 902 | Duplicate of shared core | **DELETE** after verifying no legacy refs |
-| `src/enhanced-extension.ts` | 492 | Legacy entrypoint, security risk | **DELETE** or move to `.archive/` |
-| `src/services/transports/` | ~964 | Dormant, unused by runtime | **DELETE** or deprecate with warning |
+| `src/services/SecureApiKeyService.ts` | Removed | Duplicate of shared core | **COMPLETED** |
+| `src/enhanced-extension.ts` | Removed | Legacy entrypoint | **COMPLETED** |
+| `src/services/transports/` | ~964 | Dormant, unused by runtime | **DEPRECATE** or integrate intentionally |
 | `src/services/SharedCoreIntegration.ts` | 160 | Re-exports shared core | **EVALUATE**: Direct import is cleaner |
 
 ### 5.2 Code That Should Be Delegated to Shared Packages
@@ -306,7 +275,7 @@ if (legacyKey && legacyKey.trim().length > 0) {
 
 | Assumption | Where Assumed | Risk |
 |------------|---------------|------|
-| CLI v1.5.2+ is "golden contract" | `extension.ts:230` | CLI is now v3.9.13; assumption outdated |
+| A specific CLI minimum is implicitly known even though runtime/docs now say only "compatible" | historical runtime/docs copy | Future copy can drift again unless one tested minimum is published |
 | `lanonasis.apiKey` in settings means "migration needed" | `SecureApiKeyService.ts` (shared) | May conflict with intentional API key use |
 | `~/.maas/config.json` exists for CLI integration | `EnhancedMemoryService.ts` | Assumes CLI is installed and configured |
 | MCP server on ports 3000-3002 indicates CLI presence | `MCPDiscoveryService.ts:37` | Port may be used by unrelated service |
@@ -315,7 +284,7 @@ if (legacyKey && legacyKey.trim().length > 0) {
 
 | Setting | Declared In | Used In | Status |
 |---------|-------------|---------|--------|
-| `transportPreference` | `package.json:547` | ❌ Unused | **DEAD** |
+| `transportPreference` | `package.json:547` | ❌ Unused by active runtime | **DORMANT** |
 | `websocketUrl` | `package.json:557` | `TransportManager.ts` (dormant) | **DORMANT** |
 | `enableRealtime` | `package.json:562` | `TransportManager.ts` (dormant) | **DORMANT** |
 | `refineEndpoint` | `package.json:643` | `MemoryChatParticipant.ts:454` | ✅ **USED** but undocumented |
@@ -329,8 +298,7 @@ if (legacyKey && legacyKey.trim().length > 0) {
 
 | Priority | Task | Owner | Verification |
 |----------|------|-------|--------------|
-| P0 | Delete local `SecureApiKeyService.ts` | Extension runtime | `enhanced-extension.ts` compiles using shared core |
-| P0 | Delete or archive `enhanced-extension.ts` | Extension runtime | Extension activates with only `extension.ts` |
+| P0 | Reconcile reports/docs with the deleted legacy files and the new typecheck gate | Docs + release process | Reports should match the repo’s current state |
 | P0 | Unify version to single source | Build/Release | All runtime components report same version |
 | P1 | Add deprecation warning to transport settings | Extension runtime | Settings show "deprecated" in UI |
 | P1 | Document config precedence | Documentation | Published doc showing: SecretStorage > settings > CLI config |
@@ -398,8 +366,7 @@ if (legacyKey && legacyKey.trim().length > 0) {
 **Question:** What is the actual minimum CLI version the extension requires?
 
 **Current State:**
-- Extension claims: v1.5.2+
-- README claims: v3.0.6+
+- Runtime/docs now say "compatible" rather than naming a hard minimum
 - Actual CLI: v3.9.13
 - Unknown: Does extension work with CLI v2.x? v3.0?
 
@@ -411,8 +378,8 @@ if (legacyKey && legacyKey.trim().length > 0) {
 
 Before closing this audit, verify:
 
-- [ ] Local `SecureApiKeyService.ts` deleted
-- [ ] `enhanced-extension.ts` deleted or moved to archive
+- [x] Local `SecureApiKeyService.ts` deleted
+- [x] `enhanced-extension.ts` deleted
 - [ ] All version strings derive from `package.json`
 - [ ] CHANGELOG dates/versions aligned with releases
 - [ ] Transport settings show deprecation warning or are removed
@@ -445,9 +412,9 @@ Before closing this audit, verify:
 ### Legacy/Dead Code
 | File | Status | Recommendation |
 |------|--------|----------------|
-| `src/enhanced-extension.ts` | Legacy entrypoint | DELETE |
-| `src/services/SecureApiKeyService.ts` | Duplicate | DELETE |
-| `src/services/transports/*` | Dormant | DELETE or DEPRECATE |
+| `src/enhanced-extension.ts` | Legacy entrypoint | DELETED |
+| `src/services/SecureApiKeyService.ts` | Duplicate | DELETED |
+| `src/services/transports/*` | Dormant | DEPRECATE or INTEGRATE |
 
 ---
 
