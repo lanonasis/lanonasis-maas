@@ -3,6 +3,7 @@
 Latest automated certification snapshot:
 
 - See [`docs/RELEASE_CERTIFICATION_MATRIX.md`](./docs/RELEASE_CERTIFICATION_MATRIX.md)
+- Manual follow-through lives in [`docs/MANUAL_RELEASE_CERTIFICATION_RUNBOOK.md`](./docs/MANUAL_RELEASE_CERTIFICATION_RUNBOOK.md)
 - Current recommendation is to ship through the **pre-release** channel first
 
 ## Pre-Publish Checklist

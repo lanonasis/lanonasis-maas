@@ -8,6 +8,7 @@ Use these source-of-truth docs:
 
 - [`PUBLISH_CHECKLIST.md`](./PUBLISH_CHECKLIST.md)
 - [`docs/RELEASE_CERTIFICATION_MATRIX.md`](./docs/RELEASE_CERTIFICATION_MATRIX.md)
+- [`docs/MANUAL_RELEASE_CERTIFICATION_RUNBOOK.md`](./docs/MANUAL_RELEASE_CERTIFICATION_RUNBOOK.md)
 
 ## What is already verified
 
