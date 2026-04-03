@@ -1,5 +1,10 @@
 import * as vscode from 'vscode';
 import { SecureApiKeyService, StoredCredential } from '@lanonasis/ide-extension-core';
+
+// TODO: Import from shared constants or derive from package.json
+// This should match the EXTENSION_VERSION in extension.ts and package.json
+const EXTENSION_VERSION = '2.1.1';
+
 import type {
   PaginatedResponse,
   CreateMemoryRequest,
@@ -597,7 +602,7 @@ export class EnhancedMemoryService implements IEnhancedMemoryService {
       },
       headers: {
         'X-Client-Type': 'vscode-extension',
-        'X-Client-Version': '2.0.5',
+        'X-Client-Version': EXTENSION_VERSION,
         'X-Project-Scope': 'lanonasis-maas'  // Required by backend auth middleware
       }
     };
