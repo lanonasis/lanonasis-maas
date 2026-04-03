@@ -320,13 +320,37 @@ export async function activate(context: vscode.ExtensionContext) {
     const authenticateCommand = vscode.commands.registerCommand('lanonasis.authenticate', async (mode?: 'oauth' | 'apikey') => {
         try {
             let apiKey: string | null = null;
+            const promptForApiKeyAuthentication = async () => {
+                const enteredApiKey = await vscode.window.showInputBox({
+                    prompt: 'Enter your Lanonasis API Key',
+                    placeHolder: 'Get your API key from dashboard.lanonasis.com',
+                    password: true,
+                    validateInput: (value) => {
+                        if (!value || value.trim().length === 0) {
+                            return 'API key is required';
+                        }
+                        if (value.trim().length < 20) {
+                            return 'API key seems too short';
+                        }
+                        return null;
+                    }
+                });
+
+                if (!enteredApiKey) {
+                    return null;
+                }
+
+                const authenticated = await secureApiKeyService.authenticateWithApiKey(enteredApiKey.trim());
+                return authenticated ? enteredApiKey.trim() : null;
+            };
 
             if (mode === 'oauth') {
-                apiKey = await secureApiKeyService.authenticateWithOAuth();
+                const authenticated = await secureApiKeyService.authenticateWithOAuth();
+                apiKey = authenticated ? await secureApiKeyService.getApiKey() : null;
             } else if (mode === 'apikey') {
-                apiKey = await secureApiKeyService.promptForApiKeyEntry();
+                apiKey = await promptForApiKeyAuthentication();
             } else {
-                apiKey = await secureApiKeyService.promptForAuthentication();
+                apiKey = await secureApiKeyService.getApiKeyOrPrompt();
             }
 
             if (apiKey) {
@@ -514,7 +538,7 @@ export async function activate(context: vscode.ExtensionContext) {
                 );
 
                 if (confirmed === 'Clear API Key') {
-                    await secureApiKeyService.deleteApiKey();
+                    await secureApiKeyService.clearCredentials();
                     vscode.window.showInformationMessage('API key cleared successfully.');
                     outputChannel.appendLine('[ClearApiKey] API key removed from secure storage');
                     await handleAuthenticationCleared();
@@ -666,7 +690,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
         vscode.commands.registerCommand('lanonasis.logout', async () => {
             try {
-                await secureApiKeyService.deleteApiKey();
+                await secureApiKeyService.clearCredentials();
             } catch (error) {
                 outputChannel.appendLine(`[Logout] Failed to clear stored credentials: ${error instanceof Error ? error.message : String(error)}`);
             } finally {
@@ -687,7 +711,9 @@ export async function activate(context: vscode.ExtensionContext) {
     ];
 
     context.subscriptions.push(...commands);
-    context.subscriptions.push(memoryService as vscode.Disposable);
+    if ('dispose' in memoryService && typeof memoryService.dispose === 'function') {
+        context.subscriptions.push(memoryService as unknown as vscode.Disposable);
+    }
 
     // Register MCP discovery service for disposal
     if (mcpDiscoveryService) {

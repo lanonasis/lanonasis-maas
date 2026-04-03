@@ -5,7 +5,7 @@ import { createRoot } from 'react-dom/client';
 declare global {
   interface Window {
     vscode: {
-      postMessage: (message: { type: string; data?: unknown }) => void;
+      postMessage: (message: { type: string; data?: unknown; [key: string]: unknown }) => void;
       getState: () => unknown;
       setState: (state: unknown) => void;
     };
@@ -13,7 +13,7 @@ declare global {
   
   // VS Code webview API function
   function acquireVsCodeApi(): {
-    postMessage: (message: { type: string; data?: unknown }) => void;
+    postMessage: (message: { type: string; data?: unknown; [key: string]: unknown }) => void;
     getState: () => unknown;
     setState: (state: unknown) => void;
   };

@@ -2,9 +2,10 @@ import * as matchers from '@testing-library/jest-dom/matchers';
 import { afterEach, vi, expect as vitestExpect } from 'vitest';
 import { cleanup } from '@testing-library/react';
 
-const globalExpect = globalThis.expect ?? vitestExpect;
+const globalWithExpect = globalThis as typeof globalThis & { expect?: typeof vitestExpect };
+const globalExpect = globalWithExpect.expect ?? vitestExpect;
 globalExpect.extend(matchers);
-globalThis.expect = globalExpect;
+globalWithExpect.expect = globalExpect;
 
 // Mock VS Code API - exported so tests can access and reset it
 export const mockVSCode = {

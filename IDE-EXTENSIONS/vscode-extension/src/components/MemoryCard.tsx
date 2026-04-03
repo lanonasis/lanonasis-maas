@@ -172,7 +172,7 @@ export const MemoryCard = ({
 
   const highlightText = useCallback((text: string, query: string, keyPrefix: string) => {
     const lower = text.toLowerCase();
-    const parts: Array<string | JSX.Element> = [];
+    const parts: React.ReactNode[] = [];
     let index = 0;
     let matchIndex = lower.indexOf(query, index);
     let key = 0;

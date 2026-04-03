@@ -432,13 +432,16 @@ export class EnhancedSidebarProvider implements vscode.WebviewViewProvider {
             }
 
             // Transform API keys to match the expected format
-            const transformedKeys = apiKeys.map(key => ({
+            const transformedKeys = apiKeys.map(key => {
+                const lastUsedAt = key.lastUsed ?? key.lastUsedAt ?? key.createdAt;
+
+                return ({
                 id: key.id || key.keyId || String(Math.random()),
                 name: key.name || 'Unnamed Key',
                 scope: key.scope || key.accessLevel || key.keyType || 'read,write',
-                lastUsed: key.lastUsed || key.lastUsedAt || key.createdAt ?
-                    this.formatLastUsed(key.lastUsed || key.lastUsedAt || key.createdAt) : 'Never'
-            }));
+                lastUsed: lastUsedAt ? this.formatLastUsed(lastUsedAt) : 'Never'
+            });
+            });
 
             this._view?.webview.postMessage({
                 type: 'apiKeys',
@@ -814,7 +817,7 @@ export class EnhancedSidebarProvider implements vscode.WebviewViewProvider {
         await this.sendSidebarPreferences();
     }
 
-    private async sendConnectionStatus(): Promise<void> {
+    public async sendConnectionStatus(): Promise<void> {
         const capabilities = this.isEnhancedService(this.memoryService)
             ? this.memoryService.getCapabilities()
             : null;
