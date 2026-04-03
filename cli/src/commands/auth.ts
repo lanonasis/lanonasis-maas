@@ -765,8 +765,34 @@ async function handleOAuthFlow(config: CLIConfig): Promise<void> {
   ]);
 
   if (!openBrowser) {
-    console.log(chalk.yellow('⚠️  Authentication cancelled'));
-    return;
+    // Fallback: manual token paste for headless/remote environments
+    console.log();
+    console.log(chalk.cyan('📋 Manual Token Authentication'));
+    console.log(chalk.gray('Open this URL in any browser to authenticate:'));
+    const authBase = config.getDiscoveredApiUrl();
+    console.log(chalk.white(`  ${authBase}/auth/cli-login`));
+    console.log();
+    console.log(chalk.gray('After logging in, expand "Headless/Remote?" to copy the token, then paste it below.'));
+    console.log();
+
+    const { token } = await inquirer.prompt<{ token: string }>([
+      {
+        type: 'password',
+        name: 'token',
+        message: 'Paste token:',
+        mask: '*',
+        validate: (input: string) => input.trim().length > 0 || 'Token is required',
+      }
+    ]);
+
+    const trimmed = token.trim();
+    await config.setToken(trimmed);
+    await config.set('authMethod', 'jwt');
+
+    console.log();
+    console.log(chalk.green('✓ Token saved successfully'));
+    console.log(colors.info('You can now use all Lanonasis services'));
+    process.exit(0);
   }
 
   try {
