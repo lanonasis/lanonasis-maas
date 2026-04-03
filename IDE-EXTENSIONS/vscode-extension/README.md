@@ -133,6 +133,13 @@ Choose your preferred method when running **"Lanonasis: Authenticate"**:
 - `lanonasis.cliDetectionTimeout` - CLI detection timeout in ms (default: 2000)
 - `lanonasis.verboseLogging` - Enable verbose logging for debugging (default: false)
 
+### Deprecated Transport Settings
+- `lanonasis.transportPreference` - Deprecated and ignored by the shipped runtime
+- `lanonasis.websocketUrl` - Deprecated and ignored by the shipped runtime
+- `lanonasis.enableRealtime` - Deprecated and ignored by the shipped runtime
+
+Use the supported Gateway/Direct API mode switch and MCP discovery settings instead. The extension-local transport manager remains dormant until a future runtime integration is explicitly shipped.
+
 ### Credential and Config Precedence
 1. Extension credentials in VS Code SecretStorage
 2. Deprecated `lanonasis.apiKey` setting, migrated into SecretStorage

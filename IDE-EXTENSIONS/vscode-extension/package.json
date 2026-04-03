@@ -557,17 +557,20 @@
             "http"
           ],
           "default": "auto",
-          "markdownDescription": "**Experimental**: Preferred transport mode. Currently not fully integrated into the active runtime. `auto` tries WebSocket first, then falls back to HTTP."
+          "markdownDescription": "**DEPRECATED**: Transport mode selection is not used by the shipped runtime. Use the supported Gateway/Direct API mode switch instead. This setting will be removed unless transport routing is integrated in a future release.",
+          "deprecationMessage": "This setting is ignored by the shipped runtime. Use the supported Gateway/Direct API mode switch instead."
         },
         "lanonasis.websocketUrl": {
           "type": "string",
           "default": "wss://mcp.lanonasis.com/ws",
-          "markdownDescription": "**Experimental**: WebSocket MCP server URL for real-time communication. Transport infrastructure exists but is not fully wired into the active runtime."
+          "markdownDescription": "**DEPRECATED**: The shipped runtime does not route through the extension-local WebSocket transport. Use MCP discovery and Gateway/Direct API settings instead.",
+          "deprecationMessage": "This setting is ignored by the shipped runtime. Use MCP discovery and Gateway/Direct API settings instead."
         },
         "lanonasis.enableRealtime": {
           "type": "boolean",
           "default": true,
-          "markdownDescription": "**Experimental**: Enable real-time updates via WebSocket when available. Real-time infrastructure exists but is not fully integrated into the active runtime."
+          "markdownDescription": "**DEPRECATED**: Real-time transport toggles are not used by the shipped runtime. This setting will be removed unless transport routing is integrated in a future release.",
+          "deprecationMessage": "This setting is ignored by the shipped runtime. Real-time transport is not currently routed through the active extension path."
         },
         "lanonasis.cliDetectionTimeout": {
           "type": "number",

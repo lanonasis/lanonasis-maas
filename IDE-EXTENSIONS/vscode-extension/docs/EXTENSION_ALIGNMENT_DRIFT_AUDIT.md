@@ -300,7 +300,7 @@ if (legacyKey && legacyKey.trim().length > 0) {
 |----------|------|-------|--------------|
 | P0 | Reconcile reports/docs with the deleted legacy files and the new typecheck gate | Docs + release process | Reports should match the repo’s current state |
 | P0 | Unify version to single source | Build/Release | All runtime components report same version |
-| P1 | Add deprecation warning to transport settings | Extension runtime | Settings show "deprecated" in UI |
+| P1 | Add deprecation warning to transport settings | Extension runtime | Completed in shipped settings/diagnostics |
 | P1 | Document config precedence | Documentation | Published doc showing: SecretStorage > settings > CLI config |
 
 ### Phase 2: Feature Parity (Next Sprint)
@@ -316,7 +316,7 @@ if (legacyKey && legacyKey.trim().length > 0) {
 
 | Priority | Task | Owner | Verification |
 |----------|------|-------|--------------|
-| P2 | Decide TransportManager fate | Architecture | Either wire into runtime or delete |
+| P2 | Keep `TransportManager` out of the active path unless a future roadmap item funds explicit runtime integration | Architecture | Current release uses deprecation, not integration |
 | P2 | Evaluate EnhancedSidebarProvider GA | Product | Feature flag removed or UI promoted |
 | P3 | Consolidate caching layers | SDK + Extension | `MemoryCache` delegates to SDK cache |
 | P3 | Add intelligence panel UI | Extension | Sidebar shows related memories, duplicates, insights |
@@ -326,14 +326,14 @@ if (legacyKey && legacyKey.trim().length > 0) {
 ## 8. Open Questions Requiring Product/Architecture Decisions
 
 ### Q1: TransportManager Fate
-**Question:** Should the extension-local `TransportManager` be integrated into the active runtime, or deleted in favor of the SDK's internal transport?
+**Current release decision:** Do not integrate `TransportManager` in this release. Keep the extension-local transport settings deprecated and ignored by the shipped runtime.
 
 **Options:**
 - A) Wire `TransportManager` into `EnhancedMemoryService` and enable transport settings
 - B) Delete `TransportManager` and transport settings, rely on SDK
 - C) Keep dormant with deprecation notice for future use
 
-**Blockers:** Need architecture review on WebSocket MCP vs HTTP MCP strategy.
+**Follow-up question:** If WebSocket MCP becomes a roadmap item later, should the runtime integrate the local transport stack or rely on SDK-native transport instead?
 
 ---
 

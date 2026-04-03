@@ -1,5 +1,10 @@
 # VS Code Extension Publishing Checklist
 
+Latest automated certification snapshot:
+
+- See [`docs/RELEASE_CERTIFICATION_MATRIX.md`](./docs/RELEASE_CERTIFICATION_MATRIX.md)
+- Current recommendation is to ship through the **pre-release** channel first
+
 ## Pre-Publish Checklist
 
 ### 1. Version & Docs
@@ -19,6 +24,7 @@
 
 - [ ] Packaging integrity is verified with `npm exec nx run lanonasis-memory-vscode:package`
 - [ ] Auth/config precedence changes are validated in diagnostics
+- [ ] Deprecated transport settings are surfaced as ignored by the shipped runtime
 - [ ] CLI-present and CLI-absent startup paths have been smoke tested
 - [ ] Offline queue / sidebar load still work after packaging changes
 
@@ -27,6 +33,7 @@
 - [ ] `npm run package` creates a stable VSIX
 - [ ] `npm run package:pre-release` creates a pre-release VSIX when needed
 - [ ] VSIX contents are reviewed for unexpected files
+- [ ] Pre-release VSIX manifest contains `Microsoft.VisualStudio.Code.PreRelease=true`
 - [ ] Test install works in a clean VS Code profile
 
 ### 5. Marketplace Requirements

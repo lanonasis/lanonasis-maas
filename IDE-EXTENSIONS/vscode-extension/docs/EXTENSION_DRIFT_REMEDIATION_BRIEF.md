@@ -201,11 +201,11 @@ The transport layer is functional code—deleting it removes the option to enabl
 
 | Step | Action | Decision Required | Verification |
 |------|--------|-------------------|--------------|
-| 3.1 | Evaluate WebSocket MCP priority | Product/Architecture | Decision documented |
-| 3.2a | If YES: Integrate TransportManager | Engineering | Transport settings affect runtime |
-| 3.2b | If NO: Deprecate transport settings | Engineering | Settings show deprecation warning |
+| 3.1 | Record current transport stance | Completed | Soft-deprecate transport settings in shipped runtime |
+| 3.2a | If YES in a future roadmap pass: Integrate `TransportManager` | Future architecture decision | Transport settings affect runtime |
+| 3.2b | Current release path: Deprecate transport settings | Completed | Settings and diagnostics show deprecation warning |
 
-**Risk:** Medium—requires product decision
+**Risk:** Low for current release path; higher only if a future runtime integration is attempted.
 
 ---
 
@@ -231,10 +231,10 @@ The transport layer is functional code—deleting it removes the option to enabl
 - **C) Status Quo:** Keep dormant with no changes
 
 **Information Needed:**
-- Is WebSocket MCP a Q2/Q3 priority?
-- Does `@lanonasis/memory-client/node` support WebSocket, or do we need extension-local transport?
+- Is WebSocket MCP a future product priority after the current release line ships?
+- Does `@lanonasis/memory-client/node` eventually provide the transport behavior we would otherwise rebuild locally?
 
-**Recommendation:** Decision required before Phase 3. If no decision by end of quarter, default to (B) deprecation.
+**Decision recorded for the current release:** choose (B) now. Keep the settings deprecated/ignored in the shipped runtime, keep the dormant transport code out of the active path, and only revisit integration if a dedicated roadmap item is approved.
 
 ---
 
@@ -390,7 +390,7 @@ Before implementation, verify:
 
 - [x] Build script inspection confirms the legacy entrypoint was excluded before deletion
 - [x] Legacy local-auth test inventory removed from the extension package
-- [ ] Decision recorded: TransportManager fate (integrate/deprecate/keep)
+- [x] Decision recorded: TransportManager fate (current release = deprecate settings, do not integrate)
 - [ ] CLI version matrix: Document tested CLI versions
 - [ ] Product decision: Intelligence SDK integration priority
 - [ ] Product decision: Session taxonomy (chat vs saved sessions)
