@@ -5,6 +5,22 @@
 
 set -e
 
+PRERELEASE=false
+if [ "${1:-}" = "--pre-release" ]; then
+    PRERELEASE=true
+fi
+
+VSCE_CMD="npx @vscode/vsce"
+PACKAGE_SCRIPT="package"
+PUBLISH_SCRIPT="publish"
+RELEASE_LABEL="stable"
+
+if [ "$PRERELEASE" = true ]; then
+    PACKAGE_SCRIPT="package:pre-release"
+    PUBLISH_SCRIPT="publish:pre-release"
+    RELEASE_LABEL="pre-release"
+fi
+
 echo "🚀 LanOnasis VS Code Extension - Build & Publish"
 echo "=================================================="
 echo ""
@@ -19,6 +35,7 @@ NC='\033[0m' # No Color
 # Get current version from package.json
 CURRENT_VERSION=$(node -p "require('./package.json').version")
 echo -e "${BLUE}Current version: ${CURRENT_VERSION}${NC}"
+echo -e "${BLUE}Release channel: ${RELEASE_LABEL}${NC}"
 echo ""
 
 # Step 1: Clean previous builds
@@ -69,12 +86,16 @@ echo ""
 
 # Step 6: Package extension
 echo -e "${YELLOW}Step 6: Packaging extension...${NC}"
-npm run package || {
+npm run "$PACKAGE_SCRIPT" || {
     echo -e "${RED}✗ Packaging failed${NC}"
     exit 1
 }
 
-VSIX_FILE="lanonasis-memory-${CURRENT_VERSION}.vsix"
+if [ "$PRERELEASE" = true ]; then
+    VSIX_FILE="lanonasis-memory-${CURRENT_VERSION}-pre-release.vsix"
+else
+    VSIX_FILE="lanonasis-memory-${CURRENT_VERSION}.vsix"
+fi
 if [ ! -f "$VSIX_FILE" ]; then
     echo -e "${RED}✗ Package file not found: ${VSIX_FILE}${NC}"
     exit 1
@@ -108,18 +129,18 @@ if [ "$CONFIRM_PUBLISH" != "y" ] && [ "$CONFIRM_PUBLISH" != "Y" ]; then
 fi
 
 # Check if vsce token is configured
-if ! vsce ls-publishers &> /dev/null; then
+if ! ${VSCE_CMD} ls-publishers &> /dev/null; then
     echo -e "${RED}✗ Not logged in to vsce${NC}"
-    echo "Please run: vsce login LanOnasis"
+    echo "Please run: ${VSCE_CMD} login LanOnasis"
     exit 1
 fi
 
-npm run publish || {
+npm run "$PUBLISH_SCRIPT" || {
     echo -e "${RED}✗ Publishing failed${NC}"
-    echo "You can manually publish with: vsce publish"
+    echo "You can manually publish with: ${VSCE_CMD} publish${PRERELEASE:+ --pre-release}"
     exit 1
 }
-echo -e "${GREEN}✓ Published to marketplace${NC}"
+echo -e "${GREEN}✓ Published to marketplace (${RELEASE_LABEL})${NC}"
 echo ""
 
 # Step 9: Create git tag

@@ -2,148 +2,96 @@
 
 ## Pre-Publish Checklist
 
-### 1. Version & Changelog
+### 1. Version & Docs
 
-- [x] Version bumped to 1.5.6 in package.json
-- [x] CHANGELOG.md updated with new version
-- [ ] README.md reviewed and updated if needed
-- [ ] All deprecated features documented
+- [ ] `package.json` version is correct for the intended release
+- [ ] `CHANGELOG.md` reflects the release scope
+- [ ] `README.md` matches the current runtime and auth/config behavior
+- [ ] Any deprecated settings or legacy paths are documented conservatively
 
 ### 2. Code Quality
 
-- [x] TypeScript compilation successful (no errors)
-- [x] Linting passed
-- [ ] All console.log statements removed or converted to proper logging
-- [ ] No hardcoded credentials or sensitive data
+- [ ] `npm exec nx run lanonasis-memory-vscode:lint` passes
+- [ ] Known warnings are reviewed and either fixed or explicitly accepted
+- [ ] No secrets, tokens, or local-only URLs are packaged
 
-### 3. Testing
+### 3. Gate Validation
 
-- [ ] Extension loads without errors
-- [ ] Authentication flow works (OAuth + API Key)
-- [ ] Memory search works
-- [ ] Memory creation works
-- [ ] API key management works
-- [ ] All commands accessible from command palette
-- [ ] Keyboard shortcuts work
-- [ ] Sidebar loads correctly
-- [ ] Tree views display properly
+- [ ] Packaging integrity is verified with `npm exec nx run lanonasis-memory-vscode:package`
+- [ ] Auth/config precedence changes are validated in diagnostics
+- [ ] CLI-present and CLI-absent startup paths have been smoke tested
+- [ ] Offline queue / sidebar load still work after packaging changes
 
 ### 4. Build Verification
 
-- [x] `npm run compile` succeeds
-- [x] `npm run package` creates VSIX file
-- [x] VSIX file size reasonable (~215 KB)
-- [ ] Test install locally: `code --install-extension lanonasis-memory-1.5.6.vsix --force`
+- [ ] `npm run package` creates a stable VSIX
+- [ ] `npm run package:pre-release` creates a pre-release VSIX when needed
+- [ ] VSIX contents are reviewed for unexpected files
+- [ ] Test install works in a clean VS Code profile
 
 ### 5. Marketplace Requirements
 
-- [x] Icon present (images/icon.png)
-- [x] README.md with screenshots/features
-- [x] LICENSE file present
-- [x] Repository URL in package.json
-- [x] Publisher set to "LanOnasis"
-- [ ] vsce login completed
+- [ ] Icon and metadata are present
+- [ ] Publisher and repository metadata are correct
+- [ ] Marketplace authentication is configured for the pinned local `@vscode/vsce` toolchain
 
-### 6. Documentation
+### 6. Documentation & Communication
 
-- [x] README.md has getting started guide
-- [x] All commands documented
-- [x] Configuration options explained
-- [x] Keyboard shortcuts listed
-- [ ] Migration guide for breaking changes
+- [ ] Release notes explain any required user action
+- [ ] Auth migration / CLI import behavior is described clearly
+- [ ] Pre-release vs stable channel is stated explicitly
 
-## Publishing Steps
+## Packaging Commands
 
-### Option 1: Automated Script
+### Stable
 
 ```bash
-./build-and-publish.sh
+cd IDE-EXTENSIONS/vscode-extension
+npm run package
 ```
 
-### Option 2: Manual Steps
+### Pre-release
 
 ```bash
-# 1. Clean and build
-rm -rf out/ *.vsix
-npm install
-npm run compile
+cd IDE-EXTENSIONS/vscode-extension
+npm run package:pre-release
+```
 
-# 2. Package
-npm run package
+## Publishing Commands
 
-# 3. Test locally
-code --install-extension lanonasis-memory-1.5.6.vsix --force
+### Stable
 
-# 4. Login to marketplace (first time only)
-vsce login LanOnasis
-
-# 5. Publish
-vsce publish
-# OR
+```bash
+cd IDE-EXTENSIONS/vscode-extension
+npx @vscode/vsce login LanOnasis
 npm run publish
 ```
 
-## Post-Publish
+### Pre-release
 
-### Verification
+```bash
+cd IDE-EXTENSIONS/vscode-extension
+npx @vscode/vsce login LanOnasis
+npm run publish:pre-release
+```
 
-- [ ] Extension appears on marketplace (5-10 minutes)
-- [ ] Install from marketplace works
-- [ ] All features work in fresh install
-- [ ] No errors in extension host log
+## Local Install Smoke Test
 
-### Git
+```bash
+TMP_DATA_DIR="$(mktemp -d)"
+TMP_EXT_DIR="$(mktemp -d)"
 
-- [ ] Commit all changes
-- [ ] Create git tag: `git tag -a vscode-v1.5.6 -m "VS Code Extension v1.5.6"`
-- [ ] Push tag: `git push origin vscode-v1.5.6`
-- [ ] Push changes: `git push origin main`
+code \
+  --user-data-dir "$TMP_DATA_DIR" \
+  --extensions-dir "$TMP_EXT_DIR" \
+  --install-extension lanonasis-memory-$(node -p "require('./package.json').version").vsix \
+  --force
+```
 
-### Communication
+For pre-release validation, replace the VSIX name with `lanonasis-memory-<version>-pre-release.vsix`.
 
-- [ ] Update docs.lanonasis.com if needed
-- [ ] Announce on social media/blog
-- [ ] Notify team members
-- [ ] Update internal documentation
+## Rollback Notes
 
-## Rollback Plan
-
-If issues are found after publishing:
-
-1. **Unpublish version** (if critical bug):
-
-   ```bash
-   vsce unpublish LanOnasis.lanonasis-memory@1.5.6
-   ```
-
-2. **Fix and republish**:
-   - Fix the issue
-   - Bump to 1.5.7
-   - Follow checklist again
-
-3. **Notify users**:
-   - Update marketplace description
-   - Post issue on GitHub
-   - Send notification if possible
-
-## Marketplace Links
-
-- **Extension Page**: https://marketplace.visualstudio.com/items?itemName=LanOnasis.lanonasis-memory
-- **Publisher Dashboard**: https://marketplace.visualstudio.com/manage/publishers/LanOnasis
-- **Analytics**: https://marketplace.visualstudio.com/manage/publishers/LanOnasis/extensions/lanonasis-memory/hub
-
-## Notes
-
-- Marketplace review can take 5-10 minutes
-- Users may not see update immediately (cache)
-- Extension auto-updates for users with auto-update enabled
-- Manual update: Extensions → LanOnasis Memory → Update
-
-## Current Status
-
-**Version**: 1.5.6
-**Build Date**: 2025-11-18
-**Package**: lanonasis-memory-1.5.6.vsix (214.91 KB)
-**Status**: ✅ Built, ready for testing
-
-**Next Step**: Test locally, then run `./build-and-publish.sh`
+- Publish a fixed version instead of relying on stale marketplace copy
+- Keep release notes honest about what changed and what did not
+- If a pre-release surfaces packaging/auth regressions, hold stable promotion until the regression is reproduced and fixed
