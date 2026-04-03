@@ -20,6 +20,11 @@ tsconfig.json.backup
 **/.eslintrc.json
 **/*.map
 
+# Only ship the bundled extension entrypoint from out/
+out/**
+!out/
+!out/extension.js
+
 # All TypeScript files (compiled to JS)
 **/*.ts
 **/*.tsx
@@ -88,6 +93,7 @@ test/**
 coverage/**
 .nyc_output/**
 test-results/**
+playwright-report/**
 
 # Turbo cache
 .turbo/**

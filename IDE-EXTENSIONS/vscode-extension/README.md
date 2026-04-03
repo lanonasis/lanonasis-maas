@@ -9,6 +9,7 @@
 - **SecretStorage Integration** - Credentials stored in OS keychain (macOS Keychain, Windows Credential Manager)
 - **Manual API Key Option** - Alternative authentication method for automation/CI
 - **Automatic Token Refresh** - No manual re-authentication needed
+- **CLI Session Import** - Can import compatible auth and endpoint metadata from `~/.maas/config.json`
 - **Console Redaction** - Prevents credential leaks in logs
 
 ### 🎯 Authentication Options
@@ -18,7 +19,7 @@ Choose your preferred method when running **"Lanonasis: Authenticate"**:
 
 ### ⚠️ Breaking Changes
 - **Deprecated**: `lanonasis.apiKey` setting in plaintext is now deprecated
-- **Migration**: Run `Lanonasis: Authenticate` to migrate to secure storage
+- **Migration**: Legacy plaintext settings are migrated into secure storage automatically
 - **Note**: Old API keys still work but will show deprecation warning
 
 ## Previous Updates
@@ -40,7 +41,7 @@ Choose your preferred method when running **"Lanonasis: Authenticate"**:
 - **📝 Create from Selection** - Turn code snippets into searchable memories (Ctrl+Shift+Alt+M)  
 - **🌳 Memory Tree View** - Browse memories organized by type in the Explorer
 - **💡 Code Completion** - Get memory suggestions while typing (@, #, //)
-- **⚡ Real-time Sync** - Always up-to-date with your memory service
+- **⚡ Offline-Aware Sync** - Queue changes while offline and resync when connectivity returns
 
 ### API Key Management (NEW!)
 - **🔑 Manage API Keys** - Full API key lifecycle management (Ctrl+Shift+K)
@@ -72,6 +73,10 @@ Choose your preferred method when running **"Lanonasis: Authenticate"**:
      - Press `Cmd+Shift+P` → `Lanonasis: Authenticate`
      - Select "API Key"
      - Enter your API key from [api.lanonasis.com](https://api.lanonasis.com)
+
+   - **Optional CLI Import**:
+     - If you already use the LanOnasis CLI, the extension can import compatible credentials and endpoint metadata from `~/.maas/config.json`
+     - This only happens when the extension does not already have secure credentials or explicit endpoint settings
 
 3. **Start Using**:
    - Press `Ctrl+Shift+M` to search memories
@@ -107,10 +112,11 @@ Choose your preferred method when running **"Lanonasis: Authenticate"**:
 ## 🔧 Configuration
 
 ### Memory Settings
-- `lanonasis.apiKey` - Your API key from api.lanonasis.com
-- `lanonasis.useGateway` - Use Onasis Gateway for enhanced performance (default: true)
+- `lanonasis.apiKey` - **Deprecated** plaintext fallback setting; use `Lanonasis: Authenticate` instead
+- `lanonasis.useGateway` - Use Onasis Gateway for centralized routing (default: false)
 - `lanonasis.gatewayUrl` - Gateway endpoint (default: https://api.lanonasis.com)
 - `lanonasis.apiUrl` - Direct API endpoint (default: https://api.lanonasis.com)
+- `lanonasis.authUrl` - OAuth authentication endpoint (default: https://auth.lanonasis.com)
 - `lanonasis.defaultMemoryType` - Default type for new memories
 - `lanonasis.searchLimit` - Number of search results to show
 - `lanonasis.enableAutoCompletion` - Enable memory-based code completion
@@ -122,9 +128,18 @@ Choose your preferred method when running **"Lanonasis: Authenticate"**:
 
 ### CLI Integration Settings
 - `lanonasis.preferCLI` - Prefer CLI integration when available (default: true)
+- `lanonasis.importCLIConfig` - Import compatible CLI auth/session metadata when extension credentials are not already configured (default: true)
 - `lanonasis.enableMCP` - Enable Model Context Protocol channels (default: true)
 - `lanonasis.cliDetectionTimeout` - CLI detection timeout in ms (default: 2000)
 - `lanonasis.verboseLogging` - Enable verbose logging for debugging (default: false)
+
+### Credential and Config Precedence
+1. Extension credentials in VS Code SecretStorage
+2. Deprecated `lanonasis.apiKey` setting, migrated into SecretStorage
+3. Compatible CLI state from `~/.maas/config.json` when `lanonasis.importCLIConfig` is enabled and the extension does not already have credentials
+4. Extension defaults for endpoint settings when nothing explicit is configured
+
+Explicit VS Code settings take priority over imported CLI endpoint metadata.
 
 ### Gateway vs Direct API
 - **Gateway Mode** (recommended): Uses Onasis Gateway for optimized routing, caching, and enhanced performance
