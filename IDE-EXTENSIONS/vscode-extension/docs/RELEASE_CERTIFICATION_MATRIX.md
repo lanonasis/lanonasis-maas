@@ -38,6 +38,8 @@ Release certification is **conditionally ready** for marketplace promotion.
 | CLI-absent startup path | MANUAL | Requires clean profile without CLI/config |
 | Offline queue end-to-end | MANUAL | Requires network-state transition in a live extension host |
 
+Use [`MANUAL_RELEASE_CERTIFICATION_RUNBOOK.md`](./MANUAL_RELEASE_CERTIFICATION_RUNBOOK.md) for the guided step-by-step procedure.
+
 ## Transport Decision
 
 ### Decision
