@@ -280,6 +280,9 @@ export class APIClient {
             await this.config.discoverServices();
             // Use appropriate base URL based on endpoint and auth method
             const isAuthEndpoint = config.url?.includes('/auth/') || config.url?.includes('/login') || config.url?.includes('/register') || config.url?.includes('/oauth/');
+            const isAuthGatewayManagementEndpoint = typeof config.url === 'string'
+                && (config.url.startsWith('/api/v1/auth/api-keys')
+                    || config.url.startsWith('/api/v1/projects'));
             const discoveredServices = this.config.get('discoveredServices');
             const authMethod = this.config.get('authMethod');
             const vendorKey = await this.config.getVendorKeyAsync();
@@ -322,7 +325,7 @@ export class APIClient {
             // - Other direct API calls -> api.lanonasis.com (vendor AI proxy)
             let apiBaseUrl;
             const useMcpServer = !forceDirectApi && !isAuthEndpoint && (prefersTokenAuth || useVendorKeyAuth || isMemoryEndpoint);
-            if (isAuthEndpoint) {
+            if (isAuthEndpoint || isAuthGatewayManagementEndpoint) {
                 apiBaseUrl = discoveredServices?.auth_base || 'https://auth.lanonasis.com';
             }
             else if (forceDirectApi) {
@@ -343,7 +346,7 @@ export class APIClient {
                 config.url = config.url.replace(/\/api\/v1\/memories/g, '/memory');
             }
             // Add project scope header for auth endpoints
-            if (isAuthEndpoint) {
+            if (isAuthEndpoint || isAuthGatewayManagementEndpoint) {
                 config.headers['X-Project-Scope'] = 'lanonasis-maas';
             }
             // Enhanced Authentication Support

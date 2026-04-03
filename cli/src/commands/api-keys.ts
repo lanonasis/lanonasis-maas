@@ -18,7 +18,10 @@ const colors = {
 };
 
 const AUTH_API_KEYS_BASE = '/api/v1/auth/api-keys';
+const PROJECTS_API_BASE = '/api/v1/projects';
 const VALID_ACCESS_LEVELS = ['public', 'authenticated', 'team', 'admin', 'enterprise'] as const;
+const VALID_KEY_CONTEXTS = ['personal', 'team', 'enterprise'] as const;
+type ApiKeyContext = typeof VALID_KEY_CONTEXTS[number];
 
 interface PlatformApiKey {
   id: string;
@@ -27,6 +30,7 @@ interface PlatformApiKey {
   key?: string;
   user_id: string;
   access_level: string;
+  key_context?: ApiKeyContext | null;
   permissions: string[];
   service: string;
   service_scopes?: Array<{
@@ -59,6 +63,31 @@ function parseScopes(scopes?: string): string[] | undefined {
     .filter(Boolean);
 
   return parsed.length > 0 ? parsed : undefined;
+}
+
+function parseKeyContext(keyContext?: string): ApiKeyContext | undefined {
+  if (!keyContext) {
+    return undefined;
+  }
+
+  const normalized = keyContext.trim().toLowerCase();
+  if (!normalized) {
+    return undefined;
+  }
+
+  if ((VALID_KEY_CONTEXTS as readonly string[]).includes(normalized)) {
+    return normalized as ApiKeyContext;
+  }
+
+  throw new Error('Invalid key context. Allowed: personal, team, enterprise');
+}
+
+function exitUnsupported(feature: string, guidance: string[]) {
+  console.error(colors.error(`✖ ${feature} is not exposed by the current auth-gateway API.`));
+  for (const line of guidance) {
+    console.error(colors.muted(`  • ${line}`));
+  }
+  process.exit(1);
 }
 
 const apiKeysCommand = new Command('api-keys')
@@ -117,7 +146,7 @@ projectsCommand
         projectData = { ...projectData, ...answers };
       }
 
-      const projectRes = await apiClient.post(`${AUTH_API_KEYS_BASE}/projects`, projectData);
+      const projectRes = await apiClient.post(PROJECTS_API_BASE, projectData);
       const project = unwrapApiResponse<any>(projectRes);
 
       console.log(chalk.green('✅ Project created successfully!'));
@@ -139,7 +168,7 @@ projectsCommand
   .option('--json', 'Output as JSON')
   .action(async (options) => {
     try {
-      const projects = unwrapApiResponse<any[]>(await apiClient.get(`${AUTH_API_KEYS_BASE}/projects`));
+      const projects = unwrapApiResponse<any[]>(await apiClient.get(PROJECTS_API_BASE));
 
       if (options.json) {
         console.log(JSON.stringify(projects, null, 2));
@@ -184,12 +213,14 @@ apiKeysCommand
   .option('-n, --name <name>', 'API key name')
   .option('-d, --description <description>', 'API key description (optional)')
   .option('--access-level <level>', 'Access level (public, authenticated, team, admin, enterprise)', 'team')
+  .option('--key-context <context>', 'Optional memory context (personal, team, enterprise)')
   .option('--expires-in-days <days>', 'Expiration in days (default: 365)', '365')
   .option('--scopes <scopes>', 'Comma-separated scopes (optional)')
   .option('--interactive', 'Interactive mode')
   .action(async (options) => {
     try {
       const accessLevel = (options.accessLevel || 'team').toLowerCase();
+      const keyContext = parseKeyContext(options.keyContext);
       const expiresInDays = parseInt(options.expiresInDays, 10);
 
       if (!VALID_ACCESS_LEVELS.includes(accessLevel as typeof VALID_ACCESS_LEVELS[number])) {
@@ -202,6 +233,7 @@ apiKeysCommand
       let keyData: any = {
         name: options.name,
         access_level: accessLevel,
+        key_context: keyContext,
         expires_in_days: expiresInDays,
         description: options.description?.trim() || undefined,
         scopes: parseScopes(options.scopes)
@@ -230,6 +262,16 @@ apiKeysCommand
             default: keyData.access_level
           },
           {
+            type: 'select',
+            name: 'key_context',
+            message: 'Memory context:',
+            choices: [
+              { name: 'legacy / unbounded (default)', value: '' },
+              ...VALID_KEY_CONTEXTS.map((context) => ({ name: context, value: context })),
+            ],
+            default: keyData.key_context || ''
+          },
+          {
             type: 'number',
             name: 'expires_in_days',
             message: 'Expires in days:',
@@ -247,6 +289,7 @@ apiKeysCommand
         keyData = {
           ...keyData,
           ...answers,
+          key_context: parseKeyContext(typeof answers.key_context === 'string' ? answers.key_context : undefined) ?? keyData.key_context,
           description: typeof answers.description === 'string'
             ? answers.description.trim() || undefined
             : keyData.description,
@@ -261,6 +304,7 @@ apiKeysCommand
       console.log(`${colors.highlight('Key ID:')} ${colors.primary(apiKey.id)}`);
       console.log(`${colors.highlight('Name:')} ${colors.accent(apiKey.name)}`);
       console.log(`${colors.highlight('Access Level:')} ${colors.info(apiKey.access_level || keyData.access_level)}`);
+      console.log(`${colors.highlight('Key Context:')} ${colors.info(apiKey.key_context || keyData.key_context || 'legacy')}`);
       console.log(`${colors.highlight('Permissions:')} ${colors.muted((apiKey.permissions || keyData.scopes || []).join(', ') || 'legacy:full_access')}`);
       if (apiKey.expires_at) {
         console.log(`${colors.highlight('Expires At:')} ${colors.warning(formatDate(apiKey.expires_at))}`);
@@ -308,7 +352,7 @@ apiKeysCommand
       console.log(colors.info('═'.repeat(80)));
 
       const table = new Table({
-        head: ['ID', 'Name', 'Access', 'Permissions', 'Service', 'Status', 'Expires'].map(h => colors.accent(h)),
+        head: ['ID', 'Name', 'Access', 'Context', 'Permissions', 'Service', 'Status', 'Expires'].map(h => colors.accent(h)),
         style: { head: [], border: [] }
       });
 
@@ -319,6 +363,7 @@ apiKeysCommand
           truncateText(key.id, 20),
           key.name,
           key.access_level,
+          key.key_context || 'legacy',
           truncateText((key.permissions || []).join(', ') || 'legacy:full_access', 28),
           key.service || 'all',
           statusColor(key.is_active ? 'active' : 'inactive'),
@@ -358,6 +403,7 @@ apiKeysCommand
         console.log(`${colors.highlight('Description:')} ${colors.muted(apiKey.description)}`);
       }
       console.log(`${colors.highlight('Access Level:')} ${colors.warning(apiKey.access_level)}`);
+      console.log(`${colors.highlight('Key Context:')} ${colors.info(apiKey.key_context || 'legacy')}`);
       console.log(`${colors.highlight('Permissions:')} ${colors.muted((apiKey.permissions || []).join(', ') || 'legacy:full_access')}`);
       console.log(`${colors.highlight('Service Scope:')} ${colors.info(apiKey.service || 'all')}`);
       
@@ -564,121 +610,12 @@ mcpCommand
   .option('--risk-level <level>', 'Risk level (low, medium, high, critical)', 'medium')
   .option('--interactive', 'Interactive mode')
   .action(async (options) => {
-    try {
-      let toolData: any = {
-        toolId: options.toolId,
-        toolName: options.toolName,
-        organizationId: options.organizationId,
-        permissions: {
-          keys: options.keys ? options.keys.split(',').map((k: string) => k.trim()) : [],
-          environments: options.environments ? options.environments.split(',').map((e: string) => e.trim()) : ['development'],
-          maxConcurrentSessions: parseInt(options.maxSessions),
-          maxSessionDuration: parseInt(options.maxDuration)
-        },
-        webhookUrl: options.webhookUrl,
-        autoApprove: options.autoApprove || false,
-        riskLevel: options.riskLevel
-      };
-
-      if (options.interactive || !toolData.toolId || !toolData.toolName || !toolData.organizationId) {
-        const answers = await inquirer.prompt([
-          {
-            type: 'input',
-            name: 'toolId',
-            message: 'Tool ID:',
-            when: !toolData.toolId,
-            validate: (input) => input.length > 0 || 'Tool ID is required'
-          },
-          {
-            type: 'input',
-            name: 'toolName',
-            message: 'Tool name:',
-            when: !toolData.toolName,
-            validate: (input) => input.length > 0 || 'Tool name is required'
-          },
-          {
-            type: 'input',
-            name: 'organizationId',
-            message: 'Organization ID:',
-            when: !toolData.organizationId,
-            validate: (input) => {
-              const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-              return uuidRegex.test(input) || 'Please enter a valid UUID';
-            }
-          },
-          {
-            type: 'input',
-            name: 'keys',
-            message: 'Accessible key names (comma-separated):',
-            filter: (input) => input.split(',').map((k: string) => k.trim()),
-            when: toolData.permissions.keys.length === 0
-          },
-          {
-            type: 'checkbox',
-            name: 'environments',
-            message: 'Accessible environments:',
-            choices: ['development', 'staging', 'production'],
-            default: ['development']
-          },
-          {
-            type: 'number',
-            name: 'maxConcurrentSessions',
-            message: 'Maximum concurrent sessions:',
-            default: 3,
-            validate: (input) => input > 0 && input <= 10 || 'Must be between 1 and 10'
-          },
-          {
-            type: 'number',
-            name: 'maxSessionDuration',
-            message: 'Maximum session duration (seconds):',
-            default: 900,
-            validate: (input) => input >= 60 && input <= 3600 || 'Must be between 60 and 3600 seconds'
-          },
-          {
-            type: 'input',
-            name: 'webhookUrl',
-            message: 'Webhook URL (optional):'
-          },
-          {
-            type: 'confirm',
-            name: 'autoApprove',
-            message: 'Enable auto-approval?',
-            default: false
-          },
-          {
-            type: 'select',
-            name: 'riskLevel',
-            message: 'Risk level:',
-            choices: ['low', 'medium', 'high', 'critical'],
-            default: 'medium'
-          }
-        ]);
-
-        if (answers.keys) toolData.permissions.keys = answers.keys;
-        if (answers.environments) toolData.permissions.environments = answers.environments;
-        if (answers.maxConcurrentSessions) toolData.permissions.maxConcurrentSessions = answers.maxConcurrentSessions;
-        if (answers.maxSessionDuration) toolData.permissions.maxSessionDuration = answers.maxSessionDuration;
-        
-        toolData = { ...toolData, ...answers };
-        delete toolData.keys;
-        delete toolData.environments;
-        delete toolData.maxConcurrentSessions;
-        delete toolData.maxSessionDuration;
-      }
-
-      const tool = unwrapApiResponse<any>(await apiClient.post(`${AUTH_API_KEYS_BASE}/mcp/tools`, toolData));
-
-      console.log(colors.success('🤖 MCP tool registered successfully!'));
-      console.log(colors.info('━'.repeat(50)));
-      console.log(`${colors.highlight('Tool ID:')} ${colors.primary(tool.toolId)}`);
-      console.log(`${colors.highlight('Name:')} ${colors.accent(tool.toolName)}`);
-      console.log(`${colors.highlight('Risk Level:')} ${colors.warning(tool.riskLevel)}`);
-      console.log(`${colors.highlight('Auto Approve:')} ${tool.autoApprove ? colors.success('Yes') : colors.error('No')}`);
-      console.log(colors.info('━'.repeat(50)));
-    } catch (error) {
-      console.error(colors.error('✖ Failed to register MCP tool:'), colors.muted(error.message));
-      process.exit(1);
-    }
+    void options;
+    exitUnsupported('MCP tool registration', [
+      'No /api/v1/auth/api-keys/mcp/* routes exist on the current auth-gateway.',
+      'Use API key service scoping instead: lanonasis api-keys create or update plus /service-scopes support on the gateway.',
+      'Manage MCP-specific workflows from the dashboard until dedicated routes are exposed.',
+    ]);
   });
 
 mcpCommand
@@ -686,49 +623,11 @@ mcpCommand
   .description('List registered MCP tools')
   .option('--json', 'Output as JSON')
   .action(async (options) => {
-    try {
-      const tools = unwrapApiResponse<any[]>(await apiClient.get(`${AUTH_API_KEYS_BASE}/mcp/tools`));
-
-      if (options.json) {
-        console.log(JSON.stringify(tools, null, 2));
-        return;
-      }
-
-      if (!Array.isArray(tools) || tools.length === 0) {
-        console.log(colors.warning('⚠️  No MCP tools found'));
-        console.log(colors.muted('Run: lanonasis api-keys mcp register-tool'));
-        return;
-      }
-
-      console.log(colors.primary('🤖 Registered MCP Tools'));
-      console.log(colors.info('═'.repeat(80)));
-
-      const table = new Table({
-        head: ['Tool ID', 'Name', 'Risk Level', 'Status', 'Auto Approve', 'Created'].map(h => colors.accent(h)),
-        style: { head: [], border: [] }
-      });
-
-      tools.forEach((tool: any) => {
-        const statusColor = tool.status === 'active' ? colors.success :
-                           tool.status === 'suspended' ? colors.error : colors.warning;
-        
-        table.push([
-          tool.toolId,
-          tool.toolName,
-          tool.riskLevel,
-          statusColor(tool.status),
-          tool.autoApprove ? colors.success('Yes') : colors.error('No'),
-          formatDate(tool.createdAt)
-        ]);
-      });
-
-      console.log(table.toString());
-      console.log(colors.info('═'.repeat(80)));
-      console.log(colors.muted(`🤖 Total: ${colors.highlight(tools.length)} MCP tools`));
-    } catch (error) {
-      console.error(colors.error('✖ Failed to list MCP tools:'), colors.muted(error.message));
-      process.exit(1);
-    }
+    void options;
+    exitUnsupported('MCP tool listing', [
+      'No /api/v1/auth/api-keys/mcp/* routes exist on the current auth-gateway.',
+      'The current gateway exposes configured external services at /api/v1/auth/api-keys/services/configured.',
+    ]);
   });
 
 mcpCommand
@@ -742,87 +641,11 @@ mcpCommand
   .option('--duration <seconds>', 'Estimated duration in seconds', '900')
   .option('--interactive', 'Interactive mode')
   .action(async (options) => {
-    try {
-      let requestData: any = {
-        toolId: options.toolId,
-        organizationId: options.organizationId,
-        keyNames: options.keys ? options.keys.split(',').map((k: string) => k.trim()) : [],
-        environment: options.environment,
-        justification: options.justification,
-        estimatedDuration: parseInt(options.duration),
-        context: {}
-      };
-
-      if (options.interactive || !requestData.toolId || !requestData.organizationId || 
-          requestData.keyNames.length === 0 || !requestData.environment || !requestData.justification) {
-        
-        const mcpTools = unwrapApiResponse<any[]>(await apiClient.get(`${AUTH_API_KEYS_BASE}/mcp/tools`));
-        const tools = Array.isArray(mcpTools) ? mcpTools : [];
-
-        const answers = await inquirer.prompt([
-          {
-            type: 'select',
-            name: 'toolId',
-            message: 'Select MCP tool:',
-            when: !requestData.toolId && tools.length > 0,
-            choices: tools.map((t: any) => ({ name: `${t.toolName} (${t.toolId})`, value: t.toolId }))
-          },
-          {
-            type: 'input',
-            name: 'organizationId',
-            message: 'Organization ID:',
-            when: !requestData.organizationId,
-            validate: (input) => {
-              const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-              return uuidRegex.test(input) || 'Please enter a valid UUID';
-            }
-          },
-          {
-            type: 'input',
-            name: 'keyNames',
-            message: 'Key names to access (comma-separated):',
-            when: requestData.keyNames.length === 0,
-            filter: (input) => input.split(',').map((k: string) => k.trim()),
-            validate: (input) => input.length > 0 || 'At least one key name is required'
-          },
-          {
-            type: 'select',
-            name: 'environment',
-            message: 'Environment:',
-            when: !requestData.environment,
-            choices: ['development', 'staging', 'production']
-          },
-          {
-            type: 'input',
-            name: 'justification',
-            message: 'Justification for access:',
-            when: !requestData.justification,
-            validate: (input) => input.length > 0 || 'Justification is required'
-          },
-          {
-            type: 'number',
-            name: 'estimatedDuration',
-            message: 'Estimated duration (seconds):',
-            default: 900,
-            validate: (input) => input >= 60 && input <= 3600 || 'Must be between 60 and 3600 seconds'
-          }
-        ]);
-
-        requestData = { ...requestData, ...answers };
-      }
-
-      const response = unwrapApiResponse<any>(await apiClient.post(`${AUTH_API_KEYS_BASE}/mcp/request-access`, requestData));
-
-      console.log(colors.success('🔐 Access request created successfully!'));
-      console.log(colors.info('━'.repeat(50)));
-      console.log(`${colors.highlight('Request ID:')} ${colors.primary(response.requestId)}`);
-      console.log(`${colors.highlight('Status:')} ${colors.accent(response.status)}`);
-      console.log(colors.info('━'.repeat(50)));
-      console.log(colors.warning('💡 Check the status with: lanonasis api-keys analytics usage'));
-    } catch (error) {
-      console.error(colors.error('✖ Failed to create access request:'), colors.muted(error.message));
-      process.exit(1);
-    }
+    void options;
+    exitUnsupported('MCP access requests', [
+      'No /api/v1/auth/api-keys/mcp/* routes exist on the current auth-gateway.',
+      'Use platform API keys plus service scoping for current gateway-backed access control.',
+    ]);
   });
 
 // ============================================================================
@@ -839,54 +662,11 @@ analyticsCommand
   .option('--days <days>', 'Number of days to look back', '30')
   .option('--json', 'Output as JSON')
   .action(async (options) => {
-    try {
-      let url = `${AUTH_API_KEYS_BASE}/analytics/usage`;
-      const params = new URLSearchParams();
-
-      if (options.keyId) params.append('keyId', options.keyId);
-      if (options.days) params.append('days', options.days);
-
-      if (params.toString()) {
-        url += `?${params.toString()}`;
-      }
-
-      const analytics = unwrapApiResponse<any[]>(await apiClient.get(url));
-
-      if (options.json) {
-        console.log(JSON.stringify(analytics, null, 2));
-        return;
-      }
-
-      if (!Array.isArray(analytics) || analytics.length === 0) {
-        console.log(chalk.yellow('No usage data found'));
-        return;
-      }
-
-      const table = new Table({
-        head: ['Key ID', 'Operation', 'Tool ID', 'Success', 'Timestamp'].map(h => chalk.cyan(h)),
-        style: { head: [], border: [] }
-      });
-
-      analytics.forEach((entry: any) => {
-        const successColor = entry.success ? colors.success('✓') : colors.error('✗');
-        
-        table.push([
-          truncateText(entry.keyId || '-', 20),
-          entry.operation,
-          truncateText(entry.toolId || '-', 15),
-          successColor,
-          formatDate(entry.timestamp)
-        ]);
-      });
-
-      console.log(table.toString());
-      console.log(colors.info('═'.repeat(80)));
-      console.log(colors.muted(`📈 Total: ${colors.highlight(analytics.length)} events`));
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      console.error(colors.error('✖ Failed to get usage analytics:'), colors.muted(errorMessage));
-      process.exit(1);
-    }
+    void options;
+    exitUnsupported('API key usage analytics', [
+      'No /api/v1/auth/api-keys/analytics/* routes exist on the current auth-gateway.',
+      'Use dashboard reporting or direct platform logs until analytics endpoints are exposed.',
+    ]);
   });
 
 analyticsCommand
@@ -895,54 +675,11 @@ analyticsCommand
   .option('--severity <level>', 'Filter by severity (low, medium, high, critical)')
   .option('--json', 'Output as JSON')
   .action(async (options) => {
-    try {
-      let url = `${AUTH_API_KEYS_BASE}/analytics/security-events`;
-      if (options.severity) {
-        url += `?severity=${options.severity}`;
-      }
-
-      const events = unwrapApiResponse<any[]>(await apiClient.get(url));
-
-      if (options.json) {
-        console.log(JSON.stringify(events, null, 2));
-        return;
-      }
-
-      if (!Array.isArray(events) || events.length === 0) {
-        console.log(colors.success('✅ No security events found'));
-        return;
-      }
-
-      console.log(colors.primary('🛡️  Security Events Monitor'));
-      console.log(colors.info('═'.repeat(80)));
-
-      const table = new Table({
-        head: ['Event Type', 'Severity', 'Description', 'Resolved', 'Timestamp'].map(h => colors.accent(h)),
-        style: { head: [], border: [] }
-      });
-
-      events.forEach((event: any) => {
-        const severityColor = event.severity === 'critical' ? colors.error :
-                             event.severity === 'high' ? colors.accent :
-                             event.severity === 'medium' ? colors.warning : colors.success;
-        
-        table.push([
-          event.eventType,
-          severityColor(event.severity.toUpperCase()),
-          truncateText(event.description, 40),
-          event.resolved ? colors.success('✓') : colors.warning('Pending'),
-          formatDate(event.timestamp)
-        ]);
-      });
-
-      console.log(table.toString());
-      console.log(colors.info('═'.repeat(80)));
-      console.log(colors.muted(`🛡️  Total: ${colors.highlight(events.length)} security events`));
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      console.error(colors.error('✖ Failed to get security events:'), colors.muted(errorMessage));
-      process.exit(1);
-    }
+    void options;
+    exitUnsupported('API key security event analytics', [
+      'No /api/v1/auth/api-keys/analytics/* routes exist on the current auth-gateway.',
+      'Use dashboard security reporting until gateway analytics endpoints are exposed.',
+    ]);
   });
 
 // Add subcommands
