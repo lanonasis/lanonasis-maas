@@ -24,32 +24,25 @@ outfile: 'out/extension.js',
 "main": "./out/extension.js",
 ```
 
-**Implication:** `src/enhanced-extension.ts` is NOT bundled into the shipped extension. It is dead code from a build perspective, but still imports the local `SecureApiKeyService`.
+**Implication:** `src/enhanced-extension.ts` was not bundled into the shipped extension and has now been removed. The shipped entrypoint remains `src/extension.ts`.
 
 ---
 
-### 1.2 Local SecureApiKeyService Referenced Only by Legacy
+### 1.2 Legacy Duplicate SecureApiKeyService Removed
 
-**Claim Verified:** Local `SecureApiKeyService.ts` is ONLY referenced by legacy code.
+**Current State:** The local duplicate `SecureApiKeyService.ts` and its matching legacy test have now been deleted. The active extension only uses the shared-core implementation.
 
 **Evidence:**
 ```typescript
 // Active runtime uses shared core:
 // src/extension.ts:14
 import { SecureApiKeyService, createVSCodeAdapter } from '@lanonasis/ide-extension-core';
-
-// Legacy only uses local:
-// src/enhanced-extension.ts:3
-import { SecureApiKeyService } from './services/SecureApiKeyService';
-
-// Test file targets local:
-// src/services/__tests__/SecureApiKeyService.test.ts:3
-import { SecureApiKeyService } from '../SecureApiKeyService';
 ```
 
-**Correction to Previous Plan:** Deleting `src/services/SecureApiKeyService.ts` is safe **only if**:
-1. `enhanced-extension.ts` is deleted or converted to use shared core
-2. `__tests__/SecureApiKeyService.test.ts` is deleted or converted to test shared core via adapter
+**Status:** Resolved. The coordinated cleanup was completed by deleting:
+1. `src/enhanced-extension.ts`
+2. `src/services/SecureApiKeyService.ts`
+3. `src/services/__tests__/SecureApiKeyService.test.ts`
 
 ---
 
@@ -127,18 +120,9 @@ vscode.commands.registerCommand('lanonasis.showMCPStatus', async () => {
 
 ### 2.1 Overstatement: "Security Risk in Legacy Entrypoint"
 
-**Previous Claim:** `enhanced-extension.ts` is a "security risk" because it stores API keys in plaintext settings.
+**Previous Claim:** `enhanced-extension.ts` was a "security risk" because it stored API keys in plaintext settings.
 
-**Correction:** While `enhanced-extension.ts:324` does store API keys in settings:
-```typescript
-await config.update('apiKey', apiKey, vscode.ConfigurationTarget.Global);
-```
-
-This code is **NOT executed in the shipped extension** because:
-1. esbuild only bundles `src/extension.ts`
-2. `enhanced-extension.ts` is excluded from the build
-
-**Accurate Framing:** Legacy code with outdated security practices that should be cleaned up, but not an active security vulnerability.
+**Correction:** That source-level concern is now resolved because the dormant legacy entrypoint has been deleted. The original lesson still matters for audit history: the old file was never part of the shipped bundle, so it was always a cleanup issue rather than an active production vuln.
 
 ---
 
@@ -205,9 +189,9 @@ The transport layer is functional code—deleting it removes the option to enabl
 
 | Step | Action | Dependencies | Verification |
 |------|--------|--------------|--------------|
-| 2.1 | Delete `src/enhanced-extension.ts` | None (not in build), but requires 2.2 | Extension builds successfully |
-| 2.2 | Delete `src/services/SecureApiKeyService.ts` | Used by `enhanced-extension.ts` and tests | All imports removed first |
-| 2.3 | Delete `src/services/__tests__/SecureApiKeyService.test.ts` | Tests legacy auth only | CI passes with updated tests |
+| 2.1 | Delete `src/enhanced-extension.ts` | Completed | Extension still builds successfully |
+| 2.2 | Delete `src/services/SecureApiKeyService.ts` | Completed | Shared-core auth is sole implementation |
+| 2.3 | Delete `src/services/__tests__/SecureApiKeyService.test.ts` | Completed | Test suite passes on the remaining active test surface |
 
 **Risk:** Medium—coordinated deletion required across related files; test coverage must be preserved or migrated
 
@@ -256,8 +240,7 @@ The transport layer is functional code—deleting it removes the option to enabl
 
 ### Q2: CLI Minimum Version Contract
 **Current State:**
-- Extension claims: v1.5.2+ (lines 232, 1100)
-- Extension also claims: v3.0.6+ (line 1198)
+- Active runtime and README now use generic "compatible CLI" wording
 - Actual CLI: v3.9.13
 
 **Question:** What is the actual minimum CLI version the extension requires?
@@ -362,9 +345,9 @@ The transport layer is functional code—deleting it removes the option to enabl
 ### Legacy Code (Not Shipped)
 | Component | File | Issue |
 |-----------|------|-------|
-| Entry point | `enhanced-extension.ts` | Uses local auth, stores keys in settings |
-| Auth | `services/SecureApiKeyService.ts` | Duplicates shared core |
-| Tests | `__tests__/SecureApiKeyService.test.ts` | Tests legacy code |
+| Entry point | `src/extension.ts` | Sole shipped/runtime entrypoint |
+| Auth | `@lanonasis/ide-extension-core` | Sole auth implementation |
+| Tests | `tsconfig.test.json` + Vitest suite | Active test surface only |
 
 ### Dormant Code (Present but Unexecuted)
 | Component | File | Status |
@@ -405,8 +388,8 @@ cli package.json dependencies:
 
 Before implementation, verify:
 
-- [ ] Build script inspection confirms `enhanced-extension.ts` exclusion
-- [ ] Test inventory: List all tests that import local `SecureApiKeyService`
+- [x] Build script inspection confirms the legacy entrypoint was excluded before deletion
+- [x] Legacy local-auth test inventory removed from the extension package
 - [ ] Decision recorded: TransportManager fate (integrate/deprecate/keep)
 - [ ] CLI version matrix: Document tested CLI versions
 - [ ] Product decision: Intelligence SDK integration priority

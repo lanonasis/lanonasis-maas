@@ -7,7 +7,7 @@ Git context: recreated against the current checkout after the prior report file 
 
 ## Executive summary
 
-This refresh rebases the extension analysis on the monorepo copy that actually exists in this workspace, not on the unavailable `/opt/lanonasis/lanonasis-maas` path. The active VSCode runtime is `src/extension.ts`, because the extension package points to `./out/extension.js` and the esbuild bundle is built from `src/extension.ts` (`package.json:29-33`, `esbuild.config.mjs:36-62`). `src/enhanced-extension.ts` still exists, but it behaves like legacy/reference code rather than the current shipped entrypoint.
+This refresh rebases the extension analysis on the monorepo copy that actually exists in this workspace, not on the unavailable `/opt/lanonasis/lanonasis-maas` path. The active VSCode runtime is `src/extension.ts`, because the extension package points to `./out/extension.js` and the esbuild bundle is built from `src/extension.ts` (`package.json:29-33`, `esbuild.config.mjs:36-62`). The legacy `src/enhanced-extension.ts` path and the duplicate local `src/services/SecureApiKeyService.ts` have now been removed, so the shared-core auth path is the only remaining runtime auth implementation.
 
 The biggest correction to the March report is that the extension is more capable than the older summary suggested. The active runtime already includes MCP auto-discovery, shared-core OAuth and secure storage, offline cache/queue wrappers, onboarding, diagnostics, auto-fix/reporting flows, Copilot Chat participation, capture commands beyond editor selection, and an optional React sidebar (`src/extension.ts:31-181`, `src/extension.ts:260-665`, `package.json:247-345`, `package.json:527-652`).
 
@@ -100,14 +100,14 @@ By contrast, the extension-local transport stack is present but not clearly wire
 
 ## Key corrections to the March report
 
-### 1. `src/extension.ts` is the current runtime
+### 1. `src/extension.ts` is the sole runtime entrypoint
 
 This is no longer ambiguous in the build:
 
 - `package.json:29-33` points the extension to `./out/extension.js`
 - `esbuild.config.mjs:36-62` builds `out/extension.js` from `src/extension.ts`
 
-`src/enhanced-extension.ts` remains useful as evidence of older UX and mode concepts, but it is not the active runtime entrypoint.
+The earlier legacy/reference entrypoint has been deleted, so there is no second entrypoint-shaped file left in the extension source tree.
 
 ### 2. Auth refresh is implemented
 
@@ -167,15 +167,13 @@ The extension currently has multiple conflicting version stories:
 | Area | Current evidence | Drift |
 | --- | --- | --- |
 | Extension package version | `package.json:5` -> `2.1.1` | Current package identity |
-| Runtime user agent | `src/extension.ts:64` -> `LanOnasis-Memory/2.0.9` | Older than package version |
-| README headline | `README.md:5` -> `v1.4.1` | Far older than package version |
-| README "previous updates" | `README.md:26-29` -> `v1.3.2` and CLI `v3.0.6` | Older docs copy |
-| README prerequisites/settings | `README.md:54-58`, `README.md:123-127` -> CLI `v3.0.6+` | Different from runtime messaging |
-| Active runtime copy | `src/extension.ts:231-239`, `src/extension.ts:1096-1107` -> CLI `v1.5.2+ detected` | Legacy minimum still embedded |
-| Legacy/reference entrypoint | `src/enhanced-extension.ts:145-167`, `src/enhanced-extension.ts:365-405` -> CLI `v1.5.2+` copy | Reinforces old contract |
+| Runtime user agent | `src/extension.ts:73` -> `LanOnasis-Memory/2.1.1` | Aligned with package version |
+| Shared-core integration user agent | `src/services/SharedCoreIntegration.ts:47` -> `LanOnasis-Memory/2.1.1` | Aligned with package version |
+| README headline | `README.md:5` -> `v2.1.1` | Aligned |
+| README prerequisites/settings | `README.md:55-58`, `README.md:123-127` -> compatible `@lanonasis/cli` wording | No stale hard minimum embedded |
 | Actual CLI package version | `cli/package.json:3` -> `3.9.13` | Newer than README and runtime copy |
 
-This is why the next roadmap must start with compatibility hygiene before adding new UX.
+The remaining version work is now mostly about single-source constants and release-note hygiene, not contradictory user-facing version claims.
 
 ## Gap analysis by state
 
@@ -198,20 +196,18 @@ This is why the next roadmap must start with compatibility hygiene before adding
   - Bulk actions are proven in the default/legacy sidebar, but not clearly in the optional React sidebar (`src/panels/MemorySidebarProvider.ts:438-505`, `src/panels/EnhancedSidebarProvider.ts:96-194`)
 - Capability messaging around connection modes
   - Active runtime only exposes Gateway vs Direct API switching (`src/extension.ts:1285-1330`)
-  - Legacy/reference runtime still shows Auto, CLI Only, Gateway Only, Direct API (`src/enhanced-extension.ts:407-471`)
+  - Older copy around Auto/CLI Only modes now survives only in historical docs, not in the shipped source tree
 
 ### Legacy or stale-doc
 
-- README release/version story (`README.md:5-29`, `README.md:54-58`, `README.md:123-127`)
-- Runtime copy that still references CLI `v1.5.2+` as the canonical threshold (`src/extension.ts:231-239`, `src/extension.ts:1096-1107`)
-- `src/enhanced-extension.ts` as a second entrypoint-shaped file even though the build targets `src/extension.ts` (`esbuild.config.mjs:36-62`)
+- Keep historical reports synchronized when source-level cleanup lands, so old drift items do not linger as active backlog
+- Any remaining hardcoded extension-version literals outside the active runtime source
 
 ## Current-state backlog
 
 | Priority | Item | Subsystem | Why now | Evidence |
 | --- | --- | --- | --- | --- |
-| P0 | Align docs, version strings, minimum CLI version, and the "active entrypoint" story. Either deprecate or remove `src/enhanced-extension.ts` if it is no longer supported. | extension runtime + docs + CLI contract | Current version drift is large enough to mislead users and contributors. | `package.json:5`, `src/extension.ts:64`, `README.md:5-29`, `src/enhanced-extension.ts:14-25` |
-| P0 | Publish a canonical auth/config precedence model across VSCode SecretStorage, VSCode settings, `~/.maas/config.json`, and any `~/.lanonasis/*` fallbacks before adding sync automation. | shared auth/config + CLI + extension runtime | The fragmentation problem is architectural, not cosmetic. | `src/extension.ts:56-69`, `cli/src/utils/config.ts:135-163`, `packages/recall-forge/client.ts:8-15` |
+| P0 | Publish and test one canonical auth/config precedence contract across SecretStorage, VSCode settings, `~/.maas/config.json`, and any `~/.lanonasis/*` fallbacks. | shared auth/config + CLI + extension runtime | The biggest remaining risk is still "it works in one surface but not another." | `src/extension.ts:56-100`, `cli/src/utils/config.ts:135-163`, `packages/recall-forge/client.ts:8-15` |
 | P1 | Add an extension-facing intelligence adapter and ship command-palette actions first, then decide whether dedicated views are warranted. | extension runtime + intelligence SDK + CLI | The capability already exists in CLI/SDK; the extension needs a deliberate adapter, not a rewrite. | `cli/src/commands/memory.ts:1393-1765`, `packages/memory-intelligence-engine/mem-intelligence-sdk/src/core/client.ts:181-610` |
 | P1 | Decide whether CLI saved sessions should be integrated into the extension, or whether local chat sessions should be renamed/scoped so they are not confused with MaaS sessions. | extension runtime + CLI | Session terminology currently conflates two different concepts. | `src/hooks/useChatHistory.tsx:54-156`, `cli/src/commands/memory.ts:751-972` |
 | P1 | Either wire `TransportManager` into the active service path with visible fallback/health reporting, or remove/soft-hide transport settings until the runtime really uses them. | extension runtime | Partial wiring creates false expectations about realtime support. | `package.json:547-566`, `src/services/transports/TransportManager.ts:1-260`, `src/extension.ts:81-100` |
