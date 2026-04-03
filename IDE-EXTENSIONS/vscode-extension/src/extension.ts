@@ -22,6 +22,11 @@ import { OnboardingService, OnboardingStepId } from './services/OnboardingServic
 import { OfflineService } from './services/OfflineService';
 import { OfflineQueueService } from './services/OfflineQueueService';
 import { OfflineMemoryService } from './services/OfflineMemoryService';
+import {
+    CLI_CONFIG_IMPORT_STATE_KEY,
+    CLIConfigImportState,
+    syncCLIConfigToExtension
+} from './services/CLIConfigBridge';
 import { formatErrorLogs, getErrorLogs, logExtensionError } from './utils/errorLogger';
 
 // Keep GitHub issue URLs within common browser/OS limits when embedding logs.
@@ -71,6 +76,46 @@ export async function activate(context: vscode.ExtensionContext) {
 
     const secureApiKeyService = new SecureApiKeyService(adapter);
     await secureApiKeyService.initialize();
+    let cliImportState = await syncCLIConfigToExtension(context, secureApiKeyService, outputChannel);
+
+    const updateCLIImportState = async (
+        updates: Partial<CLIConfigImportState>
+    ): Promise<CLIConfigImportState> => {
+        const currentState = context.globalState.get<CLIConfigImportState>(CLI_CONFIG_IMPORT_STATE_KEY) ?? cliImportState;
+        const nextState: CLIConfigImportState = {
+            ...currentState,
+            ...updates,
+            settingSources: {
+                ...currentState.settingSources,
+                ...(updates.settingSources ?? {})
+            }
+        };
+        await context.globalState.update(CLI_CONFIG_IMPORT_STATE_KEY, nextState);
+        cliImportState = nextState;
+        return nextState;
+    };
+
+    if (cliImportState.importedCredential || cliImportState.importedSettings.length > 0) {
+        const importedParts: string[] = [];
+        if (cliImportState.importedCredential) {
+            importedParts.push('authenticated CLI session');
+        }
+        if (cliImportState.importedSettings.length > 0) {
+            importedParts.push(`${cliImportState.importedSettings.length} configuration setting${cliImportState.importedSettings.length === 1 ? '' : 's'}`);
+        }
+
+        vscode.window.showInformationMessage(
+            `Lanonasis imported your ${importedParts.join(' and ')} from ${cliImportState.configPath}.`,
+            'Show Diagnostics',
+            'Open Settings'
+        ).then(selection => {
+            if (selection === 'Show Diagnostics') {
+                void vscode.commands.executeCommand('lanonasis.runDiagnostics');
+            } else if (selection === 'Open Settings') {
+                void vscode.commands.executeCommand('workbench.action.openSettings', 'lanonasis');
+            }
+        });
+    }
 
     const resolveHealthUrl = () => {
         const config = vscode.workspace.getConfiguration('lanonasis');
@@ -243,8 +288,15 @@ export async function activate(context: vscode.ExtensionContext) {
         }
     };
 
-    const handleAuthenticationSuccess = async () => {
+    const handleAuthenticationSuccess = async (
+        credentialSource: 'secure-storage' | 'cli-config' = 'secure-storage'
+    ) => {
         await refreshServices();
+        await updateCLIImportState({
+            credentialSource,
+            importedCredential: credentialSource === 'cli-config',
+            skippedReason: undefined
+        });
         await applyAuthenticationState(true);
         await notifyOnboardingStep('authenticate');
         announceEnhancedCapabilities();
@@ -257,6 +309,10 @@ export async function activate(context: vscode.ExtensionContext) {
             outputChannel.appendLine(`[ClearAuth] Failed to refresh memory service: ${error instanceof Error ? error.message : String(error)}`);
         }
         await memoryCache.clear();
+        await updateCLIImportState({
+            credentialSource: 'none',
+            importedCredential: false
+        });
         await applyAuthenticationState(false);
     };
 
@@ -641,7 +697,9 @@ export async function activate(context: vscode.ExtensionContext) {
     const hasStoredKey = await secureApiKeyService.hasApiKey();
 
     if (hasStoredKey) {
-        await handleAuthenticationSuccess();
+        await handleAuthenticationSuccess(
+            cliImportState.credentialSource === 'cli-config' ? 'cli-config' : 'secure-storage'
+        );
     } else {
         await applyAuthenticationState(false);
     }

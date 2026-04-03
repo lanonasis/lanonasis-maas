@@ -2,6 +2,10 @@ import * as vscode from 'vscode';
 import { SecureApiKeyService } from '@lanonasis/ide-extension-core';
 import type { IMemoryService } from '../services/IMemoryService';
 import { isEnhancedMemoryService } from '../services/IMemoryService';
+import {
+    CLI_CONFIG_IMPORT_STATE_KEY,
+    type CLIConfigImportState
+} from '../services/CLIConfigBridge';
 
 /**
  * System diagnostics and health check utilities
@@ -44,10 +48,10 @@ export async function runDiagnostics(
     results.push(await checkVSCodeVersion(outputChannel));
 
     // Check 3: Configuration
-    results.push(await checkConfiguration(outputChannel));
+    results.push(await checkConfiguration(context, outputChannel));
 
     // Check 4: Authentication
-    results.push(await checkAuthentication(secureApiKeyService, outputChannel));
+    results.push(await checkAuthentication(context, secureApiKeyService, outputChannel));
 
     // Check 5: Network Connectivity
     results.push(await checkNetworkConnectivity(memoryService, outputChannel));
@@ -151,7 +155,10 @@ async function checkVSCodeVersion(outputChannel: vscode.OutputChannel): Promise<
     }
 }
 
-async function checkConfiguration(outputChannel: vscode.OutputChannel): Promise<DiagnosticResult> {
+async function checkConfiguration(
+    context: vscode.ExtensionContext,
+    outputChannel: vscode.OutputChannel
+): Promise<DiagnosticResult> {
     outputChannel.appendLine('\n[3/7] Checking Configuration...');
 
     try {
@@ -161,12 +168,25 @@ async function checkConfiguration(outputChannel: vscode.OutputChannel): Promise<
         const useGateway = config.get<boolean>('useGateway');
         const enableMCP = config.get<boolean>('enableMCP');
         const preferCLI = config.get<boolean>('preferCLI');
+        const importCLIConfig = config.get<boolean>('importCLIConfig', true);
+        const cliImportState = context.globalState.get<CLIConfigImportState>(CLI_CONFIG_IMPORT_STATE_KEY);
 
         outputChannel.appendLine(`  ✓ API URL: ${apiUrl}`);
         outputChannel.appendLine(`  ✓ Gateway URL: ${gatewayUrl}`);
         outputChannel.appendLine(`  ✓ Use Gateway: ${useGateway}`);
         outputChannel.appendLine(`  ✓ Enable MCP: ${enableMCP}`);
         outputChannel.appendLine(`  ✓ Prefer CLI: ${preferCLI}`);
+        outputChannel.appendLine(`  ✓ Import CLI Config: ${importCLIConfig}`);
+
+        if (cliImportState) {
+            outputChannel.appendLine(`  ✓ API URL Source: ${cliImportState.settingSources.apiUrl}`);
+            outputChannel.appendLine(`  ✓ Gateway URL Source: ${cliImportState.settingSources.gatewayUrl}`);
+            outputChannel.appendLine(`  ✓ Auth URL Source: ${cliImportState.settingSources.authUrl}`);
+            outputChannel.appendLine(`  ✓ Organization ID Source: ${cliImportState.settingSources.organizationId}`);
+            if (cliImportState.lastImportedAt) {
+                outputChannel.appendLine(`  ✓ Last CLI Import: ${cliImportState.lastImportedAt}`);
+            }
+        }
 
         const issues: string[] = [];
 
@@ -205,12 +225,15 @@ async function checkConfiguration(outputChannel: vscode.OutputChannel): Promise<
 }
 
 async function checkAuthentication(
+    context: vscode.ExtensionContext,
     secureApiKeyService: SecureApiKeyService,
     outputChannel: vscode.OutputChannel
 ): Promise<DiagnosticResult> {
     outputChannel.appendLine('\n[4/7] Checking Authentication...');
 
     try {
+        const cliImportState = context.globalState.get<CLIConfigImportState>(CLI_CONFIG_IMPORT_STATE_KEY);
+
         // Check for stored credentials with type information
         const credentials = await secureApiKeyService.getStoredCredentials();
 
@@ -218,6 +241,7 @@ async function checkAuthentication(
             outputChannel.appendLine(`  ✓ Credential type: ${credentials.type.toUpperCase()}`);
             outputChannel.appendLine(`  ✓ Token length: ${credentials.token.length} characters`);
             outputChannel.appendLine(`  ✓ Token prefix: ${credentials.token.substring(0, 12)}...`);
+            outputChannel.appendLine(`  ✓ Credential source: ${cliImportState?.credentialSource ?? 'secure-storage'}`);
 
             // Check if it looks like a JWT (OAuth token)
             const isJwt = credentials.token.split('.').length === 3;
@@ -232,7 +256,7 @@ async function checkAuthentication(
             return {
                 category: 'Authentication',
                 status: 'success',
-                message: `Authenticated with ${credentials.type === 'oauth' ? 'OAuth token' : 'API key'}`
+                message: `Authenticated with ${credentials.type === 'oauth' ? 'OAuth token' : 'API key'} (${cliImportState?.credentialSource ?? 'secure-storage'})`
             };
         }
 

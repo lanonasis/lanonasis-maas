@@ -51,9 +51,6 @@ async function buildExtension() {
       'vscode', // VS Code API is provided by the host
       'keytar', // Native module for secure storage (Windsurf adapter)
       'electron', // Electron APIs (Cursor adapter)
-      '@lanonasis/ide-extension-core', // Built separately in monorepo
-      '@lanonasis/memory-client', // Runtime dependency, not bundled in extension build
-      '@lanonasis/memory-client/node', // Node-enhanced runtime dependency
     ],
     // Resolve path aliases from tsconfig and local packages
     alias: {
@@ -62,6 +59,9 @@ async function buildExtension() {
       '@/services': path.resolve(__dirname, 'src/services'),
       '@/utils': path.resolve(__dirname, 'src/utils'),
       '@/shared': path.resolve(__dirname, 'src/shared'),
+      '@lanonasis/ide-extension-core': path.resolve(__dirname, '../../packages/ide-extension-core/src/index.ts'),
+      '@lanonasis/memory-client': path.resolve(__dirname, '../../packages/memory-client/src/index.ts'),
+      '@lanonasis/memory-client/node': path.resolve(__dirname, '../../packages/memory-client/src/node/index.ts'),
     },
     logLevel: 'info',
     plugins: [esbuildProblemMatcherPlugin],

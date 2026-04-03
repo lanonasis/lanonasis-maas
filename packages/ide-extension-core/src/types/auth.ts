@@ -81,6 +81,11 @@ export interface ISecureAuthService {
    * Get stored credentials with type information
    */
   getStoredCredentials(): Promise<StoredCredential | null>;
+
+  /**
+   * Import an already-resolved credential into secure storage
+   */
+  importCredential(credential: StoredCredential): Promise<void>;
   
   /**
    * Authenticate using OAuth flow

@@ -163,6 +163,53 @@ export class SecureApiKeyService implements ISecureAuthService {
   }
 
   /**
+   * Import an existing credential into secure storage.
+   *
+   * This is used by IDE-specific bridges that can source credentials from
+   * trusted locations such as companion CLIs. The shared core remains
+   * transport-agnostic and only handles secure persistence.
+   */
+  async importCredential(credential: StoredCredential): Promise<void> {
+    const token = credential.token.trim();
+
+    if (!token) {
+      throw new Error('Cannot import an empty credential');
+    }
+
+    if (credential.type === 'oauth') {
+      const importedToken: OAuthToken & { expires_at?: number } = {
+        access_token: token,
+        token_type: 'Bearer',
+        scope: '',
+        expires_at: credential.expiresAt
+      };
+
+      if (credential.refreshToken) {
+        importedToken.refresh_token = credential.refreshToken;
+        await this.adapter.secureStorage.store(
+          SecureApiKeyService.REFRESH_TOKEN_KEY,
+          credential.refreshToken
+        );
+      } else {
+        await this.adapter.secureStorage.delete(SecureApiKeyService.REFRESH_TOKEN_KEY);
+      }
+
+      await this.adapter.secureStorage.store(
+        SecureApiKeyService.AUTH_TOKEN_KEY,
+        JSON.stringify(importedToken)
+      );
+      await this.storeApiKey(token, 'oauth');
+      this.log('Imported OAuth credential into secure storage');
+      return;
+    }
+
+    await this.storeApiKey(token, 'apiKey');
+    await this.adapter.secureStorage.delete(SecureApiKeyService.AUTH_TOKEN_KEY);
+    await this.adapter.secureStorage.delete(SecureApiKeyService.REFRESH_TOKEN_KEY);
+    this.log('Imported API key credential into secure storage');
+  }
+
+  /**
    * Get stored credentials with type information
    */
   async getStoredCredentials(): Promise<StoredCredential | null> {
