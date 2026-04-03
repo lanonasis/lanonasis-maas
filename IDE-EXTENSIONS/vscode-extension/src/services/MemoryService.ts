@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { CoreMemoryClient, createMemoryClient, CreateMemoryRequest, SearchMemoryRequest, MemoryEntry, MemorySearchResult, UserMemoryStats } from '@lanonasis/memory-client';
+import { CoreMemoryClient, createMemoryClient, CreateMemoryRequest, SearchMemoryRequest, MemoryEntry, MemorySearchResult, UserMemoryStats, type ApiErrorResponse } from '@lanonasis/memory-client';
 import type { IMemoryService } from './IMemoryService';
 import { SecureApiKeyService } from '@lanonasis/ide-extension-core';
 
@@ -146,7 +146,7 @@ export class MemoryService implements IMemoryService {
 
         const response = await testClient.healthCheck();
         if (response.error) {
-            throw new Error(response.error);
+            throw new Error(this.getErrorMessage(response.error, 'Connection test failed'));
         }
     }
 
@@ -159,7 +159,7 @@ export class MemoryService implements IMemoryService {
 
         const response = await client.createMemory(memory);
         if (response.error || !response.data) {
-            throw new Error(response.error || 'Failed to create memory');
+            throw new Error(this.getErrorMessage(response.error, 'Failed to create memory'));
         }
 
         return response.data;
@@ -174,7 +174,7 @@ export class MemoryService implements IMemoryService {
 
         const response = await client.updateMemory(id, memory);
         if (response.error || !response.data) {
-            throw new Error(response.error || 'Failed to update memory');
+            throw new Error(this.getErrorMessage(response.error, 'Failed to update memory'));
         }
 
         return response.data;
@@ -197,7 +197,7 @@ export class MemoryService implements IMemoryService {
 
         const response = await client.searchMemories(searchRequest);
         if (response.error || !response.data) {
-            throw new Error(response.error || 'Search failed');
+            throw new Error(this.getErrorMessage(response.error, 'Search failed'));
         }
 
         return response.data.results;
@@ -212,7 +212,7 @@ export class MemoryService implements IMemoryService {
 
         const response = await client.getMemory(id);
         if (response.error || !response.data) {
-            throw new Error(response.error || 'Memory not found');
+            throw new Error(this.getErrorMessage(response.error, 'Memory not found'));
         }
 
         return response.data;
@@ -240,7 +240,7 @@ export class MemoryService implements IMemoryService {
         });
 
         if (response.error || !response.data) {
-            const message = response.error || 'Failed to fetch memories';
+            const message = this.getErrorMessage(response.error, 'Failed to fetch memories');
             if (this.isAuthError(message)) {
                 await this.refreshClient();
                 if (!this.client) {
@@ -252,7 +252,7 @@ export class MemoryService implements IMemoryService {
                     order: 'desc'
                 });
                 if (retry.error || !retry.data) {
-                    throw new Error(retry.error || message);
+                    throw new Error(this.getErrorMessage(retry.error, message));
                 }
                 return retry.data.data;
             }
@@ -271,7 +271,7 @@ export class MemoryService implements IMemoryService {
 
         const response = await client.deleteMemory(id);
         if (response.error) {
-            throw new Error(response.error);
+            throw new Error(this.getErrorMessage(response.error, 'Failed to delete memory'));
         }
     }
 
@@ -284,7 +284,7 @@ export class MemoryService implements IMemoryService {
 
         const response = await client.getMemoryStats();
         if (response.error || !response.data) {
-            throw new Error(response.error || 'Failed to fetch stats');
+            throw new Error(this.getErrorMessage(response.error, 'Failed to fetch stats'));
         }
 
         return response.data;
@@ -304,5 +304,17 @@ export class MemoryService implements IMemoryService {
             || normalized.includes('401')
             || normalized.includes('auth token')
             || normalized.includes('bearer');
+    }
+
+    private getErrorMessage(error: string | ApiErrorResponse | undefined, fallback: string): string {
+        if (typeof error === 'string' && error.trim().length > 0) {
+            return error;
+        }
+
+        if (error && typeof error === 'object' && typeof error.message === 'string' && error.message.trim().length > 0) {
+            return error.message;
+        }
+
+        return fallback;
     }
 }

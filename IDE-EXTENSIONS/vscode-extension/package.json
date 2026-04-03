@@ -667,6 +667,7 @@
     "compile:dev": "node esbuild.config.mjs",
     "compile:prod": "node esbuild.config.mjs --production",
     "compile:tsc": "tsc -p ./",
+    "typecheck": "tsc -p ./ --noEmit",
     "watch": "node esbuild.config.mjs --watch",
     "pretest": "echo \"Skipping extension pretest in monorepo Nx run\"",
     "lint": "eslint src --ext ts",

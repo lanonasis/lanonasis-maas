@@ -15,7 +15,7 @@ interface GuidedTourOverlayProps {
   steps: GuidedTourStep[];
   onClose: () => void;
   onComplete: () => void;
-  scrollContainerRef?: React.RefObject<HTMLElement>;
+  scrollContainerRef?: React.RefObject<HTMLElement | null>;
 }
 
 const HIGHLIGHT_PADDING = 8;
