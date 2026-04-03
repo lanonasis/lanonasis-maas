@@ -1,5 +1,17 @@
 # Changelog - @lanonasis/cli
 
+## [3.9.14] - 2026-04-03
+
+### 🐛 Bug Fixes
+
+- **Platform key project commands now hit the live auth-gateway contract**: `api-keys projects create/list` now use `/api/v1/projects` and route to `auth.lanonasis.com`, matching the current auth-gateway surface instead of the stale `/api/v1/auth/api-keys/projects` path.
+- **Auth-gateway management calls no longer drift to the MCP/API host**: The CLI transport now treats `/api/v1/auth/api-keys/*` and `/api/v1/projects/*` as auth-gateway management endpoints, so token-authenticated key management requests consistently reach the auth service with the expected project scope header.
+- **Stale MCP and analytics subcommands now fail honestly**: Deprecated `api-keys mcp *` and `api-keys analytics *` commands no longer call nonexistent gateway routes. They now exit immediately with explicit guidance toward the supported dashboard and service-scoping paths.
+
+### ✨ Improvements
+
+- **`key_context` is now exposed in CLI key management**: `api-keys create` accepts `--key-context personal|team|enterprise`, and `api-keys list/get` now display the stored key context so context-bound platform keys are visible and intentional at the CLI layer.
+
 ## [3.9.13] - 2026-04-02
 
 ### 🐛 Bug Fixes
