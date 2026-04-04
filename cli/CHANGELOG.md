@@ -1,5 +1,13 @@
 # Changelog - @lanonasis/cli
 
+## [3.9.15] - 2026-04-04
+
+### 🐛 Bug Fixes
+
+- **Displayed memory ID prefixes now work across CLI memory reads and deletes**: `lanonasis memory get`, `memory update`, and `memory delete` now resolve 8+ character prefixes from the list output before calling the live API, so operators no longer need to paste full UUIDs for routine follow-up actions.
+- **Legacy memory route drift no longer breaks prefix fetches**: Memory lookups now retry against the compatibility `GET /api/v1/memory/get?id=...` and delete fallback routes only when the canonical plural endpoint returns the known `Memory ID is required` validation drift.
+- **MCP memory tools now accept both `id` and `memory_id`**: The bundled LanOnasis MCP server and remote MCP bridge now normalize legacy `memory_id` callers onto the live `id` contract, which restores OpenClaw and similar clients when they pass the older field name.
+
 ## [3.9.14] - 2026-04-03
 
 ### 🐛 Bug Fixes

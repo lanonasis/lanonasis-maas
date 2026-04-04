@@ -14,7 +14,7 @@ export function registerMemoryGetTool(
       properties: {
         id: {
           type: "string",
-          description: "Memory ID (UUID)",
+          description: "Memory ID or displayed prefix",
         },
       },
       required: ["id"],

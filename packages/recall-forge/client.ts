@@ -32,6 +32,7 @@
 // Phase 2 - LanOnasis API Client
 import { Agent, fetch as undiciFetch } from "undici";
 import type { LanonasisConfig } from "./config.js";
+import { redactSecrets } from "./extraction/secret-redactor.js";
 
 // Force IPv4 — Node v24 built-in fetch ignores setGlobalDispatcher; use undici fetch with explicit dispatcher
 const ipv4Agent = new Agent({ connect: { family: 4 } as any });
@@ -142,6 +143,11 @@ export type LanMemoryStats = {
 
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function sanitizeMemoryText(text: string | undefined): string | undefined {
+  if (typeof text !== "string") return text;
+  return redactSecrets(text).text;
+}
 
 // LRU Cache entry
 interface CacheEntry<T> {
@@ -832,19 +838,26 @@ export class LanonasisClient {
     updates: LanUpdateParams,
   ): Promise<LanMemory> {
     const resolvedId = await this.resolveMemoryId(id);
+    const sanitizedUpdates = Object.fromEntries(
+      Object.entries({
+        ...updates,
+        title: sanitizeMemoryText(updates.title),
+        content: sanitizeMemoryText(updates.content),
+      }).filter(([, value]) => value !== undefined),
+    ) as LanUpdateParams;
     let raw: unknown;
     try {
       raw = await this.request<unknown>(
         "PUT",
         `/api/v1/memories/${encodeURIComponent(resolvedId)}`,
-        updates,
+        sanitizedUpdates,
       );
     } catch (error) {
       if (!this.shouldUseCompatibilityFallback(error)) throw error;
       raw = await this.request<unknown>(
         "POST",
         `/api/v1/memory/update`,
-        { id: resolvedId, ...updates },
+        { id: resolvedId, ...sanitizedUpdates },
       );
     }
     // Issue 3 fix: invalidate stale search/list results

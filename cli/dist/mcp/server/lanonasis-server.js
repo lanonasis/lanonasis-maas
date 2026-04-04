@@ -43,6 +43,15 @@ export class LanonasisMCPServer {
         // Setup error handling
         this.setupErrorHandling();
     }
+    extractMemoryIdentifier(args) {
+        const id = typeof args.id === 'string' ? args.id.trim() : '';
+        const legacyId = typeof args.memory_id === 'string' ? args.memory_id.trim() : '';
+        const resolved = id || legacyId;
+        if (!resolved) {
+            throw new Error('Memory ID is required');
+        }
+        return resolved;
+    }
     /**
      * Initialize the server
      */
@@ -170,12 +179,19 @@ export class LanonasisMCPServer {
                     inputSchema: {
                         type: 'object',
                         properties: {
+                            id: {
+                                type: 'string',
+                                description: 'Memory ID or displayed prefix'
+                            },
                             memory_id: {
                                 type: 'string',
-                                description: 'Memory ID'
+                                description: 'Legacy alias for memory ID or displayed prefix'
                             }
                         },
-                        required: ['memory_id']
+                        anyOf: [
+                            { required: ['id'] },
+                            { required: ['memory_id'] }
+                        ]
                     }
                 },
                 {
@@ -184,9 +200,13 @@ export class LanonasisMCPServer {
                     inputSchema: {
                         type: 'object',
                         properties: {
+                            id: {
+                                type: 'string',
+                                description: 'Memory ID or displayed prefix'
+                            },
                             memory_id: {
                                 type: 'string',
-                                description: 'Memory ID'
+                                description: 'Legacy alias for memory ID or displayed prefix'
                             },
                             title: {
                                 type: 'string',
@@ -202,7 +222,10 @@ export class LanonasisMCPServer {
                                 description: 'New tags (optional)'
                             }
                         },
-                        required: ['memory_id']
+                        anyOf: [
+                            { required: ['id'] },
+                            { required: ['memory_id'] }
+                        ]
                     }
                 },
                 {
@@ -211,12 +234,19 @@ export class LanonasisMCPServer {
                     inputSchema: {
                         type: 'object',
                         properties: {
+                            id: {
+                                type: 'string',
+                                description: 'Memory ID or displayed prefix'
+                            },
                             memory_id: {
                                 type: 'string',
-                                description: 'Memory ID'
+                                description: 'Legacy alias for memory ID or displayed prefix'
                             }
                         },
-                        required: ['memory_id']
+                        anyOf: [
+                            { required: ['id'] },
+                            { required: ['memory_id'] }
+                        ]
                     }
                 },
                 // Topic tools
@@ -647,11 +677,13 @@ Please choose an option (1-4):`
                     topic_id: args.topic_id
                 });
             case 'memory_get':
-                return await this.apiClient.getMemory(args.memory_id);
+                return await this.apiClient.getMemory(this.extractMemoryIdentifier(args));
             case 'memory_update':
-                return await this.apiClient.updateMemory(args.memory_id, args);
+                const memoryId = this.extractMemoryIdentifier(args);
+                const { id: _id, memory_id: _legacyId, ...updateArgs } = args;
+                return await this.apiClient.updateMemory(memoryId, updateArgs);
             case 'memory_delete':
-                return await this.apiClient.deleteMemory(args.memory_id);
+                return await this.apiClient.deleteMemory(this.extractMemoryIdentifier(args));
             // Topic operations
             case 'topic_create':
                 return await this.apiClient.createTopic(args);

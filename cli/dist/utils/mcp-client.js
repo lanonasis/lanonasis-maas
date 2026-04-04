@@ -5,6 +5,13 @@ import { CLIConfig } from './config.js';
 import * as fs from 'fs';
 import { EventSource } from 'eventsource';
 import WebSocket from 'ws';
+function getMemoryToolId(args) {
+    const id = typeof args.id === 'string' ? args.id.trim() : '';
+    if (id)
+        return id;
+    const legacyId = typeof args.memory_id === 'string' ? args.memory_id.trim() : '';
+    return legacyId || undefined;
+}
 export class MCPClient {
     client = null;
     config;
@@ -838,6 +845,7 @@ export class MCPClient {
                 endpoint: '/memory/{id}',
                 transform: (args) => {
                     const data = { ...args };
+                    delete data.id;
                     delete data.memory_id;
                     return data;
                 }
@@ -861,9 +869,9 @@ export class MCPClient {
             const axios = (await import('axios')).default;
             // Handle dynamic endpoint for memory operations that need ID
             let endpoint = mapping.endpoint;
-            if (endpoint.includes('{id}') && args.memory_id) {
-                // Ensure memory_id is treated as a string for replacement
-                endpoint = endpoint.replace('{id}', String(args.memory_id));
+            const memoryId = getMemoryToolId(args);
+            if (endpoint.includes('{id}') && memoryId) {
+                endpoint = endpoint.replace('{id}', encodeURIComponent(memoryId));
             }
             const response = await axios({
                 method: mapping.method,
@@ -873,7 +881,7 @@ export class MCPClient {
                     'Content-Type': 'application/json'
                 },
                 data: mapping.transform ? mapping.transform(args) : undefined,
-                params: mapping.method === 'GET' ? args : undefined
+                params: mapping.method === 'GET' && !mapping.endpoint.includes('{id}') ? args : undefined
             });
             return response.data;
         }

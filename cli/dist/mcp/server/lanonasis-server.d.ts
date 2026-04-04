@@ -46,6 +46,7 @@ export declare class LanonasisMCPServer {
     private transportFailures;
     private enableFallback;
     constructor(options?: LanonasisServerOptions);
+    private extractMemoryIdentifier;
     /**
      * Initialize the server
      */

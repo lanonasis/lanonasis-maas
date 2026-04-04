@@ -15,7 +15,7 @@ export function registerMemoryForgetTool(
       properties: {
         id: {
           type: "string",
-          description: "Memory ID to delete (UUID format)",
+          description: "Memory ID or displayed prefix to delete",
         },
         query: {
           type: "string",
@@ -31,21 +31,30 @@ export function registerMemoryForgetTool(
 
         // ID path
         if (id) {
-          // Validate UUID format
-          const uuidPattern =
-            /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-          if (!uuidPattern.test(id)) {
+          const candidate = id.trim();
+          if (!candidate) {
             return {
               content: [
                 {
                   type: "text",
-                  text: `Invalid UUID format: ${id}`,
+                  text: "Memory ID is required.",
                 },
               ],
             };
           }
 
-          const resolvedId = await client.resolveMemoryId(id);
+          if (candidate.length < 8) {
+            return {
+              content: [
+                {
+                  type: "text",
+                  text: `Memory ID prefix must be at least 8 characters or a full UUID: ${candidate}`,
+                },
+              ],
+            };
+          }
+
+          const resolvedId = await client.resolveMemoryId(candidate);
           await client.deleteMemory(resolvedId);
           return {
             content: [

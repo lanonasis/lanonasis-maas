@@ -4,11 +4,13 @@ All notable changes to `@lanonasis/recall-forge` will be documented in this file
 
 ---
 
-## Unreleased
+## 1.1.1 — 2026-04-04
 
 ### Fixed
 
 - `getMemory()` now mirrors the `memory-lanonasis` get-specific compatibility fallback and only falls back to `GET /api/v1/memory/get?id=...` when the canonical plural route returns the current `400 Memory ID is required` validation drift
+- `memory_forget` now accepts displayed 8+ character prefixes instead of hard-requiring a full UUID before resolution
+- release packaging now includes the missing `extraction/secret-redactor.ts` mirror and builds cleanly against the published `@lanonasis/privacy-sdk` dependency
 
 ## 1.1.0 — 2026-03-26
 
