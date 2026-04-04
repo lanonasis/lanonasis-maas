@@ -127,6 +127,7 @@ const MEMORY_TYPES: readonly MemoryType[] = [
   'personal',
   'workflow'
 ];
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 export interface BulkDeleteRequest {
   memory_ids: string[];
@@ -393,6 +394,77 @@ export class APIClient {
     const hasVendorKey = this.config.hasVendorKey();
 
     return hasVendorKey || hasOpaqueToken || authMethod === 'oauth' || authMethod === 'oauth2';
+  }
+
+  private isUuid(value: string): boolean {
+    return UUID_PATTERN.test(value);
+  }
+
+  async resolveMemoryId(idOrPrefix: string): Promise<string> {
+    const candidate = idOrPrefix.trim();
+    if (!candidate) {
+      throw new Error('Memory ID is required.');
+    }
+
+    if (this.isUuid(candidate)) {
+      return candidate;
+    }
+
+    if (candidate.length < 8) {
+      throw new Error('Memory ID prefix must be at least 8 characters or a full UUID.');
+    }
+
+    const matches = new Set<string>();
+    const normalizedCandidate = candidate.toLowerCase();
+    const limit = 100;
+    let page = 1;
+
+    while (true) {
+      const result = await this.getMemories({ page, limit });
+      const memories = result.memories || result.data || [];
+
+      if (memories.length === 0) {
+        break;
+      }
+
+      for (const memory of memories) {
+        if (memory.id.toLowerCase().startsWith(normalizedCandidate)) {
+          matches.add(memory.id);
+        }
+      }
+
+      const pagination = result.pagination || {
+        total: memories.length,
+        limit,
+        offset: 0,
+        has_more: false,
+      };
+      const totalPages = Number.isFinite(Number(pagination.pages))
+        ? Number(pagination.pages)
+        : Math.max(1, Math.ceil(Number(pagination.total || memories.length) / limit));
+      const hasMore = typeof pagination.has_more === 'boolean'
+        ? pagination.has_more
+        : page < totalPages;
+
+      if (!hasMore) {
+        break;
+      }
+
+      page += 1;
+    }
+
+    const resolvedMatches = [...matches];
+    if (resolvedMatches.length === 0) {
+      throw new Error(`Memory not found for ID/prefix: ${candidate}`);
+    }
+
+    if (resolvedMatches.length > 1) {
+      throw new Error(
+        `Memory ID prefix is ambiguous: ${candidate}. Matches: ${resolvedMatches.slice(0, 5).join(', ')}`
+      );
+    }
+
+    return resolvedMatches[0];
   }
 
   private shouldUsePostListFallback(error: any): boolean {
@@ -918,12 +990,16 @@ export class APIClient {
   }
 
   async getMemory(id: string): Promise<MemoryEntry> {
+    const resolvedId = await this.resolveMemoryId(id);
+
     try {
-      const response = await this.client.get(`/api/v1/memories/${id}`);
+      const response = await this.client.get(`/api/v1/memories/${encodeURIComponent(resolvedId)}`);
       return this.normalizeMemoryEntry(response.data);
     } catch (error: any) {
       if (this.shouldUseLegacyMemoryRpcFallback(error)) {
-        const fallback = await this.client.post('/api/v1/memory/get', { id });
+        const fallback = await this.client.get('/api/v1/memory/get', {
+          params: { id: resolvedId }
+        });
         const payload = fallback.data && typeof fallback.data === 'object'
           ? (fallback.data as Record<string, unknown>).data ?? fallback.data
           : fallback.data;
@@ -934,13 +1010,15 @@ export class APIClient {
   }
 
   async updateMemory(id: string, data: UpdateMemoryRequest): Promise<MemoryEntry> {
+    const resolvedId = await this.resolveMemoryId(id);
+
     try {
-      const response = await this.client.put(`/api/v1/memories/${id}`, data);
+      const response = await this.client.put(`/api/v1/memories/${encodeURIComponent(resolvedId)}`, data);
       return this.normalizeMemoryEntry(response.data);
     } catch (error: any) {
       if (this.shouldUseLegacyMemoryRpcFallback(error) || error?.response?.status === 404) {
         const fallback = await this.client.post('/api/v1/memory/update', {
-          id,
+          id: resolvedId,
           ...data
         });
         const payload = fallback.data && typeof fallback.data === 'object'
@@ -953,11 +1031,15 @@ export class APIClient {
   }
 
   async deleteMemory(id: string): Promise<void> {
+    const resolvedId = await this.resolveMemoryId(id);
+
     try {
-      await this.client.delete(`/api/v1/memories/${id}`);
+      await this.client.delete(`/api/v1/memories/${encodeURIComponent(resolvedId)}`);
     } catch (error: any) {
       if (this.shouldUseLegacyMemoryRpcFallback(error) || error?.response?.status === 404) {
-        await this.client.post('/api/v1/memory/delete', { id });
+        await this.client.delete('/api/v1/memory/delete', {
+          params: { id: resolvedId }
+        });
         return;
       }
       throw error;

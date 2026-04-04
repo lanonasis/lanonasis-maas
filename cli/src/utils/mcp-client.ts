@@ -54,6 +54,14 @@ interface RemoteToolMapping {
   transform?: (args: MCPToolArgs) => Record<string, unknown>;
 }
 
+function getMemoryToolId(args: MCPToolArgs): string | undefined {
+  const id = typeof args.id === 'string' ? args.id.trim() : '';
+  if (id) return id;
+
+  const legacyId = typeof args.memory_id === 'string' ? args.memory_id.trim() : '';
+  return legacyId || undefined;
+}
+
 /**
  * Interface for MCP WebSocket messages
  */
@@ -1013,6 +1021,7 @@ export class MCPClient {
         endpoint: '/memory/{id}',
         transform: (args) => {
           const data = { ...args };
+          delete data.id;
           delete data.memory_id;
           return data;
         }
@@ -1039,9 +1048,9 @@ export class MCPClient {
 
       // Handle dynamic endpoint for memory operations that need ID
       let endpoint = mapping.endpoint;
-      if (endpoint.includes('{id}') && args.memory_id) {
-        // Ensure memory_id is treated as a string for replacement
-        endpoint = endpoint.replace('{id}', String(args.memory_id));
+      const memoryId = getMemoryToolId(args);
+      if (endpoint.includes('{id}') && memoryId) {
+        endpoint = endpoint.replace('{id}', encodeURIComponent(memoryId));
       }
 
       const response = await axios({
@@ -1052,7 +1061,7 @@ export class MCPClient {
           'Content-Type': 'application/json'
         },
         data: mapping.transform ? mapping.transform(args) : undefined,
-        params: mapping.method === 'GET' ? args : undefined
+        params: mapping.method === 'GET' && !mapping.endpoint.includes('{id}') ? args : undefined
       });
 
       return response.data;

@@ -198,6 +198,8 @@ export declare class APIClient {
     private shouldUseLegacyMemoryRpcFallback;
     private shouldRetryViaApiGateway;
     private shouldRetryViaSupabaseMemoryFunctions;
+    private isUuid;
+    resolveMemoryId(idOrPrefix: string): Promise<string>;
     private shouldUsePostListFallback;
     private getSupabaseFunctionsBaseUrl;
     private mapMemoryApiRouteToSupabaseFunctions;
