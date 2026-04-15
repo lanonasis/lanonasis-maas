@@ -44,6 +44,7 @@ import {
   calculateRetryDelay,
   isRetryableError
 } from './utils';
+import { USER_AGENT } from './constants';
 
 /**
  * Configuration options for the Memory Client
@@ -150,7 +151,7 @@ export class CoreMemoryClient {
 
     this.baseHeaders = {
       'Content-Type': 'application/json',
-      'User-Agent': '@lanonasis/memory-client/2.0.0',
+      'User-Agent': USER_AGENT,
       'X-Project-Scope': 'lanonasis-maas',  // Required by backend auth middleware
       ...config.headers
     };
@@ -337,6 +338,47 @@ export class CoreMemoryClient {
     };
   }
 
+  private shouldRetryRouteFamily(error?: ApiErrorResponse): boolean {
+    if (!error) {
+      return false;
+    }
+
+    const statusCode = error.statusCode;
+    const message = (error.message || '').toLowerCase();
+
+    if (statusCode === 404 || statusCode === 405) {
+      return true;
+    }
+
+    return statusCode === 400 && (
+      message.includes('memory proxy route not found') ||
+      message.includes('memory id is required')
+    );
+  }
+
+  private async requestWithFallback<T>(
+    candidates: Array<{ endpoint: string; options?: RequestInit }>
+  ): Promise<ApiResponse<T>> {
+    let lastResponse: ApiResponse<T> | undefined;
+
+    for (let index = 0; index < candidates.length; index++) {
+      const candidate = candidates[index];
+      const response = await this.request<T>(candidate.endpoint, candidate.options);
+
+      if (!response.error) {
+        return response;
+      }
+
+      lastResponse = response;
+
+      if (index === candidates.length - 1 || !this.shouldRetryRouteFamily(response.error)) {
+        return response;
+      }
+    }
+
+    return lastResponse ?? { error: createErrorResponse('No request candidates provided', 'API_ERROR') };
+  }
+
   /**
    * Validate input using Zod schema and return validation error if invalid
    */
@@ -450,10 +492,14 @@ export class CoreMemoryClient {
     });
 
     const queryString = params.toString();
-    // Use /memory/list endpoint (not /memories - blocked by CDN/proxy layer)
-    const endpoint = queryString ? `/memory/list?${queryString}` : '/memory/list';
+    const pluralEndpoint = queryString ? `/memories/list?${queryString}` : '/memories/list';
+    const singularEndpoint = queryString ? `/memory/list?${queryString}` : '/memory/list';
 
-    return this.request<PaginatedResponse<MemoryEntry>>(endpoint);
+    // Plural routes are the public contract; singular routes remain a compatibility fallback.
+    return this.requestWithFallback<PaginatedResponse<MemoryEntry>>([
+      { endpoint: pluralEndpoint },
+      { endpoint: singularEndpoint }
+    ]);
   }
 
   /**
@@ -472,10 +518,26 @@ export class CoreMemoryClient {
     }
 
     const enrichedRequest = this.enrichWithOrgContext(request as Record<string, unknown>);
-    return this.request('/memories/search', {
-      method: 'POST',
-      body: JSON.stringify(enrichedRequest)
-    });
+    return this.requestWithFallback<{
+      results: MemorySearchResult[];
+      total_results: number;
+      search_time_ms: number;
+    }>([
+      {
+        endpoint: '/memories/search',
+        options: {
+          method: 'POST',
+          body: JSON.stringify(enrichedRequest)
+        }
+      },
+      {
+        endpoint: '/memory/search',
+        options: {
+          method: 'POST',
+          body: JSON.stringify(enrichedRequest)
+        }
+      }
+    ]);
   }
 
   /**
@@ -636,10 +698,22 @@ export class CoreMemoryClient {
     }
 
     const enrichedRequest = this.enrichWithOrgContext(request as unknown as Record<string, unknown>);
-    return this.request<EnhancedSearchResponse>('/memory/search', {
-      method: 'POST',
-      body: JSON.stringify(enrichedRequest)
-    });
+    return this.requestWithFallback<EnhancedSearchResponse>([
+      {
+        endpoint: '/memories/search',
+        options: {
+          method: 'POST',
+          body: JSON.stringify(enrichedRequest)
+        }
+      },
+      {
+        endpoint: '/memory/search',
+        options: {
+          method: 'POST',
+          body: JSON.stringify(enrichedRequest)
+        }
+      }
+    ]);
   }
 
   // ========================================

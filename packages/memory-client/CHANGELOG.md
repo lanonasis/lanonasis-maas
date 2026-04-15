@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.2.1] - 2026-04-09
+
+### Fixed
+
+- Centralized exported SDK version metadata so package version, exported constants, and `User-Agent` stay aligned
+- Switched memory listing/search flows to prefer plural contract routes with singular compatibility fallbacks
+- Reduced extension/CLI breakage when deployed proxy layers expose only one of the list route variants
+
 ## [2.1.0] - 2026-01-16
 
 ### Added

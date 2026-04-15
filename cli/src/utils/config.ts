@@ -375,7 +375,7 @@ export class CLIConfig {
           maxRedirects: 5,
           proxy: false, // Bypass proxy to avoid redirect loops
           headers: {
-            'User-Agent': 'Lanonasis-CLI/3.0.13'
+            'User-Agent': 'Lanonasis-CLI/3.9.15'
           }
         });
 

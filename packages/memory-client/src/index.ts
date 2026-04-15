@@ -4,7 +4,7 @@
  * Universal Memory as a Service (MaaS) Client SDK for Lanonasis
  * Intelligent memory management with semantic search capabilities
  *
- * v2.0.0 - Universal SDK Redesign
+ * v2.2.1 - Universal SDK
  * "Drop In and Sleep" Architecture - Works everywhere with zero configuration
  *
  * @example Browser/Web App
@@ -38,6 +38,7 @@ import {
   createMemoryClient as _createMemoryClient,
   type CoreMemoryClientConfig as _CoreMemoryClientConfig
 } from './core/client';
+import { VERSION, CLIENT_NAME, USER_AGENT } from './core/constants';
 
 // ========================================
 // Core Exports (Browser-Safe)
@@ -142,8 +143,7 @@ export type { ApiErrorResponse, ErrorCode } from './core/errors';
 // ========================================
 // Constants
 // ========================================
-export const VERSION = '2.0.0';
-export const CLIENT_NAME = '@lanonasis/memory-client';
+export { VERSION, CLIENT_NAME, USER_AGENT };
 
 // ========================================
 // Environment Detection
