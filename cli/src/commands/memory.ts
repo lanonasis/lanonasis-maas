@@ -1166,12 +1166,19 @@ export function memoryCommands(program: Command): void {
         console.log();
 
         results.forEach((memory: MemorySearchResult, index: number) => {
-          const score = (memory.similarity_score * 100).toFixed(1);
-          console.log(chalk.green(`${index + 1}. ${memory.title}`) + chalk.gray(` (${score}% match)`));
-          console.log(chalk.white(`   ${truncateText(memory.content, 100)}`));
-          console.log(chalk.cyan(`   ID: ${memory.id}`) + chalk.gray(` | Type: ${memory.memory_type}`));
-          if (memory.tags.length > 0) {
-            console.log(chalk.yellow(`   Tags: ${memory.tags.join(', ')}`));
+          const title = truncateText(memory.title, 120) || '(untitled memory)';
+          const contentPreview = truncateText(memory.content, 100) || '(no content preview)';
+          const scoreValue = typeof memory.similarity_score === 'number' ? memory.similarity_score : 0;
+          const score = (scoreValue * 100).toFixed(1);
+          const memoryId = memory.id || '(missing id)';
+          const memoryType = memory.memory_type || 'unknown';
+          const tags = Array.isArray(memory.tags) ? memory.tags : [];
+
+          console.log(chalk.green(`${index + 1}. ${title}`) + chalk.gray(` (${score}% match)`));
+          console.log(chalk.white(`   ${contentPreview}`));
+          console.log(chalk.cyan(`   ID: ${memoryId}`) + chalk.gray(` | Type: ${memoryType}`));
+          if (tags.length > 0) {
+            console.log(chalk.yellow(`   Tags: ${tags.join(', ')}`));
           }
           console.log();
         });

@@ -23,9 +23,15 @@ export function formatBytes(bytes: number): string {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 }
 
-export function truncateText(text: string, maxLength: number): string {
-  if (text.length <= maxLength) return text;
-  return text.substring(0, maxLength - 3) + '...';
+export function truncateText(text: unknown, maxLength: number): string {
+  const normalized = typeof text === 'string'
+    ? text
+    : text == null
+      ? ''
+      : String(text);
+
+  if (normalized.length <= maxLength) return normalized;
+  return normalized.substring(0, maxLength - 3) + '...';
 }
 
 export function formatDuration(ms: number): string {

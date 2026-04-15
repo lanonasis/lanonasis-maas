@@ -107,8 +107,7 @@ export {
 export type { SafeJsonResult } from './utils';
 
 // Constants
-export const VERSION = '2.0.0';
-export const CLIENT_NAME = '@lanonasis/memory-client';
+export { VERSION, CLIENT_NAME, USER_AGENT } from './constants';
 
 // Environment detection (browser-safe)
 export const isBrowser = typeof window !== 'undefined';

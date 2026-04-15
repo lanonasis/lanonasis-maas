@@ -217,7 +217,7 @@ export class CLIIntegration {
         if (parseResult.success) {
           return { data: parseResult.data };
         }
-        return { error: createErrorResponse(parseResult.error, 'VALIDATION_ERROR', 400) };
+        return { error: createErrorResponse('error' in parseResult ? parseResult.error : 'Invalid JSON response', 'VALIDATION_ERROR', 400) };
       }
 
       return { data: stdout as unknown as T };
