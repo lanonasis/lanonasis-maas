@@ -5,11 +5,11 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![MCP Integration](https://img.shields.io/badge/MCP-Model%20Context%20Protocol-purple)](https://modelcontextprotocol.com)
 [![Golden Contract](https://img.shields.io/badge/Onasis--Core-v0.1%20Compliant-gold)](https://api.lanonasis.com/.well-known/onasis.json)
-[![CLI Version](https://img.shields.io/npm/v/@lanonasis/cli?label=CLI%20v1.5.2&color=blue)](https://www.npmjs.com/package/@lanonasis/cli)
+[![CLI Version](https://img.shields.io/npm/v/@lanonasis/cli?label=CLI%20v3.9.15&color=blue)](https://www.npmjs.com/package/@lanonasis/cli)
 
 Enterprise-grade Memory as a Service platform with **Golden Contract compliance**, professional CLI interface, and multi-domain deployment capabilities.
 
-## 🎯 CLI v1.5.2 - Professional Interface
+## 🎯 CLI v3.9.15 - Professional Interface
 
 ### Installation
 ```bash
@@ -144,7 +144,7 @@ GET https://api.lanonasis.com/.well-known/onasis.json
 
 ```
 lanonasis-maas/
-├── cli/                     # CLI v1.5.2 (Golden Contract)
+├── cli/                     # CLI v3.9.15 (Golden Contract)
 │   ├── src/
 │   │   ├── commands/       # CLI command implementations
 │   │   ├── completions/    # Shell completion scripts
@@ -307,9 +307,9 @@ MIT License - see [LICENSE](LICENSE) for details.
 
 ## Migration from Legacy Methods
 
-**Legacy shell scripts have been archived** to `/archive/legacy-scripts/`. All functionality is now available through CLI v1.5.2:
+**Legacy shell scripts have been archived** to `/archive/legacy-scripts/`. All functionality is now available through CLI v3.9.15:
 
-| Legacy Script | CLI v1.5.2 Command |
+| Legacy Script | CLI v3.9.15 Command |
 |--------------|---------------------|
 | `verify-services.sh` | `onasis health` |
 | `setup-essential-secrets.sh` | `onasis init && onasis login` |
@@ -320,4 +320,4 @@ MIT License - see [LICENSE](LICENSE) for details.
 
 ---
 
-*CLI v1.5.2 - Golden Contract Compliant | Onasis-Core v0.1 Standards*
+*CLI v3.9.15 - Golden Contract Compliant | Onasis-Core v0.1 Standards*

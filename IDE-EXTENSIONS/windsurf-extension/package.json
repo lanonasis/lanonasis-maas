@@ -2,7 +2,7 @@
   "name": "lanonasis-memory-windsurf",
   "displayName": "LanOnasis Memory Assistant for Windsurf",
   "description": "Memory as a Service integration optimized for Windsurf IDE - AI-powered memory management with semantic search and enhanced CLI/MCP features",
-  "version": "1.4.5",
+   "version": "2.1.1",
   "publisher": "LanOnasis",
   "icon": "images/icon.png",
   "repository": {
@@ -302,11 +302,11 @@
           "default": true,
           "description": "Enable Windsurf-specific context awareness features"
         },
-        "lanonasis.preferCLI": {
-          "type": "boolean",
-          "default": true,
-          "description": "Prefer CLI integration when @lanonasis/cli v3.0.6+ is available"
-        },
+         "lanonasis.preferCLI": {
+           "type": "boolean",
+           "default": true,
+           "description": "Prefer CLI integration when @lanonasis/cli v3.9.15+ is available"
+         },
         "lanonasis.enableMCP": {
           "type": "boolean",
           "default": true,

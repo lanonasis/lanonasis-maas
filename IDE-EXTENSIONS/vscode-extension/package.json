@@ -524,11 +524,11 @@
           "type": "string",
           "description": "Your organization ID for API key management"
         },
-        "lanonasis.preferCLI": {
-          "type": "boolean",
-          "default": true,
-          "description": "Prefer CLI integration when a compatible @lanonasis/cli is available"
-        },
+         "lanonasis.preferCLI": {
+           "type": "boolean",
+           "default": true,
+           "description": "Prefer CLI integration when a compatible @lanonasis/cli v3.9.15+ is available"
+         },
         "lanonasis.importCLIConfig": {
           "type": "boolean",
           "default": true,
