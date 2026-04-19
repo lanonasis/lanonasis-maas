@@ -28,6 +28,7 @@ import {
     syncCLIConfigToExtension
 } from './services/CLIConfigBridge';
 import { formatErrorLogs, getErrorLogs, logExtensionError } from './utils/errorLogger';
+import { IntelligenceService, createIntelligenceService } from './services/IntelligenceService';
 
 // Keep GitHub issue URLs within common browser/OS limits when embedding logs.
 const MAX_GITHUB_ISSUE_BODY_LENGTH = 6000;
@@ -142,6 +143,7 @@ export async function activate(context: vscode.ExtensionContext) {
     const offlineQueue = new OfflineQueueService(context, outputChannel, baseMemoryService, memoryCache);
     const memoryService: IMemoryService = new OfflineMemoryService(baseMemoryService, offlineService, offlineQueue, memoryCache);
     const memoryCacheBridge = new MemoryCacheBridge(memoryCache, memoryService, outputChannel);
+    const intelligenceService = createIntelligenceService(secureApiKeyService);
 
     offlineService.start();
     if (offlineService.isOnline()) {
@@ -707,6 +709,31 @@ export async function activate(context: vscode.ExtensionContext) {
             } else {
                 await captureClipboardToMemory(memoryService, notifyOnboardingStep);
             }
+        }),
+
+        // Intelligence commands
+        vscode.commands.registerCommand('lanonasis.intelligenceHealthCheck', async () => {
+            await runIntelligenceHealthCheck(intelligenceService, outputChannel);
+        }),
+
+        vscode.commands.registerCommand('lanonasis.intelligenceSuggestTags', async () => {
+            await runIntelligenceSuggestTags(intelligenceService, outputChannel);
+        }),
+
+        vscode.commands.registerCommand('lanonasis.intelligenceFindRelated', async () => {
+            await runIntelligenceFindRelated(intelligenceService, outputChannel);
+        }),
+
+        vscode.commands.registerCommand('lanonasis.intelligenceDetectDuplicates', async () => {
+            await runIntelligenceDetectDuplicates(intelligenceService, outputChannel);
+        }),
+
+        vscode.commands.registerCommand('lanonasis.intelligenceExtractInsights', async () => {
+            await runIntelligenceExtractInsights(intelligenceService, outputChannel);
+        }),
+
+        vscode.commands.registerCommand('lanonasis.intelligenceAnalyzePatterns', async () => {
+            await runIntelligenceAnalyzePatterns(intelligenceService, outputChannel);
         })
     ];
 
@@ -2068,6 +2095,384 @@ async function captureClipboardToMemory(
 
     } catch (error) {
         vscode.window.showErrorMessage(`Failed to capture clipboard: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+}
+
+async function runIntelligenceHealthCheck(
+    intelligenceService: IntelligenceService,
+    outputChannel: vscode.OutputChannel
+): Promise<void> {
+    try {
+        outputChannel.appendLine('[Intelligence] Running health check...');
+        const result = await intelligenceService.runHealthCheck();
+        
+        if (result.success && result.data) {
+            const status = result.data.status as string || 'unknown';
+            const timestamp = result.data.timestamp as string || new Date().toISOString();
+            vscode.window.showInformationMessage(
+                `🩺 Intelligence Health: ${status.toUpperCase()}`,
+                'View Details'
+            ).then(selection => {
+                if (selection === 'View Details') {
+                    outputChannel.show();
+                }
+            });
+            outputChannel.appendLine(`[Intelligence] Health check complete: ${status} at ${timestamp}`);
+        } else {
+            vscode.window.showErrorMessage(`Health check failed: ${result.error}`);
+            outputChannel.appendLine(`[Intelligence] Health check failed: ${result.error}`);
+        }
+    } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        vscode.window.showErrorMessage(`Health check failed: ${message}`);
+        outputChannel.appendLine(`[Intelligence] Error: ${message}`);
+    }
+}
+
+async function runIntelligenceSuggestTags(
+    intelligenceService: IntelligenceService,
+    outputChannel: vscode.OutputChannel
+): Promise<void> {
+    const memoryId = await vscode.window.showInputBox({
+        prompt: 'Enter Memory ID to suggest tags for',
+        placeHolder: 'Paste memory ID here...'
+    });
+
+    if (!memoryId) return;
+
+    const maxInput = await vscode.window.showInputBox({
+        prompt: 'Maximum tag suggestions',
+        value: '8',
+        validateInput: (value) => {
+            const num = parseInt(value, 10);
+            if (isNaN(num) || num < 1 || num > 20) {
+                return 'Enter a number between 1 and 20';
+            }
+            return null;
+        }
+    });
+
+    const maxSuggestions = maxInput ? parseInt(maxInput, 10) : 8;
+
+    try {
+        outputChannel.appendLine(`[Intelligence] Generating tag suggestions for ${memoryId}...`);
+        const result = await intelligenceService.suggestTags(memoryId, maxSuggestions);
+        
+        if (result.success && result.data) {
+            const suggestions = result.data.suggestions as string[] || [];
+            const existingTags = result.data.existing_tags as string[] || [];
+            
+            const items = [
+                ...suggestions.map(tag => ({ label: `🏷️ ${tag}`, description: 'Suggested' })),
+                ...existingTags.map(tag => ({ label: `📌 ${tag}`, description: 'Existing' }))
+            ];
+
+            if (items.length === 0) {
+                vscode.window.showInformationMessage('No tag suggestions available.');
+                return;
+            }
+
+            const selected = await vscode.window.showQuickPick(items, {
+                placeHolder: `Found ${items.length} tags`,
+                canPickMany: true
+            });
+
+            if (selected && selected.length > 0) {
+                const tags = selected.map(s => s.label.replace(/^[🏷️📌]\s*/, ''));
+                await vscode.env.clipboard.writeText(tags.join(', '));
+                vscode.window.showInformationMessage(`Tags copied to clipboard: ${tags.join(', ')}`);
+            }
+            
+            outputChannel.appendLine(`[Intelligence] Found ${items.length} tags for memory ${memoryId}`);
+        } else {
+            vscode.window.showErrorMessage(`Suggest tags failed: ${result.error}`);
+            outputChannel.appendLine(`[Intelligence] Error: ${result.error}`);
+        }
+    } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        vscode.window.showErrorMessage(`Suggest tags failed: ${message}`);
+        outputChannel.appendLine(`[Intelligence] Error: ${message}`);
+    }
+}
+
+async function runIntelligenceFindRelated(
+    intelligenceService: IntelligenceService,
+    outputChannel: vscode.OutputChannel
+): Promise<void> {
+    const memoryId = await vscode.window.showInputBox({
+        prompt: 'Enter Memory ID to find related memories',
+        placeHolder: 'Paste memory ID here...'
+    });
+
+    if (!memoryId) return;
+
+    const thresholdInput = await vscode.window.showInputBox({
+        prompt: 'Similarity threshold (0-1)',
+        value: '0.7',
+        validateInput: (value) => {
+            const num = parseFloat(value);
+            if (isNaN(num) || num < 0 || num > 1) {
+                return 'Enter a number between 0 and 1';
+            }
+            return null;
+        }
+    });
+
+    const threshold = thresholdInput ? parseFloat(thresholdInput) : 0.7;
+
+    try {
+        outputChannel.appendLine(`[Intelligence] Finding related memories for ${memoryId}...`);
+        const result = await intelligenceService.findRelated(memoryId, 5, threshold);
+        
+        if (result.success && result.data) {
+            const related = result.data.related_memories as Array<{ id: string; title: string; similarity: number }> || [];
+            
+            if (related.length === 0) {
+                vscode.window.showInformationMessage('No related memories found.');
+                return;
+            }
+
+            const items = related.map(m => ({
+                label: m.title || m.id,
+                description: `Similarity: ${(m.similarity * 100).toFixed(0)}%`,
+                detail: m.id
+            }));
+
+            const selected = await vscode.window.showQuickPick(items, {
+                placeHolder: `Found ${related.length} related memories`
+            });
+
+            if (selected) {
+                await vscode.env.clipboard.writeText(selected.detail || '');
+                vscode.window.showInformationMessage(`Memory ID copied: ${selected.detail}`);
+            }
+            
+            outputChannel.appendLine(`[Intelligence] Found ${related.length} related memories`);
+        } else {
+            vscode.window.showErrorMessage(`Find related failed: ${result.error}`);
+            outputChannel.appendLine(`[Intelligence] Error: ${result.error}`);
+        }
+    } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        vscode.window.showErrorMessage(`Find related failed: ${message}`);
+        outputChannel.appendLine(`[Intelligence] Error: ${message}`);
+    }
+}
+
+async function runIntelligenceDetectDuplicates(
+    intelligenceService: IntelligenceService,
+    outputChannel: vscode.OutputChannel
+): Promise<void> {
+    const thresholdInput = await vscode.window.showInputBox({
+        prompt: 'Similarity threshold (0-1)',
+        value: '0.88',
+        validateInput: (value) => {
+            const num = parseFloat(value);
+            if (isNaN(num) || num < 0 || num > 1) {
+                return 'Enter a number between 0 and 1';
+            }
+            return null;
+        }
+    });
+
+    const threshold = thresholdInput ? parseFloat(thresholdInput) : 0.88;
+
+    try {
+        outputChannel.appendLine(`[Intelligence] Detecting duplicates with threshold ${threshold}...`);
+        
+        await vscode.window.withProgress({
+            location: vscode.ProgressLocation.Notification,
+            title: 'Detecting duplicates...',
+            cancellable: false
+        }, async () => {
+            const result = await intelligenceService.detectDuplicates(threshold, 100);
+            
+            if (result.success && result.data) {
+                const pairs = result.data.duplicate_pairs as Array<{ memory1: string; memory2: string; similarity: number }> || [];
+                
+                if (pairs.length === 0) {
+                    vscode.window.showInformationMessage('No duplicates detected.');
+                    outputChannel.appendLine('[Intelligence] No duplicates found');
+                    return;
+                }
+
+                const items = pairs.map((p, i) => ({
+                    label: `Pair ${i + 1}`,
+                    description: `Similarity: ${(p.similarity * 100).toFixed(0)}%`,
+                    detail: `${p.memory1.substring(0, 20)}... ↔ ${p.memory2.substring(0, 20)}...`
+                }));
+
+                const selected = await vscode.window.showQuickPick(items, {
+                    placeHolder: `Found ${pairs.length} potential duplicate pairs`,
+                    canPickMany: true
+                });
+
+                if (selected && selected.length > 0) {
+                    vscode.window.showInformationMessage(`Selected ${selected.length} duplicate pairs for review`);
+                }
+                
+                outputChannel.appendLine(`[Intelligence] Detected ${pairs.length} duplicate pairs`);
+            } else {
+                vscode.window.showErrorMessage(`Detect duplicates failed: ${result.error}`);
+                outputChannel.appendLine(`[Intelligence] Error: ${result.error}`);
+            }
+        });
+    } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        vscode.window.showErrorMessage(`Detect duplicates failed: ${message}`);
+        outputChannel.appendLine(`[Intelligence] Error: ${message}`);
+    }
+}
+
+async function runIntelligenceExtractInsights(
+    intelligenceService: IntelligenceService,
+    outputChannel: vscode.OutputChannel
+): Promise<void> {
+    const topic = await vscode.window.showInputBox({
+        prompt: 'Optional topic filter',
+        placeHolder: 'Leave empty for all topics'
+    });
+
+    const memoryTypes = ['context', 'project', 'knowledge', 'reference', 'personal', 'workflow'];
+    const selectedType = await vscode.window.showQuickPick(memoryTypes, {
+        placeHolder: 'Select memory type filter (or press Enter for all)',
+        canPickMany: false
+    });
+
+    const maxInput = await vscode.window.showInputBox({
+        prompt: 'Maximum memories to analyze',
+        value: '50',
+        validateInput: (value) => {
+            const num = parseInt(value, 10);
+            if (isNaN(num) || num < 5 || num > 200) {
+                return 'Enter a number between 5 and 200';
+            }
+            return null;
+        }
+    });
+
+    const maxMemories = maxInput ? parseInt(maxInput, 10) : 50;
+
+    try {
+        outputChannel.appendLine(`[Intelligence] Extracting insights...`);
+        
+        await vscode.window.withProgress({
+            location: vscode.ProgressLocation.Notification,
+            title: 'Extracting insights...',
+            cancellable: false
+        }, async () => {
+            const result = await intelligenceService.extractInsights(
+                topic || undefined, 
+                selectedType, 
+                maxMemories
+            );
+            
+            if (result.success && result.data) {
+                const insights = result.data.insights as string[] || [];
+                const summary = result.data.summary as string || '';
+                
+                if (insights.length === 0 && !summary) {
+                    vscode.window.showInformationMessage('No insights available.');
+                    return;
+                }
+
+                const content = [
+                    '# 💡 Memory Insights',
+                    '',
+                    summary ? `**Summary:** ${summary}` : '',
+                    '',
+                    '## Key Insights',
+                    ...insights.map((insight, i) => `${i + 1}. ${insight}`)
+                ].join('\n');
+
+                const doc = await vscode.workspace.openTextDocument({
+                    content,
+                    language: 'markdown'
+                });
+                await vscode.window.showTextDocument(doc);
+                
+                outputChannel.appendLine(`[Intelligence] Extracted ${insights.length} insights`);
+            } else {
+                vscode.window.showErrorMessage(`Extract insights failed: ${result.error}`);
+                outputChannel.appendLine(`[Intelligence] Error: ${result.error}`);
+            }
+        });
+    } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        vscode.window.showErrorMessage(`Extract insights failed: ${message}`);
+        outputChannel.appendLine(`[Intelligence] Error: ${message}`);
+    }
+}
+
+async function runIntelligenceAnalyzePatterns(
+    intelligenceService: IntelligenceService,
+    outputChannel: vscode.OutputChannel
+): Promise<void> {
+    const daysInput = await vscode.window.showInputBox({
+        prompt: 'Days to analyze',
+        value: '30',
+        validateInput: (value) => {
+            const num = parseInt(value, 10);
+            if (isNaN(num) || num < 1 || num > 365) {
+                return 'Enter a number between 1 and 365';
+            }
+            return null;
+        }
+    });
+
+    const days = daysInput ? parseInt(daysInput, 10) : 30;
+
+    try {
+        outputChannel.appendLine(`[Intelligence] Analyzing patterns for last ${days} days...`);
+        
+        await vscode.window.withProgress({
+            location: vscode.ProgressLocation.Notification,
+            title: 'Analyzing patterns...',
+            cancellable: false
+        }, async () => {
+            const result = await intelligenceService.analyzePatterns(days);
+            
+            if (result.success && result.data) {
+                const patterns = result.data.patterns as Array<{ type: string; description: string; frequency: number }> || [];
+                const trends = result.data.trends as Record<string, number> || {};
+                
+                if (patterns.length === 0 && Object.keys(trends).length === 0) {
+                    vscode.window.showInformationMessage('No patterns detected.');
+                    return;
+                }
+
+                const trendLines = Object.entries(trends).map(([key, value]) => 
+                    `- **${key}**: ${typeof value === 'number' ? value.toFixed(1) : value}`
+                );
+
+                const content = [
+                    '# 📈 Memory Pattern Analysis',
+                    '',
+                    `**Time Period:** Last ${days} days`,
+                    '',
+                    '## Trends',
+                    trendLines.length > 0 ? trendLines.join('\n') : 'No trend data available.',
+                    '',
+                    '## Patterns',
+                    ...patterns.map((p, i) => `${i + 1}. **${p.type}**: ${p.description} (${p.frequency} occurrences)`)
+                ].join('\n');
+
+                const doc = await vscode.workspace.openTextDocument({
+                    content,
+                    language: 'markdown'
+                });
+                await vscode.window.showTextDocument(doc);
+                
+                outputChannel.appendLine(`[Intelligence] Analyzed ${patterns.length} patterns`);
+            } else {
+                vscode.window.showErrorMessage(`Analyze patterns failed: ${result.error}`);
+                outputChannel.appendLine(`[Intelligence] Error: ${result.error}`);
+            }
+        });
+    } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        vscode.window.showErrorMessage(`Analyze patterns failed: ${message}`);
+        outputChannel.appendLine(`[Intelligence] Error: ${message}`);
     }
 }
 

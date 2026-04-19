@@ -260,6 +260,42 @@
         "title": "Quick Capture (Selection or Clipboard)",
         "category": "Lanonasis",
         "icon": "$(zap)"
+      },
+      {
+        "command": "lanonasis.intelligenceHealthCheck",
+        "title": "Intelligence: Health Check",
+        "category": "Lanonasis",
+        "icon": "$(heart)"
+      },
+      {
+        "command": "lanonasis.intelligenceSuggestTags",
+        "title": "Intelligence: Suggest Tags",
+        "category": "Lanonasis",
+        "icon": "$(tag)"
+      },
+      {
+        "command": "lanonasis.intelligenceFindRelated",
+        "title": "Intelligence: Find Related Memories",
+        "category": "Lanonasis",
+        "icon": "$(link)"
+      },
+      {
+        "command": "lanonasis.intelligenceDetectDuplicates",
+        "title": "Intelligence: Detect Duplicates",
+        "category": "Lanonasis",
+        "icon": "$(copy)"
+      },
+      {
+        "command": "lanonasis.intelligenceExtractInsights",
+        "title": "Intelligence: Extract Insights",
+        "category": "Lanonasis",
+        "icon": "$(lightbulb)"
+      },
+      {
+        "command": "lanonasis.intelligenceAnalyzePatterns",
+        "title": "Intelligence: Analyze Patterns",
+        "category": "Lanonasis",
+        "icon": "$(graph)"
       }
     ],
     "keybindings": [
