@@ -29,7 +29,22 @@ jobs:
         with:
           bun-version: latest
 
-      - name: Install deps
+      - name: Install root deps and build local packages
+        working-directory: .
+        run: |
+          # Install dependencies for local packages and build them
+          # Build memory-client first (no external deps)
+          cd packages/memory-client
+          bun install
+          bun run build
+          cd ../..
+          # Build ide-extension-core (depends on memory-client)
+          cd packages/ide-extension-core
+          bun install
+          bun run build
+          cd ../..
+
+      - name: Install extension deps
         run: |
           if [ -f bun.lock ]; then
             bun install --frozen-lockfile

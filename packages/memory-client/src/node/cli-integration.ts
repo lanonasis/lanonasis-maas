@@ -216,8 +216,9 @@ export class CLIIntegration {
         const parseResult = safeJsonParse<T>(stdout);
         if (parseResult.success) {
           return { data: parseResult.data };
+        } else {
+          return { error: createErrorResponse(parseResult.error, 'VALIDATION_ERROR', 400) };
         }
-        return { error: createErrorResponse(parseResult.error, 'VALIDATION_ERROR', 400) };
       }
 
       return { data: stdout as unknown as T };
