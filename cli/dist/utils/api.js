@@ -565,7 +565,10 @@ export class APIClient {
                 if (params.order || params.sort_order) {
                     listPayload.sort_order = params.sort_order || params.order;
                 }
-                for (const endpoint of ['/api/v1/memories/list', '/api/v1/memory/list']) {
+                // Canonical GET listing is attempted above. For POST list fallbacks, prefer the
+                // currently deployed singular proxy before the plural alias to avoid IDE/CLI 404s
+                // while edge redirects catch up across environments.
+                for (const endpoint of ['/api/v1/memory/list', '/api/v1/memories/list']) {
                     try {
                         const listResponse = await this.client.post(endpoint, listPayload);
                         const payload = listResponse.data || {};

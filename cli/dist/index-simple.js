@@ -412,7 +412,7 @@ sdkCmd
     .action(async () => {
     console.log(colors.primary('🔧 SDK Status Check'));
     console.log(colors.info('━'.repeat(40)));
-    console.log(`${colors.highlight('Memory Client SDK:')} ${colors.success('@lanonasis/memory-client@1.0.0')}`);
+    console.log(`${colors.highlight('Memory Client SDK:')} ${colors.success('@lanonasis/memory-client@2.2.1')}`);
     console.log(`${colors.highlight('CLI Package:')} ${colors.success('@lanonasis/cli@1.4.2')}`);
     console.log(`${colors.highlight('NPM Registry:')} ${colors.success('✅ Published')}`);
     console.log(`${colors.highlight('GitHub Packages:')} ${colors.success('✅ Available')}`);
@@ -423,9 +423,9 @@ sdkCmd
     .action(() => {
     console.log(colors.primary('📦 Available SDK Versions'));
     console.log(colors.info('━'.repeat(40)));
-    console.log(`${colors.accent('@lanonasis/memory-client:')} ${colors.success('1.0.0 (latest)')}`);
-    console.log(`${colors.accent('@lanonasis/cli:')} ${colors.success('1.2.0 (latest)')}`);
-    console.log(`${colors.accent('@lanonasis/memory-service:')} ${colors.success('1.0.0 (latest)')}`);
+    console.log(`${colors.accent('@lanonasis/memory-client:')} ${colors.success('2.2.1 (latest local source)')}`);
+    console.log(`${colors.accent('@lanonasis/cli:')} ${colors.success('3.9.15 (latest local source)')}`);
+    console.log(`${colors.accent('@lanonasis/memory-service:')} ${colors.success('compatibility package')}`);
 });
 // REST API management commands (require auth)
 const apiCmd = program
@@ -485,8 +485,8 @@ deployCmd
     console.log();
     console.log(colors.highlight('📦 Package Distribution:'));
     console.log(`  CLI Package: ${colors.success('✅ @lanonasis/cli@1.4.2')}`);
-    console.log(`  SDK Package: ${colors.success('✅ @lanonasis/memory-client@1.0.0')}`);
-    console.log(`  Memory Service: ${colors.success('✅ @lanonasis/memory-service@1.0.0')}`);
+    console.log(`  SDK Package: ${colors.success('✅ @lanonasis/memory-client@2.2.1')}`);
+    console.log(`  Memory Service: ${colors.success('✅ Compatibility routing enabled')}`);
     console.log();
     console.log(colors.highlight('🗄️  Infrastructure:'));
     console.log(`  Database: ${colors.success('✅ Supabase PostgreSQL')}`);
