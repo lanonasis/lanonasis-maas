@@ -1,4 +1,5 @@
 {
+  "$schema": "https://json.schemastore.org/package",
   "name": "lanonasis-memory",
   "displayName": "LanOnasis Memory Assistant",
   "description": "Memory as a Service integration - AI-powered memory management with semantic search (Compatible with a supported @lanonasis/cli)",
@@ -42,6 +43,36 @@
     }
   },
   "contributes": {
+    "walkthroughs": [
+      {
+        "id": "lanonasis.gettingStarted",
+        "title": "Get Started with Lanonasis Memory",
+        "description": "Learn how to use Lanonasis Memory Assistant",
+        "steps": [
+          {
+            "id": "authenticate",
+            "title": "Authenticate",
+            "description": "Connect to your Lanonasis account via OAuth or API key",
+            "media": { "image": "media/walkthrough/authenticate.png" },
+            "completionEvents": ["onCommand:lanonasis.authenticate"]
+          },
+          {
+            "id": "createMemory",
+            "title": "Create Your First Memory",
+            "description": "Save code selections as memories",
+            "media": { "image": "media/walkthrough/create-memory.png" },
+            "completionEvents": ["onCommand:lanonasis.createMemory"]
+          },
+          {
+            "id": "search",
+            "title": "Search Memories",
+            "description": "Find relevant context with semantic search",
+            "media": { "image": "media/walkthrough/search.png" },
+            "completionEvents": ["onCommand:lanonasis.searchMemory"]
+          }
+        ]
+      }
+    ],
     "chatParticipants": [
       {
         "id": "lanonasis-memory.memory-assistant",
@@ -557,8 +588,8 @@
             "http"
           ],
           "default": "auto",
-          "markdownDescription": "**DEPRECATED**: Transport mode selection is not used by the shipped runtime. Use the supported Gateway/Direct API mode switch instead. This setting will be removed unless transport routing is integrated in a future release.",
-          "deprecationMessage": "This setting is ignored by the shipped runtime. Use the supported Gateway/Direct API mode switch instead."
+          "description": "**DEPRECATED**: Transport mode selection is not used by the shipped runtime. Use the supported Gateway/Direct API mode switch instead. This setting will be removed unless transport routing is integrated in a future release.",
+          "deprecationMessage": "This setting is ignored by the shipped runtime. Use the supported Gateway/Direct API settings instead."
         },
         "lanonasis.websocketUrl": {
           "type": "string",
@@ -640,8 +671,8 @@
         },
         "lanonasis.useEnhancedUI": {
           "type": "boolean",
-          "default": false,
-          "description": "Use enhanced React-based UI with modern design (experimental)"
+          "default": true,
+          "description": "Use enhanced React-based UI with modern design"
         },
         "lanonasis.enableLegacyViews": {
           "type": "boolean",
@@ -669,7 +700,7 @@
     "compile": "node esbuild.config.mjs",
     "compile:dev": "node esbuild.config.mjs",
     "compile:prod": "node esbuild.config.mjs --production",
-    "compile:tsc": "tsc -p ./",
+    "compile:tsc": "tsc -p .",
     "typecheck": "tsc -p ./ --noEmit",
     "watch": "node esbuild.config.mjs --watch",
     "pretest": "echo \"Skipping extension pretest in monorepo Nx run\"",
@@ -721,12 +752,10 @@
     "@vscode/vsce": "^3.7.1",
     "autoprefixer": "^10.4.22",
     "css-loader": "^7.1.2",
-    "esbuild": "^0.27.2",
     "eslint": "^9.39.1",
     "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-vitest-globals": "^1.5.0",
     "jsdom": "^27.3.0",
-    "playwright": "^1.57.0",
     "postcss": "^8.5.6",
     "postcss-loader": "^8.2.0",
     "style-loader": "^4.0.0",
