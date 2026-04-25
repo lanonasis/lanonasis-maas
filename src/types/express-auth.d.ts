@@ -28,7 +28,7 @@ export interface UnifiedUser extends Partial<JWTPayload> {
     user_metadata?: Record<string, unknown> | undefined;
     app_metadata?: Record<string, unknown> | undefined;
     // Core alignment additions
-    auth_type?: 'jwt' | 'api_key' | undefined;
+    auth_type?: 'jwt' | 'api_key' | 'sso' | undefined;
     api_key_id?: string | undefined;
     last_used?: string | undefined;
     rate_limit_remaining?: number | undefined;

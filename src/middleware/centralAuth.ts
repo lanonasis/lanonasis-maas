@@ -150,7 +150,7 @@ export const centralAuth = async (req: Request, res: Response, next: NextFunctio
 
     // Only enforce project scope for non-SSO requests
     // SSO cookies are set by auth-gateway and don't include project scope header
-    const hasSSOCookies = hasSSOfromRequest(req);
+    const hasSSOCookies = hasSSOfromRequest(req as unknown as Parameters<typeof hasSSOfromRequest>[0]);
 
     if (!hasSSOCookies && projectScope !== 'lanonasis-maas') {
       console.warn(`[${req.id}] Invalid project scope: ${projectScope}`);
@@ -161,8 +161,8 @@ export const centralAuth = async (req: Request, res: Response, next: NextFunctio
     if (hasSSOCookies) {
       console.log(`[${req.id}] Authenticating via SSO cookies`);
 
-      const ssoUser = getSSOUserFromRequest(req);
-      const sessionToken = getSessionTokenFromRequest(req);
+      const ssoUser = getSSOUserFromRequest(req as unknown as Parameters<typeof getSSOUserFromRequest>[0]);
+      const sessionToken = getSessionTokenFromRequest(req as unknown as Parameters<typeof getSessionTokenFromRequest>[0]);
 
       if (ssoUser && sessionToken) {
         // Validate the session token
