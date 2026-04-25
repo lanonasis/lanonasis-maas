@@ -9,7 +9,7 @@
  */
 
 // Core clients
-export { LanonasisClient } from './client/LanonasisClient.js';
+export { LanonasisClient } from './client/LanOnasisClient.js';
 export { MemoryClient } from './memory/MemoryClient.js';
 export { ApiKeyClient } from './api-keys/ApiKeyClient.js';
 export { MCPClient } from './mcp/MCPClient.js';
@@ -159,4 +159,4 @@ export type {
  * });
  * ```
  */
-export { LanonasisClient as default } from './client/LanonasisClient.js';
+export { LanonasisClient as default } from './client/LanOnasisClient.js';

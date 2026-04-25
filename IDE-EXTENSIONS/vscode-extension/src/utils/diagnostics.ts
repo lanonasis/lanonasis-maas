@@ -26,6 +26,38 @@ export interface SystemHealth {
 }
 
 /**
+ * Creates a diagnostic collection for extension diagnostics
+ */
+const DEPRECATED_SETTINGS_URI = vscode.Uri.parse('lanonasis://settings');
+const diagnosticCollection = vscode.languages.createDiagnosticCollection('lanonasis');
+
+/**
+ * Updates VS Code Problems panel for deprecated transport settings
+ */
+function updateDeprecatedSettingsDiagnostics(deprecatedSettings: Array<{ key: string; inspection: vscode.ConfigurationInspection<unknown> }>): void {
+    if (deprecatedSettings.length === 0) {
+        diagnosticCollection.delete(DEPRECATED_SETTINGS_URI);
+        return;
+    }
+
+    const diagnostics: vscode.Diagnostic[] = deprecatedSettings.map(({ key, inspection }) => {
+        const currentValue = inspection.globalValue ?? inspection.workspaceValue ?? inspection.workspaceFolderValue;
+
+        const range = new vscode.Range(0, 0, 0, 0);
+        const diagnostic = new vscode.Diagnostic(
+            range,
+            `Deprecated setting '${key}' is configured but ignored by the shipped runtime. ${currentValue !== undefined ? `Current value: '${currentValue}'. ` : ''}Use Gateway/Direct API mode switch instead.`,
+            vscode.DiagnosticSeverity.Warning
+        );
+        diagnostic.source = 'Lanonasis';
+        diagnostic.code = `deprecated-${key}`;
+        return diagnostic;
+    });
+
+    diagnosticCollection.set(DEPRECATED_SETTINGS_URI, diagnostics);
+}
+
+/**
  * Runs comprehensive system diagnostics
  */
 export async function runDiagnostics(
@@ -199,6 +231,9 @@ async function checkConfiguration(
             outputChannel.appendLine(
                 `  ! Deprecated transport settings configured: ${deprecatedTransportSettings.map(({ key }) => key).join(', ')}`
             );
+            updateDeprecatedSettingsDiagnostics(deprecatedTransportSettings);
+        } else {
+            updateDeprecatedSettingsDiagnostics([]);
         }
 
         if (cliImportState) {

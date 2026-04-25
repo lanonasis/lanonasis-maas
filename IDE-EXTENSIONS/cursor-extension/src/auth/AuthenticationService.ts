@@ -68,5 +68,9 @@ export class AuthenticationService {
 
     isAuthenticated(): boolean {
     return this.status.authenticated;
-            }
+  }
+
+  async getApiKey(): Promise<string | null> {
+    return this.secureAuth.getApiKey();
+  }
 }

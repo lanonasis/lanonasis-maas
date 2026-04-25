@@ -82,35 +82,15 @@ export class ApiKeyService {
     }
 
     private async makeRequest<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-        // Try to get auth header from secure storage first
-        let authHeader: string | null = null;
-        
-        if (this.authService) {
-            try {
-                authHeader = await this.authService.getAuthenticationHeader();
-            } catch (error) {
-                // Fall through to legacy config check
-            }
-        }
-
-        // Fallback to legacy configuration (for migration period)
-        if (!authHeader) {
-            const apiKey = this.config.get<string>('apiKey');
-            if (apiKey) {
-                authHeader = `Bearer ${apiKey}`;
-                // Warn user about using insecure storage
-                console.warn('[ApiKeyService] Using API key from configuration. Please migrate to secure storage.');
-            }
-        }
-
-        if (!authHeader) {
+        const apiKey = await this.authService?.getApiKey();
+        if (!apiKey) {
             throw new Error('API key not configured. Please authenticate using the "Lanonasis: Authenticate" command.');
         }
 
         const url = `${this.baseUrl}${endpoint}`;
         const headers = {
             'Content-Type': 'application/json',
-            'Authorization': authHeader,
+            'X-API-Key': apiKey,
             ...options.headers
         };
 

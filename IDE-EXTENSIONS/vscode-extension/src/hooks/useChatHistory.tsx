@@ -12,7 +12,7 @@ export interface ChatMessage {
   }>;
 }
 
-export interface ChatSession {
+export interface ChatThread {
   id: string;
   title: string;
   messages: ChatMessage[];
@@ -23,7 +23,7 @@ export interface ChatSession {
 
 interface UseChatHistoryReturn {
   messages: ChatMessage[];
-  sessions: ChatSession[];
+  sessions: ChatThread[];
   currentSessionId: string | null;
   isLoading: boolean;
   error: string | null;
@@ -40,7 +40,7 @@ const AUTO_SAVE_INTERVAL = 30000; // 30 seconds
 
 export function useChatHistory(): UseChatHistoryReturn {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [sessions, setSessions] = useState<ChatSession[]>([]);
+  const [sessions, setSessions] = useState<ChatThread[]>([]);
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -59,7 +59,7 @@ export function useChatHistory(): UseChatHistoryReturn {
         if (window.vscode) {
           const state = window.vscode.getState();
           if (state && typeof state === 'object' && 'chatSessions' in state) {
-            const savedSessions = (state as { chatSessions: ChatSession[] }).chatSessions;
+            const savedSessions = (state as { chatSessions: ChatThread[] }).chatSessions;
             if (Array.isArray(savedSessions)) {
               // Restore dates
               const restored = savedSessions.map(s => ({
@@ -96,7 +96,7 @@ export function useChatHistory(): UseChatHistoryReturn {
   }, []);
 
   // Save sessions to VS Code state
-  const saveSessions = useCallback((sessionsToSave: ChatSession[]) => {
+  const saveSessions = useCallback((sessionsToSave: ChatThread[]) => {
     try {
       if (window.vscode) {
         window.vscode.setState({ chatSessions: sessionsToSave });
@@ -112,7 +112,7 @@ export function useChatHistory(): UseChatHistoryReturn {
 
     setSessions(prev => {
       const existingIndex = prev.findIndex(s => s.id === currentSessionId);
-      const updatedSession: ChatSession = {
+      const updatedSession: ChatThread = {
         id: currentSessionId,
         title: messages[0]?.content.substring(0, 50) || 'New Chat',
         messages,
@@ -121,7 +121,7 @@ export function useChatHistory(): UseChatHistoryReturn {
         updatedAt: new Date()
       };
 
-      let newSessions: ChatSession[];
+      let newSessions: ChatThread[];
       if (existingIndex >= 0) {
         newSessions = [...prev];
         newSessions[existingIndex] = updatedSession;

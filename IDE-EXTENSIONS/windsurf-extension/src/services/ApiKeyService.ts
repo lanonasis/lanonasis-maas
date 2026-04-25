@@ -75,7 +75,7 @@ export class ApiKeyService {
         const url = `${this.baseUrl}${endpoint}`;
         const headers = {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${apiKey}`,
+            'X-API-Key': apiKey,
             ...options.headers
         };
 

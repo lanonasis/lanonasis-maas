@@ -3,7 +3,7 @@
  */
 
 import type { AxiosInstance } from 'axios';
-import type { LanonasisClientConfig } from '../client/LanonasisClient.js';
+import type { LanonasisClientConfig } from '../client/LanOnasisClient.js';
 
 export class MCPClient {
   private httpClient: AxiosInstance;

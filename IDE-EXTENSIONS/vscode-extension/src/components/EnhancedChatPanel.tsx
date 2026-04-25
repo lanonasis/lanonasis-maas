@@ -146,7 +146,7 @@ export const EnhancedChatPanel: React.FC<EnhancedChatPanelProps> = ({
             size="icon"
             className="h-5 w-5 hover:bg-[var(--vscode-list-hoverBackground)] rounded-sm"
             onClick={() => setShowHistory(!showHistory)}
-            title="Chat History"
+            title="Chat Threads"
           >
             <History className="h-3.5 w-3.5 text-[var(--vscode-icon-foreground)]" />
           </Button>
@@ -155,7 +155,7 @@ export const EnhancedChatPanel: React.FC<EnhancedChatPanelProps> = ({
             size="icon"
             className="h-5 w-5 hover:bg-[var(--vscode-list-hoverBackground)] rounded-sm"
             onClick={startNewSession}
-            title="New Chat"
+            title="New Thread"
           >
             <Plus className="h-3.5 w-3.5 text-[var(--vscode-icon-foreground)]" />
           </Button>
@@ -178,7 +178,7 @@ export const EnhancedChatPanel: React.FC<EnhancedChatPanelProps> = ({
         <div className="border-b border-[var(--vscode-panel-border)] bg-[var(--vscode-sideBarSectionHeader-background)]">
           <div className="p-2">
             <div className="text-[11px] font-medium text-[var(--vscode-descriptionForeground)] uppercase mb-2">
-              Recent Chats
+              Recent Threads
             </div>
             <ScrollArea className="max-h-[150px]">
               {sessions.length === 0 ? (
@@ -187,22 +187,22 @@ export const EnhancedChatPanel: React.FC<EnhancedChatPanelProps> = ({
                 </div>
               ) : (
                 <div className="space-y-1">
-                  {sessions.slice(0, 10).map((session) => (
+                  {sessions.slice(0, 10).map((thread) => (
                     <div
-                      key={session.id}
+                      key={thread.id}
                       className="flex items-center justify-between p-1.5 rounded-sm hover:bg-[var(--vscode-list-hoverBackground)] cursor-pointer group"
                       onClick={() => {
-                        loadSession(session.id);
+                        loadSession(thread.id);
                         setShowHistory(false);
                       }}
                     >
                       <div className="flex items-center gap-2 flex-1 min-w-0">
                         <MessageSquare className="h-3 w-3 text-[var(--vscode-icon-foreground)] opacity-60 shrink-0" />
-                        <span className="text-[12px] truncate">{session.title}</span>
+                        <span className="text-[12px] truncate">{thread.title}</span>
                       </div>
                       <div className="flex items-center gap-1">
                         <span className="text-[10px] text-[var(--vscode-descriptionForeground)] opacity-60">
-                          {formatTimestamp(session.updatedAt)}
+                          {formatTimestamp(thread.updatedAt)}
                         </span>
                         <Button
                           variant="ghost"
@@ -210,7 +210,7 @@ export const EnhancedChatPanel: React.FC<EnhancedChatPanelProps> = ({
                           className="h-4 w-4 opacity-0 group-hover:opacity-100 hover:bg-[var(--vscode-inputValidation-errorBackground)]"
                           onClick={(e) => {
                             e.stopPropagation();
-                            deleteSession(session.id);
+                            deleteSession(thread.id);
                           }}
                         >
                           <X className="h-2.5 w-2.5" />

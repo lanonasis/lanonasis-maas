@@ -4,7 +4,7 @@
  */
 
 import type { AxiosInstance } from 'axios';
-import type { LanonasisClientConfig } from '../client/LanonasisClient.js';
+import type { LanonasisClientConfig } from '../client/LanOnasisClient.js';
 
 // For now, create a minimal interface that matches expected usage
 // In production, this should import from @lanonasis/memory-client
