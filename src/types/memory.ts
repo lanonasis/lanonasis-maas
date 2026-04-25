@@ -123,7 +123,7 @@ export const createMemorySchema = z.object({
   tags: z.array(z.string().min(1).max(50)).max(10).default([]),
   topic_id: z.string().uuid().optional(),
   topic_key: z.string().min(1).max(100).optional(),
-  metadata: z.record(z.unknown()).optional()
+  metadata: z.record(z.string(), z.unknown()).optional()
 }).transform((data) => ({
   ...data,
   memory_type: data.memory_type ?? data.type ?? 'context',
@@ -170,7 +170,7 @@ export const updateMemorySchema = z.object({
   tags: z.array(z.string().min(1).max(50)).max(10).optional(),
   topic_id: z.string().uuid().nullable().optional(),
   topic_key: z.string().min(1).max(100).optional(),
-  metadata: z.record(z.unknown()).optional()
+  metadata: z.record(z.string(), z.unknown()).optional()
 }).transform((data) => ({
   ...data,
   memory_type: data.memory_type ?? data.type,

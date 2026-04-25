@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { ZodError } from 'zod';
+import { ZodError, type ZodIssue } from 'zod';
 import { logger } from '@/utils/logger';
 
 export interface AppError extends Error {
@@ -91,7 +91,7 @@ export const errorHandler = (
   if (error instanceof ZodError) {
     statusCode = 400;
     message = 'Validation failed';
-    details = error.errors.map(err => ({
+    details = error.issues.map((err: ZodIssue) => ({
       field: err.path.join('.'),
       message: err.message,
       code: err.code

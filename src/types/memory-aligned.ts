@@ -185,7 +185,7 @@ export const createMemorySchema = z.object({
   topic_key: z.string().min(1).max(100).optional(),
   project_ref: z.string().max(100).optional(),
   tags: z.array(z.string().min(1).max(50)).max(20).default([]),
-  metadata: z.record(z.unknown()).optional()
+  metadata: z.record(z.string(), z.unknown()).optional()
 });
 
 /**
@@ -240,7 +240,7 @@ export const updateMemorySchema = z.object({
   topic_key: z.string().min(1).max(100).optional(),
   project_ref: z.string().max(100).nullable().optional(),
   tags: z.array(z.string().min(1).max(50)).max(20).optional(),
-  metadata: z.record(z.unknown()).optional()
+  metadata: z.record(z.string(), z.unknown()).optional()
 });
 
 /**

@@ -200,7 +200,7 @@ router.post('/login', async (req: Request, res: Response): Promise<void> => {
       res.status(400).json({
         error: 'validation_error',
         message: 'Invalid request data',
-        details: error.errors
+        details: error.issues
       });
       return;
     }
@@ -331,7 +331,7 @@ router.post('/register', async (req: Request, res: Response): Promise<void> => {
       res.status(400).json({
         error: 'validation_error',
         message: 'Invalid request data',
-        details: error.errors
+        details: error.issues
       });
       return;
     }
