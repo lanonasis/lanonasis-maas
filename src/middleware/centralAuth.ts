@@ -181,7 +181,7 @@ export const centralAuth = async (req: Request, res: Response, next: NextFunctio
             auth_type: 'sso',
           };
 
-          console.log(`[${req.id}] SSO authentication successful for user ${req.user.id}`);
+          console.log(`[${req.id}] SSO authentication successful for user ${req.user!.id}`);
           return next();
         } else {
           console.warn(`[${req.id}] SSO token validation failed, trying other auth methods`);

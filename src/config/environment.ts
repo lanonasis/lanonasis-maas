@@ -5,7 +5,7 @@ dotenvConfig();
 
 const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
-  PORT: z.string().transform(Number).default('3000'),
+  PORT: z.coerce.number().default(3000),
   HOST: z.string().default('localhost'),
   
   // Database
@@ -22,13 +22,13 @@ const envSchema = z.object({
   API_KEY_ENCRYPTION_KEY: z.string().length(32, 'API_KEY_ENCRYPTION_KEY must be exactly 32 characters'),
   API_KEY_PREFIX_DEVELOPMENT: z.string().default('sk_test_'),
   API_KEY_PREFIX_PRODUCTION: z.string().default('sk_live_'),
-  API_KEY_DEFAULT_EXPIRY_DAYS: z.string().transform(Number).default('365'),
+  API_KEY_DEFAULT_EXPIRY_DAYS: z.coerce.number().default(365),
   
   // MCP (Model Context Protocol) Configuration
-  MCP_ENABLED: z.string().transform(val => val === 'true').default('true'),
-  MCP_ACCESS_REQUEST_EXPIRY_HOURS: z.string().transform(Number).default('24'),
-  MCP_SESSION_TIMEOUT_HOURS: z.string().transform(Number).default('8'),
-  MCP_MAX_TOOLS_PER_KEY: z.string().transform(Number).default('10'),
+  MCP_ENABLED: z.coerce.boolean().default(true),
+  MCP_ACCESS_REQUEST_EXPIRY_HOURS: z.coerce.number().default(24),
+  MCP_SESSION_TIMEOUT_HOURS: z.coerce.number().default(8),
+  MCP_MAX_TOOLS_PER_KEY: z.coerce.number().default(10),
   
   // OpenAI
   OPENAI_API_KEY: z.string().min(1),
@@ -37,16 +37,16 @@ const envSchema = z.object({
   REDIS_URL: z.string().url().optional(),
   REDIS_PASSWORD: z.string().optional(),
   REDIS_KEY_PREFIX: z.string().default('maas:'),
-  REDIS_API_KEY_TTL: z.string().transform(Number).default('300'),
-  REDIS_SESSION_TTL: z.string().transform(Number).default('28800'),
+  REDIS_API_KEY_TTL: z.coerce.number().default(300),
+  REDIS_SESSION_TTL: z.coerce.number().default(28800),
   
   // Logging
   LOG_LEVEL: z.enum(['error', 'warn', 'info', 'debug']).default('info'),
   LOG_FORMAT: z.enum(['json', 'simple']).default('json'),
   
   // Rate Limiting
-  RATE_LIMIT_WINDOW_MS: z.string().transform(Number).default('900000'), // 15 minutes
-  RATE_LIMIT_MAX_REQUESTS: z.string().transform(Number).default('100'),
+  RATE_LIMIT_WINDOW_MS: z.coerce.number().default(900000), // 15 minutes
+  RATE_LIMIT_MAX_REQUESTS: z.coerce.number().default(100),
   
   // API
   API_VERSION: z.string().default('v1'),
@@ -59,59 +59,59 @@ const envSchema = z.object({
   OAUTH_REDIRECT_URI: z.string().url().optional(),
   
   // Security & Monitoring
-  SECURITY_ALERT_ENABLED: z.string().transform(val => val === 'true').default('true'),
-  SECURITY_ALERT_THRESHOLD_CRITICAL: z.string().transform(Number).default('5'),
-  SECURITY_ALERT_THRESHOLD_HIGH: z.string().transform(Number).default('10'),
-  ANOMALY_DETECTION_ENABLED: z.string().transform(val => val === 'true').default('true'),
-  ANOMALY_DETECTION_SENSITIVITY: z.string().transform(Number).default('0.85'),
+  SECURITY_ALERT_ENABLED: z.coerce.boolean().default(true),
+  SECURITY_ALERT_THRESHOLD_CRITICAL: z.coerce.number().default(5),
+  SECURITY_ALERT_THRESHOLD_HIGH: z.coerce.number().default(10),
+  ANOMALY_DETECTION_ENABLED: z.coerce.boolean().default(true),
+  ANOMALY_DETECTION_SENSITIVITY: z.coerce.number().default(0.85),
   
   // Auto-suspension thresholds
-  AUTO_SUSPEND_FAILED_AUTH_ATTEMPTS: z.string().transform(Number).default('10'),
-  AUTO_SUSPEND_RATE_LIMIT_VIOLATIONS: z.string().transform(Number).default('50'),
-  AUTO_SUSPEND_ANOMALY_SCORE: z.string().transform(Number).default('0.95'),
+  AUTO_SUSPEND_FAILED_AUTH_ATTEMPTS: z.coerce.number().default(10),
+  AUTO_SUSPEND_RATE_LIMIT_VIOLATIONS: z.coerce.number().default(50),
+  AUTO_SUSPEND_ANOMALY_SCORE: z.coerce.number().default(0.95),
   
   // Enterprise Features (optional)
-  HSM_ENABLED: z.string().transform(val => val === 'true').default('false'),
+  HSM_ENABLED: z.coerce.boolean().default(false),
   HSM_MODULE_PATH: z.string().optional(),
   HSM_SLOT_ID: z.string().transform(Number).optional(),
   HSM_PIN: z.string().optional(),
   HSM_KEY_LABEL: z.string().optional(),
   
   // Proxy Token Configuration
-  PROXY_TOKEN_ENABLED: z.string().transform(val => val === 'true').default('true'),
-  PROXY_TOKEN_EXPIRY_HOURS: z.string().transform(Number).default('1'),
-  PROXY_TOKEN_MAX_USES: z.string().transform(Number).default('100'),
+  PROXY_TOKEN_ENABLED: z.coerce.boolean().default(true),
+  PROXY_TOKEN_EXPIRY_HOURS: z.coerce.number().default(1),
+  PROXY_TOKEN_MAX_USES: z.coerce.number().default(100),
   
   // Backup & Recovery
-  BACKUP_ENABLED: z.string().transform(val => val === 'true').default('true'),
-  BACKUP_RETENTION_DAYS: z.string().transform(Number).default('30'),
-  BACKUP_ENCRYPTION_ENABLED: z.string().transform(val => val === 'true').default('true'),
+  BACKUP_ENABLED: z.coerce.boolean().default(true),
+  BACKUP_RETENTION_DAYS: z.coerce.number().default(30),
+  BACKUP_ENCRYPTION_ENABLED: z.coerce.boolean().default(true),
   BACKUP_S3_BUCKET: z.string().optional(),
   BACKUP_S3_PREFIX: z.string().optional(),
   
   // Key Rotation
-  KEY_ROTATION_REMINDER_DAYS: z.string().transform(Number).default('30'),
-  KEY_ROTATION_ENFORCE_DAYS: z.string().transform(Number).default('90'),
+  KEY_ROTATION_REMINDER_DAYS: z.coerce.number().default(30),
+  KEY_ROTATION_ENFORCE_DAYS: z.coerce.number().default(90),
   
   // Analytics & Telemetry
-  ANALYTICS_ENABLED: z.string().transform(val => val === 'true').default('true'),
+  ANALYTICS_ENABLED: z.coerce.boolean().default(true),
   TELEMETRY_ENDPOINT: z.string().url().optional(),
-  USAGE_TRACKING: z.string().transform(val => val === 'true').default('true'),
-  ANALYTICS_BATCH_SIZE: z.string().transform(Number).default('100'),
-  ANALYTICS_FLUSH_INTERVAL_MS: z.string().transform(Number).default('60000'),
+  USAGE_TRACKING: z.coerce.boolean().default(true),
+  ANALYTICS_BATCH_SIZE: z.coerce.number().default(100),
+  ANALYTICS_FLUSH_INTERVAL_MS: z.coerce.number().default(60000),
   
   // Metrics Retention
-  METRICS_RETENTION_DAYS: z.string().transform(Number).default('90'),
-  METRICS_AGGREGATION_ENABLED: z.string().transform(val => val === 'true').default('true'),
+  METRICS_RETENTION_DAYS: z.coerce.number().default(90),
+  METRICS_AGGREGATION_ENABLED: z.coerce.boolean().default(true),
   METRICS_AGGREGATION_INTERVALS: z.string().default('hour,day,week,month'),
   
   // Monitoring
-  ENABLE_METRICS: z.string().transform(val => val === 'true').default('true'),
-  METRICS_PORT: z.string().transform(Number).default('9090'),
+  ENABLE_METRICS: z.coerce.boolean().default(true),
+  METRICS_PORT: z.coerce.number().default(9090),
   
   // CORS Configuration
   CORS_ORIGIN: z.string().default('http://localhost:3000,http://localhost:3001'),
-  CORS_CREDENTIALS: z.string().transform(val => val === 'true').default('true'),
+  CORS_CREDENTIALS: z.coerce.boolean().default(true),
   
   // Optional Email Configuration
   SMTP_HOST: z.string().optional(),
@@ -132,7 +132,7 @@ const validateEnv = () => {
     return envSchema.parse(process.env);
   } catch (error) {
     if (error instanceof z.ZodError) {
-      const missingVars = error.errors.map(err => `${err.path.join('.')}: ${err.message}`);
+      const missingVars = error.issues.map(err => `${err.path.join('.')}: ${err.message}`);
       throw new Error(`Environment validation failed:\n${missingVars.join('\n')}`);
     }
     throw error;

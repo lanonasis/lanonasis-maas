@@ -8,7 +8,7 @@ export interface AuthenticatedUser {
     plan?: string | undefined;
     organization_id?: string | undefined;
     api_key_id?: string | undefined;
-    auth_type: 'jwt' | 'api_key';
+    auth_type: 'jwt' | 'api_key' | 'sso';
     // Additional fields from UnifiedUser for compatibility
     userId?: string | undefined;
     organizationId?: string | undefined;
