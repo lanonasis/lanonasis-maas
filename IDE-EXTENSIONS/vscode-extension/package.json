@@ -546,8 +546,8 @@
         },
         "lanonasis.mcpServerUrl": {
           "type": "string",
-          "default": "",
-          "markdownDescription": "Custom MCP server URL. Leave empty for auto-discovery (default: `http://localhost:3001`)"
+          "default": "https://mcp.lanonasis.com/mcp",
+          "markdownDescription": "MCP server URL. Use `https://mcp.lanonasis.com/mcp` for production, `http://localhost:3001` for local development, or leave empty for auto-discovery."
         },
         "lanonasis.transportPreference": {
           "type": "string",
@@ -687,7 +687,7 @@
     "publish": "vsce publish",
     "publish:pre-release": "vsce publish --pre-release",
     "build:package": "npm run clean:package && npm run compile:prod && npm run build:react && vsce package --no-dependencies",
-    "build:css": "tailwindcss -i ./src/react/styles.css -o ./media/react-styles.css --minify",
+    "build:css": "echo 'CSS build skipped - using prebuilt media/react-styles.css'",
     "build:react": "npm run build:css && webpack --config webpack.react.config.js",
     "vscode:prepublish": "npm run compile:prod && npm run build:react"
   },

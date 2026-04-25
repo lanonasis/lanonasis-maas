@@ -136,25 +136,25 @@ export class MaaSClient {
 
   // Memory Operations
   async createMemory(memory: CreateMemoryRequest): Promise<ApiResponse<MemoryEntry>> {
-    return this.request<MemoryEntry>('/memory', {
+    return this.request<MemoryEntry>('/memories', {
       method: 'POST',
       body: JSON.stringify(memory)
     });
   }
 
   async getMemory(id: string): Promise<ApiResponse<MemoryEntry>> {
-    return this.request<MemoryEntry>(`/memory/${id}`);
+    return this.request<MemoryEntry>(`/memories/${id}`);
   }
 
   async updateMemory(id: string, updates: UpdateMemoryRequest): Promise<ApiResponse<MemoryEntry>> {
-    return this.request<MemoryEntry>(`/memory/${id}`, {
+    return this.request<MemoryEntry>(`/memories/${id}`, {
       method: 'PUT',
       body: JSON.stringify(updates)
     });
   }
 
   async deleteMemory(id: string): Promise<ApiResponse<void>> {
-    return this.request<void>(`/memory/${id}`, {
+    return this.request<void>(`/memories/${id}`, {
       method: 'DELETE'
     });
   }
@@ -182,7 +182,7 @@ export class MaaSClient {
     });
 
     return this.request<PaginatedResponse<MemoryEntry>>(
-      `/memory/list?${params.toString()}`
+      `/memories?${params.toString()}`
     );
   }
 
@@ -191,7 +191,7 @@ export class MaaSClient {
     total_results: number;
     search_time_ms: number;
   }>> {
-    return this.request('/memory/search', {
+    return this.request('/memories/search', {
       method: 'POST',
       body: JSON.stringify(request)
     });
@@ -201,7 +201,7 @@ export class MaaSClient {
     deleted_count: number;
     failed_ids: string[];
   }>> {
-    return this.request('/memory/bulk/delete', {
+    return this.request('/memories/bulk-delete', {
       method: 'POST',
       body: JSON.stringify({ memory_ids: memoryIds })
     });
@@ -238,7 +238,7 @@ export class MaaSClient {
 
   // Statistics
   async getMemoryStats(): Promise<ApiResponse<UserMemoryStats>> {
-    return this.request<UserMemoryStats>('/memory/stats');
+    return this.request<UserMemoryStats>('/memories/stats');
   }
 
   // Health Check
