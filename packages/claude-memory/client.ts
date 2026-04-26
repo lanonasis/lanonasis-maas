@@ -285,6 +285,7 @@ export class LanonasisClient {
     };
     if (this.projectId.trim()) {
       headers["X-Project-Scope"] = this.projectId;
+      headers["X-Project-Id"] = this.projectId;
     }
 
     const options: RequestInit = {
@@ -372,7 +373,7 @@ export class LanonasisClient {
   }
 
   private shouldRetryViaMcp(url: string, status: number): boolean {
-    return status === 401 && url.startsWith("https://api.lanonasis.com/");
+    return (status === 401 || status === 404) && url.startsWith("https://api.lanonasis.com/");
   }
 
   private getEnvCredential(names: readonly string[]): string | undefined {
@@ -607,7 +608,7 @@ export class LanonasisClient {
     }
 
     const query = queryParams.toString();
-    const path = `/api/v1/memory/list${query ? `?${query}` : ""}`;
+    const path = `/api/v1/memory${query ? `?${query}` : ""}`;
     const raw = await this.request<unknown>("GET", path);
     const envelope = raw as ApiEnvelope<LanMemory[]>;
     const result = {
