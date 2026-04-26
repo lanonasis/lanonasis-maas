@@ -128,6 +128,6 @@ export function installHooks(opts: InstallOptions): void {
   console.log(`  LANONASIS_PROJECT_ID  — legacy alias for LANONASIS_ORG_ID (optional)`);
 }
 
-if (import.meta.main) {
+if ((import.meta as { main?: boolean }).main) {
   installHooks(defaultOptions());
 }
