@@ -54,7 +54,10 @@ function parseTranscript(transcriptPath: string): TranscriptMessage[] {
     try {
       const parsed = JSON.parse(trimmed);
       if (parsed && typeof parsed === "object") {
-        messages.push(parsed as TranscriptMessage);
+        const msg = (parsed as Record<string, unknown>).message ?? parsed;
+        if (msg && typeof (msg as Record<string, unknown>).role === "string") {
+          messages.push(msg as TranscriptMessage);
+        }
       }
     } catch {
       // Skip malformed lines so a partial transcript can still be captured.

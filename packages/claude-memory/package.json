@@ -26,7 +26,7 @@
     "test": "vitest run",
     "prepublishOnly": "bun run build && bun run test",
     "install-hooks": "bun scripts/install-hooks.ts",
-    "migrate": "echo 'migrate-sessions not yet implemented (Phase 7)' && exit 1",
+    "migrate": "bun scripts/migrate-sessions.ts",
     "drain": "echo 'drain-spool not yet implemented (Phase 6)' && exit 1"
   },
   "dependencies": {

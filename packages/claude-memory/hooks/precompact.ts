@@ -50,7 +50,12 @@ function parseTranscript(transcriptPath: string): TranscriptMessage[] {
     try {
       const parsed = JSON.parse(trimmed);
       if (parsed && typeof parsed === "object") {
-        messages.push(parsed as TranscriptMessage);
+        // Claude Code JSONL wraps the message inside a `message` field:
+        // { type: "user"|"assistant", message: { role, content }, ... }
+        const msg = (parsed as Record<string, unknown>).message ?? parsed;
+        if (msg && typeof (msg as Record<string, unknown>).role === "string") {
+          messages.push(msg as TranscriptMessage);
+        }
       }
     } catch {
       // Skip malformed lines so we still preserve the rest of the transcript.
