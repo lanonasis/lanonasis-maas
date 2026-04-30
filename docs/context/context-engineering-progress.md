@@ -65,27 +65,27 @@ All context documents are stored in: `docs/context/`
 - [x] Create context-engineering-progress.md
 - [x] Create spec design document
 
-### Phase 2: Core Documentation (In Progress)
-- [ ] Create project-overview.md (master navigation)
-- [ ] Create memory-service.md
-- [ ] Create cli.md
-- [ ] Create sdk.md
-- [ ] Create memory-client.md
-- [ ] Create memory-sdk-standalone.md
-- [ ] Create claude-memory.md
-- [ ] Create recall-forge.md
-- [ ] Create ide-extension-core.md
-- [ ] Create ide-extensions/vscode.md
-- [ ] Create ide-extensions/cursor.md
-- [ ] Create ide-extensions/windsurf.md
+### Phase 2: Core Documentation ✓
+- [x] Create project-overview.md (master navigation)
+- [x] Create memory-service.md
+- [x] Create cli.md
+- [x] Create sdk.md
+- [x] Create memory-client.md
+- [x] Create memory-sdk-standalone.md
+- [x] Create claude-memory.md
+- [x] Create recall-forge.md
+- [x] Create ide-extension-core.md
+- [x] Create ide-extensions/vscode.md
+- [x] Create ide-extensions/cursor.md
+- [x] Create ide-extensions/windsurf.md
 
-### Phase 3: Integration & Refinement (Pending)
-- [ ] Create adr-001-project-structure.md
-- [ ] Create adr-002-vector-storage.md
-- [ ] Create adr-003-sdk-export-strategy.md
-- [ ] Create workflows/development.md
-- [ ] Verify cross-references
-- [ ] Commit all documentation
+### Phase 3: Integration & Refinement ✓
+- [x] Create adr-001-monorepo-structure.md
+- [x] Create adr-002-vector-storage.md
+- [x] Create adr-003-sdk-export-strategy.md
+- [x] Create workflows/development.md
+- [x] Verify cross-references
+- [ ] Commit all documentation (in progress)
 
 ## Current Status
 
