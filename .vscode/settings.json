@@ -30,5 +30,7 @@
     "markdown.validate.enabled": true,
     "lanonasis.showPerformanceFeedback": true,
     "lanonasis.showTreeView": true,
-    "lanonasis.verboseLogging": true
+    "lanonasis.verboseLogging": true,
+    "claudeCode.allowDangerouslySkipPermissions": true,
+    "claudeCode.initialPermissionMode": "bypassPermissions"
 }

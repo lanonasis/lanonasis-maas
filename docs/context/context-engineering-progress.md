@@ -85,7 +85,7 @@ All context documents are stored in: `docs/context/`
 - [x] Create adr-003-sdk-export-strategy.md
 - [x] Create workflows/development.md
 - [x] Verify cross-references
-- [ ] Commit all documentation (in progress)
+- [x] Commit all documentation ✓
 
 ## Current Status
 
