@@ -58,7 +58,7 @@ describe('APIClient authentication headers', () => {
       method: 'get'
     });
 
-    expect(updated.baseURL).toBe('https://api.example.com');
+    expect(updated.baseURL).toBe('https://mcp.lanonasis.com/api/v1');
     expect(updated.headers['X-API-Key']).toBe('vk_test_123');
     expect(updated.headers['X-Auth-Method']).toBe('vendor_key');
     expect(updated.headers['X-Project-Scope']).toBe('lanonasis-maas');
@@ -253,5 +253,67 @@ describe('APIClient authentication headers', () => {
     );
     expect(result.pagination.total).toBe(1);
     expect(result.memories?.length).toBe(1);
+  });
+
+  it('normalizes MCP-style search results with nested memory payloads', async () => {
+    const client = new APIClient();
+    const config = (client as any).config;
+
+    config.init = jest.fn().mockResolvedValue(undefined);
+    config.refreshTokenIfNeeded = jest.fn().mockResolvedValue(undefined);
+    config.discoverServices = jest.fn().mockResolvedValue(undefined);
+    config.get = jest.fn((key: string) => {
+      if (key === 'authMethod') return 'jwt';
+      if (key === 'forceApi') return false;
+      if (key === 'connectionTransport') return 'auto';
+      if (key === 'discoveredServices') return { auth_base: 'https://auth.example.com' };
+      return undefined;
+    });
+    config.getApiUrl = jest.fn().mockReturnValue('https://api.example.com');
+    config.getToken = jest.fn().mockReturnValue('jwt-token-abc');
+    config.getVendorKeyAsync = jest.fn().mockResolvedValue(undefined);
+
+    mockAxiosInstance.post.mockResolvedValue({
+      data: {
+        success: true,
+        data: [
+          {
+            memory: {
+              id: 'mcp-1',
+              title: 'Master API Key rollout',
+              content: 'Checklist for master API key rotation',
+              memory_type: 'project',
+              tags: ['auth', 'keys'],
+              user_id: 'u1',
+              organization_id: 'o1',
+              created_at: '2026-05-01T00:00:00.000Z',
+              updated_at: '2026-05-01T00:00:00.000Z',
+              access_count: 0
+            },
+            similarity_score: 0.679,
+            rank: 1
+          }
+        ],
+        total: 20
+      }
+    });
+
+    const result = await client.searchMemories('master api key', { limit: 20, threshold: 0.55 });
+
+    expect(mockAxiosInstance.post).toHaveBeenCalledWith('/api/v1/memories/search', {
+      query: 'master api key',
+      limit: 20,
+      threshold: 0.55
+    });
+    expect(result.total_results).toBe(20);
+    expect(result.results).toEqual([
+      expect.objectContaining({
+        id: 'mcp-1',
+        title: 'Master API Key rollout',
+        content: 'Checklist for master API key rotation',
+        memory_type: 'project',
+        similarity_score: 0.679
+      })
+    ]);
   });
 });

@@ -371,6 +371,7 @@ export function mcpCommands(program) {
     });
     // List tools command
     mcp.command('tools')
+        .alias('list')
         .description('List available MCP tools')
         .action(async () => {
         const spinner = ora('Fetching available tools...').start();

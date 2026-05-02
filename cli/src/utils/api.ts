@@ -260,6 +260,45 @@ export class APIClient {
     return typeof normalizedRecord.id === 'string' ? normalized as MemoryEntry : undefined;
   }
 
+  private normalizeMemorySearchResult(payload: unknown): MemorySearchResult | undefined {
+    if (!payload || typeof payload !== 'object') {
+      return undefined;
+    }
+
+    const record = payload as Record<string, unknown>;
+    const nestedMemory = record.memory;
+    const candidate = nestedMemory && typeof nestedMemory === 'object'
+      ? nestedMemory
+      : payload;
+
+    const memory = this.tryNormalizeMemoryEntry(candidate);
+    if (!memory) {
+      return undefined;
+    }
+
+    const memoryRecord = memory as unknown as Record<string, unknown>;
+    const candidateRecord = candidate as Record<string, unknown>;
+    const resolvedMemoryType = typeof memoryRecord.memory_type === 'string'
+      ? memoryRecord.memory_type
+      : typeof candidateRecord.memory_type === 'string'
+        ? candidateRecord.memory_type
+        : typeof candidateRecord.type === 'string'
+          ? candidateRecord.type
+          : 'unknown';
+
+    const similarityScore = typeof record.similarity_score === 'number'
+      ? record.similarity_score
+      : typeof record.score === 'number'
+        ? record.score
+        : 0;
+
+    return {
+      ...memory,
+      memory_type: resolvedMemoryType as MemoryType,
+      similarity_score: similarityScore
+    };
+  }
+
   private normalizeMemoryStats(payload: unknown): MemoryStats {
     if (!payload || typeof payload !== 'object') {
       throw new Error('Memory stats endpoint returned an invalid response.');
@@ -1054,7 +1093,36 @@ export class APIClient {
       query,
       ...options
     });
-    return response.data;
+    const payload = response.data || {};
+    const rawResults = Array.isArray(payload.results)
+      ? payload.results
+      : Array.isArray(payload.data)
+        ? payload.data
+        : Array.isArray(payload.memories)
+          ? payload.memories
+          : Array.isArray(payload)
+            ? payload
+            : [];
+
+    const results = rawResults
+      .map((entry: unknown) => this.normalizeMemorySearchResult(entry))
+      .filter((entry): entry is MemorySearchResult => entry !== undefined);
+
+    const totalResults = Number.isFinite(Number(payload.total_results))
+      ? Number(payload.total_results)
+      : Number.isFinite(Number(payload.total))
+        ? Number(payload.total)
+        : results.length;
+
+    return {
+      ...payload,
+      data: results,
+      results,
+      total_results: totalResults,
+      search_time_ms: Number.isFinite(Number(payload.search_time_ms))
+        ? Number(payload.search_time_ms)
+        : 0
+    };
   }
 
   async getMemoryStats(): Promise<MemoryStats> {

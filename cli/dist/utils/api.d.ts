@@ -194,6 +194,7 @@ export declare class APIClient {
     private isLikelyHashedCredential;
     private normalizeMemoryEntry;
     private tryNormalizeMemoryEntry;
+    private normalizeMemorySearchResult;
     private normalizeMemoryStats;
     private shouldUseLegacyMemoryRpcFallback;
     private shouldRetryViaApiGateway;

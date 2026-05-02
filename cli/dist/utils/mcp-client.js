@@ -901,15 +901,34 @@ export class MCPClient {
         }
         const useRemote = this.shouldUseRemoteToolBridge();
         if (useRemote) {
-            // Return hardcoded list for remote mode
-            return [
-                { name: 'memory_create_memory', description: 'Create a new memory entry' },
-                { name: 'memory_search_memories', description: 'Search memories using semantic search' },
-                { name: 'memory_get_memory', description: 'Get a specific memory by ID' },
-                { name: 'memory_update_memory', description: 'Update an existing memory' },
-                { name: 'memory_delete_memory', description: 'Delete a memory' },
-                { name: 'memory_list_memories', description: 'List all memories with pagination' }
-            ];
+            const apiUrl = this.config.getMCPRestUrl() ?? 'https://mcp.lanonasis.com/api/v1';
+            const auth = await this.resolveAuthCredential();
+            if (!auth) {
+                throw new Error('Authentication required. Run "lanonasis auth login" first.');
+            }
+            const axios = (await import('axios')).default;
+            const response = await axios({
+                method: 'POST',
+                url: `${apiUrl}/mcp/tools/list`,
+                headers: {
+                    ...this.buildAuthHeaders(auth),
+                    'Content-Type': 'application/json'
+                },
+                data: {
+                    jsonrpc: '2.0',
+                    id: Date.now(),
+                    method: 'tools/list',
+                    params: {}
+                }
+            });
+            const tools = response.data?.result?.tools;
+            if (!Array.isArray(tools)) {
+                throw new Error('Remote MCP tools/list returned an invalid response');
+            }
+            return tools.map((tool) => ({
+                name: tool.name || 'unknown_tool',
+                description: tool.description || 'No description available'
+            }));
         }
         else {
             if (!this.client) {

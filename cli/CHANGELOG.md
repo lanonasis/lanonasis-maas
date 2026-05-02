@@ -1,5 +1,17 @@
 # Changelog - @lanonasis/cli
 
+## [3.9.16] - 2026-05-02
+
+### 🐛 Bug Fixes
+
+- **Default MCP-backed `memory search` no longer prints `undefined` and crashes**: The CLI now normalizes MCP search results that arrive as `{ memory, similarity_score, rank }` into the same flattened shape used by direct REST results, so titles, previews, IDs, and types render correctly in the default transport path.
+- **MCP-backed search results now preserve memory type labels**: Results that expose `type` instead of `memory_type` are now normalized before rendering, so default `memory search` output no longer falls back to `Type: unknown` for otherwise valid matches.
+- **`mcp tools` now shows the real live remote catalog**: Remote/WebSocket MCP mode now calls the authenticated `/api/v1/mcp/tools/list` endpoint instead of returning a stale six-tool hardcoded list, restoring visibility into the full live toolset including chunked memory, intelligence, behavior, API key, project, and config tools.
+
+### ✨ Improvements
+
+- **`lanonasis mcp list` alias added**: `mcp tools` now also responds to `mcp list`, making the command easier to discover and matching operator expectations.
+
 ## [3.9.15] - 2026-04-04
 
 ### 🐛 Bug Fixes

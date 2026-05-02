@@ -67,4 +67,41 @@ describe('MCPClient remote memory bridge', () => {
       data: { title: 'Updated title' },
     }));
   });
+
+  it('lists tools from the remote MCP tools/list endpoint instead of a hardcoded set', async () => {
+    mockAxios.mockResolvedValue({
+      data: {
+        result: {
+          tools: [
+            { name: 'search_memories', description: 'Search memories using semantic vector search' },
+            { name: 'list_api_keys', description: 'List API keys' },
+            { name: 'get_organization_info', description: 'Get organization info' }
+          ]
+        }
+      }
+    });
+
+    client.isConnected = true;
+    client.shouldUseRemoteToolBridge = jest.fn().mockReturnValue(true);
+
+    const tools = await client.listTools();
+
+    expect(mockAxios).toHaveBeenCalledWith(expect.objectContaining({
+      method: 'POST',
+      url: 'https://mcp.example.com/api/v1/mcp/tools/list',
+      headers: expect.objectContaining({
+        Authorization: 'Bearer token-123',
+        'Content-Type': 'application/json'
+      }),
+      data: expect.objectContaining({
+        jsonrpc: '2.0',
+        method: 'tools/list'
+      })
+    }));
+    expect(tools).toEqual([
+      { name: 'search_memories', description: 'Search memories using semantic vector search' },
+      { name: 'list_api_keys', description: 'List API keys' },
+      { name: 'get_organization_info', description: 'Get organization info' }
+    ]);
+  });
 });
