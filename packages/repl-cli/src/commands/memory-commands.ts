@@ -19,6 +19,17 @@ const VALID_MEMORY_TYPES = [
   'workflow'
 ] as const;
 
+// Helper to pause/resume readline around spinner operations
+function pauseReadline() {
+  const rl = (global as any).rlInterface;
+  if (rl) rl.pause();
+}
+
+function resumeReadline() {
+  const rl = (global as any).rlInterface;
+  if (rl) rl.resume();
+}
+
 const VALID_MEMORY_STATUSES = [
   'active',
   'archived',
@@ -93,6 +104,7 @@ export class MemoryCommands {
       return;
     }
     
+    pauseReadline();
     const spinner = ora('Creating memory...').start();
     try {
       const client = this.getClient(context);
@@ -112,6 +124,8 @@ export class MemoryCommands {
       }
     } catch (error) {
       spinner.fail(chalk.red(`Failed: ${error instanceof Error && error.message ? error.message : String(error)}`));
+    } finally {
+      resumeReadline();
     }
   }
 
@@ -173,6 +187,7 @@ export class MemoryCommands {
       return;
     }
 
+    pauseReadline();
     const spinner = ora('Updating memory...').start();
     try {
       const client = this.getClient(context);
@@ -187,6 +202,8 @@ export class MemoryCommands {
       }
     } catch (error) {
       spinner.fail(chalk.red(`Update failed: ${error instanceof Error && error.message ? error.message : String(error)}`));
+    } finally {
+      resumeReadline();
     }
   }
   
@@ -218,6 +235,7 @@ export class MemoryCommands {
       return;
     }
     
+    pauseReadline();
     const spinner = ora('Searching...').start();
     try {
       const client = this.getClient(context);
@@ -247,12 +265,15 @@ export class MemoryCommands {
       context.lastResult = results;
     } catch (error) {
       spinner.fail(chalk.red(`Search failed: ${error instanceof Error && error.message ? error.message : String(error)}`));
+    } finally {
+      resumeReadline();
     }
   }
   
   async list(args: string[], context: CommandContext) {
     const limit = parseInt(args[0] || '10', 10);
     
+    pauseReadline();
     const spinner = ora('Fetching memories...').start();
     try {
       const client = this.getClient(context);
@@ -275,6 +296,8 @@ export class MemoryCommands {
       }
     } catch (error) {
       spinner.fail(chalk.red(`List failed: ${error instanceof Error && error.message ? error.message : String(error)}`));
+    } finally {
+      resumeReadline();
     }
   }
   
@@ -285,6 +308,7 @@ export class MemoryCommands {
       return;
     }
     
+    pauseReadline();
     const spinner = ora('Fetching memory...').start();
     try {
       const client = this.getClient(context);
@@ -306,6 +330,8 @@ export class MemoryCommands {
       }
     } catch (error) {
       spinner.fail(chalk.red(`Get failed: ${error instanceof Error && error.message ? error.message : String(error)}`));
+    } finally {
+      resumeReadline();
     }
   }
   
@@ -316,6 +342,7 @@ export class MemoryCommands {
       return;
     }
     
+    pauseReadline();
     const spinner = ora('Deleting memory...').start();
     try {
       const client = this.getClient(context);
@@ -328,6 +355,8 @@ export class MemoryCommands {
       context.lastResult = { deleted: id };
     } catch (error) {
       spinner.fail(chalk.red(`Failed: ${error instanceof Error && error.message ? error.message : String(error)}`));
+    } finally {
+      resumeReadline();
     }
   }
 }

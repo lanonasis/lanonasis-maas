@@ -13,6 +13,7 @@ export default {
     '<rootDir>/src/**/__tests__/**/*.test.ts',
     '<rootDir>/src/**/*.test.ts',
     '<rootDir>/tests/**/*.test.js',
+    '<rootDir>/test/**/*.test.ts',
   ],
   collectCoverageFrom: [
     'src/**/*.ts',
@@ -34,17 +35,17 @@ export default {
   testTimeout: 30000,
   transform: {
     '^.+\\.ts$': [
-      'ts-jest',
-      {
-        useESM: true,
-        tsconfig: {
-          target: 'ES2022',
-          module: 'ES2022',
-          moduleResolution: 'node',
-          esModuleInterop: true,
-          allowSyntheticDefaultImports: true,
+        'ts-jest',
+        {
+          useESM: true,
+          tsconfig: {
+            target: 'ES2022',
+            module: 'NodeNext',
+            moduleResolution: 'NodeNext',
+            esModuleInterop: true,
+            allowSyntheticDefaultImports: true,
+          },
         },
-      },
     ],
   },
   transformIgnorePatterns: ['node_modules/(?!(chalk|inquirer|ora|cli-progress|cli-table3)/)'],

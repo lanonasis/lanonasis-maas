@@ -45,7 +45,7 @@ export const ApiKeyManager = () => {
       const { data, error } = await supabase
         .from("api_keys")
         .select("*")
-        .eq("user_id", user.id as any)
+        .eq("user_id", user.id)
         .order("created_at", { ascending: false });
       
       if (error) throw error;
@@ -101,16 +101,18 @@ export const ApiKeyManager = () => {
         const keyHash = await hashApiKeyBrowser(formattedKey);
         
         // Save the HASHED API key to the database (never store plaintext!)
-        const { error } = await supabase.from("api_keys").insert({
-          key_hash: keyHash,  // Store hash, not raw key
+        const insertData = {
+          key_hash: keyHash,
           name: keyName,
           service: keyService,
-          user_id: user.id as any,
+          user_id: user.id,
           expires_at: expirationDate,
           rate_limited: rateLimit,
           created_at: new Date().toISOString(),
           last_used: null,
-        } as any);
+        };
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { error } = await supabase.from("api_keys").insert(insertData as any);
         
         if (error) throw error;
       }
@@ -140,7 +142,7 @@ export const ApiKeyManager = () => {
         .from("api_keys")
         .delete()
         .eq("id", keyId)
-        .eq("user_id", user.id as any);
+        .eq("user_id", user.id);
       
       if (error) throw error;
       

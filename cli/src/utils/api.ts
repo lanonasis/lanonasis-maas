@@ -39,6 +39,7 @@ export interface MemoryEntry {
   memory_type: MemoryType;
   tags: string[];
   topic_id?: string | null;
+  topic_key?: string | null;
   user_id: string;
   organization_id: string;
   metadata?: Record<string, unknown>;
@@ -54,6 +55,7 @@ export interface CreateMemoryRequest {
   memory_type?: MemoryType;
   tags?: string[];
   topic_id?: string;
+  topic_key?: string;
   metadata?: Record<string, unknown>;
   continuity_key?: string;
   idempotency_key?: string;
@@ -66,6 +68,7 @@ export interface UpdateMemoryRequest {
   memory_type?: MemoryType;
   tags?: string[];
   topic_id?: string | null;
+  topic_key?: string;
   metadata?: Record<string, unknown>;
   continuity_key?: string;
   idempotency_key?: string;
@@ -79,6 +82,8 @@ export interface GetMemoriesParams {
   memory_type?: MemoryType;
   tags?: string[] | string;
   topic_id?: string;
+  topic_key?: string;
+  include_deleted?: boolean;
   user_id?: string;
   sort?: 'created_at' | 'updated_at' | 'last_accessed' | 'access_count' | 'title';
   order?: 'asc' | 'desc';
@@ -91,8 +96,11 @@ export interface SearchMemoryRequest {
   memory_types?: MemoryType[];
   tags?: string[];
   topic_id?: string;
+  topic_key?: string;
   limit?: number;
   threshold?: number;
+  include_deleted?: boolean;
+  response_mode?: 'full' | 'compact' | 'timeline';
 }
 
 export interface MemorySearchResult extends MemoryEntry {
@@ -107,6 +115,15 @@ export interface MemoryStats {
   most_accessed_memory?: MemoryEntry;
   recent_memories: MemoryEntry[];
 }
+
+const MEMORY_TYPES: readonly MemoryType[] = [
+  'context',
+  'project',
+  'knowledge',
+  'reference',
+  'personal',
+  'workflow'
+];
 
 export interface BulkDeleteRequest {
   memory_ids: string[];
@@ -182,7 +199,10 @@ export interface UserProfile {
   email: string;
   name: string | null;
   avatar_url: string | null;
+  organization_id?: string | null;
+  organizationId?: string | null;
   role: string;
+  plan?: string | null;
   provider: string | null;
   project_scope: string | null;
   platform: string | null;
@@ -196,6 +216,10 @@ export class APIClient {
   private config: CLIConfig;
   /** When true, throw on 401/403 instead of printing+exiting (for callers that handle errors) */
   noExit = false;
+
+  private isLikelyHashedCredential(value: unknown): value is string {
+    return typeof value === 'string' && /^[a-f0-9]{64}$/i.test(value.trim());
+  }
 
   private normalizeMemoryEntry(payload: unknown): MemoryEntry {
     // API responses are inconsistent across gateways:
@@ -218,12 +242,88 @@ export class APIClient {
     return payload as MemoryEntry;
   }
 
+  private tryNormalizeMemoryEntry(payload: unknown): MemoryEntry | undefined {
+    if (!payload || typeof payload !== 'object') {
+      return undefined;
+    }
+
+    const normalized = this.normalizeMemoryEntry(payload) as unknown;
+    if (!normalized || typeof normalized !== 'object') {
+      return undefined;
+    }
+
+    const normalizedRecord = normalized as Record<string, unknown>;
+    return typeof normalizedRecord.id === 'string' ? normalized as MemoryEntry : undefined;
+  }
+
+  private normalizeMemoryStats(payload: unknown): MemoryStats {
+    if (!payload || typeof payload !== 'object') {
+      throw new Error('Memory stats endpoint returned an invalid response.');
+    }
+
+    const envelope = payload as Record<string, unknown>;
+    const rawStats =
+      envelope.data && typeof envelope.data === 'object' && !Array.isArray(envelope.data)
+        ? envelope.data as Record<string, unknown>
+        : envelope;
+
+    const rawByType =
+      rawStats.memories_by_type && typeof rawStats.memories_by_type === 'object' && !Array.isArray(rawStats.memories_by_type)
+        ? rawStats.memories_by_type as Record<string, unknown>
+        : rawStats.by_type && typeof rawStats.by_type === 'object' && !Array.isArray(rawStats.by_type)
+          ? rawStats.by_type as Record<string, unknown>
+          : {};
+
+    const memoriesByType = MEMORY_TYPES.reduce((accumulator, memoryType) => {
+      const value = rawByType[memoryType];
+      accumulator[memoryType] = typeof value === 'number' ? value : 0;
+      return accumulator;
+    }, {} as Record<MemoryType, number>);
+
+    const recentMemories = Array.isArray(rawStats.recent_memories)
+      ? rawStats.recent_memories
+        .map((entry) => this.tryNormalizeMemoryEntry(entry))
+        .filter((entry): entry is MemoryEntry => entry !== undefined)
+      : [];
+
+    const totalMemories = typeof rawStats.total_memories === 'number'
+      ? rawStats.total_memories
+      : Object.values(memoriesByType).reduce((sum, count) => sum + count, 0);
+
+    return {
+      total_memories: totalMemories,
+      memories_by_type: memoriesByType,
+      total_size_bytes: typeof rawStats.total_size_bytes === 'number' ? rawStats.total_size_bytes : 0,
+      avg_access_count: typeof rawStats.avg_access_count === 'number' ? rawStats.avg_access_count : 0,
+      most_accessed_memory: this.tryNormalizeMemoryEntry(rawStats.most_accessed_memory),
+      recent_memories: recentMemories
+    };
+  }
+
   private shouldUseLegacyMemoryRpcFallback(error: any): boolean {
     const status = error?.response?.status;
     const errorData = error?.response?.data;
     const message = `${errorData?.error || ''} ${errorData?.message || ''}`.toLowerCase();
+    const rawRequestUrl = String(error?.config?.url || '');
+    const requestPath = (() => {
+      try {
+        if (/^https?:\/\//i.test(rawRequestUrl)) {
+          return new URL(rawRequestUrl).pathname;
+        }
+      } catch {
+        // Fall back to the raw URL if URL parsing fails.
+      }
+      return rawRequestUrl;
+    })();
+    const normalizedRequestUrl = requestPath.startsWith('/memory')
+      ? this.normalizeMcpPathToApi(requestPath)
+      : requestPath;
 
     if (status === 405) {
+      return true;
+    }
+
+    if (status === 404 && /^\/api\/v1\/memories\/[^/?#]+$/.test(normalizedRequestUrl)) {
       return true;
     }
 
@@ -249,7 +349,7 @@ export class APIClient {
 
   private shouldRetryViaSupabaseMemoryFunctions(error: any): boolean {
     const status = Number(error?.response?.status || 0);
-    if (status !== 401) return false;
+    if (status !== 401 && status !== 404) return false;
 
     const cfg = (error?.config || {}) as AxiosRequestConfig & {
       __retriedViaSupabaseMemoryFunctions?: boolean;
@@ -261,16 +361,44 @@ export class APIClient {
     if (baseURL.includes('supabase.co')) return false;
 
     const requestUrl = String(cfg.url || '');
-    if (!requestUrl.startsWith('/api/v1/memories')) return false;
+    const normalizedRequestUrl = requestUrl.startsWith('/memory')
+      ? this.normalizeMcpPathToApi(requestUrl)
+      : requestUrl;
+    if (!normalizedRequestUrl.startsWith('/api/v1/memories')) return false;
 
-    const message = String(error?.response?.data?.message || error?.response?.data?.error || '');
-    if (!/invalid jwt/i.test(message)) return false;
+    const errorData = error?.response?.data;
+    const responseText = typeof errorData === 'string'
+      ? errorData
+      : `${errorData?.message || ''} ${errorData?.error || ''}`;
+
+    if (status === 401) {
+      const indicatesRouteShapeDrift = /invalid jwt|missing authorization header|authentication required|token is not active or has expired/i
+        .test(responseText);
+      if (!indicatesRouteShapeDrift) return false;
+    }
+
+    if (status === 404) {
+      const isGetByIdRequest = /^\/api\/v1\/memories\/[^/?#]+$/.test(normalizedRequestUrl);
+      const indicatesMissingMcpGetRoute = /cannot get \/api\/v1\/memory\/|cannot get \/memory\/|route[_ -]?not[_ -]?found/i
+        .test(responseText.toLowerCase());
+      if (!isGetByIdRequest || !indicatesMissingMcpGetRoute) return false;
+    }
 
     const authMethod = String(this.config.get<string>('authMethod') || '');
     const token = this.config.getToken();
     const hasOpaqueToken = Boolean(token) && token!.split('.').length !== 3;
+    const hasVendorKey = this.config.hasVendorKey();
 
-    return hasOpaqueToken || authMethod === 'oauth' || authMethod === 'oauth2';
+    return hasVendorKey || hasOpaqueToken || authMethod === 'oauth' || authMethod === 'oauth2';
+  }
+
+  private shouldUsePostListFallback(error: any): boolean {
+    const status = Number(error?.response?.status || 0);
+    if (status === 405) return true;
+    if (status !== 401) return false;
+
+    const message = String(error?.response?.data?.message || error?.response?.data?.error || '');
+    return /missing authorization header|authentication required/i.test(message);
   }
 
   private getSupabaseFunctionsBaseUrl(): string {
@@ -282,7 +410,10 @@ export class APIClient {
     ];
 
     for (const candidate of candidates) {
-      if (typeof candidate === 'string' && candidate.includes('supabase.co')) {
+      if (typeof candidate === 'string'
+        && candidate.includes('supabase.co')
+        && !candidate.includes('your-project.supabase.co')
+        && !candidate.includes('<project-ref>.supabase.co')) {
         return candidate.replace(/\/$/, '');
       }
     }
@@ -296,7 +427,10 @@ export class APIClient {
     vendorKey?: string
   ): InternalAxiosRequestConfig {
     const method = String(config.method || 'get').toLowerCase();
-    const url = String(config.url || '');
+    const rawUrl = String(config.url || '');
+    const url = rawUrl.startsWith('/memory')
+      ? this.normalizeMcpPathToApi(rawUrl)
+      : rawUrl;
 
     const mapped = config;
     mapped.baseURL = this.getSupabaseFunctionsBaseUrl();
@@ -397,14 +531,17 @@ export class APIClient {
       const useSupabaseMemoryFunctions = (config as AxiosRequestConfig & {
         __useSupabaseMemoryFunctions?: boolean;
       }).__useSupabaseMemoryFunctions === true;
-      const isMemoryEndpoint = typeof config.url === 'string' && config.url.startsWith('/api/v1/memories');
+      const normalizedMemoryUrl = typeof config.url === 'string'
+        ? this.normalizeMcpPathToApi(config.url)
+        : '';
+      const isMemoryEndpoint = normalizedMemoryUrl.startsWith('/api/v1/memories');
       const forceApiFromEnv = process.env.LANONASIS_FORCE_API === 'true'
         || process.env.CLI_FORCE_API === 'true'
         || process.env.ONASIS_FORCE_API === 'true';
       const forceApiFromConfig = this.config.get<boolean>('forceApi') === true
         || this.config.get<string>('connectionTransport') === 'api';
 
-      if (useSupabaseMemoryFunctions && typeof config.url === 'string' && config.url.startsWith('/api/v1/memories')) {
+      if (useSupabaseMemoryFunctions && isMemoryEndpoint) {
         const remapped = this.mapMemoryApiRouteToSupabaseFunctions(config, token || undefined, vendorKey || undefined);
         if (process.env.CLI_VERBOSE === 'true') {
           const requestId = randomUUID();
@@ -424,6 +561,12 @@ export class APIClient {
       const forceDirectApi = forceApiFromEnv || forceApiFromConfig || forceDirectApiRetry;
       const prefersTokenAuth = Boolean(token) && (authMethod === 'jwt' || authMethod === 'oauth' || authMethod === 'oauth2');
       const useVendorKeyAuth = Boolean(vendorKey) && !prefersTokenAuth;
+
+      if (authMethod === 'vendor_key' && this.isLikelyHashedCredential(vendorKey)) {
+        throw new Error(
+          'Stored vendor key is in legacy hashed format. Run "lanonasis auth login --vendor-key <your-key>" to refresh secure storage.'
+        );
+      }
 
       // Determine the correct API base URL:
       // - Auth endpoints -> auth.lanonasis.com
@@ -611,7 +754,7 @@ export class APIClient {
       return response.data;
     } catch (error: any) {
       // Backward-compatible fallback: newer API contracts may reject GET list.
-      if (error?.response?.status === 405) {
+      if (this.shouldUsePostListFallback(error)) {
         const limit = Number(params.limit || 20);
         const page = Number(params.page || 1);
         const offset = Number(params.offset ?? Math.max(0, (page - 1) * limit));
@@ -787,7 +930,7 @@ export class APIClient {
       const response = await this.client.put(`/api/v1/memories/${id}`, data);
       return this.normalizeMemoryEntry(response.data);
     } catch (error: any) {
-      if (this.shouldUseLegacyMemoryRpcFallback(error)) {
+      if (this.shouldUseLegacyMemoryRpcFallback(error) || error?.response?.status === 404) {
         const fallback = await this.client.post('/api/v1/memory/update', {
           id,
           ...data
@@ -805,7 +948,7 @@ export class APIClient {
     try {
       await this.client.delete(`/api/v1/memories/${id}`);
     } catch (error: any) {
-      if (this.shouldUseLegacyMemoryRpcFallback(error)) {
+      if (this.shouldUseLegacyMemoryRpcFallback(error) || error?.response?.status === 404) {
         await this.client.post('/api/v1/memory/delete', { id });
         return;
       }
@@ -823,7 +966,7 @@ export class APIClient {
 
   async getMemoryStats(): Promise<MemoryStats> {
     const response = await this.client.get('/api/v1/memories/stats');
-    return response.data;
+    return this.normalizeMemoryStats(response.data);
   }
 
   async bulkDeleteMemories(memoryIds: string[]): Promise<BulkDeleteResponse> {

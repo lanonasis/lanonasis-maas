@@ -826,13 +826,8 @@ async function handleOAuthFlow(config: CLIConfig): Promise<void> {
     await config.set('token_expires_at', Date.now() + (tokens.expires_in * 1000));
     await config.set('authMethod', 'oauth');
 
-    // The OAuth access token from auth-gateway works as the API token for all services
-    // Store it as the vendor key equivalent for MCP and API access
     spinner.text = 'Configuring unified access...';
     spinner.start();
-
-    // Use the OAuth access token directly - it's already an auth-gateway token
-    await config.setVendorKey(tokens.access_token);
     spinner.succeed('Unified authentication configured');
 
     console.log();

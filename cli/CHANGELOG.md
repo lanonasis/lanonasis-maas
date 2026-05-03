@@ -1,5 +1,13 @@
 # Changelog - @lanonasis/cli
 
+## [3.9.11] - 2026-03-27
+
+### 🐛 Bug Fixes
+
+- **`memory stats` no longer crashes on wrapped responses**: The CLI now normalizes both flat and `{ data: ... }` stats payloads and safely defaults optional fields like `total_size_bytes` and `avg_access_count` when the backend omits them.
+- **Secure storage no longer initializes on every command startup**: Vendor key storage is now lazy-loaded, which prevents unnecessary keychain fallback warnings on CLI commands that do not access vendor key storage.
+- **Bundled auth client updated to `@lanonasis/oauth-client@2.0.4`**: Pulls in the ESM-safe native keychain loader fix and semver-compliant optional React peer metadata.
+
 ## [3.9.8] - 2026-02-25
 
 ### ✨ New Features

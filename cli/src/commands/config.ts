@@ -609,7 +609,7 @@ export function configCommands(program: Command): void {
       const mcpServerUrl = config.get<string>('mcpServerUrl');
 
       if (mcpPreference) {
-        if (['local', 'remote', 'auto'].includes(mcpPreference)) {
+        if (['local', 'remote', 'websocket', 'auto'].includes(mcpPreference)) {
           console.log(chalk.green(`   ✓ MCP preference: ${mcpPreference}`));
           validation.mcpConfigValid = true;
         } else {

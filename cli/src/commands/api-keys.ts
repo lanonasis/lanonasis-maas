@@ -17,6 +17,50 @@ const colors = {
   highlight: chalk.white.bold
 };
 
+const AUTH_API_KEYS_BASE = '/api/v1/auth/api-keys';
+const VALID_ACCESS_LEVELS = ['public', 'authenticated', 'team', 'admin', 'enterprise'] as const;
+
+interface PlatformApiKey {
+  id: string;
+  name: string;
+  description?: string | null;
+  key?: string;
+  user_id: string;
+  access_level: string;
+  permissions: string[];
+  service: string;
+  service_scopes?: Array<{
+    service_key: string;
+    allowed_actions?: string[];
+    max_calls_per_minute?: number;
+    max_calls_per_day?: number;
+  }>;
+  expires_at?: string | null;
+  last_used_at?: string | null;
+  created_at: string;
+  is_active: boolean;
+}
+
+function unwrapApiResponse<T>(response: T | { data?: T }): T {
+  if (response && typeof response === 'object' && 'data' in response) {
+    return (response as { data?: T }).data ?? (response as T);
+  }
+  return response as T;
+}
+
+function parseScopes(scopes?: string): string[] | undefined {
+  if (!scopes) {
+    return undefined;
+  }
+
+  const parsed = scopes
+    .split(',')
+    .map((scope: string) => scope.trim())
+    .filter(Boolean);
+
+  return parsed.length > 0 ? parsed : undefined;
+}
+
 const apiKeysCommand = new Command('api-keys')
   .alias('keys')
   .description(colors.info('🔐 Manage API keys securely with enterprise-grade encryption'));
@@ -73,8 +117,9 @@ projectsCommand
         projectData = { ...projectData, ...answers };
       }
 
-      const project = await apiClient.post('/api-keys/projects', projectData);
-      
+      const projectRes = await apiClient.post(`${AUTH_API_KEYS_BASE}/projects`, projectData);
+      const project = unwrapApiResponse<any>(projectRes);
+
       console.log(chalk.green('✅ Project created successfully!'));
       console.log(chalk.blue(`Project ID: ${project.id}`));
       console.log(chalk.blue(`Name: ${project.name}`));
@@ -94,14 +139,14 @@ projectsCommand
   .option('--json', 'Output as JSON')
   .action(async (options) => {
     try {
-      const projects = await apiClient.get('/api-keys/projects');
+      const projects = unwrapApiResponse<any[]>(await apiClient.get(`${AUTH_API_KEYS_BASE}/projects`));
 
       if (options.json) {
         console.log(JSON.stringify(projects, null, 2));
         return;
       }
 
-      if (projects.length === 0) {
+      if (!Array.isArray(projects) || projects.length === 0) {
         console.log(chalk.yellow('No projects found'));
         return;
       }
@@ -137,32 +182,32 @@ apiKeysCommand
   .command('create')
   .description('Create a new API key')
   .option('-n, --name <name>', 'API key name')
-  .option('-v, --value <value>', 'API key value')
-  .option('-t, --type <type>', 'Key type (api_key, database_url, oauth_token, etc.)')
-  .option('-e, --environment <env>', 'Environment (development, staging, production)')
-  .option('-p, --project-id <id>', 'Project ID')
-  .option('--access-level <level>', 'Access level (public, authenticated, team, admin, enterprise)')
-  .option('--tags <tags>', 'Comma-separated tags')
-  .option('--expires-at <date>', 'Expiration date (ISO format)')
-  .option('--rotation-frequency <days>', 'Rotation frequency in days', '90')
+  .option('-d, --description <description>', 'API key description (optional)')
+  .option('--access-level <level>', 'Access level (public, authenticated, team, admin, enterprise)', 'team')
+  .option('--expires-in-days <days>', 'Expiration in days (default: 365)', '365')
+  .option('--scopes <scopes>', 'Comma-separated scopes (optional)')
   .option('--interactive', 'Interactive mode')
   .action(async (options) => {
     try {
+      const accessLevel = (options.accessLevel || 'team').toLowerCase();
+      const expiresInDays = parseInt(options.expiresInDays, 10);
+
+      if (!VALID_ACCESS_LEVELS.includes(accessLevel as typeof VALID_ACCESS_LEVELS[number])) {
+        throw new Error('Invalid access level. Allowed: public, authenticated, team, admin, enterprise');
+      }
+      if (!Number.isInteger(expiresInDays) || expiresInDays <= 0 || expiresInDays > 3650) {
+        throw new Error('expires-in-days must be a positive integer up to 3650');
+      }
+
       let keyData: any = {
         name: options.name,
-        value: options.value,
-        keyType: options.type,
-        environment: options.environment || 'development',
-        projectId: options.projectId,
-        accessLevel: options.accessLevel || 'team',
-        tags: options.tags ? options.tags.split(',').map((tag: string) => tag.trim()) : [],
-        expiresAt: options.expiresAt,
-        rotationFrequency: parseInt(options.rotationFrequency)
+        access_level: accessLevel,
+        expires_in_days: expiresInDays,
+        description: options.description?.trim() || undefined,
+        scopes: parseScopes(options.scopes)
       };
 
-      if (options.interactive || !keyData.name || !keyData.value || !keyData.projectId) {
-        const projects = await apiClient.get('/api-keys/projects');
-        
+      if (options.interactive || !keyData.name) {
         const answers = await inquirer.prompt([
           {
             type: 'input',
@@ -172,87 +217,64 @@ apiKeysCommand
             validate: (input) => input.length > 0 || 'Name is required'
           },
           {
-            type: 'password',
-            name: 'value',
-            message: 'API key value:',
-            when: !keyData.value,
-            validate: (input) => input.length > 0 || 'Value is required'
+            type: 'input',
+            name: 'description',
+            message: 'Description (optional):',
+            default: keyData.description || ''
           },
           {
             type: 'select',
-            name: 'keyType',
-            message: 'Key type:',
-            when: !keyData.keyType,
-            choices: [
-              'api_key',
-              'database_url',
-              'oauth_token',
-              'certificate',
-              'ssh_key',
-              'webhook_secret',
-              'encryption_key'
-            ]
-          },
-          {
-            type: 'select',
-            name: 'environment',
-            message: 'Environment:',
-            choices: ['development', 'staging', 'production'],
-            default: 'development'
-          },
-          {
-            type: 'select',
-            name: 'projectId',
-            message: 'Select project:',
-            when: !keyData.projectId && projects.length > 0,
-            choices: projects.map((p: any) => ({ name: `${p.name} (${p.id})`, value: p.id }))
-          },
-          {
-            type: 'select',
-            name: 'accessLevel',
+            name: 'access_level',
             message: 'Access level:',
-            choices: ['public', 'authenticated', 'team', 'admin', 'enterprise'],
-            default: 'team'
-          },
-          {
-            type: 'input',
-            name: 'tags',
-            message: 'Tags (comma-separated, optional):',
-            filter: (input) => input ? input.split(',').map((tag: string) => tag.trim()) : []
-          },
-          {
-            type: 'input',
-            name: 'expiresAt',
-            message: 'Expiration date (YYYY-MM-DD, optional):',
-            validate: (input) => {
-              if (!input) return true;
-              const date = new Date(input);
-              return !isNaN(date.getTime()) || 'Please enter a valid date';
-            },
-            filter: (input) => input ? new Date(input).toISOString() : undefined
+            choices: VALID_ACCESS_LEVELS,
+            default: keyData.access_level
           },
           {
             type: 'number',
-            name: 'rotationFrequency',
-            message: 'Rotation frequency (days):',
-            default: 90,
-            validate: (input) => input > 0 && input <= 365 || 'Must be between 1 and 365 days'
+            name: 'expires_in_days',
+            message: 'Expires in days:',
+            default: keyData.expires_in_days,
+            validate: (input) => Number.isInteger(input) && input > 0 && input <= 3650 || 'Must be between 1 and 3650 days'
+          },
+          {
+            type: 'input',
+            name: 'scopes',
+            message: 'Scopes (comma-separated, optional):',
+            default: (keyData.scopes || []).join(', ')
           }
         ]);
 
-        keyData = { ...keyData, ...answers };
+        keyData = {
+          ...keyData,
+          ...answers,
+          description: typeof answers.description === 'string'
+            ? answers.description.trim() || undefined
+            : keyData.description,
+          scopes: parseScopes(typeof answers.scopes === 'string' ? answers.scopes : undefined) ?? keyData.scopes
+        };
       }
 
-      const apiKey = await apiClient.post('/api-keys', keyData);
+      const apiKey = unwrapApiResponse<PlatformApiKey>(await apiClient.post(AUTH_API_KEYS_BASE, keyData));
       
       console.log(colors.success('🔐 API key created successfully!'));
       console.log(colors.info('━'.repeat(50)));
       console.log(`${colors.highlight('Key ID:')} ${colors.primary(apiKey.id)}`);
       console.log(`${colors.highlight('Name:')} ${colors.accent(apiKey.name)}`);
-      console.log(`${colors.highlight('Type:')} ${colors.info(apiKey.keyType)}`);
-      console.log(`${colors.highlight('Environment:')} ${colors.accent(apiKey.environment)}`);
+      console.log(`${colors.highlight('Access Level:')} ${colors.info(apiKey.access_level || keyData.access_level)}`);
+      console.log(`${colors.highlight('Permissions:')} ${colors.muted((apiKey.permissions || keyData.scopes || []).join(', ') || 'legacy:full_access')}`);
+      if (apiKey.expires_at) {
+        console.log(`${colors.highlight('Expires At:')} ${colors.warning(formatDate(apiKey.expires_at))}`);
+      }
+      if (keyData.description) {
+        console.log(`${colors.highlight('Description:')} ${colors.muted(keyData.description)}`);
+      }
       console.log(colors.info('━'.repeat(50)));
-      console.log(colors.warning('⚠️  The key value is securely encrypted and cannot be retrieved later.'));
+      if (apiKey.key) {
+        console.log(`${colors.highlight('API Key:')} ${colors.primary(apiKey.key)}`);
+        console.log(colors.warning('⚠️  Save this key now. It will not be shown again.'));
+      } else {
+        console.log(colors.warning('⚠️  Key value was not returned. If newly created, it cannot be retrieved later.'));
+      }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       console.error(colors.error('✖ Failed to create API key:'), colors.muted(errorMessage));
@@ -264,16 +286,12 @@ apiKeysCommand
   .command('list')
   .alias('ls')
   .description('List API keys')
-  .option('-p, --project-id <id>', 'Filter by project ID')
+  .option('--all', 'Include inactive keys')
   .option('--json', 'Output as JSON')
   .action(async (options) => {
     try {
-      let url = '/api-keys';
-      if (options.projectId) {
-        url += `?projectId=${options.projectId}`;
-      }
-
-      const apiKeys = await apiClient.get(url);
+      const query = options.all ? '?active_only=false' : '';
+      const apiKeys = unwrapApiResponse<PlatformApiKey[]>(await apiClient.get(`${AUTH_API_KEYS_BASE}${query}`));
 
       if (options.json) {
         console.log(JSON.stringify(apiKeys, null, 2));
@@ -290,22 +308,21 @@ apiKeysCommand
       console.log(colors.info('═'.repeat(80)));
 
       const table = new Table({
-        head: ['ID', 'Name', 'Type', 'Environment', 'Status', 'Usage', 'Last Rotated'].map(h => colors.accent(h)),
+        head: ['ID', 'Name', 'Access', 'Permissions', 'Service', 'Status', 'Expires'].map(h => colors.accent(h)),
         style: { head: [], border: [] }
       });
 
-      apiKeys.forEach((key: any) => {
-        const statusColor = key.status === 'active' ? colors.success :
-                           key.status === 'rotating' ? colors.warning : colors.error;
+      apiKeys.forEach((key) => {
+        const statusColor = key.is_active ? colors.success : colors.error;
         
         table.push([
           truncateText(key.id, 20),
           key.name,
-          key.keyType,
-          key.environment,
-          statusColor(key.status),
-          colors.highlight(key.usageCount.toString()),
-          formatDate(key.lastRotated)
+          key.access_level,
+          truncateText((key.permissions || []).join(', ') || 'legacy:full_access', 28),
+          key.service || 'all',
+          statusColor(key.is_active ? 'active' : 'inactive'),
+          key.expires_at ? formatDate(key.expires_at) : colors.muted('Never')
         ]);
       });
 
@@ -326,7 +343,7 @@ apiKeysCommand
   .option('--json', 'Output as JSON')
   .action(async (keyId, options) => {
     try {
-      const apiKey = await apiClient.get(`/api-keys/${keyId}`);
+      const apiKey = unwrapApiResponse<PlatformApiKey>(await apiClient.get(`${AUTH_API_KEYS_BASE}/${keyId}`));
 
       if (options.json) {
         console.log(JSON.stringify(apiKey, null, 2));
@@ -337,24 +354,23 @@ apiKeysCommand
       console.log(colors.info('═'.repeat(60)));
       console.log(`${colors.highlight('ID:')} ${colors.primary(apiKey.id)}`);
       console.log(`${colors.highlight('Name:')} ${colors.accent(apiKey.name)}`);
-      console.log(`${colors.highlight('Type:')} ${colors.info(apiKey.keyType)}`);
-      console.log(`${colors.highlight('Environment:')} ${colors.accent(apiKey.environment)}`);
-      console.log(`${colors.highlight('Project ID:')} ${colors.muted(apiKey.projectId)}`);
-      console.log(`${colors.highlight('Access Level:')} ${colors.warning(apiKey.accessLevel)}`);
+      if (apiKey.description) {
+        console.log(`${colors.highlight('Description:')} ${colors.muted(apiKey.description)}`);
+      }
+      console.log(`${colors.highlight('Access Level:')} ${colors.warning(apiKey.access_level)}`);
+      console.log(`${colors.highlight('Permissions:')} ${colors.muted((apiKey.permissions || []).join(', ') || 'legacy:full_access')}`);
+      console.log(`${colors.highlight('Service Scope:')} ${colors.info(apiKey.service || 'all')}`);
       
-      const statusColor = apiKey.status === 'active' ? colors.success :
-                         apiKey.status === 'rotating' ? colors.warning : colors.error;
-      console.log(`${colors.highlight('Status:')} ${statusColor(apiKey.status)}`);
+      const statusColor = apiKey.is_active ? colors.success : colors.error;
+      console.log(`${colors.highlight('Status:')} ${statusColor(apiKey.is_active ? 'active' : 'inactive')}`);
       
-      console.log(`${colors.highlight('Usage Count:')} ${colors.accent(apiKey.usageCount)}`);
-      console.log(`${colors.highlight('Tags:')} ${colors.muted(apiKey.tags.join(', ') || 'None')}`);
-      console.log(`${colors.highlight('Rotation Frequency:')} ${colors.info(apiKey.rotationFrequency)} days`);
-      console.log(`${colors.highlight('Last Rotated:')} ${colors.muted(formatDate(apiKey.lastRotated))}`);
-      console.log(`${colors.highlight('Created:')} ${colors.muted(formatDate(apiKey.createdAt))}`);
-      console.log(`${colors.highlight('Updated:')} ${colors.muted(formatDate(apiKey.updatedAt))}`);
+      if (apiKey.last_used_at) {
+        console.log(`${colors.highlight('Last Used:')} ${colors.muted(formatDate(apiKey.last_used_at))}`);
+      }
+      console.log(`${colors.highlight('Created:')} ${colors.muted(formatDate(apiKey.created_at))}`);
       
-      if (apiKey.expiresAt) {
-        console.log(`${colors.highlight('Expires:')} ${colors.warning(formatDate(apiKey.expiresAt))}`);
+      if (apiKey.expires_at) {
+        console.log(`${colors.highlight('Expires:')} ${colors.warning(formatDate(apiKey.expires_at))}`);
       }
       console.log(colors.info('═'.repeat(60)));
     } catch (error) {
@@ -369,21 +385,37 @@ apiKeysCommand
   .description('Update an API key')
   .argument('<keyId>', 'API key ID')
   .option('-n, --name <name>', 'New name')
-  .option('-v, --value <value>', 'New value')
-  .option('--tags <tags>', 'Comma-separated tags')
-  .option('--rotation-frequency <days>', 'Rotation frequency in days')
+  .option('-d, --description <description>', 'New description')
+  .option('--access-level <level>', 'New access level')
+  .option('--expires-in-days <days>', 'Set a new expiry in days')
+  .option('--clear-expiry', 'Remove the current expiry')
+  .option('--scopes <scopes>', 'Replace scopes with a comma-separated list')
   .option('--interactive', 'Interactive mode')
   .action(async (keyId, options) => {
     try {
       let updateData: any = {};
 
       if (options.name) updateData.name = options.name;
-      if (options.value) updateData.value = options.value;
-      if (options.tags) updateData.tags = options.tags.split(',').map((tag: string) => tag.trim());
-      if (options.rotationFrequency) updateData.rotationFrequency = parseInt(options.rotationFrequency);
+      if (options.description !== undefined) updateData.description = options.description.trim() || null;
+      if (options.accessLevel) {
+        const accessLevel = options.accessLevel.toLowerCase();
+        if (!VALID_ACCESS_LEVELS.includes(accessLevel as typeof VALID_ACCESS_LEVELS[number])) {
+          throw new Error('Invalid access level. Allowed: public, authenticated, team, admin, enterprise');
+        }
+        updateData.access_level = accessLevel;
+      }
+      if (options.expiresInDays) {
+        const expiresInDays = parseInt(options.expiresInDays, 10);
+        if (!Number.isInteger(expiresInDays) || expiresInDays <= 0 || expiresInDays > 3650) {
+          throw new Error('expires-in-days must be a positive integer up to 3650');
+        }
+        updateData.expires_in_days = expiresInDays;
+      }
+      if (options.clearExpiry) updateData.clear_expiry = true;
+      if (options.scopes) updateData.scopes = parseScopes(options.scopes);
 
       if (options.interactive || Object.keys(updateData).length === 0) {
-        const current = await apiClient.get(`/api-keys/${keyId}`);
+        const current = unwrapApiResponse<PlatformApiKey>(await apiClient.get(`${AUTH_API_KEYS_BASE}/${keyId}`));
         
         const answers = await inquirer.prompt([
           {
@@ -394,49 +426,79 @@ apiKeysCommand
             when: !updateData.name
           },
           {
-            type: 'confirm',
-            name: 'updateValue',
-            message: 'Update the key value?',
-            default: false,
-            when: !updateData.value
-          },
-          {
-            type: 'password',
-            name: 'value',
-            message: 'New key value:',
-            when: (answers) => answers.updateValue
-          },
-          {
             type: 'input',
-            name: 'tags',
-            message: 'Tags (comma-separated):',
-            default: current.tags.join(', '),
-            filter: (input) => input.split(',').map((tag: string) => tag.trim()),
-            when: !updateData.tags
+            name: 'description',
+            message: 'Description (optional):',
+            default: current.description || '',
+            when: !updateData.description
+          },
+          {
+            type: 'select',
+            name: 'access_level',
+            message: 'Access level:',
+            choices: VALID_ACCESS_LEVELS,
+            default: current.access_level,
+            when: !updateData.access_level
+          },
+          {
+            type: 'confirm',
+            name: 'changeExpiry',
+            message: 'Change expiry?',
+            default: false,
+            when: updateData.expires_in_days === undefined && !updateData.clear_expiry
           },
           {
             type: 'number',
-            name: 'rotationFrequency',
-            message: 'Rotation frequency (days):',
-            default: current.rotationFrequency,
-            validate: (input) => input > 0 && input <= 365 || 'Must be between 1 and 365 days',
-            when: !updateData.rotationFrequency
+            name: 'expires_in_days',
+            message: 'Expires in days:',
+            default: current.expires_at ? 365 : 365,
+            when: (answers) => answers.changeExpiry === true && updateData.expires_in_days === undefined && !updateData.clear_expiry,
+            validate: (input) => Number.isInteger(input) && input > 0 && input <= 3650 || 'Must be between 1 and 3650 days'
+          },
+          {
+            type: 'confirm',
+            name: 'clear_expiry',
+            message: 'Clear expiry instead?',
+            default: false,
+            when: (answers) => answers.changeExpiry === true && updateData.expires_in_days === undefined && !updateData.clear_expiry && Boolean(current.expires_at)
+          },
+          {
+            type: 'input',
+            name: 'scopes',
+            message: 'Scopes (comma-separated, optional):',
+            default: (current.permissions || []).join(', '),
+            when: !updateData.scopes
           }
         ]);
 
-        updateData = { ...updateData, ...answers };
-        delete updateData.updateValue;
+        updateData = {
+          ...updateData,
+          ...answers,
+          description: typeof answers.description === 'string'
+            ? answers.description.trim() || null
+            : updateData.description,
+          scopes: parseScopes(typeof answers.scopes === 'string' ? answers.scopes : undefined) ?? updateData.scopes
+        };
+
+        delete updateData.changeExpiry;
       }
 
-      const updatedKey = await apiClient.put(`/api-keys/${keyId}`, updateData);
+      if (Object.keys(updateData).length === 0) {
+        console.log(colors.warning('🚫 Nothing to update'));
+        return;
+      }
+
+      const updatedKey = unwrapApiResponse<PlatformApiKey>(await apiClient.put(`${AUTH_API_KEYS_BASE}/${keyId}`, updateData));
       
       console.log(colors.success('🔄 API key updated successfully!'));
       console.log(colors.info('━'.repeat(40)));
       console.log(`${colors.highlight('Name:')} ${colors.accent(updatedKey.name)}`);
-      console.log(`${colors.highlight('Status:')} ${colors.success(updatedKey.status)}`);
-      if (updateData.value) {
-        console.log(colors.warning('⚠️  The key value has been updated and re-encrypted.'));
+      if (updatedKey.description || updateData.description) {
+        console.log(`${colors.highlight('Description:')} ${colors.muted(updatedKey.description || updateData.description)}`);
       }
+      console.log(`${colors.highlight('Access Level:')} ${colors.info(updatedKey.access_level)}`);
+      console.log(`${colors.highlight('Permissions:')} ${colors.muted((updatedKey.permissions || []).join(', ') || 'legacy:full_access')}`);
+      console.log(`${colors.highlight('Expires:')} ${updatedKey.expires_at ? colors.warning(formatDate(updatedKey.expires_at)) : colors.muted('Never')}`);
       console.log(colors.info('━'.repeat(40)));
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
@@ -454,7 +516,7 @@ apiKeysCommand
   .action(async (keyId, options) => {
     try {
       if (!options.force) {
-        const apiKey = await apiClient.get(`/api-keys/${keyId}`);
+        const apiKey = unwrapApiResponse<PlatformApiKey>(await apiClient.get(`${AUTH_API_KEYS_BASE}/${keyId}`));
         
         const { confirm } = await inquirer.prompt([
           {
@@ -471,7 +533,7 @@ apiKeysCommand
         }
       }
 
-      await apiClient.delete(`/api-keys/${keyId}`);
+      await apiClient.delete(`${AUTH_API_KEYS_BASE}/${keyId}`);
       
       console.log(colors.success('🗑️  API key deleted successfully!'));
     } catch (error) {
@@ -604,8 +666,8 @@ mcpCommand
         delete toolData.maxSessionDuration;
       }
 
-      const tool = await apiClient.post('/api-keys/mcp/tools', toolData);
-      
+      const tool = unwrapApiResponse<any>(await apiClient.post(`${AUTH_API_KEYS_BASE}/mcp/tools`, toolData));
+
       console.log(colors.success('🤖 MCP tool registered successfully!'));
       console.log(colors.info('━'.repeat(50)));
       console.log(`${colors.highlight('Tool ID:')} ${colors.primary(tool.toolId)}`);
@@ -625,14 +687,14 @@ mcpCommand
   .option('--json', 'Output as JSON')
   .action(async (options) => {
     try {
-      const tools = await apiClient.get('/api-keys/mcp/tools');
+      const tools = unwrapApiResponse<any[]>(await apiClient.get(`${AUTH_API_KEYS_BASE}/mcp/tools`));
 
       if (options.json) {
         console.log(JSON.stringify(tools, null, 2));
         return;
       }
 
-      if (tools.length === 0) {
+      if (!Array.isArray(tools) || tools.length === 0) {
         console.log(colors.warning('⚠️  No MCP tools found'));
         console.log(colors.muted('Run: lanonasis api-keys mcp register-tool'));
         return;
@@ -694,8 +756,9 @@ mcpCommand
       if (options.interactive || !requestData.toolId || !requestData.organizationId || 
           requestData.keyNames.length === 0 || !requestData.environment || !requestData.justification) {
         
-        const tools = await apiClient.get('/api-keys/mcp/tools');
-        
+        const mcpTools = unwrapApiResponse<any[]>(await apiClient.get(`${AUTH_API_KEYS_BASE}/mcp/tools`));
+        const tools = Array.isArray(mcpTools) ? mcpTools : [];
+
         const answers = await inquirer.prompt([
           {
             type: 'select',
@@ -748,8 +811,8 @@ mcpCommand
         requestData = { ...requestData, ...answers };
       }
 
-      const response = await apiClient.post('/api-keys/mcp/request-access', requestData);
-      
+      const response = unwrapApiResponse<any>(await apiClient.post(`${AUTH_API_KEYS_BASE}/mcp/request-access`, requestData));
+
       console.log(colors.success('🔐 Access request created successfully!'));
       console.log(colors.info('━'.repeat(50)));
       console.log(`${colors.highlight('Request ID:')} ${colors.primary(response.requestId)}`);
@@ -777,24 +840,24 @@ analyticsCommand
   .option('--json', 'Output as JSON')
   .action(async (options) => {
     try {
-      let url = '/api-keys/analytics/usage';
+      let url = `${AUTH_API_KEYS_BASE}/analytics/usage`;
       const params = new URLSearchParams();
-      
+
       if (options.keyId) params.append('keyId', options.keyId);
       if (options.days) params.append('days', options.days);
-      
+
       if (params.toString()) {
         url += `?${params.toString()}`;
       }
 
-      const analytics = await apiClient.get(url);
+      const analytics = unwrapApiResponse<any[]>(await apiClient.get(url));
 
       if (options.json) {
         console.log(JSON.stringify(analytics, null, 2));
         return;
       }
 
-      if (analytics.length === 0) {
+      if (!Array.isArray(analytics) || analytics.length === 0) {
         console.log(chalk.yellow('No usage data found'));
         return;
       }
@@ -833,19 +896,19 @@ analyticsCommand
   .option('--json', 'Output as JSON')
   .action(async (options) => {
     try {
-      let url = '/api-keys/analytics/security-events';
+      let url = `${AUTH_API_KEYS_BASE}/analytics/security-events`;
       if (options.severity) {
         url += `?severity=${options.severity}`;
       }
 
-      const events = await apiClient.get(url);
+      const events = unwrapApiResponse<any[]>(await apiClient.get(url));
 
       if (options.json) {
         console.log(JSON.stringify(events, null, 2));
         return;
       }
 
-      if (events.length === 0) {
+      if (!Array.isArray(events) || events.length === 0) {
         console.log(colors.success('✅ No security events found'));
         return;
       }

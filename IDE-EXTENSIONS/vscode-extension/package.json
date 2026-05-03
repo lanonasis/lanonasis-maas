@@ -1,7 +1,7 @@
 {
   "name": "lanonasis-memory",
   "displayName": "LanOnasis Memory Assistant",
-  "description": "Memory as a Service integration - AI-powered memory management with semantic search (Compatible with CLI v3.0.6+)",
+  "description": "Memory as a Service integration - AI-powered memory management with semantic search (Compatible with a supported @lanonasis/cli)",
   "version": "2.1.1",
   "publisher": "LanOnasis",
   "icon": "images/icon.png",
@@ -527,7 +527,7 @@
         "lanonasis.preferCLI": {
           "type": "boolean",
           "default": true,
-          "description": "Prefer CLI integration when @lanonasis/cli v3.0.6+ is available"
+          "description": "Prefer CLI integration when a compatible @lanonasis/cli is available"
         },
         "lanonasis.enableMCP": {
           "type": "boolean",

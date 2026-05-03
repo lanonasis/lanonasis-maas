@@ -30,6 +30,7 @@ export interface MemoryEntry {
     memory_type: MemoryType;
     tags: string[];
     topic_id?: string | null;
+    topic_key?: string | null;
     user_id: string;
     organization_id: string;
     metadata?: Record<string, unknown>;
@@ -44,6 +45,7 @@ export interface CreateMemoryRequest {
     memory_type?: MemoryType;
     tags?: string[];
     topic_id?: string;
+    topic_key?: string;
     metadata?: Record<string, unknown>;
     continuity_key?: string;
     idempotency_key?: string;
@@ -55,6 +57,7 @@ export interface UpdateMemoryRequest {
     memory_type?: MemoryType;
     tags?: string[];
     topic_id?: string | null;
+    topic_key?: string;
     metadata?: Record<string, unknown>;
     continuity_key?: string;
     idempotency_key?: string;
@@ -67,6 +70,8 @@ export interface GetMemoriesParams {
     memory_type?: MemoryType;
     tags?: string[] | string;
     topic_id?: string;
+    topic_key?: string;
+    include_deleted?: boolean;
     user_id?: string;
     sort?: 'created_at' | 'updated_at' | 'last_accessed' | 'access_count' | 'title';
     order?: 'asc' | 'desc';
@@ -78,8 +83,11 @@ export interface SearchMemoryRequest {
     memory_types?: MemoryType[];
     tags?: string[];
     topic_id?: string;
+    topic_key?: string;
     limit?: number;
     threshold?: number;
+    include_deleted?: boolean;
+    response_mode?: 'full' | 'compact' | 'timeline';
 }
 export interface MemorySearchResult extends MemoryEntry {
     similarity_score: number;
@@ -161,7 +169,10 @@ export interface UserProfile {
     email: string;
     name: string | null;
     avatar_url: string | null;
+    organization_id?: string | null;
+    organizationId?: string | null;
     role: string;
+    plan?: string | null;
     provider: string | null;
     project_scope: string | null;
     platform: string | null;
@@ -177,10 +188,14 @@ export declare class APIClient {
     private config;
     /** When true, throw on 401/403 instead of printing+exiting (for callers that handle errors) */
     noExit: boolean;
+    private isLikelyHashedCredential;
     private normalizeMemoryEntry;
+    private tryNormalizeMemoryEntry;
+    private normalizeMemoryStats;
     private shouldUseLegacyMemoryRpcFallback;
     private shouldRetryViaApiGateway;
     private shouldRetryViaSupabaseMemoryFunctions;
+    private shouldUsePostListFallback;
     private getSupabaseFunctionsBaseUrl;
     private mapMemoryApiRouteToSupabaseFunctions;
     private normalizeMcpPathToApi;
