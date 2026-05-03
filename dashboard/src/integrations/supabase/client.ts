@@ -2,9 +2,9 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 
-// @ts-ignore - Vite env variables
+// @ts-expect-error - Vite env variables
 const SUPABASE_URL = process.env.SUPABASE_URL || ''
-// @ts-ignore - Vite env variables
+// @ts-expect-error - Vite env variables
 const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY
 
 // Import the supabase client like this:

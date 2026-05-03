@@ -80,15 +80,68 @@ export class CLIConfig {
   private static readonly CONFIG_VERSION = '1.0.0';
   private authCheckCache: { isValid: boolean; timestamp: number } | null = null;
   private readonly AUTH_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
-  private apiKeyStorage: ApiKeyStorage;
+  private apiKeyStorage?: ApiKeyStorage;
   private vendorKeyCache?: string;
+
+  private isLegacyHashedCredential(value: unknown): value is string {
+    return typeof value === 'string' && /^[a-f0-9]{64}$/i.test(value.trim());
+  }
+
+  private getLegacyHashedVendorKeyReason(): string {
+    return 'Stored vendor key is in legacy hashed format. Run "lanonasis auth login --vendor-key <your-key>" to refresh secure storage.';
+  }
+
+  private normalizeOptionalString(value: unknown): string | undefined {
+    if (typeof value === 'string') {
+      const trimmed = value.trim();
+      return trimmed.length > 0 ? trimmed : undefined;
+    }
+
+    if (value === null || value === undefined) {
+      return undefined;
+    }
+
+    return String(value);
+  }
+
+  private extractOrganizationId(source: Record<string, unknown>): string | undefined {
+    return this.normalizeOptionalString(source.organization_id)
+      ?? this.normalizeOptionalString(source.organizationId);
+  }
+
+  private buildUserProfile(
+    source: Record<string, unknown>,
+    existing?: UserProfile
+  ): UserProfile | undefined {
+    const email = this.normalizeOptionalString(source.email) ?? existing?.email ?? '';
+    const organization_id = this.extractOrganizationId(source) ?? existing?.organization_id ?? '';
+    const role = this.normalizeOptionalString(source.role) ?? existing?.role ?? '';
+    const plan = this.normalizeOptionalString(source.plan) ?? existing?.plan ?? '';
+
+    if (!email && !organization_id && !role && !plan) {
+      return existing;
+    }
+
+    return {
+      email,
+      organization_id,
+      role,
+      plan
+    };
+  }
 
   constructor() {
     this.configDir = path.join(os.homedir(), '.maas');
     this.configPath = path.join(this.configDir, 'config.json');
     this.lockFile = path.join(this.configDir, 'config.lock');
-    // Initialize secure storage for vendor keys using oauth-client's ApiKeyStorage
-    this.apiKeyStorage = new ApiKeyStorage();
+  }
+
+  private getApiKeyStorage(): ApiKeyStorage {
+    if (!this.apiKeyStorage) {
+      this.apiKeyStorage = new ApiKeyStorage();
+    }
+
+    return this.apiKeyStorage;
   }
 
   /**
@@ -797,6 +850,14 @@ export class CLIConfig {
     const token = this.getToken();
     const vendorKey = await this.getVendorKeyAsync();
 
+    if (this.config.authMethod === 'vendor_key' && this.isLegacyHashedCredential(vendorKey)) {
+      return {
+        valid: false,
+        method: 'vendor_key',
+        reason: this.getLegacyHashedVendorKeyReason()
+      };
+    }
+
     if (this.config.authMethod === 'vendor_key' && vendorKey) {
       return this.verifyVendorKeyWithAuthGateway(vendorKey);
     }
@@ -897,8 +958,9 @@ export class CLIConfig {
 
     // Initialize and store using ApiKeyStorage from @lanonasis/oauth-client
     // This handles encryption automatically (AES-256-GCM with machine-derived key)
-    await this.apiKeyStorage.initialize();
-    await this.apiKeyStorage.store({
+    const apiKeyStorage = this.getApiKeyStorage();
+    await apiKeyStorage.initialize();
+    await apiKeyStorage.store({
       apiKey: trimmedKey,
       organizationId: this.config.user?.organization_id,
       userId: this.config.user?.email,
@@ -1022,8 +1084,9 @@ export class CLIConfig {
    */
   async getVendorKeyAsync(): Promise<string | undefined> {
     try {
-      await this.apiKeyStorage.initialize();
-      const stored = await this.apiKeyStorage.retrieve();
+      const apiKeyStorage = this.getApiKeyStorage();
+      await apiKeyStorage.initialize();
+      const stored = await apiKeyStorage.retrieve();
       if (stored) {
         this.vendorKeyCache = stored.apiKey;
         return this.vendorKeyCache;
@@ -1072,12 +1135,7 @@ export class CLIConfig {
       }
 
       // Store user info
-      this.config.user = {
-        email: String(decoded.email || ''),
-        organization_id: String(decoded.organizationId || ''),
-        role: String(decoded.role || ''),
-        plan: String(decoded.plan || '')
-      };
+      this.config.user = this.buildUserProfile(decoded, this.config.user);
     } catch {
       // Invalid token, don't store user info or expiry
       this.config.tokenExpiry = undefined;
@@ -1092,8 +1150,33 @@ export class CLIConfig {
     return this.config.token;
   }
 
+  getAuthMethod(): string | undefined {
+    return this.config.authMethod;
+  }
+
   async getCurrentUser(): Promise<UserProfile | undefined> {
     return this.config.user;
+  }
+
+  async updateCurrentUserProfile(profile: Record<string, unknown>): Promise<void> {
+    const nextUser = this.buildUserProfile(profile, this.config.user);
+    if (!nextUser) {
+      return;
+    }
+
+    const currentUser = this.config.user;
+    const changed = !currentUser
+      || currentUser.email !== nextUser.email
+      || currentUser.organization_id !== nextUser.organization_id
+      || currentUser.role !== nextUser.role
+      || currentUser.plan !== nextUser.plan;
+
+    if (!changed) {
+      return;
+    }
+
+    this.config.user = nextUser;
+    await this.save();
   }
 
   async isAuthenticated(): Promise<boolean> {
@@ -1106,6 +1189,14 @@ export class CLIConfig {
       // Use async method to read from encrypted ApiKeyStorage
       const vendorKey = await this.getVendorKeyAsync();
       if (!vendorKey) return false;
+
+      if (this.isLegacyHashedCredential(vendorKey)) {
+        if (process.env.CLI_VERBOSE === 'true') {
+          console.warn(`⚠️  ${this.getLegacyHashedVendorKeyReason()}`);
+        }
+        this.authCheckCache = { isValid: false, timestamp: Date.now() };
+        return false;
+      }
 
       // Check in-memory cache first (5-minute TTL)
       if (this.authCheckCache && (Date.now() - this.authCheckCache.timestamp) < this.AUTH_CACHE_TTL) {
@@ -1351,10 +1442,13 @@ export class CLIConfig {
     this.vendorKeyCache = undefined;
     this.config.vendorKey = undefined;
     this.config.authMethod = undefined;
+    this.config.refresh_token = undefined;
+    this.config.token_expires_at = undefined;
     try {
-      await this.apiKeyStorage.initialize();
+      const apiKeyStorage = this.getApiKeyStorage();
+      await apiKeyStorage.initialize();
       // ApiKeyStorage may implement clear() to remove encrypted secrets
-      const storage: any = this.apiKeyStorage;
+      const storage: any = apiKeyStorage;
       if (typeof storage.clear === 'function') {
         await storage.clear();
       }
@@ -1420,6 +1514,13 @@ export class CLIConfig {
     }
 
     try {
+      // Vendor-key sessions should never attempt token refresh.
+      // Some environments retain stale token/refresh_token fields from older logins,
+      // which can otherwise trip dead refresh routes during normal memory commands.
+      if (String(this.config.authMethod || '').toLowerCase() === 'vendor_key') {
+        return;
+      }
+
       // OAuth token refresh (opaque tokens + refresh_token + token_expires_at)
       if (this.config.authMethod === 'oauth') {
         const refreshToken = this.get<string>('refresh_token');
@@ -1490,14 +1591,6 @@ export class CLIConfig {
           this.config.token_expires_at = Date.now() + (expiresIn * 1000);
         }
 
-        // Keep the encrypted "vendor key" in sync for MCP/WebSocket clients that use X-API-Key.
-        // This does not change authMethod away from oauth (setVendorKey guards against that).
-        try {
-          await this.setVendorKey(accessToken);
-        } catch {
-          // Non-fatal: bearer token refresh still helps API calls.
-        }
-
         await this.save().catch(() => {});
         return;
       }
@@ -1554,9 +1647,22 @@ export class CLIConfig {
     this.config.user = undefined;
     this.config.authMethod = undefined;
     this.config.tokenExpiry = undefined;
+    this.config.refresh_token = undefined;
+    this.config.token_expires_at = undefined;
     this.config.lastValidated = undefined;
     this.config.authFailureCount = 0;
     this.config.lastAuthFailure = undefined;
+    this.vendorKeyCache = undefined;
+    try {
+      const apiKeyStorage = this.getApiKeyStorage();
+      await apiKeyStorage.initialize();
+      const storage: any = apiKeyStorage;
+      if (typeof storage.clear === 'function') {
+        await storage.clear();
+      }
+    } catch {
+      // Ignore secure storage cleanup failures while invalidating credentials
+    }
     await this.save();
   }
 

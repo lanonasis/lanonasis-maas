@@ -43,6 +43,9 @@ export class ReplEngine {
       historySize: this.config.maxHistorySize ?? 1000,
       completer: this.createCompleter.bind(this), // Enable tab completion
     });
+    
+    // Expose readline interface globally so orchestrator can pause/resume around spinners
+    (global as any).rlInterface = this.rl;
 
     this.context = {
       mode: config.useMCP ? 'local' : 'remote',
@@ -235,6 +238,7 @@ export class ReplEngine {
         return;
       }
       
+<<<<<<< HEAD
       // Filter if search term provided
       const filtered = searchTerm 
         ? history.filter((cmd, idx) => 
@@ -243,10 +247,23 @@ export class ReplEngine {
           )
         : history;
       
+=======
+      // Filter if search term provided, preserving original index
+      const filtered = searchTerm
+        ? history
+            .map((cmd, originalIndex) => ({ cmd, originalIndex }))
+            .filter(({ cmd, originalIndex }) =>
+              cmd.toLowerCase().includes(searchTerm) ||
+              (originalIndex + 1).toString().includes(searchTerm)
+            )
+        : history.map((cmd, originalIndex) => ({ cmd, originalIndex }));
+
+>>>>>>> ce786191aaaaa1cbb51d90ad0677da7f8c0bf858
       if (filtered.length === 0) {
         console.log(chalk.gray(`No commands matching "${searchTerm}" found.`));
         return;
       }
+<<<<<<< HEAD
       
       console.log(chalk.cyan(`\n📜 Command History (${filtered.length} commands):\n`));
       
@@ -256,6 +273,17 @@ export class ReplEngine {
       toShow.forEach((cmd, idx) => {
         const displayIndex = searchTerm 
           ? history.indexOf(cmd) + 1 
+=======
+
+      console.log(chalk.cyan(`\n📜 Command History (${filtered.length} commands):\n`));
+
+      // Show last 50 commands by default, or filtered results
+      const toShow = searchTerm ? filtered : filtered.slice(-50);
+
+      toShow.forEach(({ cmd, originalIndex }, idx) => {
+        const displayIndex = searchTerm
+          ? originalIndex + 1
+>>>>>>> ce786191aaaaa1cbb51d90ad0677da7f8c0bf858
           : filtered.length - toShow.length + idx + 1;
         const truncated = cmd.length > 70 ? cmd.substring(0, 67) + '...' : cmd;
         console.log(chalk.gray(`  ${displayIndex.toString().padStart(3)}  ${truncated}`));
@@ -312,7 +340,11 @@ export class ReplEngine {
       (async () => {
         // Handle multi-line input mode
         if (this.isMultilineMode) {
+<<<<<<< HEAD
           this.multilineBuffer += '\n' + line;
+=======
+          this.multilineBuffer += '\n' + line.replace(/\s*\\$/, '');
+>>>>>>> ce786191aaaaa1cbb51d90ad0677da7f8c0bf858
           
           // Check if input is now complete
           if (!this.isIncompleteInput(this.multilineBuffer)) {
@@ -341,7 +373,11 @@ export class ReplEngine {
         // Check if this is the start of a multi-line input
         if (this.isIncompleteInput(lineTrimmed)) {
           this.isMultilineMode = true;
+<<<<<<< HEAD
           this.multilineBuffer = lineTrimmed;
+=======
+          this.multilineBuffer = lineTrimmed.replace(/\s*\\$/, '');
+>>>>>>> ce786191aaaaa1cbb51d90ad0677da7f8c0bf858
           this.rl.setPrompt(chalk.cyan('... '));
           this.rl.prompt();
           return;

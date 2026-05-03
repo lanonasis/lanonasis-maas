@@ -280,10 +280,16 @@ authCmd
             const profileClient = new APIClient();
             profileClient.noExit = true;
             const profile = await profileClient.getUserProfile();
+            await cliConfig.updateCurrentUserProfile(profile);
+            const organizationId = profile.organization_id || profile.organizationId;
             console.log(`Email: ${profile.email}`);
             if (profile.name)
                 console.log(`Name: ${profile.name}`);
+            if (organizationId)
+                console.log(`Organization: ${organizationId}`);
             console.log(`Role: ${profile.role}`);
+            if (profile.plan)
+                console.log(`Plan: ${profile.plan}`);
             if (profile.provider)
                 console.log(`Provider: ${profile.provider}`);
             if (profile.last_sign_in_at) {
@@ -736,13 +742,21 @@ program
         const profileClient = new APIClient();
         profileClient.noExit = true;
         const profile = await profileClient.getUserProfile();
+        await cliConfig.updateCurrentUserProfile(profile);
+        const organizationId = profile.organization_id || profile.organizationId;
         console.log(chalk.blue.bold('👤 Current User'));
         console.log('━'.repeat(40));
         console.log(`Email:      ${chalk.white(profile.email)}`);
         if (profile.name) {
             console.log(`Name:       ${chalk.white(profile.name)}`);
         }
+        if (organizationId) {
+            console.log(`Organization: ${chalk.white(organizationId)}`);
+        }
         console.log(`Role:       ${chalk.white(profile.role)}`);
+        if (profile.plan) {
+            console.log(`Plan:       ${chalk.white(profile.plan)}`);
+        }
         if (profile.provider) {
             console.log(`Provider:   ${chalk.white(profile.provider)}`);
         }

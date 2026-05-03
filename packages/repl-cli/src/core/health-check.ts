@@ -50,6 +50,7 @@ export class AIEndpointHealthCheck {
 
       // For AI Router
       if (endpoint.type === 'router') {
+<<<<<<< HEAD
         response = await fetch(`${endpoint.url}/health`, {
           method: 'GET',
           signal: controller.signal,
@@ -60,6 +61,23 @@ export class AIEndpointHealthCheck {
             signal: controller.signal,
           })
         );
+=======
+        const tryHead = () => fetch(endpoint.url, {
+          method: 'HEAD',
+          signal: controller.signal,
+        });
+
+        response = await fetch(`${endpoint.url}/health`, {
+          method: 'GET',
+          signal: controller.signal,
+        }).then(async (r) => {
+          if (!r.ok) {
+            // Health endpoint returned a non-OK status; fall back to HEAD
+            return tryHead().catch(() => r);
+          }
+          return r;
+        }).catch(() => tryHead());
+>>>>>>> ce786191aaaaa1cbb51d90ad0677da7f8c0bf858
 
         const latency = Date.now() - startTime;
 
@@ -249,10 +267,20 @@ export class AIEndpointHealthCheck {
    * Start periodic health checks
    */
   startPeriodicChecks(intervalMs = 60000): void {
+<<<<<<< HEAD
     this.checkAllEndpoints();
     this.checkInterval = setInterval(() => {
       this.checkAllEndpoints();
     }, intervalMs);
+=======
+    const loop = async () => {
+      if (!this.checkInterval) return;
+      await this.checkAllEndpoints();
+      this.checkInterval = setTimeout(loop, intervalMs) as unknown as NodeJS.Timeout;
+    };
+    // Use a sentinel value so loop() knows it has been started
+    this.checkInterval = setTimeout(loop, 0) as unknown as NodeJS.Timeout;
+>>>>>>> ce786191aaaaa1cbb51d90ad0677da7f8c0bf858
   }
 
   /**
@@ -260,7 +288,11 @@ export class AIEndpointHealthCheck {
    */
   stopPeriodicChecks(): void {
     if (this.checkInterval) {
+<<<<<<< HEAD
       clearInterval(this.checkInterval);
+=======
+      clearTimeout(this.checkInterval);
+>>>>>>> ce786191aaaaa1cbb51d90ad0677da7f8c0bf858
       this.checkInterval = undefined;
     }
   }

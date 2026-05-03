@@ -25,7 +25,7 @@ import { useToast } from "@/hooks/use-toast";
 import mcpServers from "@/config/mcp-servers.json";
 
 // Icon mapping for different MCP servers
-const serverIcons: Record<string, React.ComponentType<any>> = {
+const serverIcons: Record<string, React.ComponentType<{ size?: number; className?: string }>> = {
   'hostinger-api': Server,
   'Context7': Database,
   '@21st-dev/magic': Code,
@@ -78,7 +78,7 @@ const MCPServerManager: React.FC = () => {
     copyToClipboard(configStr, "Full MCP configuration");
   };
 
-  const copyServerConfig = (serverName: string, config: any) => {
+  const copyServerConfig = (serverName: string, config: Record<string, unknown>) => {
     const serverConfig = { [serverName]: config };
     const configStr = JSON.stringify(serverConfig, null, 2);
     copyToClipboard(configStr, `${serverName} configuration`);

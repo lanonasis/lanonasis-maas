@@ -360,6 +360,10 @@ export class MCPClient {
         const authMethod = String(this.config.get('authMethod') || '').toLowerCase();
         const token = this.config.get('token');
         const vendorKey = await this.config.getVendorKeyAsync();
+        const isLikelyHashedCredential = typeof vendorKey === 'string' && /^[a-f0-9]{64}$/i.test(vendorKey.trim());
+        if (authMethod === 'vendor_key' && isLikelyHashedCredential) {
+            throw new Error('AUTHENTICATION_INVALID: Stored vendor key is in legacy hashed format. Run "lanonasis auth login --vendor-key <your-key>" to refresh secure storage.');
+        }
         if (authMethod === 'vendor_key' && typeof vendorKey === 'string' && vendorKey.trim().length > 0) {
             return { value: vendorKey.trim(), source: 'vendor_key' };
         }
@@ -386,7 +390,7 @@ export class MCPClient {
         if (!value) {
             return headers;
         }
-        if (auth.source === 'vendor_key' || value.startsWith('lano_')) {
+        if (auth.source === 'vendor_key' || value.startsWith('lano_') || value.startsWith('lms_')) {
             headers['X-API-Key'] = value;
             headers['X-Auth-Method'] = 'vendor_key';
             headers['X-Project-Scope'] = 'lanonasis-maas';

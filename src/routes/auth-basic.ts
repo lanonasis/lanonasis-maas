@@ -75,6 +75,11 @@ async function ensureOrganizationForUser(
       .delete()
       .eq('id', orgData.id);
 
+<<<<<<< HEAD
+=======
+    await supabase.auth.admin.deleteUser(userId);
+
+>>>>>>> ce786191aaaaa1cbb51d90ad0677da7f8c0bf858
     throw new Error('Failed to associate user with organization');
   }
 
@@ -160,6 +165,9 @@ router.post('/login', async (req: Request, res: Response): Promise<void> => {
     // Create JWT token for API access
     const token = jwt.sign(
       {
+        sub: data.user.id,
+        user_id: data.user.id,
+        organization_id: userData?.organization_id,
         userId: data.user.id,
         email: data.user.email,
         organizationId: userData?.organization_id,
@@ -288,6 +296,9 @@ router.post('/register', async (req: Request, res: Response): Promise<void> => {
     // Create JWT token
     const token = jwt.sign(
       {
+        sub: data.user.id,
+        user_id: data.user.id,
+        organization_id: organizationId,
         userId: data.user.id,
         email: data.user.email,
         organizationId,

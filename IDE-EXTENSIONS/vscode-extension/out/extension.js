@@ -2633,9 +2633,9 @@ function getMemoryClientModule() {
   if (!attemptedMemoryClientLoad) {
     attemptedMemoryClientLoad = true;
     try {
-      cachedMemoryClientModule = require("@lanonasis/memory-client");
+      cachedMemoryClientModule = require("@lanonasis/memory-client/node");
     } catch (error) {
-      console.warn("[EnhancedMemoryService] @lanonasis/memory-client not available. Falling back to basic service.", error);
+      console.warn("[EnhancedMemoryService] @lanonasis/memory-client/node not available. Falling back to basic service.", error);
       cachedMemoryClientModule = void 0;
     }
   }
@@ -2647,7 +2647,7 @@ var EnhancedMemoryService = class _EnhancedMemoryService {
     this.connectionCapabilities = null;
     const sdkModule = getMemoryClientModule();
     if (!sdkModule) {
-      throw new Error("@lanonasis/memory-client module not available");
+      throw new Error("@lanonasis/memory-client/node module not available");
     }
     this.sdk = sdkModule;
     this.secureApiKeyService = secureApiKeyService;
@@ -2661,7 +2661,7 @@ var EnhancedMemoryService = class _EnhancedMemoryService {
     this.initializeClient();
   }
   async initializeClient() {
-    const { CoreMemoryClient: CoreMemoryClient2 } = this.sdk;
+    const { createNodeMemoryClient } = this.sdk;
     const credential = await this.secureApiKeyService.getStoredCredentials();
     if (!credential) {
       this.client = null;
@@ -2674,13 +2674,18 @@ var EnhancedMemoryService = class _EnhancedMemoryService {
       const useGateway = this.config.get("useGateway", true);
       clientConfig.apiUrl = useGateway ? this.config.get("gatewayUrl", "https://api.lanonasis.com") : apiUrl;
       const verbose = this.config.get("verboseLogging", false);
+      clientConfig.preferCLI = this.config.get("preferCLI", true);
+      clientConfig.enableMCP = this.config.get("enableMCP", true);
+      clientConfig.cliDetectionTimeout = this.config.get("cliDetectionTimeout", 2e3);
+      clientConfig.fallbackToAPI = true;
+      clientConfig.verbose = verbose;
       if (verbose && false) {
         verboseLoggingWarningShown = true;
         console.info(
           "[EnhancedMemoryService] Note: Verbose logging is enabled. Disable via Settings > Lanonasis > Verbose Logging for production use."
         );
       }
-      this.client = new CoreMemoryClient2(clientConfig);
+      this.client = await createNodeMemoryClient(clientConfig);
       this.connectionCapabilities = await this.detectCapabilities();
       this.updateStatusBar(true, this.getConnectionStatus());
     } catch (error) {
@@ -2694,25 +2699,39 @@ var EnhancedMemoryService = class _EnhancedMemoryService {
     if (!this.client) {
       return {
         authenticated: false,
+        cliAvailable: false,
+        mcpSupport: false,
+        goldenContract: false,
         connectionMode: "http"
       };
     }
     try {
+      const cliCapabilities = await this.client.getCapabilities();
       const healthResult = await this.client.healthCheck();
       return {
         authenticated: healthResult.error === void 0,
-        connectionMode: "http"
+        cliAvailable: cliCapabilities.cliAvailable,
+        mcpSupport: cliCapabilities.mcpSupport,
+        goldenContract: cliCapabilities.goldenContract,
+        version: cliCapabilities.version,
+        connectionMode: cliCapabilities.cliAvailable ? cliCapabilities.mcpSupport ? "cli+mcp" : "cli" : "http"
       };
     } catch {
       return {
         authenticated: false,
+        cliAvailable: false,
+        mcpSupport: false,
+        goldenContract: false,
         connectionMode: "http"
       };
     }
   }
   getConnectionStatus() {
     if (!this.connectionCapabilities) return "Unknown";
-    return this.connectionCapabilities.authenticated ? "HTTP API" : "Disconnected";
+    if (!this.connectionCapabilities.authenticated) return "Disconnected";
+    if (this.connectionCapabilities.connectionMode === "cli+mcp") return "CLI+MCP";
+    if (this.connectionCapabilities.connectionMode === "cli") return "CLI";
+    return "HTTP API";
   }
   updateStatusBar(connected, status) {
     if (connected) {
@@ -2739,18 +2758,21 @@ var EnhancedMemoryService = class _EnhancedMemoryService {
   getCapabilities() {
     if (!this.connectionCapabilities) return null;
     return {
-      cliAvailable: false,
-      mcpSupport: false,
+      cliAvailable: this.connectionCapabilities.cliAvailable,
+      mcpSupport: this.connectionCapabilities.mcpSupport,
       authenticated: this.connectionCapabilities.authenticated,
-      goldenContract: false
+      goldenContract: this.connectionCapabilities.goldenContract,
+      version: this.connectionCapabilities.version,
+      activeTransport: this.connectionCapabilities.connectionMode === "http" ? "http-only" : void 0,
+      connectionHealth: this.connectionCapabilities.authenticated ? "healthy" : "disconnected"
     };
   }
   async testConnection(apiKey) {
-    const { CoreMemoryClient: CoreMemoryClient2 } = this.sdk;
+    const { createNodeMemoryClient } = this.sdk;
     let testClient = this.client;
     if (apiKey) {
       const config = this.buildClientConfigFromCredential({ type: "apiKey", token: apiKey });
-      testClient = new CoreMemoryClient2(config);
+      testClient = await createNodeMemoryClient(config);
     }
     if (!testClient) {
       const credential = await this.secureApiKeyService.getStoredCredentials();
@@ -2758,7 +2780,7 @@ var EnhancedMemoryService = class _EnhancedMemoryService {
         throw new Error("No API key configured");
       }
       const config = this.buildClientConfigFromCredential(credential);
-      testClient = new CoreMemoryClient2(config);
+      testClient = await createNodeMemoryClient(config);
     }
     const testRequest = this.toSDKSearchRequest({
       query: "connection test",
@@ -2901,12 +2923,21 @@ var EnhancedMemoryService = class _EnhancedMemoryService {
     }
     const details = [
       `Connection Mode: ${caps.connectionMode.toUpperCase()}`,
-      `Authenticated: ${caps.authenticated ? "\u2705" : "\u274C"}`
+      `Authenticated: ${caps.authenticated ? "\u2705" : "\u274C"}`,
+      `CLI Available: ${caps.cliAvailable ? "\u2705" : "\u274C"}`,
+      `MCP Support: ${caps.mcpSupport ? "\u2705" : "\u274C"}`,
+      `Golden Contract: ${caps.goldenContract ? "\u2705" : "\u274C"}`
     ];
     const message = `Lanonasis Memory Connection Status:
 
 ${details.join("\n")}`;
-    if (caps.authenticated) {
+    if (caps.authenticated && caps.cliAvailable) {
+      vscode7.window.showInformationMessage(
+        `${message}
+
+Connected via ${this.getConnectionStatus()}.`
+      );
+    } else if (caps.authenticated) {
       vscode7.window.showInformationMessage(
         `${message}
 

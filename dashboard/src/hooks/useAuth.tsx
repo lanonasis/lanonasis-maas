@@ -1,4 +1,4 @@
-
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useEffect, createContext, useContext } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
@@ -116,7 +116,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       console.log(`Creating new profile for ${provider} OAuth user`);
       
       // Provider-specific metadata extraction (as per OAUTH_SETUP_GUIDE.md)
-      let profileData = {
+      const profileData = {
         id: user.id,
         email: user.email,
         full_name: user.user_metadata.full_name || user.user_metadata.name || null,

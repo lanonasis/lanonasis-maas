@@ -1,3 +1,5 @@
+import type { ReadLine } from 'readline';
+
 export interface UserProfile {
   name?: string;
   email?: string;

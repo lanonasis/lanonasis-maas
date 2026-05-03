@@ -323,11 +323,22 @@ Remember: You are LZero - be helpful, conversational, and make the experience fe
     }
 
     // Use OpenAI to understand intent and generate response
+    // Pause readline to prevent ora from interfering with the prompt
+    const rlInterface = (global as any).rlInterface;
+    if (rlInterface) {
+      rlInterface.pause();
+    }
+    
     const spinner = ora('Processing...').start();
 
     try {
       const response = await this.callOpenAI();
       spinner.stop();
+      
+      // Resume readline after spinner stops
+      if (rlInterface) {
+        rlInterface.resume();
+      }
 
       // Add assistant response to history
       this.conversationHistory.push({
@@ -348,6 +359,12 @@ Remember: You are LZero - be helpful, conversational, and make the experience fe
     } catch (error) {
       // Always stop spinner in error cases
       spinner.stop();
+      
+      // Resume readline after spinner stops (even on error)
+      const rlInterface = (global as any).rlInterface;
+      if (rlInterface) {
+        rlInterface.resume();
+      }
 
       // Log the actual error for debugging
       const errorMessage = this.formatError(error);

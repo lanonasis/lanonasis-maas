@@ -53,6 +53,7 @@ export interface MemoryEntry {
   memory_type: MemoryType;
   tags: string[];
   topic_id?: string | null;
+  topic_key?: string | null;
   user_id: string;
   organization_id: string;
   metadata?: Record<string, unknown>;
@@ -112,14 +113,22 @@ export interface MemoryEntry {
  *             difficulty: "intermediate"
  *             last_updated: "2025-01-01"
  */
+const MEMORY_TYPE_ENUM = ['context', 'project', 'knowledge', 'reference', 'personal', 'workflow'] as const;
+
 export const createMemorySchema = z.object({
   title: z.string().min(1).max(200),
   content: z.string().min(1).max(50000),
-  memory_type: z.enum(['context', 'project', 'knowledge', 'reference', 'personal', 'workflow']).default('context'),
+  memory_type: z.enum(MEMORY_TYPE_ENUM).optional(),
+  type: z.enum(MEMORY_TYPE_ENUM).optional(), // SDK alias for memory_type
   tags: z.array(z.string().min(1).max(50)).max(10).default([]),
   topic_id: z.string().uuid().optional(),
+  topic_key: z.string().min(1).max(100).optional(),
   metadata: z.record(z.unknown()).optional()
-});
+}).transform((data) => ({
+  ...data,
+  memory_type: data.memory_type ?? data.type ?? 'context',
+  type: undefined, // normalise — downstream only sees memory_type
+}));
 
 /**
  * @swagger
@@ -156,11 +165,17 @@ export const createMemorySchema = z.object({
 export const updateMemorySchema = z.object({
   title: z.string().min(1).max(200).optional(),
   content: z.string().min(1).max(50000).optional(),
-  memory_type: z.enum(['context', 'project', 'knowledge', 'reference', 'personal', 'workflow']).optional(),
+  memory_type: z.enum(MEMORY_TYPE_ENUM).optional(),
+  type: z.enum(MEMORY_TYPE_ENUM).optional(), // SDK alias for memory_type
   tags: z.array(z.string().min(1).max(50)).max(10).optional(),
   topic_id: z.string().uuid().nullable().optional(),
+  topic_key: z.string().min(1).max(100).optional(),
   metadata: z.record(z.unknown()).optional()
-});
+}).transform((data) => ({
+  ...data,
+  memory_type: data.memory_type ?? data.type,
+  type: undefined,
+}));
 
 /**
  * @swagger
@@ -203,8 +218,11 @@ export const searchMemorySchema = z.object({
   memory_types: z.array(z.enum(['context', 'project', 'knowledge', 'reference', 'personal', 'workflow'])).optional(),
   tags: z.array(z.string()).optional(),
   topic_id: z.string().uuid().optional(),
+  topic_key: z.string().min(1).max(100).optional(),
   limit: z.number().int().min(1).max(100).default(20),
-  threshold: z.number().min(0).max(1).default(0.7)
+  threshold: z.number().min(0).max(1).default(0.7),
+  include_deleted: z.boolean().optional(),
+  response_mode: z.enum(['full', 'compact', 'timeline']).optional()
 });
 
 /**

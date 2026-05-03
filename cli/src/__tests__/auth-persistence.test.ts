@@ -118,6 +118,30 @@ describe('Authentication Persistence Tests', () => {
       expect(newConfig.getToken()).toBe(testToken);
       expect(newConfig.get('authMethod')).toBe('jwt');
     });
+
+    it('should accept camelCase organizationId claim from JWT payload', async () => {
+      const testToken = createTestJwt(Math.floor(Date.now() / 1000) + 60 * 60, {
+        email: 'admin@lanonasis.com',
+        organizationId: 'org_camel_123',
+        role: 'authenticated'
+      });
+
+      await config.setToken(testToken);
+
+      expect((await config.getCurrentUser())?.organization_id).toBe('org_camel_123');
+    });
+
+    it('should accept snake_case organization_id claim from JWT payload', async () => {
+      const testToken = createTestJwt(Math.floor(Date.now() / 1000) + 60 * 60, {
+        email: 'admin@lanonasis.com',
+        organization_id: 'org_snake_123',
+        role: 'authenticated'
+      });
+
+      await config.setToken(testToken);
+
+      expect((await config.getCurrentUser())?.organization_id).toBe('org_snake_123');
+    });
   });
 
   describe('Authentication Failure Tracking', () => {

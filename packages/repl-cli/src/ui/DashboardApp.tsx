@@ -35,6 +35,10 @@ export const DashboardApp: React.FC<DashboardAppProps> = ({ config }) => {
 
   const [view, setView] = useState<View>('list');
   const [memories, setMemories] = useState<Memory[]>([]);
+<<<<<<< HEAD
+=======
+  const [originalMemories, setOriginalMemories] = useState<Memory[]>([]);
+>>>>>>> ce786191aaaaa1cbb51d90ad0677da7f8c0bf858
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [selectedMemory, setSelectedMemory] = useState<Memory | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -56,6 +60,10 @@ export const DashboardApp: React.FC<DashboardAppProps> = ({ config }) => {
 
       if (result.data?.data) {
         setMemories(result.data.data);
+<<<<<<< HEAD
+=======
+        setOriginalMemories(result.data.data);
+>>>>>>> ce786191aaaaa1cbb51d90ad0677da7f8c0bf858
         setConnectionStatus('connected');
         setError(null);
       } else {
@@ -107,6 +115,10 @@ export const DashboardApp: React.FC<DashboardAppProps> = ({ config }) => {
       }
     } else if (view === 'search') {
       if (key.escape) {
+<<<<<<< HEAD
+=======
+        setMemories(originalMemories);
+>>>>>>> ce786191aaaaa1cbb51d90ad0677da7f8c0bf858
         setView('list');
         setSearchQuery('');
       }
@@ -127,7 +139,15 @@ export const DashboardApp: React.FC<DashboardAppProps> = ({ config }) => {
   // Handle search
   const handleSearch = async (query: string) => {
     if (!query.trim()) return;
+<<<<<<< HEAD
     
+=======
+
+    if (originalMemories.length === 0 && memories.length > 0) {
+      setOriginalMemories(memories);
+    }
+
+>>>>>>> ce786191aaaaa1cbb51d90ad0677da7f8c0bf858
     setIsSearching(true);
     try {
       const result = await client.searchMemories({
@@ -163,9 +183,15 @@ export const DashboardApp: React.FC<DashboardAppProps> = ({ config }) => {
     if (!selectedMemory) return;
 
     try {
+<<<<<<< HEAD
       const result = await client.deleteMemory(selectedMemory.id);
       if (result && (result as any).error) {
         setError(`Failed to delete memory: ${(result as any).error}`);
+=======
+      const result: { data?: unknown; error?: string } = await client.deleteMemory(selectedMemory.id);
+      if (result && 'error' in result && result.error) {
+        setError(`Failed to delete memory: ${result.error}`);
+>>>>>>> ce786191aaaaa1cbb51d90ad0677da7f8c0bf858
         return;
       }
       setView('list');

@@ -88,7 +88,11 @@ lrepl
 
 ## 🏗️ Architecture
 
+<<<<<<< HEAD
 ```
+=======
+```text
+>>>>>>> ce786191aaaaa1cbb51d90ad0677da7f8c0bf858
 src/ui/
 ├── DashboardApp.tsx          # Main dashboard container
 ├── components/

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
-import { CheckCircle, Shield, Key, Database } from 'lucide-react';
+import { CheckCircle, Shield, Key, Database, type LucideIcon } from 'lucide-react';
 import { AnimatedButton } from '@/components/ui/AnimatedButton';
 
 interface ClientInfo {
@@ -122,9 +122,9 @@ export default function OAuthAuthorize() {
 
         window.location.href = callbackUrl.toString();
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error('Authorization error:', err);
-      setError(err.message || 'Authorization failed');
+      setError(err instanceof Error ? err.message : 'Authorization failed');
     } finally {
       setLoading(false);
     }
@@ -144,7 +144,7 @@ export default function OAuthAuthorize() {
     }
   };
 
-  const scopeDescriptions: Record<string, { icon: any; description: string }> = {
+  const scopeDescriptions: Record<string, { icon: LucideIcon; description: string }> = {
     'mcp:read': {
       icon: Database,
       description: 'Read your memory entries and search memories'

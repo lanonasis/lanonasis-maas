@@ -21,7 +21,7 @@ type ChartType = "area" | "line" | "bar";
 interface ChartProps {
   title?: string;
   subtitle?: string;
-  data: any[];
+  data: Record<string, unknown>[];
   type?: ChartType;
   dataKeys: string[];
   xAxisDataKey: string;
