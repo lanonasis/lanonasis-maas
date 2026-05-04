@@ -24,8 +24,8 @@ const router: Router = Router();
 
 // Emergency token must be set in environment
 const EMERGENCY_TOKEN = process.env.EMERGENCY_BOOTSTRAP_TOKEN || 'set-a-secure-token-here';
-const SUPABASE_URL = process.env.SUPABASE_URL || ''
-const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || ''
+const SUPABASE_URL = process.env.SUPABASE_URL || '';
+const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 
 // Initialize Supabase with service role key
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY, {
@@ -66,45 +66,8 @@ router.post('/emergency/bootstrap-admin', async (req, res) => {
 
     console.log(`[EMERGENCY] Creating bootstrap admin for: ${email}`);
 
-    // 1. Check if user exists
-    let userId;
-    const { data: existingUser } = await supabase
-      .from('users')
-      .select('id')
-      .eq('email', email)
-      .single();
-
-    if (existingUser) {
-      userId = existingUser.id;
-      console.log(`[EMERGENCY] User exists with ID: ${userId}`);
-    } else {
-      // Create user if doesn't exist
-      const temporaryPassword = crypto.randomBytes(16).toString('hex');
-      const hashedPassword = await bcrypt.hash(temporaryPassword, 10);
-
-      const { data: newUser, error: userError } = await supabase
-        .from('users')
-        .insert({
-          email,
-          password_hash: hashedPassword,
-          role: 'admin',
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        })
-        .select()
-        .single();
-
-      if (userError) {
-        console.error('[EMERGENCY] Failed to create user:', userError);
-        return res.status(500).json({ error: 'Failed to create user' });
-      }
-
-      userId = newUser.id;
-      console.log(`[EMERGENCY] Created new user with ID: ${userId}`);
-    }
-
-    // 2. Check if organization exists
-    let organizationId;
+    // 1. Check if organization exists
+    let organizationId: string;
     const { data: existingOrg } = await supabase
       .from('organizations')
       .select('id')
@@ -136,7 +99,60 @@ router.post('/emergency/bootstrap-admin', async (req, res) => {
       console.log(`[EMERGENCY] Created new organization with ID: ${organizationId}`);
     }
 
-    // 3. Link user to organization if not already linked
+    // 2. Check if user exists and ensure public.users has the same organization
+    let userId: string;
+    const { data: existingUser } = await supabase
+      .from('users')
+      .select('id, organization_id')
+      .eq('email', email)
+      .single();
+
+    if (existingUser) {
+      userId = existingUser.id;
+      console.log(`[EMERGENCY] User exists with ID: ${userId}`);
+
+      const { error: updateUserError } = await supabase
+        .from('users')
+        .update({
+          organization_id: organizationId,
+          role: 'admin',
+          plan: 'enterprise',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', userId);
+
+      if (updateUserError) {
+        console.error('[EMERGENCY] Failed to update user organization:', updateUserError);
+        return res.status(500).json({ error: 'Failed to assign user to organization' });
+      }
+    } else {
+      const temporaryPassword = crypto.randomBytes(16).toString('hex');
+      const hashedPassword = await bcrypt.hash(temporaryPassword, 10);
+
+      const { data: newUser, error: userError } = await supabase
+        .from('users')
+        .insert({
+          email,
+          password_hash: hashedPassword,
+          organization_id: organizationId,
+          role: 'admin',
+          plan: 'enterprise',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .select()
+        .single();
+
+      if (userError) {
+        console.error('[EMERGENCY] Failed to create user:', userError);
+        return res.status(500).json({ error: 'Failed to create user' });
+      }
+
+      userId = newUser.id;
+      console.log(`[EMERGENCY] Created new user with ID: ${userId}`);
+    }
+
+    // 3. Link user to organization if the optional membership table exists
     const { error: linkError } = await supabase
       .from('organization_users')
       .upsert({
@@ -163,15 +179,15 @@ router.post('/emergency/bootstrap-admin', async (req, res) => {
         user_id: userId,
         organization_id: organizationId,
         name: 'Emergency Bootstrap Key',
-        key: apiKey,
         key_hash: hashedKey,
-        service: 'lanonasis-maas',
-        access_level: 'admin',
-        permissions: ['legacy.full_access'],
-        description: 'Emergency bootstrap key created for auth recovery',
+        permissions: {
+          read: true,
+          write: true,
+          delete: true,
+          admin: true
+        },
         expires_at: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(), // 1 year
         created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
         is_active: true
       })
       .select()
