@@ -1,9 +1,5 @@
 import React from 'react';
 import { Box, Text } from 'ink';
-<<<<<<< HEAD
-import chalk from 'chalk';
-=======
->>>>>>> ce786191aaaaa1cbb51d90ad0677da7f8c0bf858
 
 interface StatusBarProps {
   mode: 'remote' | 'local';

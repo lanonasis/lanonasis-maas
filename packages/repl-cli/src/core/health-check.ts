@@ -50,18 +50,6 @@ export class AIEndpointHealthCheck {
 
       // For AI Router
       if (endpoint.type === 'router') {
-<<<<<<< HEAD
-        response = await fetch(`${endpoint.url}/health`, {
-          method: 'GET',
-          signal: controller.signal,
-        }).catch(() => 
-          // Fallback to main endpoint if health endpoint doesn't exist
-          fetch(endpoint.url, {
-            method: 'HEAD',
-            signal: controller.signal,
-          })
-        );
-=======
         const tryHead = () => fetch(endpoint.url, {
           method: 'HEAD',
           signal: controller.signal,
@@ -71,13 +59,12 @@ export class AIEndpointHealthCheck {
           method: 'GET',
           signal: controller.signal,
         }).then(async (r) => {
-          if (!r.ok) {
-            // Health endpoint returned a non-OK status; fall back to HEAD
+          if (r.status === 404) {
+            // Routers without a health endpoint can still be reachable.
             return tryHead().catch(() => r);
           }
           return r;
         }).catch(() => tryHead());
->>>>>>> ce786191aaaaa1cbb51d90ad0677da7f8c0bf858
 
         const latency = Date.now() - startTime;
 
@@ -267,12 +254,6 @@ export class AIEndpointHealthCheck {
    * Start periodic health checks
    */
   startPeriodicChecks(intervalMs = 60000): void {
-<<<<<<< HEAD
-    this.checkAllEndpoints();
-    this.checkInterval = setInterval(() => {
-      this.checkAllEndpoints();
-    }, intervalMs);
-=======
     const loop = async () => {
       if (!this.checkInterval) return;
       await this.checkAllEndpoints();
@@ -280,7 +261,6 @@ export class AIEndpointHealthCheck {
     };
     // Use a sentinel value so loop() knows it has been started
     this.checkInterval = setTimeout(loop, 0) as unknown as NodeJS.Timeout;
->>>>>>> ce786191aaaaa1cbb51d90ad0677da7f8c0bf858
   }
 
   /**
@@ -288,11 +268,7 @@ export class AIEndpointHealthCheck {
    */
   stopPeriodicChecks(): void {
     if (this.checkInterval) {
-<<<<<<< HEAD
-      clearInterval(this.checkInterval);
-=======
       clearTimeout(this.checkInterval);
->>>>>>> ce786191aaaaa1cbb51d90ad0677da7f8c0bf858
       this.checkInterval = undefined;
     }
   }

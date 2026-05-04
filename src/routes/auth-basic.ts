@@ -53,7 +53,6 @@ async function ensureOrganizationForUser(
     .from('organizations')
     .insert({
       name: workspaceName,
-      owner_id: userId,
       plan: 'free',
       created_at: new Date().toISOString()
     })
@@ -75,11 +74,8 @@ async function ensureOrganizationForUser(
       .delete()
       .eq('id', orgData.id);
 
-<<<<<<< HEAD
-=======
     await supabase.auth.admin.deleteUser(userId);
 
->>>>>>> ce786191aaaaa1cbb51d90ad0677da7f8c0bf858
     throw new Error('Failed to associate user with organization');
   }
 

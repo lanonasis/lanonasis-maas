@@ -1,8 +1,4 @@
-<<<<<<< HEAD
-import React, { useState } from 'react';
-=======
 import React, { useState, useEffect } from 'react';
->>>>>>> ce786191aaaaa1cbb51d90ad0677da7f8c0bf858
 import { Text, useInput } from 'ink';
 
 interface TextInputProps {
@@ -22,13 +18,10 @@ export const TextInput: React.FC<TextInputProps> = ({
 }) => {
   const [cursorOffset, setCursorOffset] = useState(0);
 
-<<<<<<< HEAD
-=======
   useEffect(() => {
     setCursorOffset(prev => Math.min(prev, value.length));
   }, [value]);
 
->>>>>>> ce786191aaaaa1cbb51d90ad0677da7f8c0bf858
   useInput((input, key) => {
     if (!focus) return;
 
@@ -36,24 +29,17 @@ export const TextInput: React.FC<TextInputProps> = ({
       setCursorOffset(Math.max(0, cursorOffset - 1));
     } else if (key.rightArrow) {
       setCursorOffset(Math.min(value.length, cursorOffset + 1));
-<<<<<<< HEAD
-    } else if (key.backspace || key.delete) {
-=======
     } else if (key.backspace) {
->>>>>>> ce786191aaaaa1cbb51d90ad0677da7f8c0bf858
       if (cursorOffset > 0) {
         const newValue = value.slice(0, cursorOffset - 1) + value.slice(cursorOffset);
         onChange(newValue);
         setCursorOffset(cursorOffset - 1);
       }
-<<<<<<< HEAD
-=======
     } else if (key.delete) {
       if (cursorOffset < value.length) {
         const newValue = value.slice(0, cursorOffset) + value.slice(cursorOffset + 1);
         onChange(newValue);
       }
->>>>>>> ce786191aaaaa1cbb51d90ad0677da7f8c0bf858
     } else if (input && !key.ctrl && !key.meta) {
       const newValue = value.slice(0, cursorOffset) + input + value.slice(cursorOffset);
       onChange(newValue);
