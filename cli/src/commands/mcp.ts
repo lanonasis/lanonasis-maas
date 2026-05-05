@@ -18,6 +18,23 @@ type MCPMemorySearchResult = {
   content: string;
 };
 
+export function renderSearchResults(
+  results: MCPMemorySearchResult[],
+  options: { contentPreviewLength?: number } = {}
+): string {
+  const previewLen = options.contentPreviewLength ?? 100;
+  const parts: string[] = [];
+  parts.push(chalk.cyan('\n🔍 Search Results:'));
+  results.forEach((memory, index) => {
+    parts.push(chalk.bold(`\n${index + 1}. ${memory.title}`));
+    parts.push(`   ID: ${chalk.gray(memory.id)}`);
+    parts.push(`   Type: ${chalk.blue(memory.memory_type ?? 'context')}`);
+    parts.push(`   Score: ${chalk.green((memory.similarity_score * 100).toFixed(1) + '%')}`);
+    parts.push(`   Content: ${memory.content.substring(0, previewLen)}...`);
+  });
+  return parts.join('\n');
+}
+
 const tokenizeQuery = (input: string): string[] =>
   input
     .toLowerCase()
@@ -607,14 +624,7 @@ export function mcpCommands(program: Command) {
           return;
         }
 
-        console.log(chalk.cyan('\n🔍 Search Results:'));
-        results.forEach((memory: { id: string; title: string; memory_type: string; similarity_score: number; content: string }, index: number) => {
-          console.log(`\n${chalk.bold(`${index + 1}. ${memory.title}`)}`);
-          console.log(`   ID: ${chalk.gray(memory.id)}`);
-          console.log(`   Type: ${chalk.blue(memory.memory_type)}`);
-          console.log(`   Score: ${chalk.green((memory.similarity_score * 100).toFixed(1) + '%')}`);
-          console.log(`   Content: ${memory.content.substring(0, 100)}...`);
-        });
+        console.log(renderSearchResults(results));
       } catch (error) {
         spinner.fail(`Search failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
         process.exit(1);
