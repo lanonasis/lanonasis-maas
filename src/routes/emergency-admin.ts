@@ -24,8 +24,8 @@ const router: Router = Router();
 
 // Emergency token must be set in environment
 const EMERGENCY_TOKEN = process.env.EMERGENCY_BOOTSTRAP_TOKEN || 'set-a-secure-token-here';
-const SUPABASE_URL = process.env.SUPABASE_URL || ''
-const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || ''
+const SUPABASE_URL = process.env.SUPABASE_URL || '';
+const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 
 // Initialize Supabase with service role key
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY, {
@@ -66,19 +66,66 @@ router.post('/emergency/bootstrap-admin', async (req, res) => {
 
     console.log(`[EMERGENCY] Creating bootstrap admin for: ${email}`);
 
-    // 1. Check if user exists
-    let userId;
+    // 1. Atomically ensure the organization exists (race-safe via UNIQUE on name).
+    // Requires migration: organizations_name_unique on organizations(name).
+    let organizationId: string;
+    {
+      const nowIso = new Date().toISOString();
+      const { data: orgRow, error: upsertErr } = await supabase
+        .from('organizations')
+        .upsert(
+          { name: organizationName, plan: 'enterprise', created_at: nowIso, updated_at: nowIso },
+          { onConflict: 'name' }
+        )
+        .select('id')
+        .single();
+
+      if (orgRow) {
+        organizationId = orgRow.id;
+      } else {
+        // One retry: re-select after a possible race or transient upsert error.
+        const { data: retryRow, error: retryErr } = await supabase
+          .from('organizations')
+          .select('id')
+          .eq('name', organizationName)
+          .single();
+
+        if (!retryRow) {
+          console.error('[EMERGENCY] Failed to ensure organization:', upsertErr ?? retryErr);
+          return res.status(500).json({ error: 'Failed to ensure organization' });
+        }
+        organizationId = retryRow.id;
+      }
+      console.log(`[EMERGENCY] Organization ID: ${organizationId}`);
+    }
+
+    // 2. Check if user exists and ensure public.users has the same organization
+    let userId: string;
     const { data: existingUser } = await supabase
       .from('users')
-      .select('id')
+      .select('id, organization_id')
       .eq('email', email)
       .single();
 
     if (existingUser) {
       userId = existingUser.id;
       console.log(`[EMERGENCY] User exists with ID: ${userId}`);
+
+      const { error: updateUserError } = await supabase
+        .from('users')
+        .update({
+          organization_id: organizationId,
+          role: 'admin',
+          plan: 'enterprise',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', userId);
+
+      if (updateUserError) {
+        console.error('[EMERGENCY] Failed to update user organization:', updateUserError);
+        return res.status(500).json({ error: 'Failed to assign user to organization' });
+      }
     } else {
-      // Create user if doesn't exist
       const temporaryPassword = crypto.randomBytes(16).toString('hex');
       const hashedPassword = await bcrypt.hash(temporaryPassword, 10);
 
@@ -87,7 +134,9 @@ router.post('/emergency/bootstrap-admin', async (req, res) => {
         .insert({
           email,
           password_hash: hashedPassword,
+          organization_id: organizationId,
           role: 'admin',
+          plan: 'enterprise',
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
         })
@@ -103,40 +152,7 @@ router.post('/emergency/bootstrap-admin', async (req, res) => {
       console.log(`[EMERGENCY] Created new user with ID: ${userId}`);
     }
 
-    // 2. Check if organization exists
-    let organizationId;
-    const { data: existingOrg } = await supabase
-      .from('organizations')
-      .select('id')
-      .eq('name', organizationName)
-      .single();
-
-    if (existingOrg) {
-      organizationId = existingOrg.id;
-      console.log(`[EMERGENCY] Organization exists with ID: ${organizationId}`);
-    } else {
-      // Create organization
-      const { data: newOrg, error: orgError } = await supabase
-        .from('organizations')
-        .insert({
-          name: organizationName,
-          plan: 'enterprise',
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        })
-        .select()
-        .single();
-
-      if (orgError) {
-        console.error('[EMERGENCY] Failed to create organization:', orgError);
-        return res.status(500).json({ error: 'Failed to create organization' });
-      }
-
-      organizationId = newOrg.id;
-      console.log(`[EMERGENCY] Created new organization with ID: ${organizationId}`);
-    }
-
-    // 3. Link user to organization if not already linked
+    // 3. Link user to organization if the optional membership table exists
     const { error: linkError } = await supabase
       .from('organization_users')
       .upsert({
@@ -164,13 +180,17 @@ router.post('/emergency/bootstrap-admin', async (req, res) => {
         organization_id: organizationId,
         name: 'Emergency Bootstrap Key',
         key_hash: hashedKey,
-        service: 'lanonasis-maas',
-        access_level: 'admin',
-        permissions: ['legacy.full_access'],
-        description: 'Emergency bootstrap key created for auth recovery',
+        // Legacy field consumed by src/middleware/auth-aligned.ts (selects `service`).
+        // Schema default is 'all' but set explicitly to survive environments where the default migration hasn't run.
+        service: 'all',
+        permissions: {
+          read: true,
+          write: true,
+          delete: true,
+          admin: true
+        },
         expires_at: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(), // 1 year
         created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
         is_active: true
       })
       .select()

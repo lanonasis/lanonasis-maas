@@ -53,7 +53,6 @@ async function ensureOrganizationForUser(
     .from('organizations')
     .insert({
       name: workspaceName,
-      owner_id: userId,
       plan: 'free',
       created_at: new Date().toISOString()
     })

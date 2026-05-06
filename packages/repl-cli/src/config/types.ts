@@ -1,4 +1,4 @@
-import type { ReadLine } from 'readline';
+import type { Interface as ReadLine } from 'readline';
 
 export interface UserProfile {
   name?: string;
