@@ -77,13 +77,16 @@ export class ReplEngine {
    * Provides completion for all registered commands and aliases
    */
   private createCompleter(line: string): [string[], string] {
-    // Build completion list from registered commands and aliases
-    const commands = this.registry.getCommands();
-    const aliases = Array.from(this.registry.getAliases().keys());
+    // Normalize both sides to lowercase so readline appends the suffix to the
+    // correct prefix. Returning the original-case `line` as the prefix would
+    // make readline overwrite mixed-case input with the lowercased completion.
+    const normalizedPrefix = line.toLowerCase();
+    const commands = this.registry.getCommands().map(c => c.toLowerCase());
+    const aliases = Array.from(this.registry.getAliases().keys()).map(a => a.toLowerCase());
     const allCommands = [...commands, ...aliases];
-    
-    const hits = allCommands.filter(c => c.startsWith(line.toLowerCase()));
-    return [hits.length ? hits : allCommands, line];
+
+    const hits = allCommands.filter(c => c.startsWith(normalizedPrefix));
+    return [hits.length ? hits : allCommands, normalizedPrefix];
   }
   
   /**

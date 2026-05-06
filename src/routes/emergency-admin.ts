@@ -66,37 +66,37 @@ router.post('/emergency/bootstrap-admin', async (req, res) => {
 
     console.log(`[EMERGENCY] Creating bootstrap admin for: ${email}`);
 
-    // 1. Check if organization exists
+    // 1. Atomically ensure the organization exists (race-safe via UNIQUE on name).
+    // Requires migration: organizations_name_unique on organizations(name).
     let organizationId: string;
-    const { data: existingOrg } = await supabase
-      .from('organizations')
-      .select('id')
-      .eq('name', organizationName)
-      .single();
-
-    if (existingOrg) {
-      organizationId = existingOrg.id;
-      console.log(`[EMERGENCY] Organization exists with ID: ${organizationId}`);
-    } else {
-      // Create organization
-      const { data: newOrg, error: orgError } = await supabase
+    {
+      const nowIso = new Date().toISOString();
+      const { data: orgRow, error: upsertErr } = await supabase
         .from('organizations')
-        .insert({
-          name: organizationName,
-          plan: 'enterprise',
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        })
-        .select()
+        .upsert(
+          { name: organizationName, plan: 'enterprise', created_at: nowIso, updated_at: nowIso },
+          { onConflict: 'name' }
+        )
+        .select('id')
         .single();
 
-      if (orgError) {
-        console.error('[EMERGENCY] Failed to create organization:', orgError);
-        return res.status(500).json({ error: 'Failed to create organization' });
-      }
+      if (orgRow) {
+        organizationId = orgRow.id;
+      } else {
+        // One retry: re-select after a possible race or transient upsert error.
+        const { data: retryRow, error: retryErr } = await supabase
+          .from('organizations')
+          .select('id')
+          .eq('name', organizationName)
+          .single();
 
-      organizationId = newOrg.id;
-      console.log(`[EMERGENCY] Created new organization with ID: ${organizationId}`);
+        if (!retryRow) {
+          console.error('[EMERGENCY] Failed to ensure organization:', upsertErr ?? retryErr);
+          return res.status(500).json({ error: 'Failed to ensure organization' });
+        }
+        organizationId = retryRow.id;
+      }
+      console.log(`[EMERGENCY] Organization ID: ${organizationId}`);
     }
 
     // 2. Check if user exists and ensure public.users has the same organization
@@ -180,6 +180,9 @@ router.post('/emergency/bootstrap-admin', async (req, res) => {
         organization_id: organizationId,
         name: 'Emergency Bootstrap Key',
         key_hash: hashedKey,
+        // Legacy field consumed by src/middleware/auth-aligned.ts (selects `service`).
+        // Schema default is 'all' but set explicitly to survive environments where the default migration hasn't run.
+        service: 'all',
         permissions: {
           read: true,
           write: true,
