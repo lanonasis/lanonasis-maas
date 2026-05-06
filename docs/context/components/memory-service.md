@@ -3,12 +3,13 @@
 **Package:** `@lanonasis/memory-service-maas`
 **Version:** 1.2.0-dev
 **Type:** Main backend service
+**Authentication**: OAuth2 PKCE (not basic auth)
 
 ---
 
 ## Purpose
 
-Enterprise Memory as a Service API backend. Provides semantic memory storage and retrieval via REST API with JWT authentication, multi-tenant isolation, and vector search.
+Enterprise Memory as a Service API backend. Provides semantic memory storage and retrieval via REST API with OAuth2 authentication, multi-tenant isolation, and vector search.
 
 ---
 
@@ -18,7 +19,7 @@ Enterprise Memory as a Service API backend. Provides semantic memory storage and
 |------|---------|
 | `src/server.ts` | Main Express server entry point |
 | `src/config/environment.ts` | Environment configuration loading |
-| `src/routes/auth.ts` | Authentication endpoints |
+| `src/routes/auth.ts` | OAuth2 endpoints (authorize, token, refresh) |
 | `src/routes/memory.ts` | Memory CRUD endpoints |
 | `src/routes/health.ts` | Health check endpoints |
 | `src/middleware/auth.ts` | JWT authentication middleware |
@@ -58,12 +59,14 @@ Enterprise Memory as a Service API backend. Provides semantic memory storage and
 
 ## API Endpoints
 
-### Authentication
+### Authentication (OAuth2)
 | Method | Path | Description |
 |--------|------|-------------|
-| POST | `/api/v1/auth/register` | Register new user |
-| POST | `/api/v1/auth/login` | Login and get JWT |
-| POST | `/api/v1/auth/refresh` | Refresh JWT token |
+| GET | `/auth/oauth/authorize` | OAuth2 authorization endpoint |
+| POST | `/auth/oauth/token` | Exchange code for access token |
+| POST | `/api/v1/auth/refresh` | Refresh access token |
+
+**Architecture Note**: The service uses OAuth2 PKCE (Proof Key for Code Exchange) as the primary authentication mechanism. This replaced basic email/password authentication (register/login) endpoints to improve security and support multi-tenant scenarios. All `/api/v1/*` endpoints require a valid JWT Bearer token obtained through the OAuth2 flow.
 
 ### Memory Operations
 | Method | Path | Description |
