@@ -59,8 +59,8 @@ export class AIEndpointHealthCheck {
           method: 'GET',
           signal: controller.signal,
         }).then(async (r) => {
-          if (!r.ok) {
-            // Health endpoint returned a non-OK status; fall back to HEAD
+          if (r.status === 404) {
+            // Routers without a health endpoint can still be reachable.
             return tryHead().catch(() => r);
           }
           return r;

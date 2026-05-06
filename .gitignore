@@ -95,8 +95,10 @@ coverage/
 .next/
 
 # Package artifacts  
+*.tgz
 *.vsix.backup
 *.tgz.backup
+*.tsbuildinfo
 .kiro/settings/mcp.json
 test-github-mcp.cjs
 mcp-config-fixed.json

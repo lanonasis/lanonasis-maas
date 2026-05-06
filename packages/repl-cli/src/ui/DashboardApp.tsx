@@ -170,9 +170,11 @@ export const DashboardApp: React.FC<DashboardAppProps> = ({ config }) => {
     if (!selectedMemory) return;
 
     try {
-      const result: { data?: unknown; error?: string } = await client.deleteMemory(selectedMemory.id);
-      if (result && 'error' in result && result.error) {
-        setError(`Failed to delete memory: ${result.error}`);
+      const result = await client.deleteMemory(selectedMemory.id);
+      if (result.error) {
+        setError(`Failed to delete memory: ${
+          typeof result.error === 'string' ? result.error : 'Delete request failed'
+        }`);
         return;
       }
       setView('list');
@@ -213,6 +215,7 @@ export const DashboardApp: React.FC<DashboardAppProps> = ({ config }) => {
             onChange={setSearchQuery}
             onSearch={handleSearch}
             onExit={() => {
+              setMemories(originalMemories);
               setView('list');
               setSearchQuery('');
             }}

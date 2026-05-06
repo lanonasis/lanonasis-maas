@@ -8,6 +8,7 @@ import {
 import chalk from 'chalk';
 import ora from 'ora';
 import { CommandContext } from '../config/types.js';
+import { withSpinner } from '../utils/spinner-utils.js';
 
 const VALID_MEMORY_TYPES = [
   'context',
