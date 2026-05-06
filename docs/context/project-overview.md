@@ -57,6 +57,7 @@ Provides semantic memory storage and retrieval via API, SDKs, CLI, and IDE exten
 | `@lanonasis/claude-memory` | 0.1.0 | Claude Code cross-session memory |
 | `@lanonasis/recall-forge` | 1.1.1 | OpenClaw plugin (memory + contextEngine) |
 | `@lanonasis/ide-extension-core` | 1.0.0 | Shared IDE extension library |
+| `@lanonasis/cli` | 3.9.15 | Command-line memory tool (memory) |
 
 ### IDE Extensions
 | Extension | Path |
@@ -187,8 +188,8 @@ docker build -t memory-service  # Build image
 ### Key Endpoints
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| POST | `/api/v1/auth/register` | Register user |
-| POST | `/api/v1/auth/login` | Login user |
+| GET | `/auth/oauth/authorize` | OAuth2 authorization flow |
+| POST | `/auth/oauth/token` | Get OAuth2 access token |
 | POST | `/api/v1/memory` | Create memory |
 | GET | `/api/v1/memory` | List memories |
 | POST | `/api/v1/memory/search` | Semantic search |
@@ -196,7 +197,7 @@ docker build -t memory-service  # Build image
 | PUT | `/api/v1/memory/:id` | Update memory |
 | DELETE | `/api/v1/memory/:id` | Delete memory |
 
-All endpoints require `Authorization: Bearer <token>` header.
+**Authentication**: Uses OAuth2 PKCE flow (not basic auth). All memory endpoints require `Authorization: Bearer <token>` header from OAuth token.
 
 ---
 
