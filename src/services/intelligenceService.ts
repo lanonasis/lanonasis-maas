@@ -66,6 +66,10 @@ export class IntelligenceService {
       .order('confidence', { ascending: false })
       .limit(opts.limit ?? 20);
 
+    if (opts.organization_id) {
+      query = query.eq('organization_id', opts.organization_id);
+    }
+
     if (!opts.include_superseded) {
       query = query.is('superseded_by', null);
     }

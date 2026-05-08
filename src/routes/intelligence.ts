@@ -3,8 +3,11 @@ import { asyncHandler } from '@/middleware/errorHandler';
 import { alignedAuthMiddleware } from '@/middleware/auth-aligned';
 import { planBasedRateLimit } from '@/middleware/rateLimit';
 import { validateProjectScope } from '@/middleware/projectScope';
-import type { UnifiedUser } from '@/middleware/auth-aligned';
 import { IntelligenceService } from '@/services/intelligenceService';
+import {
+  canReadIntelligenceSubject,
+  resolveIntelligenceSubjectBoundary,
+} from '@/services/intelligenceAccess';
 
 const router: Router = Router();
 const intelligenceService = new IntelligenceService();
@@ -27,10 +30,16 @@ router.get(
 
     const limit = parseInt(req.query.limit as string) || 20;
     const includeSuperseded = req.query.include_superseded === 'true';
+    const boundary = resolveIntelligenceSubjectBoundary(req.user, subjectId);
+    if (!boundary) {
+      res.status(403).json({ error: 'Subject is outside the authenticated visibility boundary' });
+      return;
+    }
 
     try {
       const result = await intelligenceService.listInferredConclusions({
-        subject_id: subjectId,
+        subject_id: boundary.subjectId,
+        organization_id: boundary.personalSubject ? undefined : boundary.organizationId,
         limit,
         include_superseded: includeSuperseded,
       });
@@ -65,6 +74,10 @@ router.get(
         res.status(404).json({ error: 'Job not found' });
         return;
       }
+      if (!canReadIntelligenceSubject(req.user, job.subject_id, job.organization_id)) {
+        res.status(404).json({ error: 'Job not found' });
+        return;
+      }
       res.json({ job });
     } catch (err) {
       console.error('getReasoningJobStatus error:', err);
@@ -88,9 +101,14 @@ router.post(
       res.status(400).json({ error: 'subject_id required' });
       return;
     }
+    const boundary = resolveIntelligenceSubjectBoundary(req.user, subject_id);
+    if (!boundary) {
+      res.status(403).json({ error: 'Subject is outside the authenticated visibility boundary' });
+      return;
+    }
 
     try {
-      const result = await intelligenceService.flushReasoningQueue(subject_id);
+      const result = await intelligenceService.flushReasoningQueue(boundary.subjectId);
       res.json(result);
     } catch (err) {
       console.error('flushReasoningQueue error:', err);
