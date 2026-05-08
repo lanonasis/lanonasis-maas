@@ -358,4 +358,116 @@ export class MemoryCommands {
       resumeReadline();
     }
   }
+
+  // ============================================================
+  // Phase 1: Intelligence / Reasoning commands
+  // ============================================================
+
+  async listConclusions(args: string[], context: CommandContext) {
+    let subjectId: string | undefined;
+    let limit = 20;
+    let includeSuperseded = false;
+
+    for (const arg of args) {
+      if (arg.startsWith('--subject=')) {
+        subjectId = arg.substring(10);
+      } else if (arg.startsWith('--limit=')) {
+        limit = parseInt(arg.substring(8)) || 20;
+      } else if (arg === '--include-superseded') {
+        includeSuperseded = true;
+      }
+    }
+
+    if (!subjectId) {
+      console.log(chalk.yellow('Usage: conclusions list --subject=<uuid> [--limit=20] [--include-superseded]'));
+      return;
+    }
+
+    pauseReadline();
+    const spinner = ora('Fetching conclusions...').start();
+    try {
+      const client = this.getClient(context);
+      const result = await client.listInferredConclusions({ subject_id: subjectId, limit, include_superseded: includeSuperseded });
+      if (result.error) {
+        spinner.fail(chalk.red(`Failed: ${result.error}`));
+        return;
+      }
+      const conclusions = result.data?.conclusions ?? [];
+      spinner.succeed(chalk.green(`${conclusions.length} conclusion(s)`));
+      for (const c of conclusions) {
+        const type = (c as any).conclusion_type ?? 'unknown';
+        const conf = ((c as any).confidence ?? 0) * 100;
+        console.log(chalk.cyan(`  [${type}] ${conf.toFixed(0)}% — ${(c as any).content?.substring(0, 80)}...`));
+      }
+      context.lastResult = { conclusions };
+    } catch (error) {
+      spinner.fail(chalk.red(`Failed: ${error instanceof Error && error.message ? error.message : String(error)}`));
+    } finally {
+      resumeReadline();
+    }
+  }
+
+  async getJobStatus(args: string[], context: CommandContext) {
+    const jobId = args[0];
+    if (!jobId) {
+      console.log(chalk.yellow('Usage: conclusions job <job-id>'));
+      return;
+    }
+
+    pauseReadline();
+    const spinner = ora('Fetching job status...').start();
+    try {
+      const client = this.getClient(context);
+      const result = await client.getReasoningJobStatus(jobId);
+      if (result.error) {
+        spinner.fail(chalk.red(`Failed: ${result.error}`));
+        return;
+      }
+      const job = result.data;
+      if (!job) {
+        spinner.fail(chalk.yellow(`Job not found: ${jobId}`));
+        return;
+      }
+      spinner.succeed(chalk.green(`Job ${jobId}`));
+      console.log(chalk.cyan(`Status: ${job.status}`));
+      console.log(chalk.gray(`Subject: ${job.subject_id}`));
+      console.log(chalk.gray(`Created: ${job.created_at}`));
+      if (job.started_at) console.log(chalk.gray(`Started: ${job.started_at}`));
+      if (job.completed_at) console.log(chalk.gray(`Completed: ${job.completed_at}`));
+      if (job.error) console.log(chalk.red(`Error: ${job.error}`));
+      context.lastResult = { job };
+    } catch (error) {
+      spinner.fail(chalk.red(`Failed: ${error instanceof Error && error.message ? error.message : String(error)}`));
+    } finally {
+      resumeReadline();
+    }
+  }
+
+  async flushQueue(args: string[], context: CommandContext) {
+    const subjectId = args[0];
+    if (!subjectId) {
+      console.log(chalk.yellow('Usage: intelligence flush <subject-id>'));
+      return;
+    }
+
+    pauseReadline();
+    const spinner = ora(`Flushing reasoning queue for ${subjectId}...`).start();
+    try {
+      const client = this.getClient(context);
+      const result = await client.flushReasoningQueue(subjectId);
+      if (result.error) {
+        spinner.fail(chalk.red(`Failed: ${result.error}`));
+        return;
+      }
+      spinner.succeed(chalk.green('Flush triggered'));
+      console.log(chalk.cyan(`Flushed: ${result.data?.flushed}`));
+      console.log(chalk.gray(`Job IDs: ${(result.data?.job_ids ?? []).join(', ')}`));
+      console.log(chalk.gray(`Conclusions: ${result.data?.conclusion_count ?? 0}`));
+      context.lastResult = result.data;
+    } catch (error) {
+      spinner.fail(chalk.red(`Failed: ${error instanceof Error && error.message ? error.message : String(error)}`));
+    } finally {
+      resumeReadline();
+    }
+  }
 }

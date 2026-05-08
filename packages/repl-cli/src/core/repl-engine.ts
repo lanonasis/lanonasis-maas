@@ -194,6 +194,17 @@ export class ReplEngine {
     this.registry.register('get', (args, ctx) => this.memoryCommands.get(args, ctx));
     this.registry.register('delete', (args, ctx) => this.memoryCommands.delete(args, ctx), ['del', 'rm']);
 
+    // Phase 1: Intelligence / Reasoning commands
+    this.registry.register('conclusions', (args, ctx) => this.memoryCommands.listConclusions(args, ctx));
+    this.registry.register('intelligence', (args, ctx) => {
+      const sub = args[0];
+      if (sub === 'flush') {
+        this.memoryCommands.flushQueue(args.slice(1), ctx);
+      } else {
+        this.memoryCommands.listConclusions(args, ctx);
+      }
+    });
+
     // System commands
     this.registry.register('mode', (args, ctx) => this.systemCommands.mode(args, ctx));
     this.registry.register('status', (args, ctx) => this.systemCommands.status(args, ctx));

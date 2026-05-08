@@ -664,3 +664,37 @@ export const analyticsDateRangeSchema = z.object({
   to: z.string().optional(),
   group_by: z.enum(['day', 'week', 'month']).default('day')
 });
+
+// ---------------------------------------------------------------------------
+// Phase 1: Reasoning / Inference types
+// ---------------------------------------------------------------------------
+
+export interface InferredConclusion {
+  id: string;
+  subject_id: string;
+  organization_id: string | null;
+  conclusion_type: 'explicit' | 'deductive' | 'inductive' | 'abductive';
+  content: string;
+  confidence: number;
+  evidence_memory_ids: string[];
+  scope: string | null;
+  freshness: string;
+  superseded_by: string | null;
+  contradiction_group_id: string | null;
+  created_at: string;
+  source_job_id: string | null;
+}
+
+export interface ReasoningJob {
+  id: string;
+  subject_id: string;
+  organization_id: string | null;
+  source_memory_ids: string[];
+  status: 'pending' | 'running' | 'completed' | 'failed';
+  source_event: 'memory.create' | 'memory.update' | 'manual.flush' | 'reprocess';
+  pending_token_count: number;
+  created_at: string;
+  started_at: string | null;
+  completed_at: string | null;
+  error: string | null;
+}
