@@ -198,7 +198,14 @@ export class ReplEngine {
     this.registry.register('delete', (args, ctx) => this.memoryCommands.delete(args, ctx), ['del', 'rm']);
 
     // Phase 1: Intelligence / Reasoning commands
-    this.registry.register('conclusions', (args, ctx) => this.memoryCommands.listConclusions(args, ctx));
+    this.registry.register('conclusions', (args, ctx) => {
+      // Route `conclusions job <job-id>` to getJobStatus
+      if (args[0] === 'job' && args[1]) {
+        this.memoryCommands.getJobStatus(args.slice(1), ctx);
+      } else {
+        this.memoryCommands.listConclusions(args, ctx);
+      }
+    });
     this.registry.register('intelligence', (args, ctx) => {
       const sub = args[0];
       if (sub === 'flush') {

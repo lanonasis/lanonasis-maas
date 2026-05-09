@@ -911,7 +911,9 @@ export class CoreMemoryClient {
    * Get the status of an async reasoning job.
    */
   async getReasoningJobStatus(jobId: string): Promise<ApiResponse<ReasoningJob>> {
-    return this.request<ReasoningJob>(`/intelligence/jobs/${jobId}`);
+    const result = await this.request<{ job: ReasoningJob }>(`/intelligence/jobs/${jobId}`);
+    if (result.error) return { data: undefined, error: result.error };
+    return { data: result.data!.job, error: undefined };
   }
 
   /**
