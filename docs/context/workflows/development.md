@@ -37,25 +37,24 @@ lanonasis-maas/
 
 ## Common Commands
 
+**Package manager:** Bun (not npm). This is a Bun workspace.
+
 ### All Packages (Workspace)
 
 ```bash
-npm run workspace:install   # Install all dependencies
-npm run workspace:build      # Build all packages
-npm run workspace:test       # Test all packages
-npm run workspace:lint       # Lint all packages
+bun run build      # Build all packages
+bun run test       # Test all packages
+bun run lint       # Lint all packages
 ```
 
-### Main Service
+### Main Service (standalone testing only)
 
 ```bash
-npm run dev           # Development with hot reload (tsx watch)
-npm run build         # Compile TypeScript
-npm start             # Production server
-npm run type-check    # TypeScript checking
-npm run lint          # ESLint
-npm test              # Run tests
-npm run test:coverage  # With coverage
+bun run dev           # Start Express server for standalone testing
+bun run build         # Build all packages
+bun run test          # Run tests
+bun run type-check    # TypeScript checking
+bun run lint          # ESLint
 ```
 
 ### CLI Tool
