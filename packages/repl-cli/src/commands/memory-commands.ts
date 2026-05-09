@@ -471,4 +471,89 @@ export class MemoryCommands {
       resumeReadline();
     }
   }
+
+  // Phase 2: Living Memory Profile commands
+
+  async profileShow(subjectId: string, context: CommandContext): Promise<void> {
+    pauseReadline();
+    const spinner = ora('Fetching profile...').start();
+    try {
+      const client = this.getClient(context);
+      const result = await client.getProfile(subjectId);
+      if (result.error) {
+        spinner.fail(chalk.red(`Failed: ${result.error}`));
+        return;
+      }
+      spinner.succeed(chalk.green('Profile loaded'));
+      const p = result.data?.profile;
+      if (!p) { console.log(chalk.yellow('No profile data')); return; }
+      console.log(chalk.cyan('\nProfile Summary:'), p.profile_summary ?? chalk.gray('(none)'));
+      console.log(chalk.cyan('\nStructured Fields:'));
+      for (const [field, items] of Object.entries(p.structured_fields ?? {})) {
+        if ((items as string[]).length > 0) {
+          console.log(chalk.bold(`  ${field}:`));
+          for (const item of items as string[]) {
+            console.log(chalk.gray(`    • ${item}`));
+          }
+        }
+      }
+      console.log(chalk.cyan('\nConfidence by Field:'));
+      for (const [field, score] of Object.entries(p.confidence_by_field ?? {})) {
+        console.log(chalk.gray(`  ${field}: ${(score as number).toFixed(2)}`));
+      }
+      console.log(chalk.dim(`\nFreshness: ${p.freshness} | Updated: ${p.updated_at}`));
+      context.lastResult = p;
+    } catch (error) {
+      spinner.fail(chalk.red(`Failed: ${error instanceof Error && error.message ? error.message : String(error)}`));
+    } finally {
+      resumeReadline();
+    }
+  }
+
+  async profileHistory(subjectId: string, limit: number, context: CommandContext): Promise<void> {
+    pauseReadline();
+    const spinner = ora('Fetching profile history...').start();
+    try {
+      const client = this.getClient(context);
+      const result = await client.getProfileHistory(subjectId, limit);
+      if (result.error) {
+        spinner.fail(chalk.red(`Failed: ${result.error}`));
+        return;
+      }
+      spinner.succeed(chalk.green(`${result.data?.versions?.length ?? 0} version(s)`));
+      for (const v of result.data?.versions ?? []) {
+        console.log(chalk.cyan(`\n[${v.created_at}]`) + chalk.gray(` id: ${v.id}`));
+        const keys = Object.keys(v.diff ?? {});
+        if (keys.length > 0) {
+          console.log(chalk.gray(`  Changed: ${keys.join(', ')}`));
+        }
+      }
+      context.lastResult = result.data;
+    } catch (error) {
+      spinner.fail(chalk.red(`Failed: ${error instanceof Error && error.message ? error.message : String(error)}`));
+    } finally {
+      resumeReadline();
+    }
+  }
+
+  async profileAsk(subjectId: string, question: string, context: CommandContext): Promise<void> {
+    pauseReadline();
+    const spinner = ora('Asking profile...').start();
+    try {
+      const client = this.getClient(context);
+      const result = await client.askProfile(subjectId, question);
+      if (result.error) {
+        spinner.fail(chalk.red(`Failed: ${result.error}`));
+        return;
+      }
+      spinner.succeed(chalk.green('Answer received'));
+      console.log(chalk.cyan('\nAnswer:'), result.data?.answer ?? chalk.gray('(empty)'));
+      console.log(chalk.dim(`Confidence: ${((result.data?.confidence ?? 0) * 100).toFixed(1)}%`));
+      context.lastResult = result.data;
+    } catch (error) {
+      spinner.fail(chalk.red(`Failed: ${error instanceof Error && error.message ? error.message : String(error)}`));
+    } finally {
+      resumeReadline();
+    }
+  }
 }

@@ -24,7 +24,11 @@ import type {
   ExtendedMemoryStats,
   AnalyticsDateRange,
   CreateMemoryWithPreprocessingRequest,
-  UpdateMemoryWithPreprocessingRequest
+  UpdateMemoryWithPreprocessingRequest,
+  // Phase 2: Living profile types
+  MemoryProfile,
+  ProfileVersion,
+  ProfileAnswer,
 } from './types';
 
 import {
@@ -919,6 +923,31 @@ export class CoreMemoryClient {
     return this.request<{ flushed: boolean; job_ids: string[]; conclusion_count: number }>(
       '/intelligence/flush',
       { method: 'POST', body: JSON.stringify({ subject_id }) },
+    );
+  }
+
+  // Phase 2: Living Memory Profile
+
+  async getProfile(subject_id: string): Promise<ApiResponse<{ profile: MemoryProfile }>> {
+    return this.request<{ profile: MemoryProfile }>(`/profiles/${subject_id}`);
+  }
+
+  async getProfileHistory(
+    subject_id: string,
+    limit = 20,
+  ): Promise<ApiResponse<{ versions: ProfileVersion[] }>> {
+    return this.request<{ versions: ProfileVersion[] }>(
+      `/profiles/${subject_id}/versions?limit=${limit}`,
+    );
+  }
+
+  async askProfile(
+    subject_id: string,
+    question: string,
+  ): Promise<ApiResponse<ProfileAnswer>> {
+    return this.request<ProfileAnswer>(
+      `/profiles/${subject_id}/ask`,
+      { method: 'POST', body: JSON.stringify({ question }) },
     );
   }
 }

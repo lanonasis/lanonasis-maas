@@ -34,6 +34,7 @@ import mcpApiKeyRoutes from '@/routes/mcp-api-keys';
 import mcpSseRoutes from '@/routes/mcp-sse';
 import emergencyRoutes from '@/routes/emergency-admin';
 import intelligenceRoutes from '@/routes/intelligence';
+import profilesRouter from '@/routes/profiles';
 
 // AI Client middleware for JSON responses
 import { aiClientMiddleware, AIClientRequest } from '@/middleware/ai-client-json';
@@ -284,6 +285,7 @@ if (process.env.EMERGENCY_BOOTSTRAP_TOKEN) {
 app.use(`${config.API_PREFIX}/${config.API_VERSION}/memory`, validateProjectScope, alignedAuthMiddleware, planBasedRateLimit(), memoryRoutes);
 app.use(`${config.API_PREFIX}/${config.API_VERSION}/memories`, validateProjectScope, alignedAuthMiddleware, planBasedRateLimit(), memoryRoutes);
 app.use(`${config.API_PREFIX}/${config.API_VERSION}/intelligence`, validateProjectScope, alignedAuthMiddleware, planBasedRateLimit(), intelligenceRoutes);
+app.use(`${config.API_PREFIX}/${config.API_VERSION}/profiles`, validateProjectScope, alignedAuthMiddleware, planBasedRateLimit(), profilesRouter);
 
 // API key management routes (require auth)
 app.use(`${config.API_PREFIX}/${config.API_VERSION}/keys`, validateProjectScope, alignedAuthMiddleware, apiKeyRoutes);
