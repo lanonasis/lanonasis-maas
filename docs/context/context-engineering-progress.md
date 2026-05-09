@@ -2,7 +2,29 @@
 
 **Project:** LanOnasis MaaS Context Documentation
 **Started:** 2026-04-30
-**Status:** Phase 1 in progress
+**Last Updated:** 2026-05-09 (aligned to monorepo architecture truth reset)
+**Status:** Phase 2 — Aligned to monorepo truth
+
+## Workflow Instructions
+
+To continue this work in a new chat session:
+1. Read `docs/context/project-overview.md` to understand the full project context
+2. Read `docs/context/context-engineering-progress.md` (this file) for current status
+3. Continue from where we left off based on the status below
+
+## ⚠️ CRITICAL ALIGNMENT (2026-05-09)
+
+This document previously described the Express server as the production API path.
+**This was incorrect.** After the monorepo CLAUDE.md alignment pass, the following
+facts are now canonical:
+
+1. **Express server is standalone-only.** Production intelligence routes bypass it.
+2. **Package manager is `bun`** (not npm).
+3. **Backend logic lives in `apps/onasis-core/supabase/functions/`** (74+ EFs).
+4. **Auth is X-API-Key** via `_shared/auth.ts` in onasis-core — NOT OAuth2 PKCE.
+5. **NEVER run `supabase db push`** — use `apply_migration` MCP tool.
+
+For full architecture truth, see monorepo at `/.devops/context-engineering/`.
 
 ## Workflow Instructions
 
@@ -39,11 +61,12 @@ All context documents are stored in: `docs/context/`
 ### Packages (published to npm)
 | Package | Version | Description |
 |---------|---------|-------------|
-| @lanonasis/sdk | 1.2.0 | Enterprise SDK with Memory + API Keys + MCP |
-| @lanonasis/memory-client | 2.2.1 | Universal (Browser/Node/React/Vue/Edge) |
-| @lanonasis/memory-sdk-standalone | 1.1.0 | Standalone multi-agent SDK |
-| @lanonasis/claude-memory | 0.1.0 | Claude Code cross-session memory |
-| @lanonasis/recall-forge | 1.1.1 | OpenClaw plugin (memory + contextEngine) |
+| @lanonasis/memory-sdk | 1.0.0 | Memory-as-a-Service TypeScript SDK |
+| @lanonasis/cli | 3.9.14+ | CLI with MCP server + interactive commands |
+| @lanonasis/mcp-core | 1.0.0 | Production MCP server (17+ tools) |
+| @lanonasis/ai-sdk | 0.2.2 | Drop-in AI SDK |
+| @lanonasis/claude-memory | (in packages/) | Claude Code cross-session memory |
+| @lanonasis/recall-forge | (in packages/) | OpenClaw plugin |
 | @lanonasis/ide-extension-core | 1.0.0 | Shared IDE extension library |
 
 ### IDE Extensions

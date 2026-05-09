@@ -1,9 +1,59 @@
 # Memory Service (MaaS API) - Component Context
 
 **Package:** `@lanonasis/memory-service-maas`
-**Version:** 1.2.0-dev
+**Version:** 1.0.0
 **Type:** Main backend service
-**Authentication**: OAuth2 PKCE (not basic auth)
+**Production status:** STANDALONE PATH ONLY — production API bypasses this server
+
+---
+
+## Purpose
+
+Express-based API backend for standalone/self-hosted deployments.
+**Production intelligence routes go directly to Supabase Edge Functions in
+`apps/onasis-core`** — not through this server.
+
+---
+
+## Key Files
+
+| File | Purpose |
+|------|---------|
+| `src/server.ts` | Main Express server entry point |
+| `src/config/environment.ts` | Environment configuration |
+| `src/routes/auth.ts` | Auth endpoints (standalone mode) |
+| `src/routes/memory.ts` | Memory CRUD endpoints |
+| `src/routes/health.ts` | Health check endpoints |
+| `src/middleware/auth.ts` | JWT authentication middleware |
+| `src/middleware/errorHandler.ts` | Global error handling |
+| `src/services/memoryService.ts` | Core memory business logic |
+| `src/db/schema.sql` | Database schema with pgvector |
+
+---
+
+## Production vs Standalone
+
+**This server is NOT in the production API path.**
+```
+Production (api.lanonasis.com):
+  Client → Supabase Edge Functions (onasis-core/supabase/functions/)
+           NOT through src/server.ts
+
+Standalone (local dev / self-hosted):
+  Client → Express :3000 → Supabase Edge Functions
+```
+
+---
+
+## Dependencies
+
+### External
+- **express** (5.2.1) - Web framework
+- **@supabase/supabase-js** (2.56.1) - Database client
+- **openai** (4.76.1) - Embeddings
+- **jsonwebtoken** (9.0.3) - JWT auth
+- **bcrypt** (6.0.0) - Password hashing
+- **zod** (3.24.4) - Validation
 
 ---
 

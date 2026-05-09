@@ -2,12 +2,17 @@
 
 **Package:** `memory` CLI
 **Type:** Command-line interface
+**Package manager:** Bun (not npm)
 
 ---
 
 ## Purpose
 
-Professional CLI for LanOnasis Memory as a Service. Provides commands for authentication, memory CRUD operations, and search - all powered by the MaaS API.
+Professional CLI for LanOnasis Memory as a Service. Provides commands for
+authentication, memory CRUD operations, and search.
+
+**For production intelligence calls:** SDK/CLI calls `api.lanonasis.com` endpoints
+(which route to Supabase EFs) — not the local Express server.
 
 ---
 
@@ -20,7 +25,7 @@ Professional CLI for LanOnasis Memory as a Service. Provides commands for authen
 | `cli/src/utils/config.ts` | Configuration management |
 | `cli/src/utils/api.ts` | API client wrapper |
 | `cli/src/core/` | Core CLI functionality |
-| `cli/src/ux/` | User experience (output formatting) |
+| `cli/src/ux/` | User experience (output formatting)
 
 ---
 
