@@ -1,5 +1,40 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { config } from '@/config/environment';
+import { logger } from '@/utils/logger';
+import { MetricsCollector } from '@/utils/metrics';
+
+// ---------------------------------------------------------------------------
+// Typed Errors
+// ---------------------------------------------------------------------------
+
+export class DatabaseError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'DatabaseError';
+  }
+}
+
+export class ExternalServiceError extends Error {
+  status: number;
+  body?: string;
+  constructor(message: string, status: number, body?: string) {
+    super(message);
+    this.name = 'ExternalServiceError';
+    this.status = status;
+    this.body = body;
+  }
+}
+
+export class TimeoutError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'TimeoutError';
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
 
 export interface MemoryProfile {
   subject_id: string;
@@ -34,8 +69,13 @@ export interface ProfileAnswer {
   confidence: number;
 }
 
+// ---------------------------------------------------------------------------
+// ProfileService
+// ---------------------------------------------------------------------------
+
 export class ProfileService {
   private supabase: SupabaseClient;
+  private metrics = new MetricsCollector();
 
   constructor() {
     this.supabase = createClient(config.SUPABASE_URL, config.SUPABASE_SERVICE_KEY, {
@@ -43,7 +83,12 @@ export class ProfileService {
     });
   }
 
+  /**
+   * Get a memory profile for a subject.
+   */
   async getProfile(subject_id: string): Promise<MemoryProfile | null> {
+    const startTime = Date.now();
+
     const { data, error } = await this.supabase
       .from('memory_profiles')
       .select('*')
@@ -51,14 +96,32 @@ export class ProfileService {
       .single();
 
     if (error) {
-      if (error.code === 'PGRST116') return null;
-      throw new Error(`getProfile failed: ${error.message}`);
+      if (error.code === 'PGRST116') {
+        logger.info('getProfile profile not found', { subject_id });
+        return null;
+      }
+      logger.error('getProfile failed', {
+        subject_id,
+        error: error.message,
+      });
+      this.metrics.incrementCounter('profile.get.error', {}, 1);
+      throw new DatabaseError(`getProfile failed: ${error.message}`);
     }
+
+    this.metrics.incrementCounter('profile.get.success', { subject_id }, 1);
+    this.metrics.recordDuration('profile.get.duration', Date.now() - startTime, { subject_id });
+    logger.info('Retrieved memory profile', { subject_id });
 
     return data as MemoryProfile;
   }
 
+  /**
+   * Get version history for a profile.
+   * Note: subject_id param is used for profile_id column in DB.
+   */
   async getProfileHistory(subject_id: string, limit = 20): Promise<ProfileVersion[]> {
+    const startTime = Date.now();
+
     const { data, error } = await this.supabase
       .from('memory_profile_versions')
       .select('*')
@@ -67,36 +130,101 @@ export class ProfileService {
       .limit(limit);
 
     if (error) {
-      throw new Error(`getProfileHistory failed: ${error.message}`);
+      logger.error('getProfileHistory failed', {
+        subject_id,
+        error: error.message,
+      });
+      this.metrics.incrementCounter('profile.history.error', {}, 1);
+      throw new DatabaseError(`getProfileHistory failed: ${error.message}`);
     }
+
+    this.metrics.incrementCounter('profile.history.success', {}, 1);
+    this.metrics.recordDuration('profile.history.duration', Date.now() - startTime, { subject_id });
+    logger.info('Retrieved profile history', {
+      subject_id,
+      count: (data as ProfileVersion[])?.length ?? 0,
+    });
 
     return (data as ProfileVersion[]) ?? [];
   }
 
+  /**
+   * Ask a profile a question via the intelligence edge function.
+   * Uses AbortController with 30s timeout to prevent indefinite hangs.
+   */
   async askProfile(subject_id: string, question: string): Promise<ProfileAnswer> {
-    const res = await fetch(
-      `${config.SUPABASE_URL}/functions/v1/intelligence-ask-profile`,
-      {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${config.SUPABASE_SERVICE_KEY}`,
-          'Content-Type': 'application/json',
+    const startTime = Date.now();
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 30_000);
+
+    try {
+      logger.info('askProfile starting', {
+        subject_id,
+        question_length: question.length,
+      });
+
+      const res = await fetch(
+        `${config.SUPABASE_URL}/functions/v1/intelligence-ask-profile`,
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${config.SUPABASE_SERVICE_KEY}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ subject_id, question }),
+          signal: controller.signal,
         },
-        body: JSON.stringify({ subject_id, question }),
-      },
-    );
+      );
 
-    if (!res.ok) {
-      const text = await res.text();
-      throw new Error(`askProfile returned ${res.status}: ${text}`);
+      clearTimeout(timeout);
+
+      if (!res.ok) {
+        const text = await res.text();
+        logger.error('askProfile received error response', {
+          subject_id,
+          status: res.status,
+          body: text,
+        });
+        this.metrics.incrementCounter('profile.ask.error', {}, 1);
+        throw new ExternalServiceError(`askProfile returned ${res.status}: ${text}`, res.status, text);
+      }
+
+      const envelope = await res.json() as { success: boolean; data?: ProfileAnswer; error?: string };
+
+      if (!envelope.success || !envelope.data) {
+        logger.error('askProfile edge function returned error', {
+          subject_id,
+          ef_error: envelope.error ?? 'unknown',
+        });
+        this.metrics.incrementCounter('profile.ask.error', {}, 1);
+        throw new ExternalServiceError(
+          `askProfile EF error: ${envelope.error ?? 'unknown'}`,
+          res.status,
+          envelope.error ?? 'unknown',
+        );
+      }
+
+      this.metrics.incrementCounter('profile.ask.success', {}, 1);
+      this.metrics.recordDuration('profile.ask.duration', Date.now() - startTime, { subject_id });
+      logger.info('askProfile completed', { subject_id });
+
+      return envelope.data;
+    } catch (err: unknown) {
+      clearTimeout(timeout);
+
+      if (err instanceof Error && err.name === 'AbortError') {
+        logger.error('askProfile timed out', { subject_id });
+        this.metrics.incrementCounter('profile.ask.timeout', {}, 1);
+        throw new TimeoutError('askProfile timed out after 30s');
+      }
+
+      if (err instanceof ExternalServiceError) throw err;
+      if (err instanceof TimeoutError) throw err;
+
+      const message = err instanceof Error ? err.message : String(err);
+      logger.error('askProfile unexpected error', { subject_id, error: message });
+      this.metrics.incrementCounter('profile.ask.error', {}, 1);
+      throw new ExternalServiceError(`askProfile failed: ${message}`, 0, message);
     }
-
-    const envelope = await res.json() as { success: boolean; data?: ProfileAnswer; error?: string };
-
-    if (!envelope.success || !envelope.data) {
-      throw new Error(`askProfile EF error: ${envelope.error ?? 'unknown'}`);
-    }
-
-    return envelope.data;
   }
 }

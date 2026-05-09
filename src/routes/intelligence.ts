@@ -1,10 +1,12 @@
 import { Router, Request, Response } from 'express';
+import { z } from 'zod';
 import { asyncHandler } from '@/middleware/errorHandler';
 import {
   alignedAuthMiddleware,
   planBasedRateLimit,
   validateProjectScope,
 } from '@/middleware/auth-aligned';
+import { logger } from '@/utils/logger';
 import { IntelligenceService } from '@/services/intelligenceService';
 import {
   canReadIntelligenceSubject,
@@ -14,26 +16,43 @@ import {
 const router: Router = Router();
 const intelligenceService = new IntelligenceService();
 
-/**
- * GET /api/v1/intelligence/conclusions
- * List pre-reasoned inferred conclusions for a subject
- */
+// ---------------------------------------------------------------------------
+// Input schemas
+// ---------------------------------------------------------------------------
+
+const conclusionsQuerySchema = z.object({
+  subject_id: z.string().min(1, 'subject_id is required'),
+  limit: z.coerce.number().int().positive().max(100).optional(),
+  include_superseded: z.enum(['true', 'false']).optional(),
+});
+
+const flushRequestSchema = z.object({
+  subject_id: z.string().min(1, 'subject_id required'),
+});
+
+// ---------------------------------------------------------------------------
+// GET /api/v1/intelligence/conclusions
+// ---------------------------------------------------------------------------
+
 router.get(
   '/conclusions',
   validateProjectScope,
   alignedAuthMiddleware,
   planBasedRateLimit('intelligence'),
   asyncHandler(async (req: Request, res: Response) => {
-    const subjectId = req.query.subject_id as string;
-    if (!subjectId) {
-      res.status(400).json({ error: 'subject_id is required' });
+    const parsed = conclusionsQuerySchema.safeParse(req.query);
+    if (!parsed.success) {
+      res.status(400).json({ error: 'Validation failed', details: parsed.error.issues });
       return;
     }
 
-    const limit = parseInt(req.query.limit as string) || 20;
-    const includeSuperseded = req.query.include_superseded === 'true';
-    const boundary = resolveIntelligenceSubjectBoundary(req.user, subjectId);
+    const { subject_id, limit, include_superseded } = parsed.data;
+    const effectiveLimit = limit ?? 20;
+    const includeSuperseded = include_superseded === 'true';
+
+    const boundary = resolveIntelligenceSubjectBoundary(req.user, subject_id);
     if (!boundary) {
+      logger.warn('conclusions: subject outside visibility boundary', { subject_id, user: req.user?.id });
       res.status(403).json({ error: 'Subject is outside the authenticated visibility boundary' });
       return;
     }
@@ -42,22 +61,27 @@ router.get(
       const result = await intelligenceService.listInferredConclusions({
         subject_id: boundary.subjectId,
         organization_id: boundary.personalSubject ? undefined : boundary.organizationId,
-        limit,
+        limit: effectiveLimit,
         include_superseded: includeSuperseded,
       });
 
+      logger.info('conclusions: listed', {
+        subject_id: boundary.subjectId,
+        count: result.conclusions.length,
+      });
       res.json(result);
     } catch (err) {
-      console.error('listInferredConclusions error:', err);
+      const msg = err instanceof Error ? err.message : String(err);
+      logger.error('listInferredConclusions error', { err: msg, subject_id: boundary.subjectId });
       res.status(500).json({ error: 'Failed to retrieve conclusions' });
     }
   }),
 );
 
-/**
- * GET /api/v1/intelligence/jobs/:id
- * Get reasoning job status by ID
- */
+// ---------------------------------------------------------------------------
+// GET /api/v1/intelligence/jobs/:id
+// ---------------------------------------------------------------------------
+
 router.get(
   '/jobs/:id',
   validateProjectScope,
@@ -73,47 +97,60 @@ router.get(
     try {
       const job = await intelligenceService.getReasoningJobStatus(id);
       if (!job) {
+        logger.info('getReasoningJobStatus: job not found', { jobId: id });
         res.status(404).json({ error: 'Job not found' });
         return;
       }
       if (!canReadIntelligenceSubject(req.user, job.subject_id, job.organization_id)) {
+        logger.warn('getReasoningJobStatus: access denied', { jobId: id, user: req.user?.id });
         res.status(404).json({ error: 'Job not found' });
         return;
       }
+      logger.info('getReasoningJobStatus: retrieved', { jobId: id, status: job.status });
       res.json({ job });
     } catch (err) {
-      console.error('getReasoningJobStatus error:', err);
+      const msg = err instanceof Error ? err.message : String(err);
+      logger.error('getReasoningJobStatus error', { err: msg, jobId: id });
       res.status(500).json({ error: 'Failed to retrieve job status' });
     }
   }),
 );
 
-/**
- * POST /api/v1/intelligence/flush
- * Force-immediate reasoning for a subject
- */
+// ---------------------------------------------------------------------------
+// POST /api/v1/intelligence/flush
+// ---------------------------------------------------------------------------
+
 router.post(
   '/flush',
   validateProjectScope,
   alignedAuthMiddleware,
   planBasedRateLimit('intelligence'),
   asyncHandler(async (req: Request, res: Response) => {
-    const { subject_id } = req.body as { subject_id?: string };
-    if (!subject_id) {
-      res.status(400).json({ error: 'subject_id required' });
+    const parsed = flushRequestSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: 'Validation failed', details: parsed.error.issues });
       return;
     }
+
+    const { subject_id } = parsed.data;
     const boundary = resolveIntelligenceSubjectBoundary(req.user, subject_id);
     if (!boundary) {
+      logger.warn('flush: subject outside visibility boundary', { subject_id, user: req.user?.id });
       res.status(403).json({ error: 'Subject is outside the authenticated visibility boundary' });
       return;
     }
 
     try {
       const result = await intelligenceService.flushReasoningQueue(boundary.subjectId);
+      logger.info('flushReasoningQueue: completed', {
+        subject_id: boundary.subjectId,
+        flushed: result.flushed,
+        job_count: result.job_ids.length,
+      });
       res.json(result);
     } catch (err) {
-      console.error('flushReasoningQueue error:', err);
+      const msg = err instanceof Error ? err.message : String(err);
+      logger.error('flushReasoningQueue error', { err: msg, subject_id: boundary.subjectId });
       res.status(500).json({ error: 'Failed to flush reasoning queue' });
     }
   }),
