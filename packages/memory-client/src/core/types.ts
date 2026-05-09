@@ -698,3 +698,40 @@ export interface ReasoningJob {
   completed_at: string | null;
   error: string | null;
 }
+
+// ---------------------------------------------------------------------------
+// Phase 2: Living Memory Profile types
+// ---------------------------------------------------------------------------
+
+export interface MemoryProfile {
+  subject_id: string;
+  organization_id: string | null;
+  profile_summary: string | null;
+  structured_fields: {
+    preferences: string[];
+    goals: string[];
+    constraints: string[];
+    tendencies: string[];
+    facts: string[];
+  };
+  last_reasoned_at: string | null;
+  freshness: string;
+  confidence_by_field: Record<string, number>;
+  head_version_id: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ProfileVersion {
+  id: string;
+  profile_id: string;
+  diff: Record<string, unknown>;
+  source_job_id: string | null;
+  created_at: string;
+}
+
+export interface ProfileAnswer {
+  answer: string;
+  sources: string[];
+  confidence: number;
+}

@@ -105,7 +105,11 @@ export type {
   AnalyticsDateRange,
   // Phase 1: Reasoning types
   InferredConclusion,
-  ReasoningJob
+  ReasoningJob,
+  // Phase 2: Living profile types
+  MemoryProfile,
+  ProfileVersion,
+  ProfileAnswer,
 } from './core/types';
 
 export {
