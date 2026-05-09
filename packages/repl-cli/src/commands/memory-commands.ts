@@ -3,6 +3,7 @@ import {
   type MemoryEntry,
   type MemorySearchResult,
   type UpdateMemoryRequest,
+  type InferredConclusion,
   createMemoryClient
 } from '@lanonasis/memory-client';
 import chalk from 'chalk';
@@ -396,9 +397,9 @@ export class MemoryCommands {
       const conclusions = result.data?.conclusions ?? [];
       spinner.succeed(chalk.green(`${conclusions.length} conclusion(s)`));
       for (const c of conclusions) {
-        const type = (c as any).conclusion_type ?? 'unknown';
-        const conf = ((c as any).confidence ?? 0) * 100;
-        console.log(chalk.cyan(`  [${type}] ${conf.toFixed(0)}% — ${(c as any).content?.substring(0, 80)}...`));
+        const type = c.conclusion_type ?? 'unknown';
+        const conf = (c.confidence ?? 0) * 100;
+        console.log(chalk.cyan(`  [${type}] ${conf.toFixed(0)}% — ${c.content?.substring(0, 80)}...`));
       }
       context.lastResult = { conclusions };
     } catch (error) {

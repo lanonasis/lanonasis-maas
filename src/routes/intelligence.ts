@@ -1,8 +1,10 @@
 import { Router, Request, Response } from 'express';
 import { asyncHandler } from '@/middleware/errorHandler';
-import { alignedAuthMiddleware } from '@/middleware/auth-aligned';
-import { planBasedRateLimit } from '@/middleware/rateLimit';
-import { validateProjectScope } from '@/middleware/projectScope';
+import {
+  alignedAuthMiddleware,
+  planBasedRateLimit,
+  validateProjectScope,
+} from '@/middleware/auth-aligned';
 import { IntelligenceService } from '@/services/intelligenceService';
 import {
   canReadIntelligenceSubject,

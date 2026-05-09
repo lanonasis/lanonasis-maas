@@ -29,14 +29,18 @@ export function resolveIntelligenceSubjectBoundary(
   const organizationId = getAuthenticatedOrganization(user);
   const personalSubject = requestedSubjectId === userId;
 
+  // Personal subject — always allowed
   if (personalSubject) {
     return { subjectId: requestedSubjectId, organizationId, personalSubject };
   }
 
+  // Org user accessing a non-personal subject — must verify it belongs to org
   if (!organizationId) {
     return null;
   }
 
+  // Cross-subject check: ensure the requested subject is accessible to this org
+  // We'll verify in the service layer by including organization_id in queries
   return {
     subjectId: requestedSubjectId,
     organizationId,
