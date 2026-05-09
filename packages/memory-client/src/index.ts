@@ -102,7 +102,10 @@ export type {
   ProjectMemoryCount,
   TagCount,
   ExtendedMemoryStats,
-  AnalyticsDateRange
+  AnalyticsDateRange,
+  // Phase 1: Reasoning types
+  InferredConclusion,
+  ReasoningJob
 } from './core/types';
 
 export {

@@ -881,6 +881,46 @@ export class CoreMemoryClient {
     const { apiKey, authToken, ...safeConfig } = this.config;
     return safeConfig;
   }
+
+  // ============================================================
+  // Phase 1: Reasoning / Inference
+  // ============================================================
+
+  /**
+   * List pre-reasoned inferred conclusions for a subject.
+   */
+  async listInferredConclusions(opts: {
+    subject_id: string;
+    limit?: number;
+    include_superseded?: boolean;
+  }): Promise<ApiResponse<{ conclusions: InferredConclusion[] }>> {
+    const params = new URLSearchParams({ subject_id: opts.subject_id });
+    if (opts.limit) params.set('limit', String(opts.limit));
+    if (opts.include_superseded) params.set('include_superseded', 'true');
+
+    return this.request<{ conclusions: InferredConclusion[] }>(
+      `/intelligence/conclusions?${params.toString()}`,
+    );
+  }
+
+  /**
+   * Get the status of an async reasoning job.
+   */
+  async getReasoningJobStatus(jobId: string): Promise<ApiResponse<ReasoningJob>> {
+    return this.request<ReasoningJob>(`/intelligence/jobs/${jobId}`);
+  }
+
+  /**
+   * Force-immediate reasoning for a subject (bypass cron threshold).
+   */
+  async flushReasoningQueue(
+    subject_id: string,
+  ): Promise<ApiResponse<{ flushed: boolean; job_ids: string[]; conclusion_count: number }>> {
+    return this.request<{ flushed: boolean; job_ids: string[]; conclusion_count: number }>(
+      '/intelligence/flush',
+      { method: 'POST', body: JSON.stringify({ subject_id }) },
+    );
+  }
 }
 
 /**
