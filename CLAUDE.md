@@ -77,7 +77,7 @@ For SDK/CLI methods calling intelligence features, call `api.lanonasis.com` endp
 ## Database
 
 The system uses Supabase (PostgreSQL + pgvector) for vector storage.
-Primary project: `mxtsdgkwzjzlttpotole.supabase.co`
+Primary project: `mxtsdg*********.supabase.co`
 
 **Database safety: NEVER run `supabase db push` against production.**
 The remote ledger has diverged from local migrations. Apply new migrations via
