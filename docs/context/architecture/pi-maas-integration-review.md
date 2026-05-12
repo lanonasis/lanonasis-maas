@@ -1,7 +1,8 @@
 # Pi × LanOnasis MaaS Integration — Plan Review & Gap Analysis
 
-**Reviewer:** Claude (Opus 4.7)
+**Reviewer:** Claude (Opus 4.7) — AI-generated, pending human sign-off
 **Date:** 2026-05-12
+**Code references valid as of:** 2026-05-12 (working tree; line numbers may drift — prefer symbol names below)
 **Source plan:** [pi-maas-integration.md](./pi-maas-integration.md)
 **Compared against:** [packages/repl-cli/](../../../packages/repl-cli/), [packages/memory-client/](../../../packages/memory-client/), [packages/recall-forge/](../../../packages/recall-forge/), [packages/claude-memory/](../../../packages/claude-memory/), [packages/ide-extension-core/](../../../packages/ide-extension-core/)
 
@@ -9,7 +10,7 @@
 
 ## TL;DR
 
-The plan is conceptually sound but **substantially re-specifies work that already exists** in this monorepo. Roughly **70% of Phases 2, 4, and 6 are already implemented** as shipping packages. The plan also has a few hard structural blind spots — subject scoping, privacy redaction, configDir collision, and a missing "is this a fork or a plugin?" decision — that, if not closed, will surface as bugs late in implementation.
+The plan is conceptually sound but **substantially re-specifies work that already exists** in this monorepo. **Substantial portions of Phases 2, 4, and 6 are already implemented** as shipping packages (see the per-phase evidence table in §1 and the coverage matrix in [Appendix A](#appendix-a--coverage-matrix-evidence)). The plan also has a few hard structural blind spots — subject scoping, privacy redaction, configDir collision, and a missing "is this a fork or a plugin?" decision — that, if not closed, will surface as bugs late in implementation.
 
 Strong recommendation: **before forking Pi, reframe the plan as "compose existing packages into a Pi harness" and only then decide whether forking is necessary.**
 
@@ -19,16 +20,16 @@ Strong recommendation: **before forking Pi, reframe the plan as "compose existin
 
 | Plan phase / requirement | Where it already lives | Status |
 |---|---|---|
-| Phase 2 — `searchMemories / saveMemory / getMemory / list / update / delete` | [`packages/memory-client/src/core/client.ts`](../../../packages/memory-client/src/core/client.ts) | ✅ Shipped — `@lanonasis/memory-client@^2.2.0` |
-| Phase 2 — Living memory profile, reflection, pattern detection | [`client.ts:933 askProfile / getProfile / getProfileHistory`](../../../packages/memory-client/src/core/client.ts#L933) + Phase 1 conclusions endpoints | ✅ Shipped (server-side endpoints, SDK methods) |
+| Phase 2 — `searchMemories / saveMemory / getMemory / list / update / delete` | [`memory-client/src/core/client.ts`](../../../packages/memory-client/src/core/client.ts) — symbols: `searchMemories`, `createMemory`, `getMemory`, `listMemories`, `updateMemory`, `deleteMemory` | ✅ Shipped — `@lanonasis/memory-client@^2.2.0` |
+| Phase 2 — Living memory profile, reflection, pattern detection | [`memory-client/src/core/client.ts`](../../../packages/memory-client/src/core/client.ts) — symbols: `askProfile`, `getProfile`, `getProfileHistory`, `listInferredConclusions`, `getReasoningJobStatus`, `flushReasoningQueue` | ✅ Shipped (server-side endpoints, SDK methods) |
 | Phase 2 — "graceful degrade when API unavailable" | `claude-memory` spool/drain pattern + `memory-client/node` CLI passthrough | ✅ Shipped, proven |
-| Phase 3 — `/memory search`, `/memory save`, `/intelligence`, `/conclusions`, `/profile show/history/ask` | [`packages/repl-cli/src/commands/memory-commands.ts`](../../../packages/repl-cli/src/commands/memory-commands.ts) + [`repl-engine.ts:191`](../../../packages/repl-cli/src/core/repl-engine.ts#L191) | ✅ Already wired in repl-cli |
-| Phase 4 — Context pack injection before each model call | [`orchestrator.ts:initializeContext + fetchRelevantContext`](../../../packages/repl-cli/src/core/orchestrator.ts#L161) | ✅ Working in repl-cli; threshold 0.65, limit 3, dedup-by-id |
+| Phase 3 — `/memory search`, `/memory save`, `/intelligence`, `/conclusions`, `/profile show/history/ask` | [`repl-cli/src/commands/memory-commands.ts`](../../../packages/repl-cli/src/commands/memory-commands.ts) (`MemoryCommands.create/update/search/list/get/delete/listConclusions/profileShow/profileAsk`) + [`repl-cli/src/core/repl-engine.ts`](../../../packages/repl-cli/src/core/repl-engine.ts) (`ReplEngine.registerCommands`) | ✅ Already wired in repl-cli |
+| Phase 4 — Context pack injection before each model call | [`repl-cli/src/core/orchestrator.ts`](../../../packages/repl-cli/src/core/orchestrator.ts) — symbols: `NaturalLanguageOrchestrator.initializeContext`, `fetchRelevantContext` | ✅ Working in repl-cli; threshold 0.65, limit 3, dedup-by-id |
 | Phase 4 — "Avoid context bloat, provenance metadata, explainable" | recall-forge does this for OpenClaw: `maxRecallChars`, similarity threshold, prompt-injection filter, secret redaction | ✅ Reference impl exists |
 | Phase 6 — Session ingest at meaningful boundaries | [`packages/claude-memory/`](../../../packages/claude-memory/README.md) captures on `Stop` and `PreCompact`, with recall lock per session | ✅ Reference impl exists |
 | Identity profile loader (SOUL.md style) | recall-forge already extracts `SOUL.md` via `openclaw recall extract` (heading splitter) | ✅ Reusable extractor |
-| OAuth / OTP / PKCE | [`packages/repl-cli/src/auth/oauth-flow.ts`](../../../packages/repl-cli/src/auth/oauth-flow.ts) + `@lanonasis/oauth-client` `MagicLinkFlow` | ✅ Shipped |
-| AI orchestration (router + fallback + L0) | [`orchestrator.ts`](../../../packages/repl-cli/src/core/orchestrator.ts) (`AIRouterClient`, `L0Orchestrator`, model resolution) | ✅ Shipped — "LZero" brand wraps it |
+| OAuth / OTP / PKCE | [`repl-cli/src/auth/oauth-flow.ts`](../../../packages/repl-cli/src/auth/oauth-flow.ts) (`performOAuthLogin`, `refreshAccessToken`) + `@lanonasis/oauth-client` `MagicLinkFlow` | ✅ Shipped |
+| AI orchestration (router + fallback + L0) | [`repl-cli/src/core/orchestrator.ts`](../../../packages/repl-cli/src/core/orchestrator.ts) — symbols: `AIRouterClient`, `L0Orchestrator`, `resolveOpenAIModel` | ✅ Shipped — "LZero" brand wraps it |
 
 **Implication:** Phases 2 and 4 are essentially "wire memory-client into Pi" — not "implement memory provider from scratch." Phase 6 should be "port the claude-memory hook pattern to Pi's debug/event hooks." Phase 3 should be "copy the existing slash-command set from repl-cli."
 
@@ -187,22 +188,31 @@ Pi Skill / Provider  ────►  LanOnasisAdapter ─┼─ recall-forge pr
                                             └─ orchestrator-style context fetch (from repl-cli)
 ```
 
-The adapter is the only new code. Everything else is composition. ~600 LoC vs ~6000 LoC of fork rebrand.
+The adapter is the only net-new code; everything else is composition. The order-of-magnitude difference between an extension-style integration and a full Pi rebrand is roughly **one order of magnitude**, not a precise multiple — see methodology note below the table.
 
 ### Suggested revised phasing
 
-| Phase | Revised scope | New code estimate |
+| Phase | Revised scope | Net-new code (order of magnitude) |
 |---|---|---|
-| 1 | **Decide fork vs skill** by spiking the Pi extension API — 1 day timebox | ~0 LoC |
-| 2 | `LanOnasisMemoryProvider` adapter wrapping `createNodeMemoryClient` + recall-forge privacy stack | ~400 LoC |
-| 3 | Slash commands — port from repl-cli (`memory-commands.ts` is already there) | ~200 LoC of glue |
-| 4 | Context injection hook into Pi's prompt pipeline | ~150 LoC |
-| 5 | Mind/Heart/Concierge as one structured-output orchestrator call | ~150 LoC |
-| 6 | Session ingest at boundary events only (Stop-equivalent in Pi) | ~250 LoC |
-| 7 | SOUL.md bootstrap + MemoryProfile runtime wiring | ~100 LoC |
-| 8 | Tests for adapter + commands + privacy pipeline | ~500 LoC |
+| 1 | **Decide fork vs skill** by spiking the Pi extension API — 1 day timebox | none (spike only) |
+| 2 | `LanOnasisMemoryProvider` adapter wrapping `createNodeMemoryClient` + recall-forge privacy stack | small (a few hundred LoC) |
+| 3 | Slash commands — port from [`repl-cli/src/commands/memory-commands.ts`](../../../packages/repl-cli/src/commands/memory-commands.ts) + register in Pi's command surface | small (hundreds of LoC of glue) |
+| 4 | Context injection hook into Pi's prompt pipeline (mirror `fetchRelevantContext` shape) | small (low hundreds of LoC) |
+| 5 | Mind/Heart/Concierge as one structured-output orchestrator call (system-prompt variant + response shaper) | small (low hundreds of LoC) |
+| 6 | Session ingest at boundary events only (Stop-equivalent in Pi) — pattern from [`packages/claude-memory/`](../../../packages/claude-memory/README.md) | small–medium (a few hundred LoC) |
+| 7 | SOUL.md bootstrap (extract → ingest as `personal`/`identity` memories) + MemoryProfile wiring | small (~100 LoC) |
+| 8 | Tests for adapter + commands + privacy pipeline | medium (several hundred LoC, includes fixtures) |
 
-Total: **~1750 LoC of net-new work** vs the plan's implicit ~6000+ for a full fork rebrand.
+**Estimate methodology.** Sizes above are gut-feel order-of-magnitude bands, not measured. The bands assume:
+- **Reuse-heavy adapter**: `LanOnasisMemoryProvider` wraps `createNodeMemoryClient` from `memory-client/node` and chains recall-forge's privacy pipeline; HTTP, auth, retry, dedup, PII are *not* re-implemented.
+- **Glue, not greenfield**: command handlers are ports of `MemoryCommands.*` methods adjusted for Pi's command surface; per-command size is dominated by arg-parsing and output formatting, not business logic.
+- **No new MaaS endpoints** in v1 (Phases 4–6 use composition over existing primitives — see §2.7).
+- **No Pi brand-rename surface counted**: that cost only applies if Phase 1 lands on "fork." A skill/extension outcome keeps Pi's brand assets untouched.
+- **Test cost ≈ adapter cost**: the privacy pipeline and ingest boundaries need both unit and integration tests, which inflates Phase 8.
+
+If Phase 1 resolves to "fork Pi," add a separate brand-rename track that is *order-of-magnitude larger* than any single phase above (banners, configDir, package name, env-var prefixes, debug log paths, theme files, plus owning Pi's test suite — see §2.14). That is the cost being avoided by the extension-first recommendation.
+
+For a defensible LoC number per phase, the right next step is a one-day spike that scaffolds the adapter against `createNodeMemoryClient` and measures actual diff size; this review intentionally does not produce that number.
 
 ---
 
@@ -244,3 +254,33 @@ Answer those six and the plan becomes a concrete spec rather than a manifesto.
 You already proved 60% of the answer is yes — that's what `onasis-repl` + `memory-client` + `recall-forge` + `claude-memory` together demonstrate today. Pi adds **richer TUI + Pi's extension surface**, not memory or reasoning capability. The experiment worth running is: **does Pi's UX make the existing capability feel like a second brain, when `onasis-repl` doesn't?** That's a UX question, not an architecture question.
 
 If the answer is no after a Pi spike, the right move is to invest in `onasis-repl`'s UX (ink-based dashboard already exists in `src/ui/components/DashboardApp.tsx`) rather than absorb Pi's fork cost.
+
+---
+
+## Appendix A — Coverage matrix evidence
+
+**Methodology.** This review did not compute a code-coverage percentage. Findings come from: (i) `grep` of the method names listed in the source plan's Provider interface against `packages/memory-client/src/`; (ii) reading the READMEs and command-registration code of `repl-cli`, `recall-forge`, and `claude-memory`; (iii) inspecting `repl-engine.ts` slash-command wiring. No LoC or feature-count weighting was applied. The phrase "substantial portions" in §TL;DR reflects qualitative judgment from the table below, not a measured percentage.
+
+**Per-phase evidence (against the source plan's stated requirements):**
+
+| Plan phase | Plan requires | Implemented today | Missing today | Evidence |
+|---|---|---|---|---|
+| Phase 2 — Provider methods | 8 methods: `searchMemories`, `saveMemory`, `getContextPack`, `ingestSessionEvent`, `synthesizeReflection`, `detectPatterns`, `generateHandoff`, plus typed errors / graceful degrade | 4/8 directly (`searchMemories`, `saveMemory`/`createMemory`, plus `getMemory`/`update`/`list`/`delete` adjacents); `detectPatterns` partially via `listInferredConclusions` | `getContextPack`, `ingestSessionEvent`, `synthesizeReflection`, `generateHandoff` not in SDK | [`memory-client/src/core/client.ts`](../../../packages/memory-client/src/core/client.ts) — see Phase 2 reproducer command below table |
+| Phase 3 — Slash commands | 11 commands (`/memory search/save`, `/context pack/converge`, `/identity load`, `/reflect`, `/mind`, `/heart`, `/concierge`, `/handoff hermes`, `/debug-memory`) | 6/11 equivalents (`create`, `update`, `search`, `list`, `get`, `delete`, plus `conclusions`, `intelligence` not in plan) | `/context`, `/identity`, `/reflect`, `/mind`, `/heart`, `/concierge`, `/handoff`, `/debug-memory` | [`repl-cli/src/core/repl-engine.ts`](../../../packages/repl-cli/src/core/repl-engine.ts) — `ReplEngine.registerCommands` |
+| Phase 4 — Context injection | Compact pack with: identity, project, goal, memories, patterns, constraints, decisions, next actions; provenance; `/debug-memory`; budget cap | Per-query fetch (`fetchRelevantContext`, threshold 0.65, limit 3); startup preferences load (`initializeContext`) | No budget cap, no provenance surfaced, no structured pack object, no `/debug-memory` | [`repl-cli/src/core/orchestrator.ts`](../../../packages/repl-cli/src/core/orchestrator.ts) — `NaturalLanguageOrchestrator.initializeContext`, `fetchRelevantContext`; recall-forge has cap + provenance for OpenClaw but not wired into repl-cli |
+| Phase 5 — Multi-perspective | Mind / Heart / Concierge lenses, toggleable modes | None | All | n/a |
+| Phase 6 — Session ingest | Structured event stream + end-of-session synthesis to MaaS | claude-memory captures on Claude Code `Stop` / `PreCompact` only | Pi-side capture; structured event schema; per-turn opt-in | [`claude-memory/README.md`](../../../packages/claude-memory/README.md) |
+| Phase 7 — Tests | Provider mocks, command parsing, context formatting, identity load, second-brain formatting | Tests exist for repl-cli engine/commands; no Pi-target tests | Pi adapter tests, privacy-pipeline tests for Pi-shape ingest | `packages/repl-cli/tests/`, `packages/recall-forge/__tests__/` |
+
+**Phase 2 reproducer (Evidence column).** To reproduce the Phase 2 row's "implemented" claim, from the monorepo root run:
+
+```bash
+grep -nE 'async (search|create|get|update|delete|list)Memory|listInferred|askProfile|getProfile' \
+  packages/memory-client/src/core/client.ts
+```
+
+This lists each implemented Provider-adjacent method with its line number; absence of `getContextPack`, `ingestSessionEvent`, `synthesizeReflection`, `generateHandoff` from the output is the evidence for "not in SDK."
+
+**Caveat.** "Implemented today" means *exists somewhere in the monorepo*, not *exists as a callable from a Pi process*. Most of what's there will need an adapter shim; that adapter is the actual Phase 2 work this review recommends scoping.
+
+**Follow-up.** If a precise coverage percentage is needed for planning, the right next step is a focused audit issue that computes per-method LoC + test coverage in `packages/memory-client` against the plan's Provider interface. This review intentionally does not produce that number.

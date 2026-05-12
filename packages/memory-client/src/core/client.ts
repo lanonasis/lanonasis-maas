@@ -29,6 +29,9 @@ import type {
   MemoryProfile,
   ProfileVersion,
   ProfileAnswer,
+  // Phase 1: Intelligence/Reasoning types
+  InferredConclusion,
+  ReasoningJob,
 } from './types';
 
 import {
