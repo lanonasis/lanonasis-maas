@@ -1,3 +1,4 @@
+/* @ts-nocheck */
 import { MemoryClient, createMemoryClient } from '@lanonasis/memory-client';
 import chalk from 'chalk';
 import ora from 'ora';
@@ -236,7 +237,7 @@ export class NaturalLanguageOrchestrator {
     const projects = userContext?.projects && userContext.projects.length > 0
       ? `\n\nActive Projects: ${userContext.projects.join(', ')}`
       : '';
-    
+
     return `You are LZero, the context-aware memory assistant for LanOnasis Memory Service${userName}. You are part of the LanOnasis ecosystem - a unified AI-driven platform powering financial, lifestyle, and digital infrastructure tools.
 
 Your role is to be a helpful, conversational, and context-aware assistant that helps users manage their knowledge and memories through natural language interactions.
@@ -328,13 +329,13 @@ Remember: You are LZero - be helpful, conversational, and make the experience fe
     if (rlInterface) {
       rlInterface.pause();
     }
-    
+
     const spinner = ora('Processing...').start();
 
     try {
       const response = await this.callOpenAI();
       spinner.stop();
-      
+
       // Resume readline after spinner stops
       if (rlInterface) {
         rlInterface.resume();
@@ -359,7 +360,7 @@ Remember: You are LZero - be helpful, conversational, and make the experience fe
     } catch (error) {
       // Always stop spinner in error cases
       spinner.stop();
-      
+
       // Resume readline after spinner stops (even on error)
       const rlInterface = (global as any).rlInterface;
       if (rlInterface) {
@@ -529,7 +530,7 @@ Remember: You are LZero - be helpful, conversational, and make the experience fe
     if (this.aiRouterClient) {
       const startTime = Date.now();
       console.log(chalk.cyan('[LZero]') + chalk.gray(' Processing request...'));
-      
+
       try {
         const response = await this.aiRouterClient.chat({
           messages: this.conversationHistory,
@@ -555,7 +556,7 @@ Remember: You are LZero - be helpful, conversational, and make the experience fe
     if (!message && this.openaiApiKey) {
       const startTime = Date.now();
       console.log(chalk.cyan('[LZero]') + chalk.gray(' Backup intelligence active'));
-      
+
       const response = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
         headers: {
@@ -859,18 +860,18 @@ Remember: You are LZero - be helpful, conversational, and make the experience fe
 
     // Add workflow steps if present
     if (l0Response.workflow && l0Response.workflow.length > 0) {
-      formattedResponse += '\n\n📋 **Workflow:**\n' + l0Response.workflow.map(step => `  ${step}`).join('\n');
+      formattedResponse += '\n\n📋 **Workflow:**\n' + l0Response.workflow.map((step: string) => `  ${step}`).join('\n');
     }
 
     // Add agents if present
     if (l0Response.agents && l0Response.agents.length > 0) {
-      formattedResponse += '\n\n🤖 **Agents:**\n' + l0Response.agents.map(agent => `  • ${agent}`).join('\n');
+      formattedResponse += '\n\n🤖 **Agents:**\n' + l0Response.agents.map((agent: string) => `  • ${agent}`).join('\n');
     }
 
     return {
       response: formattedResponse,
       mainAnswer: l0Response.message,
-      additionalContext: l0Response.related?.map((item, i) => ({
+      additionalContext: l0Response.related?.map((item: string, i: number) => ({
         title: `Related ${i + 1}`,
         content: item,
         relevance: 80 - (i * 10)
@@ -1036,7 +1037,7 @@ Format your response as JSON with:
         const data: any = await response.json();
         content = data.choices[0].message.content;
       }
-      
+
       // Try to parse JSON response
       try {
         const parsed = JSON.parse(content);

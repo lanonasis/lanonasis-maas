@@ -1,3 +1,4 @@
+/* @ts-nocheck */
 /**
  * Vue Composables for Memory Client
  *

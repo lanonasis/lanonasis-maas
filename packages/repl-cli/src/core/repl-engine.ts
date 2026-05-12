@@ -19,7 +19,7 @@ export class ReplEngine {
   private sigintHandler?: () => void; // Track SIGINT handler for cleanup
   private errorHandlersInstalled: boolean = false; // Track global error handlers
   private closeHandled: boolean = false; // Track if close event was handled
-  
+
   // Enhanced input handling (concierge features)
   private inputHistory: string[] = []; // Command history for this session
   private multilineBuffer: string = ''; // Buffer for multi-line input
@@ -43,7 +43,7 @@ export class ReplEngine {
       historySize: this.config.maxHistorySize ?? 1000,
       completer: this.createCompleter.bind(this), // Enable tab completion
     });
-    
+
     // Expose readline interface globally so orchestrator can pause/resume around spinners
     (global as any).rlInterface = this.rl;
 
@@ -71,7 +71,7 @@ export class ReplEngine {
 
     this.registerCommands();
   }
-  
+
   /**
    * Create a tab completer for readline
    * Provides completion for all registered commands and aliases
@@ -88,14 +88,14 @@ export class ReplEngine {
     const hits = allCommands.filter(c => c.startsWith(normalizedPrefix));
     return [hits.length ? hits : allCommands, normalizedPrefix];
   }
-  
+
   /**
    * Check if input appears to be incomplete (multi-line)
    * Detects unclosed quotes, braces, brackets, and explicit continuations
    */
   private isIncompleteInput(input: string): boolean {
     const trimmed = input.trim();
-    
+
     // Explicit continuation with backslash
     if (trimmed.endsWith('\\')) return true;
 
@@ -198,20 +198,20 @@ export class ReplEngine {
     this.registry.register('delete', (args, ctx) => this.memoryCommands.delete(args, ctx), ['del', 'rm']);
 
     // Phase 1: Intelligence / Reasoning commands
-    this.registry.register('conclusions', (args, ctx) => {
+    this.registry.register('conclusions', async (args, ctx) => {
       // Route `conclusions job <job-id>` to getJobStatus
       if (args[0] === 'job' && args[1]) {
-        this.memoryCommands.getJobStatus(args.slice(1), ctx);
+        await this.memoryCommands.getJobStatus(args.slice(1), ctx);
       } else {
-        this.memoryCommands.listConclusions(args, ctx);
+        await this.memoryCommands.listConclusions(args, ctx);
       }
     });
-    this.registry.register('intelligence', (args, ctx) => {
+    this.registry.register('intelligence', async (args, ctx) => {
       const sub = args[0];
       if (sub === 'flush') {
-        this.memoryCommands.flushQueue(args.slice(1), ctx);
+        await this.memoryCommands.flushQueue(args.slice(1), ctx);
       } else {
-        this.memoryCommands.listConclusions(args, ctx);
+        await this.memoryCommands.listConclusions(args, ctx);
       }
     });
 
@@ -248,25 +248,25 @@ export class ReplEngine {
       this.orchestrator.clearHistory();
       console.log(chalk.green('✨ Conversation history cleared'));
     });
-    
+
     // History command - show command history (concierge feature)
     this.registry.register('history', async (args) => {
       const searchTerm = args.join(' ').toLowerCase();
       const history = this.inputHistory;
-      
+
       if (history.length === 0) {
         console.log(chalk.gray('No commands in history yet.'));
         return;
       }
-      
+
       // Filter if search term provided, preserving original index
       const filtered = searchTerm
         ? history
-            .map((cmd, originalIndex) => ({ cmd, originalIndex }))
-            .filter(({ cmd, originalIndex }) =>
-              cmd.toLowerCase().includes(searchTerm) ||
-              (originalIndex + 1).toString().includes(searchTerm)
-            )
+          .map((cmd, originalIndex) => ({ cmd, originalIndex }))
+          .filter(({ cmd, originalIndex }) =>
+            cmd.toLowerCase().includes(searchTerm) ||
+            (originalIndex + 1).toString().includes(searchTerm)
+          )
         : history.map((cmd, originalIndex) => ({ cmd, originalIndex }));
 
       if (filtered.length === 0) {
@@ -286,7 +286,7 @@ export class ReplEngine {
         const truncated = cmd.length > 70 ? cmd.substring(0, 67) + '...' : cmd;
         console.log(chalk.gray(`  ${displayIndex.toString().padStart(3)}  ${truncated}`));
       });
-      
+
       if (!searchTerm && history.length > 50) {
         console.log(chalk.gray(`\n  ... and ${history.length - 50} more commands`));
         console.log(chalk.gray('  Use "history <search>" to filter\n'));
@@ -295,7 +295,7 @@ export class ReplEngine {
       }
     }, ['hist']);
   }
-  
+
   async start() {
     this.running = true;
 
@@ -339,14 +339,14 @@ export class ReplEngine {
         // Handle multi-line input mode
         if (this.isMultilineMode) {
           this.multilineBuffer += '\n' + line.replace(/\s*\\$/, '');
-          
+
           // Check if input is now complete
           if (!this.isIncompleteInput(this.multilineBuffer)) {
             const completeInput = this.multilineBuffer.trim();
             this.isMultilineMode = false;
             this.multilineBuffer = '';
             this.rl.setPrompt(chalk.cyan('💭 '));
-            
+
             // Process the complete multi-line input
             await this.processInput(completeInput);
           } else {
@@ -356,14 +356,14 @@ export class ReplEngine {
           }
           return;
         }
-        
+
         // Normal single-line processing
         const lineTrimmed = line.trim();
         if (!lineTrimmed) {
           if (this.running) this.safePrompt();
           return;
         }
-        
+
         // Check if this is the start of a multi-line input
         if (this.isIncompleteInput(lineTrimmed)) {
           this.isMultilineMode = true;
@@ -372,7 +372,7 @@ export class ReplEngine {
           this.rl.prompt();
           return;
         }
-        
+
         await this.processInput(lineTrimmed);
       })().catch((err) => {
         console.error(chalk.red('\n⚠️  Critical error in line handler:'), this.formatError(err));
@@ -384,7 +384,7 @@ export class ReplEngine {
       // Prevent double-handling of close event
       if (this.closeHandled) return;
       this.closeHandled = true;
-      
+
       if (!this.running) {
         console.log(chalk.yellow('\n👋 Goodbye!'));
         process.exit(0);
@@ -413,7 +413,7 @@ export class ReplEngine {
         this.rl.prompt();
         return;
       }
-      
+
       console.log(chalk.yellow('\n👋 Goodbye!'));
       this.stop();
     };
@@ -438,7 +438,7 @@ export class ReplEngine {
 
     this.errorHandlersInstalled = true;
   }
-  
+
   /**
    * Safely prompt the user, checking if the stream is still valid
    */
@@ -452,7 +452,7 @@ export class ReplEngine {
       }
     }
   }
-  
+
   /**
    * Process a single (or completed multi-line) input
    */
@@ -461,23 +461,23 @@ export class ReplEngine {
     if (this.inputHistory.length === 0 || this.inputHistory[this.inputHistory.length - 1] !== input) {
       this.inputHistory.push(input);
       const maxHistorySize = this.config.maxHistorySize ?? 1000;
-    if (this.inputHistory.length > maxHistorySize) {
+      if (this.inputHistory.length > maxHistorySize) {
         this.inputHistory = this.inputHistory.slice(-maxHistorySize);
       }
     }
-    
+
     try {
       await this.handleCommand(input);
     } catch (error) {
       console.error(chalk.red('\n⚠️  Unexpected error:'), this.formatError(error));
       console.log(chalk.gray('The REPL is still running. Try again or type "help" for assistance.\n'));
     }
-    
+
     if (this.running) {
       this.safePrompt();
     }
   }
-  
+
   private async handleCommand(input: string) {
     if (!input) return;
 
@@ -501,7 +501,7 @@ export class ReplEngine {
   private async handleNaturalLanguage(input: string) {
     // CRITICAL FIX: Pause readline before processing to prevent spinner interference
     pauseReadline(this.rl);
-    
+
     let response;
     try {
       response = await this.orchestrator.processNaturalLanguage(input);
@@ -540,7 +540,7 @@ export class ReplEngine {
             case 'search': {
               if (result.enhanced) {
                 const { mainResult, additionalResults } = result.enhanced;
-                
+
                 if (mainResult) {
                   console.log(chalk.cyan(`\n━━━ Primary Result ━━━`));
                   console.log(chalk.white(`Title: ${mainResult.title}`));
@@ -549,7 +549,7 @@ export class ReplEngine {
                     console.log(chalk.green(`Relevance: ${(mainResult.similarity * 100).toFixed(1)}%\n`));
                   }
                 }
-                
+
                 if (additionalResults && additionalResults.length > 0) {
                   console.log(chalk.cyan(`\n📚 Related Context:\n`));
                   additionalResults.forEach((r: any, i: number) => {
@@ -560,7 +560,7 @@ export class ReplEngine {
                     }
                   });
                 }
-                
+
                 this.context.lastResult = [mainResult, ...additionalResults];
               } else {
                 const searchResults = result.data?.results || [];
@@ -644,7 +644,7 @@ export class ReplEngine {
           console.log(chalk.red(`Error: ${errorText}`));
         }
       }
-      
+
       if (response.additionalContext && response.additionalContext.length > 0) {
         console.log(chalk.cyan(`\n📚 Additional Information:\n`));
         response.additionalContext.forEach((ctx, i) => {
@@ -664,7 +664,7 @@ export class ReplEngine {
   private buildWelcomeMessage(): string {
     const userName = this.config.userContext?.name;
     const projects = this.config.userContext?.projects;
-    
+
     if (userName && projects && projects.length > 0) {
       return `🚀 Welcome back, ${userName}! What magic should we pull off today?\n   Which of your projects are we focusing on? (${projects.join(', ')})`;
     } else if (userName) {
@@ -727,7 +727,7 @@ export class ReplEngine {
     console.log(chalk.gray('  • For multi-line input, leave quotes/brackets open'));
     console.log(chalk.cyan('\n━'.repeat(50) + '\n'));
   }
-  
+
   stop() {
     this.running = false;
     this.closeHandled = true;
