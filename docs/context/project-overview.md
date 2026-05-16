@@ -1,306 +1,130 @@
 # LanOnasis MaaS - Project Overview
 
-**Generated:** 2026-04-30
-**Last Updated:** 2026-05-09 (aligned to monorepo architecture reset)
-**Source of Truth:** Monorepo context-engineering (`/.devops/context-engineering/`)
-**Relationship:** This app is a submodule of `lan-onasis-monorepo`. Architecture truth lives in the monorepo.
+**Last verified:** 2026-05-16
+**Primary source for platform truth:** `/.devops/context-engineering/`
+**Role of this document:** MaaS-specific orientation and handoff
 
----
+## What This App Owns
 
-## ⚠️ ARCHITECTURE STATUS: ALIGNED TO MONOREPO TRUTH RESET (2026-05-09)
+`apps/lanonasis-maas` is best understood as a mixed workspace that contains:
 
-This document previously described the Express server as the production API path.
-This is **incorrect**. The following corrections apply:
+- a standalone Express server in `src/`
+- the published CLI in `cli/`
+- published and internal packages in `packages/`
+- IDE extension assets and support code
+- app-local docs and release context
 
-1. **Express server is standalone-only.** Production intelligence API traffic bypasses
-   `src/server.ts` entirely and routes directly to Supabase Edge Functions in
-   `apps/onasis-core/supabase/functions/`.
-2. **Package manager is `bun`** (not npm). This is a Bun workspace.
-3. **Backend logic lives in onasis-core** — not in lanonasis-maas/src/.
-4. **Public repo claim is conditional** — perform a secrets/history audit before publishing.
-5. **Auth model:** X-API-Key via `_shared/auth.ts` in onasis-core (NOT OAuth2 PKCE from Express).
+It is not the final source of truth for all production memory/intelligence behavior across the platform.
 
----
+## Canonical Boundaries
 
-## Quick Navigation for AI
+### Production path
 
-This is the master context file. Based on your task, refer to:
+For production memory and intelligence behavior, the important logic lives outside this app in `apps/onasis-core/supabase/functions/`.
 
-| Task | Context File |
+In practice, this means:
+- production API behavior should be verified against monorepo platform docs and current source
+- the standalone Express app here is not the canonical production execution path for intelligence
+
+### Standalone path
+
+The local/self-hosted server in `src/server.ts` still matters for:
+- app-local development
+- standalone/self-hosted deployments
+- local auth and route behavior
+- CLI and package integration testing against a local endpoint
+
+## Current Mental Model
+
+Use this split when reasoning about the app:
+
+| Area | What it is |
 |------|-------------|
-| API server (standalone/self-hosted) | `components/memory-service.md` |
-| CLI tool changes | `components/cli.md` |
-| SDK development | `components/sdk.md` |
-| Universal client (Browser/Node/React) | `components/memory-client.md` |
-| Standalone SDK | `components/memory-sdk-standalone.md` |
-| Claude Code integration | `components/claude-memory.md` |
-| OpenClaw plugin | `components/recall-forge.md` |
-| IDE extension shared library | `components/ide-extension-core.md` |
-| VSCode extension | `components/ide-extensions/vscode.md` |
-| Cursor extension | `components/ide-extensions/cursor.md` |
-| Windsurf extension | `components/ide-extensions/windsurf.md` |
-| Dev/build/test/deploy | `workflows/development.md` |
-| Architecture decisions | `architecture/decisions/` |
+| `src/` | Standalone MaaS server and app-local routes/services |
+| `cli/` | Published CLI and MCP entrypoint packaging |
+| `packages/` | SDKs, extension helpers, plugin-facing packages |
+| `IDE-EXTENSIONS/` | editor integrations and packaging support |
+| `docs/context/` | MaaS-specific handoff layer |
 
-For platform-level architecture (VPS gateways, Supabase EFs, DB rules), see the monorepo context-engineering at `/.devops/context-engineering/`.
+## Key Files And Folders
 
----
+| Path | Why it matters |
+|------|----------------|
+| `src/server.ts` | standalone Express entrypoint |
+| `src/routes/` | local route surface including memory, intelligence, profiles, auth, metrics |
+| `src/middleware/auth-aligned.ts` | current standalone auth and request-shaping middleware |
+| `src/services/` | app-local service layer |
+| `cli/package.json` | current published CLI metadata and binaries |
+| `package.json` | source of truth for app-local scripts |
+| `packages/` | SDK/package ownership map |
 
-## Quick Navigation for AI
+## Navigation
 
-This is the master context file. Based on your task, refer to:
+| If you are working on... | Read... |
+|--------------------------|---------|
+| standalone server behavior | `components/memory-service.md` |
+| CLI commands and packaging | `components/cli.md` |
+| SDK/package changes | `components/sdk.md`, `components/memory-client.md`, `components/memory-sdk-standalone.md` |
+| Claude/OpenClaw integrations | `components/claude-memory.md`, `components/recall-forge.md` |
+| editor integration support | `components/ide-extension-core.md` and `components/ide-extensions/*.md` |
+| local commands and workflows | `workflows/development.md` |
 
-| Task | Context File |
-|------|-------------|
-| API server development | `components/memory-service.md` |
-| CLI tool changes | `components/cli.md` |
-| SDK development | `components/sdk.md` |
-| Universal client (Browser/Node/React) | `components/memory-client.md` |
-| Standalone SDK | `components/memory-sdk-standalone.md` |
-| Claude Code integration | `components/claude-memory.md` |
-| OpenClaw plugin | `components/recall-forge.md` |
-| IDE extension shared library | `components/ide-extension-core.md` |
-| VSCode extension | `components/ide-extensions/vscode.md` |
-| Cursor extension | `components/ide-extensions/cursor.md` |
-| Windsurf extension | `components/ide-extensions/windsurf.md` |
-| Dev/build/test/deploy | `workflows/development.md` |
-| Architecture decisions | `architecture/decisions/` |
+## Tooling Reality
 
----
+This app contains both Bun-era and npm-era workflow traces.
 
-## Project Essentials
+For reliable execution:
+- prefer the exact scripts defined in `apps/lanonasis-maas/package.json`
+- treat `package.json` and package-local manifests as more trustworthy than older narrative docs
+- do not assume every package follows one identical package-manager pattern
 
-**Name:** LanOnasis Memory as a Service (MaaS)
-**Type:** Enterprise microservice monorepo with SDKs, CLI, and IDE extensions
-**Repository:** `https://github.com/lanonasis/lanonasis-maas`
+## Commands That Matter Most
 
-### Purpose
-Provides semantic memory storage and retrieval via API, SDKs, CLI, and IDE extensions. Enables AI agents and human developers to persist and recall context across sessions.
+These are the app-level commands verified from `apps/lanonasis-maas/package.json`:
 
-### Tech Stack
-| Component | Technology |
-|-----------|------------|
-| Package manager | Bun (not npm) |
-| Language | TypeScript (strict) |
-| API Server (standalone) | Express 5.2.1 — standalone/self-hosted path only |
-| Database | Supabase (PostgreSQL + pgvector) — via onasis-core EFs |
-| Production auth | X-API-Key via `_shared/auth.ts` (onasis-core) — NOT OAuth2 PKCE |
-| Production routing | Intelligence bypasses Express → Supabase EFs direct |
-| Monitoring | Prometheus metrics, Winston logging |
-| Vector Embeddings | OpenAI text-embedding-ada-002 via onasis-core EFs |
-
-### Production vs Standalone Path
-
-**Production API (`api.lanonasis.com`):**
-```
-Client → api.lanonasis.com → Supabase EFs (onasis-core/supabase/functions/)
-```
-The Express server in `src/server.ts` is **NOT** in the production path for
-intelligence or memory routes. It only serves standalone/self-hosted deployments.
-
-**Standalone path (`src/server.ts`):**
-```
-Client → Express :3000 → Supabase Edge Functions (standalone mode)
-```
-
-### Packages Published to npm
-| Package | Version | Description |
-|---------|---------|-------------|
-| `@lanonasis/memory-sdk` | 1.0.0 | Memory-as-a-Service TypeScript SDK |
-| `@lanonasis/cli` | 3.9.14+ | CLI with MCP server + interactive commands |
-| `@lanonasis/mcp-core` | 1.0.0 | Production MCP server (17+ tools) |
-| `@lanonasis/ai-sdk` | 0.2.2 | Drop-in AI SDK |
-| `@lanonasis/claude-memory` | (in packages/) | Claude session memory enrichment |
-| `@lanonasis/recall-forge` | (in packages/) | OpenClaw plugin |
-
-### IDE Extensions
-| Extension | Path |
-|-----------|------|
-| VSCode | `IDE-EXTENSIONS/vscode-extension/` |
-| Cursor | `IDE-EXTENSIONS/cursor-extension/` |
-| Windsurf | `IDE-EXTENSIONS/windsurf-extension/` |
-
-### CLI Tool
-- **Command:** `memory`
-- **Location:** `cli/`
-- **Commands:** init, login, create, search, list, get, update, delete, stats
-
----
-
-## Architecture
-
-### Production Path (api.lanonasis.com)
-
-```
-Client → api.lanonasis.com → Supabase Edge Functions (onasis-core)
-                                                    ↑
-                              (Express standalone server NOT in path)
-```
-
-Intelligence and memory routes bypass `src/server.ts` entirely.
-
-### Standalone/Development Path
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│                        LanOnasis MaaS                       │
-├─────────────────────────────────────────────────────────────┤
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────┐ │
-│  │   CLI Tool  │  │  IDE Exts   │  │   External Clients  │ │
-│  │  (memory)   │  │ VSCode/Cursor│  │  (Browser/Node/etc) │ │
-│  └──────┬──────┘  └──────┬──────┘  └──────────┬──────────┘ │
-│         │                │                     │             │
-│  ┌──────▼────────────────▼─────────────────────▼──────────┐ │
-│  │              SDK packages (@lanonasis/*)                │ │
-│  └──────────────────────────┬──────────────────────────────┘ │
-│                             │                                │
-│  ┌──────────────────────────▼──────────────────────────────┐ │
-│  │              memory-service (API Server)                 │ │
-│  │       Express 5 + TypeScript — STANDALONE PATH ONLY      │ │
-│  └──────────────────────────────────────────────────────────┘ │
-└─────────────────────────────────────────────────────────────┘
-```
-
-**Note:** The Express server is the standalone path only. Production intelligence
-routes go directly to Supabase Edge Functions in `apps/onasis-core`.
-
----
-
-## Key Context Files
-
-| Directory | Contents |
-|-----------|----------|
-| `architecture/decisions/` | Architecture Decision Records (ADRs) - why decisions were made |
-| `components/` | Detailed context for each package and extension |
-| `workflows/` | Development, testing, and deployment processes |
-
----
-
-## AI Collaboration Notes
-
-### Coding Standards
-- TypeScript strict mode on all packages
-- Zod for runtime validation
-- Winston for structured logging
-- Express middleware for auth, rate limiting, metrics
-
-### Common Patterns
-- **Subpath exports:** Each SDK uses `exports` field for tree-shaking
-- **MCP integration:** Model Context Protocol support in SDKs
-- **Vector search:** pgvector similarity search with configurable thresholds
-- **Multi-tenant:** Organization-based isolation with RLS policies
-
-### Constraints
-- Node.js 18+ required
-- Supabase project needed for database
-- OpenAI API key required for embeddings
-- JWT secret required for auth
-
----
-
-## Development Commands
-
-**Package manager:** Bun (not npm). This is a Bun workspace.
-
-### Main Service (standalone testing only)
 ```bash
-bun run dev        # Start Express server for standalone testing only
-bun run build       # Build all packages
-bun run test        # Run tests
-bun run type-check  # TypeScript checking
-bun run lint        # ESLint
+npm run dev
+npm run build
+npm run test
+npm run type-check
+npm run lint
+npm run db:migrate
+npm run db:seed
 ```
 
-### Workspace (all packages)
+CLI package commands verified from `apps/lanonasis-maas/cli/package.json`:
+
 ```bash
-bun run build      # Build all packages
-bun run test       # Test all packages
-bun run lint       # Lint all packages
+npm run build --prefix cli
+npm test --prefix cli
 ```
 
-### CLI Tool (from cli/ directory)
-```bash
-bun run dev          # Development
-bun run build        # Build
-memory --help        # Test after build
-```
+## Auth Notes
 
-### Docker
-```bash
-docker-compose up              # Local development
-docker build -t memory-service  # Build image
-```
+Keep the distinction clear:
 
-**Note:** Database migrations use `apply_migration` MCP tool or reviewed SQL only.
-NEVER run `supabase db push` against the production database.
+- standalone MaaS still has local auth-related routes and middleware
+- production/platform auth contracts are broader than this app and should be validated from monorepo-level context and source
+- when docs disagree, current route/middleware code wins over older prose
 
----
+## Environment Notes
 
-## API Base URL
+Common standalone environment inputs referenced by app-local code and scripts include:
 
-**Production:** `https://api.lanonasis.com` (routes to Supabase EFs via VPS nginx)
-**Standalone/Development:** `http://localhost:3000` (Express server — standalone path only)
+- `SUPABASE_URL`
+- `SUPABASE_KEY`
+- `SUPABASE_SERVICE_KEY`
+- `JWT_SECRET`
+- `OPENAI_API_KEY`
 
-### Key Endpoints (Production)
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/v1/memories` | Create memory |
-| GET | `/api/v1/memories` | List memories |
-| POST | `/api/v1/memories/search` | Semantic search |
-| GET | `/api/v1/memories/:id` | Get memory |
-| PUT | `/api/v1/memories/:id` | Update memory |
-| DELETE | `/api/v1/memories/:id` | Delete memory |
-| POST | `/api/v1/intelligence/suggest-tags` | AI tag suggestions |
-| POST | `/api/v1/intelligence/find-related` | Find related memories |
+Treat environment docs in this folder as guidance for standalone flows, not as a complete description of platform production secrets or routing.
 
-### Key Endpoints (Standalone/Local)
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/v1/auth/login` | Login (standalone) |
-| POST | `/api/v1/memory` | Create memory (standalone) |
-| GET | `/api/v1/memory` | List memories (standalone) |
+## Known Cautions
 
-**Authentication (Production):** `X-API-Key` header with `lano_*` prefix (canonical).
-**Authentication (Standalone):** `Authorization: Bearer <token>` via JWT.
+- Older examples may still refer to `memory` as the CLI command name; current published binaries in `cli/package.json` are `onasis`, `lanonasis`, and `lanonasis-mcp`.
+- Some repo text still describes auth in overly broad terms; verify against current code before making claims.
+- Do not use this folder as evidence for live production routing on its own.
 
-**Important:** For SDK/CLI calling production intelligence features, call
-`api.lanonasis.com` endpoints — not the local Express server.
+## Handoff Summary
 
----
-
-## Environment Variables
-
-### Required
-- `SUPABASE_URL` - Supabase project URL
-- `SUPABASE_KEY` - Supabase anon key
-- `SUPABASE_SERVICE_KEY` - Supabase service role key
-- `JWT_SECRET` - JWT signing secret
-- `OPENAI_API_KEY` - OpenAI API key for embeddings
-
-### Optional
-- `REDIS_URL` - Redis for caching
-- `LOG_LEVEL` - debug, info, warn, error
-- `RATE_LIMIT_WINDOW_MS` - Rate limit window
-- `RATE_LIMIT_MAX_REQUESTS` - Max requests per window
-- `ENABLE_METRICS` - Enable Prometheus metrics
-
----
-
-## Recent Changes (from git log)
-
-| Commit | Description |
-|--------|-------------|
-| f819640 | plugin update |
-| 3798869 | feat: update project configuration and enhance API request handling |
-| 4fe7494 | update cli and repl |
-| 058da7a | fix(memory-client): align route fallbacks and harden cli output |
-| c09162f | fix(memory): restore prefix compatibility across cli and recall-forge |
-
----
-
-## Status
-
-**Documentation Status:** Phase 2 in progress
-**Last Updated:** 2026-04-30
-**Next Task:** Create component documentation files
-**Progress File:** `context-engineering-progress.md`
+This folder is now reliable for one job: getting a new session oriented around the MaaS app quickly without confusing standalone ownership with platform ownership.
