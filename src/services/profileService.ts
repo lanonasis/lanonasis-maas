@@ -104,6 +104,8 @@ export class ProfileService {
 
     if (error) {
       if (error.code === 'PGRST116') {
+        this.metrics.incrementCounter('profile.get.not_found', {}, 1);
+        this.metrics.recordDuration('profile.get.duration', Date.now() - startTime, { outcome: 'not_found' });
         logger.info('getProfile profile not found', { subject_id });
         return null;
       }
@@ -124,10 +126,25 @@ export class ProfileService {
 
   /**
    * Get version history for a profile.
-   * Note: subject_id param is used for profile_id column in DB.
+   * When organization_id is provided, a preliminary check verifies the parent
+   * profile belongs to that org (memory_profile_versions has no org column).
    */
-  async getProfileHistory(subject_id: string, limit = 20): Promise<ProfileVersion[]> {
+  async getProfileHistory(subject_id: string, limit = 20, organization_id?: string): Promise<ProfileVersion[]> {
     const startTime = Date.now();
+
+    if (organization_id) {
+      const { data: profileCheck } = await this.supabase
+        .from('memory_profiles')
+        .select('subject_id')
+        .eq('subject_id', subject_id)
+        .eq('organization_id', organization_id)
+        .single();
+      if (!profileCheck) {
+        this.metrics.incrementCounter('profile.history.not_found', {}, 1);
+        logger.info('getProfileHistory: profile not found under org', { subject_id });
+        return [];
+      }
+    }
 
     const { data, error } = await this.supabase
       .from('memory_profile_versions')
