@@ -491,16 +491,16 @@ export class MemoryCommands {
       console.log(chalk.cyan('\nProfile Summary:'), p.profile_summary ?? chalk.gray('(none)'));
       console.log(chalk.cyan('\nStructured Fields:'));
       for (const [field, items] of Object.entries(p.structured_fields ?? {})) {
-        if ((items as string[]).length > 0) {
+        if (items.length > 0) {
           console.log(chalk.bold(`  ${field}:`));
-          for (const item of items as string[]) {
+          for (const item of items) {
             console.log(chalk.gray(`    • ${item}`));
           }
         }
       }
       console.log(chalk.cyan('\nConfidence by Field:'));
       for (const [field, score] of Object.entries(p.confidence_by_field ?? {})) {
-        console.log(chalk.gray(`  ${field}: ${(score as number).toFixed(2)}`));
+        console.log(chalk.gray(`  ${field}: ${score.toFixed(2)}`));
       }
       console.log(chalk.dim(`\nFreshness: ${p.freshness} | Updated: ${p.updated_at}`));
       context.lastResult = p;

@@ -85,15 +85,22 @@ export class ProfileService {
 
   /**
    * Get a memory profile for a subject.
+   * When organization_id is provided the query also filters by it, preventing
+   * cross-tenant reads when the service-role client bypasses RLS.
    */
-  async getProfile(subject_id: string): Promise<MemoryProfile | null> {
+  async getProfile(subject_id: string, organization_id?: string): Promise<MemoryProfile | null> {
     const startTime = Date.now();
 
-    const { data, error } = await this.supabase
+    let query = this.supabase
       .from('memory_profiles')
       .select('*')
-      .eq('subject_id', subject_id)
-      .single();
+      .eq('subject_id', subject_id);
+
+    if (organization_id) {
+      query = query.eq('organization_id', organization_id);
+    }
+
+    const { data, error } = await query.single();
 
     if (error) {
       if (error.code === 'PGRST116') {
