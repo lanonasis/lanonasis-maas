@@ -1,4 +1,4 @@
-/* @ts-nocheck */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * Vue Composables for Memory Client
  *

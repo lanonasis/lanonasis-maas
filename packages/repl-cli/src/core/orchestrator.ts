@@ -1,4 +1,3 @@
-/* @ts-nocheck */
 import { MemoryClient, createMemoryClient } from '@lanonasis/memory-client';
 import chalk from 'chalk';
 import ora from 'ora';

@@ -19,7 +19,7 @@ export function createPluginManager(): any;
 export function configureMemoryPlugin(config: any): any;
 
 declare const l0: {
-    L0Orchestrator: typeof L0Orchestrator;
+    L0Orchestrator: L0Orchestrator;
     createPluginManager: typeof createPluginManager;
     configureMemoryPlugin: typeof configureMemoryPlugin;
 };

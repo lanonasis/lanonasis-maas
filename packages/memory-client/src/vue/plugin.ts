@@ -1,4 +1,4 @@
-/* @ts-nocheck */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * Vue Plugin for Memory Client
  *
@@ -8,7 +8,7 @@
 import { type App, type InjectionKey, inject } from 'vue';
 import { createMemoryClient, type CoreMemoryClient, type CoreMemoryClientConfig } from '../core/client';
 
-export const MEMORY_CLIENT_KEY: InjectionKey<CoreMemoryClient> = Symbol('MemoryClient');
+export const MEMORY_CLIENT_KEY = Symbol('MemoryClient') as unknown as InjectionKey<CoreMemoryClient>;
 
 export interface MemoryPluginOptions extends CoreMemoryClientConfig {
   /** Automatically authenticate on plugin installation */
@@ -49,7 +49,7 @@ export function createMemoryPlugin(options: MemoryPluginOptions) {
  * @throws Error if used without installing the plugin
  */
 export function useMemoryClient(): CoreMemoryClient {
-  const client = inject(MEMORY_CLIENT_KEY);
+  const client = inject(MEMORY_CLIENT_KEY as any) as CoreMemoryClient | undefined;
 
   if (!client) {
     throw new Error('Memory client not provided. Did you install the createMemoryPlugin?');
