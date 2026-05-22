@@ -5,14 +5,42 @@
 **Code references valid as of:** 2026-05-12 (working tree; line numbers may drift — prefer symbol names below)
 **Source plan:** [pi-maas-integration.md](./pi-maas-integration.md)
 **Compared against:** [packages/repl-cli/](../../../packages/repl-cli/), [packages/memory-client/](../../../packages/memory-client/), [packages/recall-forge/](../../../packages/recall-forge/), [packages/claude-memory/](../../../packages/claude-memory/), [packages/ide-extension-core/](../../../packages/ide-extension-core/)
+**Pi source:** [.pi/ source code](~/.pi/) — to guide customizations per original plan
+**Prior context:** Remote session (Ollama local model, did not work out) produced key insight: convergence engine is the moat, not plumbing.
+
+---
+
+## Strategic Context
+
+This review evaluates **Layer 1** of a two-layer strategy defined in the original plan:
+
+| Layer | Scope | This Review Covers |
+|-------|-------|--------------------|
+| **Layer 1 — Thin Harness** | Infrastructure validation: Pi fork, MaaS provider, context injection, command routing, session persistence | ✅ Yes |
+| **Layer 2 — Convergence Engine** | Continuity intelligence: `/context converge`, pattern emergence, identity evolution, longitudinal synthesis | ❌ Out of scope |
+
+The review doc's recommendations (reuse existing packages, reduce scope, extend vs rebuild) apply to **Layer 1 only**.
+
+**The actual product vision** lives in Layer 2: emergent intelligence, reflective synthesis, context convergence, and identity continuity. This document does not diminish that vision — it simply validates that Layer 1 can be built quickly by composing existing LanOnasis packages.
+
+Layer 2 begins immediately after Layer 1 is validated. Its anchor feature is `/context converge` — the first proof that this transcends "memory search" into "continuity intelligence."
 
 ---
 
 ## TL;DR
 
-The plan is conceptually sound but **substantially re-specifies work that already exists** in this monorepo. **Substantial portions of Phases 2, 4, and 6 are already implemented** as shipping packages (see the per-phase evidence table in §1 and the coverage matrix in [Appendix A](#appendix-a--coverage-matrix-evidence)). The plan also has a few hard structural blind spots — subject scoping, privacy redaction, configDir collision, and a missing "is this a fork or a plugin?" decision — that, if not closed, will surface as bugs late in implementation.
+This review confirms that **Layer 1 can be built quickly** by composing existing LanOnasis packages. Substantial portions of Phase 2, 3, 4, and 6 already exist (see [Appendix A — Coverage matrix evidence](#appendix-a-coverage-matrix-evidence)).
 
-Strong recommendation: **before forking Pi, reframe the plan as "compose existing packages into a Pi harness" and only then decide whether forking is necessary.**
+**For Layer 1:** Reframe as "compose existing packages into a Pi harness."
+
+**The vision is not reduced.** This review does not change the two-layer strategy. Layer 2 (convergence engine, identity evolution, longitudinal synthesis) remains the actual product. This document only validates Layer 1 feasibility.
+
+**Critical gaps still need decisions before Layer 1 execution:**
+- Subject scoping (who/what is the subject? user, session, or persona?)
+- Fork vs extension (spike Pi extension API before committing to fork)
+- Privacy pipeline (reuse recall-forge's 30-pattern redactor before any MaaS write)
+- configDir collision (namespace to `.lanonasis/pi/` not `.lanonasis/`)
+- Env var normalization (reuse `LANONASIS_API_KEY`, don't add `LANONASIS_MAAS_*` variants)
 
 ---
 
@@ -283,4 +311,70 @@ This lists each implemented Provider-adjacent method with its line number; absen
 
 **Caveat.** "Implemented today" means *exists somewhere in the monorepo*, not *exists as a callable from a Pi process*. Most of what's there will need an adapter shim; that adapter is the actual Phase 2 work this review recommends scoping.
 
-**Follow-up.** If a precise coverage percentage is needed for planning, the right next step is a focused audit issue that computes per-method LoC + test coverage in `packages/memory-client` against the plan's Provider interface. This review intentionally does not produce that number.
+---
+
+## Appendix B — Layer 2 Vision (Not in Scope for This Review)
+
+This review focuses on Layer 1 (thin harness) feasibility. The actual product vision lives in Layer 2:
+
+### What Layer 2 Enables
+
+**`/context converge`** — the anchor feature that proves this transcends "memory search":
+
+```
+/context converge
+
+Mind:
+Across the last 42 sessions, your strongest recurring themes are:
+- orchestration, continuity, interoperability
+- infrastructure control, identity persistence
+
+Heart:
+This project appears emotionally important because it connects:
+- identity, continuity, memory, creativity, control
+- recurring frustration around losing context between tools
+
+Concierge:
+Recommended next actions:
+1. Build only the thin Pi harness first
+2. Implement convergence before advanced agent orchestration
+3. Start logging "decision moments" explicitly
+```
+
+### What Layer 2 Requires (Beyond Layer 1)
+
+| Capability | Description |
+|------------|-------------|
+| **Session accumulation** | Structured session events with emotional/strategic tags |
+| **Pattern emergence** | Detect recurring themes across sessions + projects |
+| **Identity evolution** | Track how priorities, frustrations, passions change over time |
+| **Contradiction surfacing** | Surface gaps between stated intentions and actual behavior |
+| **Convergence synthesis** | Not retrieval — *comparative synthesis* across longitudinal data |
+
+### Data Model Differences
+
+| Layer 1 | Layer 2 |
+|---------|---------|
+| `memory_entries` (vector search) | `session_events` + `decision_moments` + `pattern_graph` |
+| Search by similarity | Synthesize by comparison + evolution |
+| Static identity (SOUL.md bootstrap) | Dynamic identity (behavior-derived) |
+| Context pack (fetch existing memories) | Context convergence (synthesize new insights) |
+
+### Layer 2 Begins Immediately After Layer 1
+
+Immediately after Layer 1 is validated. Layer 1 sessions accumulate material (decision moments, session events, emotional tags). Layer 2 reads that material to prove emergent intelligence.
+
+**Do not wire agent files to AI router yet.** Build the convergence engine first.
+
+**The question every feature must answer:** Does it validate emergent intelligence, or just plumbing?
+
+```
+Feature              Validates
+─────────────────────────────────────
+Memory storage      Transport works
+Session persistence  Data persists
+Context injection    Stuff loads
+/context converge    Intelligence emerges ← THIS
+```
+
+**Layer 2 is not a future roadmap item. It's the reason Layer 1 exists.**

@@ -206,4 +206,44 @@ The key experiment should answer one question:
 
 Can a customizable terminal agent become a live interface to a persistent second brain that can reason across memory, identity, intent, and execution?
 
+
+---
+
+## Strategic Framing
+
+This plan executes a **two-layer strategy**:
+
+| Layer | Scope | Validates |
+|-------|-------|-----------|
+| **Layer 1 — Thin Harness** | Infrastructure: Pi fork, MaaS provider, context injection, commands, session persist | Transport, ergonomics, extensibility |
+| **Layer 2 — Convergence Engine** | Intelligence: `/context converge`, pattern emergence, identity evolution, longitudinal synthesis | **Emergent intelligence** ← the actual product |
+
+
+**The trap this plan avoids:**
+
+```
+What It Looks Like    What It Actually Is
+─────────────────────────────────────────────
+Second brain          Fancy memory CLI
+Context intelligence  Retrieval layer
+Convergence          Summarization
+Identity              Static system prompt
+```
+
+`/context converge` is the anchor feature that proves this transcends "memory search." Build it as the first Layer 2 proof, not as an afterthought.
+
+
+**Do not wire agent files to AI router yet.** Build the convergence engine first.
+
+**The question every feature must answer:** *Does it validate emergent intelligence, or just plumbing?*
+
+---
+
+## The Real Test
+
+> Can a customizable terminal agent become a live interface to a persistent second brain that can reason across memory, identity, intent, and execution?
+
+
+That is the real test.
+
 That is the real test.

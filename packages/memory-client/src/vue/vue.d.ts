@@ -6,15 +6,24 @@
  */
 
 declare module 'vue' {
-    export function ref<T>(value: T | (() => T)): any;
-    export function computed<T>(getter: () => T): any;
+    // Stub types for when Vue is NOT installed — real Vue types take precedence when available
+    export interface Ref<T = any> {
+        value: T;
+    }
+
+    export type ComputedRef<T = any> = {
+        value: T;
+    };
+
+    export function ref<T>(value: T): Ref<T>;
+    export function computed<T>(getter: () => T): ComputedRef<T>;
     export function onMounted(callback: () => void): void;
     export function onUnmounted(callback: () => void): void;
     export function watch<T>(
         source: any,
         callback: (newVal: T, oldVal: T) => void,
         options?: any
-    ): void;
+    ): () => void;
 
     export interface App<RootComponent = any> {
         use(plugin: any, ...options: any[]): this;
