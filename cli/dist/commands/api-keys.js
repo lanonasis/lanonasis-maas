@@ -15,8 +15,8 @@ const colors = {
     muted: chalk.gray,
     highlight: chalk.white.bold
 };
-const AUTH_API_KEYS_BASE = '/api/v1/auth/api-keys';
-const PROJECTS_API_BASE = '/api/v1/projects';
+const AUTH_API_KEYS_BASE = '/api/v1/api-keys';
+const PROJECTS_API_BASE = '/api/v1/api-keys/projects';
 const VALID_ACCESS_LEVELS = ['public', 'authenticated', 'team', 'admin', 'enterprise'];
 const VALID_KEY_CONTEXTS = ['personal', 'team', 'enterprise'];
 function unwrapApiResponse(response) {
