@@ -10,6 +10,7 @@ export interface Memory {
   tags?: string[];
   metadata?: Record<string, any>;
   topic_id?: string;
+  topic_key?: string;
   user_id?: string;
   organization_id?: string;
   created_at?: string;
@@ -38,6 +39,7 @@ export interface CreateMemoryRequest {
   tags?: string[];
   metadata?: Record<string, any>;
   topic_id?: string;
+  topic_key?: string;
 }
 
 export interface UpdateMemoryRequest {
@@ -54,8 +56,11 @@ export interface SearchMemoryRequest {
   type?: MemoryType | MemoryType[];
   tags?: string[];
   topic_id?: string;
+  topic_key?: string;
   limit?: number;
   threshold?: number;
+  response_mode?: 'full' | 'compact' | 'timeline';
+  include_deleted?: boolean;
 }
 
 export interface SearchMemoryResponse {

@@ -1,124 +1,87 @@
 # CLI Tool - Component Context
 
-**Package:** `memory` CLI
-**Type:** Command-line interface
-**Package manager:** Bun (not npm)
-
----
+**Package:** `@lanonasis/cli`
+**Last verified:** 2026-05-16
+**Type:** published command-line interface and MCP entry packaging
 
 ## Purpose
 
-Professional CLI for LanOnasis Memory as a Service. Provides commands for
-authentication, memory CRUD operations, and search.
+The CLI is the user-facing command surface for memory operations, auth flows, and MCP-oriented usage.
 
-**For production intelligence calls:** SDK/CLI calls `api.lanonasis.com` endpoints
-(which route to Supabase EFs) — not the local Express server.
-
----
+For platform questions, separate:
+- CLI packaging and command behavior owned here
+- production API/platform behavior owned elsewhere in the monorepo
 
 ## Key Files
 
 | File | Purpose |
 |------|---------|
-| `cli/src/index.ts` | Main CLI entry point |
-| `cli/src/commands/` | All command implementations |
-| `cli/src/utils/config.ts` | Configuration management |
+| `cli/src/index.ts` | main CLI entrypoint |
+| `cli/src/commands/` | command implementations |
 | `cli/src/utils/api.ts` | API client wrapper |
-| `cli/src/core/` | Core CLI functionality |
-| `cli/src/ux/` | User experience (output formatting)
+| `cli/src/utils/config.ts` | local config handling |
+| `cli/src/mcp-server-entry.ts` | MCP entrypoint binary |
+| `cli/package.json` | published metadata, scripts, and binary names |
 
----
+## Current Binary Names
+
+Verified from `cli/package.json`:
+
+- `onasis`
+- `lanonasis`
+- `lanonasis-mcp`
+
+Important drift note:
+- older repo docs and code comments still sometimes use `memory`
+- prefer `onasis` or `lanonasis` when documenting the currently published interface unless you have verified a local alias/wrapper
 
 ## Commands
 
-| Command | Description |
-|---------|-------------|
-| `memory init` | Initialize CLI configuration |
-| `memory login` | Authenticate with API |
-| `memory create -t <title> -c <content> [--type <type>]` | Create memory |
-| `memory search <query> [--limit <n>]` | Semantic search |
-| `memory list [--type <type>] [--tags <tags>]` | List memories |
-| `memory get <id>` | Get specific memory |
-| `memory update <id> -t <title>` | Update memory |
-| `memory delete <id>` | Delete memory |
-| `memory stats` | Show memory statistics |
-| `memory config show` | Display configuration |
-| `memory --help` | Show all commands |
+Representative command surface in current docs/code:
 
----
+- `onasis guide`
+- `onasis init`
+- `onasis login`
+- `onasis memory create`
+- `onasis memory search`
+- `onasis auth status`
+- `lanonasis-mcp`
 
-## Key Features
+## Development Commands
 
-### Interactive Mode
-- Inquirer prompts for missing arguments
-- Colored terminal output
-- Table formatting for list results
-
-### Configuration
-- Local config storage (`~/.config/memory/`)
-- API key storage with secure handling
-- Platform key support (Claude Code, OpenClaw, etc.)
-
-### Output Formats
-- **Table** - Human-readable with colors
-- **JSON** - Machine-parseable output
-
----
-
-## Dependencies
-
-### Internal
-- `@lanonasis/memory-client` - API communication
-
-### External
-- `commander` - CLI argument parsing
-- `inquirer` - Interactive prompts
-- `axios` - HTTP client
-
----
-
-## Development
+Verified from `cli/package.json`:
 
 ```bash
-# From cli/ directory
-npm run dev       # Development with watch
-npm run build     # Compile TypeScript
-memory --help     # Test after build
-
-# From root
-npm run dev --prefix cli
 npm run build --prefix cli
+npm test --prefix cli
+npm run test:coverage --prefix cli
 ```
 
----
+Notes:
+- there is no `dev` script in `cli/package.json` right now
+- if a doc tells you to run `npm run dev --prefix cli`, treat that as stale
 
 ## Integration Points
 
-| Platform | Integration |
-|----------|------------|
-| `@lanonasis/claude-memory` | Uses CLI for memory operations |
-| `@lanonasis/recall-forge` | Uses CLI for context retrieval |
-| Claude Code | Hook-based token optimization via `rtk` |
+| Component | Connection |
+|-----------|------------|
+| standalone MaaS server | local testing target |
+| production API | command execution target for real usage |
+| `packages/*` | shared SDK and helper dependencies |
+| Claude/MCP tooling | packaged through `lanonasis-mcp` entrypoint |
 
----
+## Environment And Config
 
-## Build Output
+Common config inputs mentioned in current CLI docs/code:
 
-```
-cli/dist/
-├── core/
-├── commands/
-├── utils/
-├── mcp/
-├── ux/
-└── index.js  (entry point)
-```
+- `MEMORY_API_URL`
+- `MEMORY_API_KEY`
+- local config storage under the user's config directory
 
----
+Auth mode can vary by target environment; do not infer the entire platform auth contract from CLI docs alone.
 
-## Environment
+## Known Cautions
 
-Uses environment variables:
-- `MEMORY_API_URL` - API endpoint (default: http://localhost:3000)
-- `MEMORY_API_KEY` - Authentication token
-- `MEMORY_CONFIG_DIR` - Config directory path
+- CLI naming has drifted over time; examples using `memory` may still exist.
+- README-level guidance may be newer than this context folder for some auth examples, so check `cli/README.md` if command naming seems off.
+- For endpoint/routing truth, validate against live manifests and monorepo context rather than CLI prose.

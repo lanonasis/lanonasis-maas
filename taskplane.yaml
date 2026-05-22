@@ -1,0 +1,705 @@
+# =============================================================================
+# Memory Concierge — Taskplane Blueprint
+# =============================================================================
+# Pipeline orchestration for the LanOnasis MaaS second-brain harness.
+# Manages session persistence, context retrieval, deep reasoning, synthesis,
+# quality gates, and response delivery.
+#
+# Integration points: memory-client, recall-forge, claude-memory, Hermes gateway
+# =============================================================================
+
+version: "1.0.0"
+name: "memory-concierge"
+namespace: "lanonasis-maas"
+description: |
+  Second-brain harness orchestrator. Coordinates session persistence,
+  semantic context retrieval, multi-stage reasoning, synthesis, and delivery.
+
+# =============================================================================
+# AGENT DEFINITIONS
+# =============================================================================
+agents:
+  # -------------------------------------------------------------------------
+  # memory-scout: Pre-flight context gathering agent
+  # -------------------------------------------------------------------------
+  memory-scout:
+    id: "memory-scout"
+    role: "scout"
+    description: |
+      Scans and identifies relevant memories before primary retrieval.
+      Performs lightweight FTS5 and vector searches to surface candidate
+      sessions, topics, and knowledge fragments. Narrow window, fast exit.
+    config:
+      timeout_ms: 3000
+      max_candidates: 20
+      priority_sources:
+        - "session_history"
+        - "pinned_memories"
+        - "recent_topics"
+      fallback_empty: true
+    integrations:
+      - memory-client
+      - recall-forge
+
+  # -------------------------------------------------------------------------
+  # memory-retriever: Primary semantic memory retrieval agent
+  # -------------------------------------------------------------------------
+  memory-retriever:
+    id: "memory-retriever"
+    role: "retriever"
+    description: |
+      Executes full semantic search pipeline over candidate memories.
+      Applies privacy filter, relevance scoring, and temporal weighting.
+      Returns ranked memory blocks with provenance metadata.
+    config:
+      timeout_ms: 8000
+      max_results: 50
+      similarity_threshold: 0.72
+      temporal_decay: true
+      privacy_filter: "strict"
+      include_withheld: false
+    integrations:
+      - memory-client
+      - recall-forge
+      - privacy-pipeline
+
+  # -------------------------------------------------------------------------
+  # Mind: Analytical reasoning stage
+  # -------------------------------------------------------------------------
+  mind:
+    id: "mind"
+    role: "reasoner"
+    description: |
+      Analytical and logical reasoning engine. Decomposes queries,
+      identifies assumptions, evaluates evidence, and constructs
+      logical chains. Outputs structured reasoning traces.
+    config:
+      timeout_ms: 15000
+      reasoning_depth: "deep"
+      allow_uncertainty: true
+      output_format: "structured"
+      tracks_hypotheses: true
+    integrations:
+      - memory-retriever
+      - knowledge-graph
+
+  # -------------------------------------------------------------------------
+  # Heart: Creative and empathetic reasoning stage
+  # -------------------------------------------------------------------------
+  heart:
+    id: "heart"
+    role: "empath"
+    description: |
+      Creative, intuitive, and emotionally intelligent reasoning.
+      Synthesizes disparate concepts, finds analogies, and considers
+      human impact. Balances analytical Mind output.
+    config:
+      timeout_ms: 12000
+      creativity_level: "adaptive"
+      empathy_weight: 0.4
+      metaphor_generation: true
+      output_format: "narrative"
+    integrations:
+      - mind
+      - knowledge-graph
+
+  # -------------------------------------------------------------------------
+  # Concierge: Orchestration and synthesis stage
+  # -------------------------------------------------------------------------
+  concierge:
+    id: "concierge"
+    role: "orchestrator"
+    description: |
+      Master orchestrator. Blends Mind and Heart outputs, manages
+      context budget, resolves conflicts, and produces final synthesis.
+      Acts as the user's single point of contact in the harness.
+    config:
+      timeout_ms: 20000
+      context_budget_chars: 48000
+      blend_ratio: "adaptive"
+      conflict_resolution: "weighted-vote"
+      output_format: "structured_response"
+    integrations:
+      - mind
+      - heart
+      - quality-gate
+
+  # -------------------------------------------------------------------------
+  # identity-agent: Identity and context management
+  # -------------------------------------------------------------------------
+  identity-agent:
+    id: "identity-agent"
+    role: "identity"
+    description: |
+      Manages user identity, session continuity, and context boundaries.
+      Validates authentication, resolves user context, and enforces
+      data residency and privacy constraints.
+    config:
+      session_refresh_ms: 3600000
+      max_session_age_ms: 86400000
+      require_auth: true
+      privacy_tier: "user-controlled"
+    integrations:
+      - hermes-gateway
+      - privacy-pipeline
+
+# =============================================================================
+# TASK DEFINITIONS
+# =============================================================================
+tasks:
+  # -------------------------------------------------------------------------
+  # STAGE 1: Session Persistence
+  # -------------------------------------------------------------------------
+  session-persist:
+    id: "session-persist"
+    stage: 1
+    description: "Capture and persist current session state"
+    trigger: ["session_start", "session_end", "pre_compact"]
+    pipeline:
+      - step: "capture-transcript"
+        agent: null  # system-level, no agent
+        action: "extract_session_transcript"
+        config:
+          max_chars: 100000
+          include_tool_calls: true
+          include_errors: false
+      - step: "run-privacy-guard"
+        agent: null
+        action: "privacy-guard-stage-1"
+        config:
+          patterns: 30
+          redact_in_place: true
+      - step: "extract-tags"
+        agent: null
+        action: "extract_semantic_tags"
+        config:
+          max_tags: 15
+          confidence_threshold: 0.7
+      - step: "generate-embedding"
+        agent: null
+        action: "generate_vector_embedding"
+        config:
+          model: "text-embedding-3-small"
+          dimensions: 1536
+      - step: "deduplicate"
+        agent: null
+        action: "vector_dedup"
+        config:
+          threshold: 0.985
+          action: "skip"
+      - step: "persist-memory"
+        agent: null
+        action: "write_memory_entry"
+        config:
+          memory_type: "context"
+          namespace: "session"
+          storage: ["lanonasis-maas", "local-fallback"]
+    outputs:
+      memory_id: "string"
+      privacy_event: "boolean"
+      tags: "string[]"
+
+  # -------------------------------------------------------------------------
+  # STAGE 2: Context Retrieval (memory-scout + memory-retriever)
+  # -------------------------------------------------------------------------
+  context-retrieval:
+    id: "context-retrieval"
+    stage: 2
+    description: "Retrieve relevant context for the current query"
+    trigger: ["before_agent_start", "user_message"]
+    pipeline:
+      - step: "scout-candidates"
+        agent: "memory-scout"
+        action: "scan_and_identify"
+        config:
+          search_modes: ["fts5", "vector"]
+          candidate_limit: 20
+          priority_filter: "recency + relevance"
+      - step: "retrieve-semantic"
+        agent: "memory-retriever"
+        action: "full_semantic_search"
+        config:
+          similarity_threshold: 0.72
+          max_results: 50
+          include_metadata: true
+          privacy_filter: "strict"
+      - step: "apply-temporal-weighting"
+        agent: null
+        action: "temporal_decay_sort"
+        config:
+          decay_factor: 0.95
+          half_life_days: 7
+      - step: "filter-redundant"
+        agent: null
+        action: "remove_duplicates"
+        config:
+          similarity_threshold: 0.92
+          prefer_recency: true
+      - step: "build-context-block"
+        agent: null
+        action: "assemble_context_injection"
+        config:
+          max_chars: 32000
+          format: "markdown"
+          include_source_refs: true
+    outputs:
+      context_block: "string"
+      memory_sources: "MemoryRef[]"
+      retrieval_confidence: "number"
+
+  # -------------------------------------------------------------------------
+  # STAGE 3: Deep Reasoning (Mind + Heart)
+  # -------------------------------------------------------------------------
+  deep-reasoning:
+    id: "deep-reasoning"
+    stage: 3
+    description: "Multi-stage reasoning with analytical and creative modes"
+    trigger: ["reasoning_required", "complex_query"]
+    parallel: true
+    pipeline:
+      - branch: "mind"
+        steps:
+          - step: "decompose-query"
+            agent: "mind"
+            action: "analyze_and_decompose"
+            config:
+              identify_assumptions: true
+              flag_uncertainty: true
+          - step: "evaluate-evidence"
+            agent: "mind"
+            action: "evaluate_memory_evidence"
+            config:
+              confidence_scoring: true
+              track_conflicts: true
+          - step: "build-logic-chain"
+            agent: "mind"
+            action: "construct_reasoning_trace"
+            config:
+              include_alternatives: true
+              output_format: "structured"
+      - branch: "heart"
+        steps:
+          - step: "emotional-analysis"
+            agent: "heart"
+            action: "analyze_sentiment_context"
+            config:
+              empathy_weight: 0.4
+              detect_frustration: true
+          - step: "creative-synthesis"
+            agent: "heart"
+            action: "generate_analogies_insights"
+            config:
+              creativity_level: "adaptive"
+              metaphor_generation: true
+          - step: "narrative-blend"
+            agent: "heart"
+            action: "synthesize_narrative"
+            config:
+              tone: "adaptive"
+              output_format: "narrative"
+      - step: "merge-branches"
+        agent: "concierge"
+        action: "blend_mind_heart"
+        config:
+          blend_mode: "weighted"
+          conflict_threshold: 0.3
+    outputs:
+      reasoning_trace: "ReasoningTrace"
+      narrative_response: "string"
+      confidence: "number"
+      alternatives: "string[]"
+
+  # -------------------------------------------------------------------------
+  # STAGE 4: Synthesis
+  # -------------------------------------------------------------------------
+  synthesize:
+    id: "synthesize"
+    stage: 4
+    description: "Combine reasoning outputs into coherent response"
+    trigger: ["post_reasoning", "synthesis_required"]
+    pipeline:
+      - step: "resolve-conflicts"
+        agent: "concierge"
+        action: "resolve_reasoning_conflicts"
+        config:
+          strategy: "weighted-vote"
+          preserve_uncertainty: true
+      - step: "structure-response"
+        agent: "concierge"
+        action: "structure_final_output"
+        config:
+          output_format: "structured_response"
+          include_reasoning: false
+          include_sources: true
+      - step: "apply-persona"
+        agent: "concierge"
+        action: "apply_response_tone"
+        config:
+          tone: "conversational"
+          detail_level: "adaptive"
+      - step: "final-privacy-scan"
+        agent: null
+        action: "privacy-guard-stage-2"
+        config:
+          patterns: 30
+          output_action: "redact"
+    outputs:
+      response: "string"
+      metadata: "ResponseMetadata"
+      privacy_action: "string | null"
+
+  # -------------------------------------------------------------------------
+  # STAGE 5: Quality Gate
+  # -------------------------------------------------------------------------
+  quality-gate:
+    id: "quality-gate"
+    stage: 5
+    description: "Validate response against quality thresholds"
+    trigger: ["pre_delivery", "always"]
+    pipeline:
+      - step: "accuracy-check"
+        agent: null
+        action: "validate_factual_claims"
+        config:
+          fact_check_sources: true
+          confidence_floor: 0.6
+      - step: "safety-scan"
+        agent: null
+        action: "safety_content_scan"
+        config:
+          categories: ["harm", "misinformation", "pii"]
+          threshold: "strict"
+      - step: "completeness-check"
+        agent: null
+        action: "verify_query_coverage"
+        config:
+          min_coverage: 0.8
+          missing_aspects: "flag"
+      - step: "privacy-final"
+        agent: null
+        action: "privacy_audit_final"
+        config:
+          block_on_intervention: true
+          log_event: true
+    outputs:
+      gate_passed: "boolean"
+      issues: "QualityIssue[]"
+      interventions: "PrivacyIntervention[]"
+
+  # -------------------------------------------------------------------------
+  # STAGE 6: Response Delivery
+  # -------------------------------------------------------------------------
+  deliver-response:
+    id: "deliver-response"
+    stage: 6
+    description: "Format and deliver final response"
+    trigger: ["gate_passed", "force_deliver"]
+    pipeline:
+      - step: "format-output"
+        agent: null
+        action: "format_for_channel"
+        config:
+          channel: "{{channel}}"
+          preserve_markdown: true
+          code_formatting: true
+      - step: "inject-metadata"
+        agent: null
+        action: "attach_response_metadata"
+        config:
+          include_sources: true
+          include_confidence: true
+          include_session_ref: true
+      - step: "deliver"
+        agent: "hermes-gateway"
+        action: "route_response"
+        config:
+          protocol: "stream"
+          fallback: "buffered"
+    outputs:
+      delivered_payload: "ResponsePayload"
+      channel: "string"
+      latency_ms: "number"
+
+# =============================================================================
+# EXECUTION ENGINE CONFIG
+# =============================================================================
+execution:
+  engine: "taskplane-v1"
+  mode: "streaming"  # streaming | buffered | hybrid
+
+  pipeline_order:
+    - session-persist
+    - context-retrieval
+    - deep-reasoning
+    - synthesize
+    - quality-gate
+    - deliver-response
+
+  parallel_stages:
+    - mind
+    - heart
+
+  timeouts:
+    stage_1_session_persist: 5000
+    stage_2_context_retrieval: 10000
+    stage_3_deep_reasoning: 25000
+    stage_4_synthesis: 10000
+    stage_5_quality_gate: 5000
+    stage_6_delivery: 3000
+
+  retry_policy:
+    max_attempts: 3
+    backoff_ms: [500, 1500, 4000]
+    retry_on: ["network_error", "timeout", "rate_limit"]
+    abort_on: ["auth_failure", "privacy_violation"]
+
+  circuit_breaker:
+    enabled: true
+    error_threshold: 5
+    window_ms: 60000
+    half_open_after_ms: 30000
+
+# =============================================================================
+# PRIVACY PIPELINE INTEGRATION
+# =============================================================================
+privacy:
+  enabled: true
+  always_on: true
+
+  stages:
+    - name: "secret-redactor"
+      stage: 1
+      patterns: 30
+      action: "redact"
+      log: true
+
+    - name: "pii-detector"
+      stage: 2
+      detectors:
+        - ssn
+        - email
+        - credit_card
+        - iban
+        - passport
+        - dob
+        - phone
+        - ip_address
+        - api_key
+        - private_key
+      confidence_threshold: 0.85
+      validation:
+        - luhn_check
+        - area_code_check
+
+    - name: "regulation-tagging"
+      stage: 3
+      regulations:
+        - GDPR
+        - CCPA
+        - HIPAA
+        - PCI-DSS
+
+    - name: "final-audit"
+      stage: 5
+      action: "block-or-flag"
+      notify_url: "{{privacyNotifyUrl}}"
+
+  local_fallback:
+    enabled: true
+    path: "workspace/memory/YYYY-MM-DD.md"
+    already_sanitized: true
+
+  audit_log:
+    path: "workspace/memory/privacy/YYYY-MM-DD.md"
+    format: "markdown"
+    fields: ["timestamp", "action", "secrets", "pii_types", "sensitivity", "regulations"]
+
+# =============================================================================
+# IDENTITY MANAGEMENT
+# =============================================================================
+identity:
+  session_management:
+    refresh_interval_ms: 3600000
+    max_age_ms: 86400000
+    continuity_mode: "strict"
+
+  authentication:
+    provider: "hermes-gateway"
+    token_validation: "jwt"
+    scopes:
+      - "memory:read"
+      - "memory:write"
+      - "context:inject"
+
+  privacy_tiers:
+    - name: "public"
+      description: "Shared knowledge, no user data"
+    - name: "user-controlled"
+      description: "User owns and manages access"
+    - name: "private"
+      description: "Isolated to single user, never shared"
+
+  data_residency:
+    default_region: "us-east-1"
+    allowed_regions: ["us-east-1", "eu-west-1", "ap-southeast-1"]
+    enforce_user_preference: true
+
+# =============================================================================
+# INTEGRATION POINTS
+# =============================================================================
+integrations:
+  memory-client:
+    package: "@lanonasis/memory-client"
+    version: ">=2.2.0"
+    usage:
+      - "Semantic memory retrieval (memory-retriever)"
+      - "Memory persistence (session-persist)"
+      - "Vector embedding generation"
+    config:
+      api_base: "https://api.lanonasis.com"
+      api_key_env: "LANONASIS_API_KEY"
+
+  recall-forge:
+    package: "@lanonasis/recall-forge"
+    version: ">=1.1.1"
+    usage:
+      - "OpenClaw plugin slots: memory + contextEngine"
+      - "Tiered semantic search (personal → shared namespace)"
+      - "Prompt injection with privacy filter"
+    config:
+      secret_patterns: 30
+      dedup_threshold: 0.985
+
+  claude-memory:
+    package: "@lanonasis/claude-memory"
+    version: ">=0.1.0"
+    usage:
+      - "Claude Code lifecycle hooks (stop, pre_compact, pre_tool)"
+      - "Session memory capture"
+      - "Spool queue management"
+    config:
+      hooks:
+        - "stop"
+        - "pre_compact"
+        - "before_agent_start"
+      capture_modes: ["auto", "manual", "scheduled"]
+
+  hermes-gateway:
+    package: "@lanonasis/hermes-gateway"
+    version: ">=1.0.0"
+    usage:
+      - "Response routing and delivery"
+      - "Authentication token validation"
+      - "Streaming protocol support"
+    config:
+      protocol: "stream"
+      fallback: "buffered"
+      auth_validation: "jwt"
+
+# =============================================================================
+# MEMORY TYPES AND NAMESPACES
+# =============================================================================
+memory:
+  types:
+    - id: "context"
+      description: "Session context and conversation history"
+      ttl_days: 90
+      retention: "user-controlled"
+    - id: "project"
+      description: "Project-specific knowledge and decisions"
+      ttl_days: 365
+      retention: "persistent"
+    - id: "knowledge"
+      description: "Learned facts and insights"
+      ttl_days: -1  # permanent until deleted
+      retention: "user-controlled"
+    - id: "reference"
+      description: "Reference materials and documentation"
+      ttl_days: -1
+      retention: "persistent"
+    - id: "personal"
+      description: "Personal preferences and patterns"
+      ttl_days: -1
+      retention: "private"
+    - id: "workflow"
+      description: "Workflow patterns and procedures"
+      ttl_days: 180
+      retention: "user-controlled"
+
+  namespaces:
+    - id: "session"
+      access: "private"
+      description: "Current session context"
+    - id: "user"
+      access: "private"
+      description: "User's personal memories"
+    - id: "shared"
+      access: "shared"
+      description: "Shared team/project knowledge"
+    - id: "global"
+      access: "public"
+      description: "Public reference materials"
+
+# =============================================================================
+# MONITORING AND OBSERVABILITY
+# =============================================================================
+observability:
+  logging:
+    level: "info"
+    structured: true
+    fields:
+      - "pipeline_stage"
+      - "memory_id"
+      - "retrieval_latency_ms"
+      - "reasoning_latency_ms"
+      - "gate_passed"
+      - "privacy_interventions"
+
+  metrics:
+    pipeline_duration_ms:
+      type: "histogram"
+      buckets: [100, 500, 1000, 5000, 10000, 30000]
+    memory_retrieval_count:
+      type: "counter"
+    quality_gate_pass_rate:
+      type: "gauge"
+    privacy_intervention_rate:
+      type: "counter"
+
+  tracing:
+    enabled: true
+    sample_rate: 0.1
+    include_spans:
+      - "scout-candidates"
+      - "retrieve-semantic"
+      - "deep-reasoning"
+      - "quality-gate"
+
+# =============================================================================
+# ERROR HANDLING
+# =============================================================================
+errors:
+  recovery_strategies:
+    network_error:
+      action: "retry_with_backoff"
+      fallback: "use_cached_context"
+    memory_not_found:
+      action: "continue_without_context"
+      log: "warning"
+    privacy_violation:
+      action: "block_and_notify"
+      fallback: "null_response"
+    auth_failure:
+      action: "abort_pipeline"
+      fallback: "anonymous_guest_mode"
+    timeout:
+      action: "return_partial_response"
+      fallback: "timeout_error"
+
+  escalation:
+    privacy_violation:
+      notify: ["audit_log", "privacyNotifyUrl"]
+      block_response: true
+    repeated_auth_failure:
+      notify: ["hermes-gateway"]
+      lock_session: true

@@ -485,6 +485,7 @@ export class CoreMemoryClient {
     tags?: string[];
     sort?: string;
     order?: 'asc' | 'desc';
+    include_deleted?: boolean;
   } = {}): Promise<ApiResponse<PaginatedResponse<MemoryEntry>>> {
     const params = new URLSearchParams();
 
