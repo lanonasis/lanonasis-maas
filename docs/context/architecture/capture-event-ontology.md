@@ -105,7 +105,7 @@ These were considered and rejected to keep the schema small:
 
 ## Capture pipeline (Phase A implementation)
 
-```
+```text
 User message  ─┐
 Assistant     ─┼─► rules pass (mid-session, deterministic)
 Command exec  ─┘    │
@@ -144,7 +144,7 @@ Command exec  ─┘    │
 
 `/context converge` calls `searchMemories({ tags: ['event:*'], limit: 200 })` then templates:
 
-```
+```text
 You are synthesizing across {N} captured events for subject {subject_id}.
 
 Event distribution:

@@ -12,7 +12,7 @@ export class PersonaRegistry {
 
   constructor() {
     for (const persona of BUILTIN_PERSONAS) {
-      this.personas.set(persona.name, persona);
+      this.personas.set(persona.name.toLowerCase(), persona);
     }
     this.activeName = DEFAULT_PERSONA_NAME;
   }

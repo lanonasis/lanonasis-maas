@@ -18,7 +18,8 @@ const CONFIG = join(homedir(), '.lanonasis', 'repl-config.json');
 const BACKUP = CONFIG + '.smoke-backup';
 
 // Back up the live config so we can restore it after.
-if (existsSync(CONFIG)) copyFileSync(CONFIG, BACKUP);
+const hadConfig = existsSync(CONFIG);
+if (hadConfig) copyFileSync(CONFIG, BACKUP);
 
 let exitCode = 0;
 function assert(cond, msg) {
@@ -98,15 +99,26 @@ try {
   console.log('\n[3] saveConfig persistence');
   const { saveConfig } = await import('../../src/config/loader.ts');
 
+  const beforeDisk = existsSync(CONFIG) ? JSON.parse(readFileSync(CONFIG, 'utf-8')) : {};
   saveConfig({ defaultPersona: 'mind' });
   const onDisk = JSON.parse(readFileSync(CONFIG, 'utf-8'));
   assert(onDisk.defaultPersona === 'mind', `defaultPersona persisted to ${CONFIG}`);
 
   // Sensitive fields should still be intact (we merged, not overwrote).
-  assert(typeof onDisk.authToken === 'string' && onDisk.authToken.length > 0,
-    'existing authToken preserved through merge');
-  assert(typeof onDisk.openaiApiKey === 'string' && onDisk.openaiApiKey.length > 0,
-    'existing openaiApiKey preserved through merge');
+  if ('authToken' in beforeDisk) {
+    assert(onDisk.authToken === beforeDisk.authToken,
+      'existing authToken preserved through merge');
+  } else {
+    assert(onDisk.authToken === undefined,
+      'authToken remains absent when no existing authToken was present');
+  }
+  if ('openaiApiKey' in beforeDisk) {
+    assert(onDisk.openaiApiKey === beforeDisk.openaiApiKey,
+      'existing openaiApiKey preserved through merge');
+  } else {
+    assert(onDisk.openaiApiKey === undefined,
+      'openaiApiKey remains absent when no existing openaiApiKey was present');
+  }
 
   // ── 4. loadConfig applies defaultPersona ────────────────────────────
   console.log('\n[4] loadConfig surfaces defaultPersona');
@@ -148,6 +160,19 @@ try {
   assert(thirdDisk.defaultPersona === 'concierge',
     'saveConfig({configPath}) writes to the explicit override path');
 
+  const invalidPath = join(tmp, 'invalid-profile.json');
+  const invalidContent = '{not valid json';
+  writeFileSync(invalidPath, invalidContent);
+  let invalidSaveThrew = false;
+  try {
+    saveConfig({ defaultPersona: 'mind' }, { configPath: invalidPath });
+  } catch {
+    invalidSaveThrew = true;
+  }
+  assert(invalidSaveThrew, 'saveConfig() rejects malformed existing JSON');
+  assert(readFileSync(invalidPath, 'utf-8') === invalidContent,
+    'saveConfig() preserves malformed config content instead of overwriting it');
+
   // The active path should NOT have changed (explicit override doesn't sticky).
   assert(getActiveConfigPath() === altPath,
     'explicit configPath override does not change the active path');
@@ -164,6 +189,9 @@ try {
     copyFileSync(BACKUP, CONFIG);
     unlinkSync(BACKUP);
     console.log('\n  ↺ Restored original repl-config.json from backup.');
+  } else if (!hadConfig && existsSync(CONFIG)) {
+    unlinkSync(CONFIG);
+    console.log('\n  ↺ Removed smoke-created repl-config.json.');
   }
 }
 

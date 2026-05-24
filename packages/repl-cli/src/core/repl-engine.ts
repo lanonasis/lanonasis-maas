@@ -83,6 +83,11 @@ export class ReplEngine {
         registry.switch(target.name);
         this.orchestrator.setPersona(target);
       } else {
+        const fallback = registry.get('lzero');
+        if (fallback) {
+          registry.switch(fallback.name);
+          this.orchestrator.setPersona(fallback);
+        }
         console.warn(chalk.yellow(
           `Configured defaultPersona "${config.defaultPersona}" not found; using lzero.`
         ));

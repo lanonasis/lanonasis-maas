@@ -131,9 +131,13 @@ export function saveConfig(
   let existing: Partial<ReplConfig> = {};
   if (existsSync(target)) {
     try {
-      existing = JSON.parse(readFileSync(target, 'utf-8'));
-    } catch {
-      existing = {};
+      const raw = readFileSync(target, 'utf-8');
+      existing = JSON.parse(raw);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      throw new Error(
+        `Cannot save config: existing file at "${target}" is invalid JSON (${message}).`
+      );
     }
   }
   const merged = { ...existing, ...partial };
