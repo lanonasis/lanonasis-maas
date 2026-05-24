@@ -22,17 +22,28 @@ describe('ReplEngine Enhancements - History, Completion, Multi-line', () => {
     });
 
     it('should add commands to history', async () => {
+      // History bookkeeping runs before handleCommand is awaited; stub the
+      // command dispatcher to keep this unit test off the network.
+      vi.spyOn(engine as any, 'handleCommand').mockResolvedValue(undefined);
+      vi.spyOn(engine as any, 'rl', 'get').mockReturnValue({ prompt: vi.fn() });
+
       await engine['processInput']('search typescript');
       expect(engine['inputHistory']).toContain('search typescript');
     });
 
     it('should avoid duplicate consecutive commands', async () => {
+      vi.spyOn(engine as any, 'handleCommand').mockResolvedValue(undefined);
+      vi.spyOn(engine as any, 'rl', 'get').mockReturnValue({ prompt: vi.fn() });
+
       await engine['processInput']('list');
       await engine['processInput']('list');
       expect(engine['inputHistory'].filter(cmd => cmd === 'list').length).toBe(1);
     });
 
     it('should allow same command if not consecutive', async () => {
+      vi.spyOn(engine as any, 'handleCommand').mockResolvedValue(undefined);
+      vi.spyOn(engine as any, 'rl', 'get').mockReturnValue({ prompt: vi.fn() });
+
       await engine['processInput']('list');
       await engine['processInput']('search test');
       await engine['processInput']('list');
