@@ -6,6 +6,7 @@ import { MemoryCommands } from '../commands/memory-commands.js';
 import { SystemCommands } from '../commands/system-commands.js';
 import { PersonaCommands } from '../commands/persona-commands.js';
 import { getPersonaRegistry } from '../personas/registry.js';
+import { EventCommands } from '../commands/event-commands.js';
 import { NaturalLanguageOrchestrator } from './orchestrator.js';
 import { pauseReadline, resumeReadline } from '../utils/spinner-utils.js';
 
@@ -17,6 +18,7 @@ export class ReplEngine {
   private memoryCommands: MemoryCommands;
   private systemCommands: SystemCommands;
   private personaCommands: PersonaCommands;
+  private eventCommands: EventCommands;
   private orchestrator: NaturalLanguageOrchestrator;
   private nlMode: boolean = true; // Natural language mode enabled by default
   private sigintHandler?: () => void; // Track SIGINT handler for cleanup
@@ -60,6 +62,7 @@ export class ReplEngine {
     this.registry = new CommandRegistry();
     this.memoryCommands = new MemoryCommands();
     this.systemCommands = new SystemCommands();
+    this.eventCommands = new EventCommands();
     this.orchestrator = new NaturalLanguageOrchestrator({
       apiUrl: config.apiUrl,
       authToken: config.authToken,
@@ -242,6 +245,9 @@ export class ReplEngine {
 
     // Persona switching
     this.registry.register('persona', (args, ctx) => this.personaCommands.run(args, ctx), ['p']);
+
+    // Capture-event ontology (tag, untag, detect, types)
+    this.registry.register('event', (args, ctx) => this.eventCommands.run(args, ctx), ['ev']);
 
     // System commands
     this.registry.register('mode', (args, ctx) => this.systemCommands.mode(args, ctx));
@@ -740,6 +746,13 @@ export class ReplEngine {
     console.log(chalk.gray('    persona                 - Show active persona'));
     console.log(chalk.gray('    persona list            - List available personas'));
     console.log(chalk.gray('    persona switch <name>   - Swap persona (system prompt + model)'));
+
+    console.log(chalk.white('\n  Capture Events (ontology):'));
+    console.log(chalk.gray('    event types             - List the 7 canonical event types'));
+    console.log(chalk.gray('    event detect <text>     - Dry-run detector on text; no write'));
+    console.log(chalk.gray('    event tag <id> <type>   - Add event:<type> tag to a memory'));
+    console.log(chalk.gray('    event untag <id> [type] - Remove event tag(s) from a memory'));
+    console.log(chalk.gray('    create ... --event=<t>  - Save a memory pre-tagged with event:<t>'));
 
     console.log(chalk.white('\n  System Commands:'));
     console.log(chalk.gray('    nl [on|off]             - Toggle natural language mode'));
