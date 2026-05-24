@@ -14,6 +14,7 @@ import {
 import { AIRouterClient } from './ai-router-client';
 import type { L0Config } from '../config/types.js';
 import { DEFAULT_OPENAI_MODEL } from '../config/constants.js';
+import type { Persona } from '../personas/types.js';
 
 export interface OrchestratorConfig {
   apiUrl: string;
@@ -187,6 +188,25 @@ export class NaturalLanguageOrchestrator {
     } catch (error) {
       // Silently fail - context loading is optional
       this.contextInitialized = true;
+    }
+  }
+
+  /**
+   * Swap the active persona at runtime. Replaces the system prompt and
+   * updates the model. Conversation history (turns 1+) is preserved so the
+   * new persona enters with full prior context. Cached user-preference
+   * context, if any, is re-applied on top of the new system prompt.
+   */
+  setPersona(persona: Persona): void {
+    if (!this.conversationHistory.length || this.conversationHistory[0].role !== 'system') {
+      this.conversationHistory.unshift({ role: 'system', content: persona.systemPrompt });
+    } else {
+      this.conversationHistory[0].content = persona.systemPrompt;
+    }
+    this.model = persona.model;
+    // Re-append cached user context to the fresh system prompt, if loaded.
+    if (this.cachedUserPreferences.length > 0) {
+      this.updateSystemPromptWithContext();
     }
   }
 

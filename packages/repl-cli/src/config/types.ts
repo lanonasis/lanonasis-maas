@@ -40,6 +40,8 @@ export interface ReplConfig {
   // User profile and preferences
   userProfile?: UserProfile;
   userPreferences?: UserPreferences;
+  // Default persona slug applied on startup; overridden at runtime by `persona switch`
+  defaultPersona?: string;
   // L0/LZero configuration
   l0?: L0Config;
   // Legacy userContext (for backwards compatibility)

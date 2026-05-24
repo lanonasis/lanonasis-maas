@@ -4,6 +4,8 @@ import { CommandContext, ReplConfig } from '../config/types.js';
 import { CommandRegistry } from '../commands/registry.js';
 import { MemoryCommands } from '../commands/memory-commands.js';
 import { SystemCommands } from '../commands/system-commands.js';
+import { PersonaCommands } from '../commands/persona-commands.js';
+import { getPersonaRegistry } from '../personas/registry.js';
 import { NaturalLanguageOrchestrator } from './orchestrator.js';
 import { pauseReadline, resumeReadline } from '../utils/spinner-utils.js';
 
@@ -14,6 +16,7 @@ export class ReplEngine {
   private registry: CommandRegistry;
   private memoryCommands: MemoryCommands;
   private systemCommands: SystemCommands;
+  private personaCommands: PersonaCommands;
   private orchestrator: NaturalLanguageOrchestrator;
   private nlMode: boolean = true; // Natural language mode enabled by default
   private sigintHandler?: () => void; // Track SIGINT handler for cleanup
@@ -68,6 +71,23 @@ export class ReplEngine {
       l0: config.l0,
       userContext: config.userContext
     });
+
+    this.personaCommands = new PersonaCommands(this.orchestrator);
+
+    // Apply defaultPersona from config (if set and known) before any input.
+    // Silent on success; warn if the configured slug is unknown.
+    if (config.defaultPersona) {
+      const registry = getPersonaRegistry();
+      const target = registry.get(config.defaultPersona);
+      if (target) {
+        registry.switch(target.name);
+        this.orchestrator.setPersona(target);
+      } else {
+        console.warn(chalk.yellow(
+          `Configured defaultPersona "${config.defaultPersona}" not found; using lzero.`
+        ));
+      }
+    }
 
     this.registerCommands();
   }
@@ -214,6 +234,9 @@ export class ReplEngine {
         await this.memoryCommands.listConclusions(args, ctx);
       }
     });
+
+    // Persona switching
+    this.registry.register('persona', (args, ctx) => this.personaCommands.run(args, ctx), ['p']);
 
     // System commands
     this.registry.register('mode', (args, ctx) => this.systemCommands.mode(args, ctx));
@@ -707,6 +730,11 @@ export class ReplEngine {
     console.log(chalk.gray('    list [limit]            - List recent memories'));
     console.log(chalk.gray('    get <id>                - Get a specific memory'));
     console.log(chalk.gray('    delete <id>             - Delete a memory'));
+
+    console.log(chalk.white('\n  Persona (mind / heart / concierge / lzero):'));
+    console.log(chalk.gray('    persona                 - Show active persona'));
+    console.log(chalk.gray('    persona list            - List available personas'));
+    console.log(chalk.gray('    persona switch <name>   - Swap persona (system prompt + model)'));
 
     console.log(chalk.white('\n  System Commands:'));
     console.log(chalk.gray('    nl [on|off]             - Toggle natural language mode'));
