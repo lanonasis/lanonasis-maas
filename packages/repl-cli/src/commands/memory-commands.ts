@@ -10,7 +10,14 @@ import chalk from 'chalk';
 import ora from 'ora';
 import { CommandContext } from '../config/types.js';
 import { withSpinner } from '../utils/spinner-utils.js';
-import { eventTag, isEventType, EVENT_TYPES, type EventType } from '../events/index.js';
+import {
+  eventTag,
+  eventTypeFromTag,
+  isEventType,
+  EVENT_TYPES,
+  TAG_BACKFILLED,
+  type EventType,
+} from '../events/index.js';
 
 const VALID_MEMORY_TYPES = [
   'context',
@@ -41,6 +48,11 @@ const VALID_MEMORY_STATUSES = [
 
 type MemoryType = (typeof VALID_MEMORY_TYPES)[number];
 type MemoryStatus = (typeof VALID_MEMORY_STATUSES)[number];
+
+interface ConvergedEvent {
+  memory: MemoryEntry;
+  types: EventType[];
+}
 
 export class MemoryCommands {
   private client: MemoryClient | null = null;
@@ -491,6 +503,215 @@ export class MemoryCommands {
     } finally {
       resumeReadline();
     }
+  }
+
+  async contextConverge(args: string[], context: CommandContext): Promise<void> {
+    let subjectId: string | undefined;
+    let limit = 200;
+    let includeBackfilled = false;
+
+    for (const arg of args) {
+      if (arg.startsWith('--subject=')) {
+        subjectId = arg.substring(10).trim();
+      } else if (arg.startsWith('--limit=')) {
+        const parsed = parseInt(arg.substring(8), 10);
+        if (Number.isFinite(parsed) && parsed > 0) {
+          limit = Math.min(parsed, 200);
+        }
+      } else if (arg === '--include-backfilled') {
+        includeBackfilled = true;
+      }
+    }
+
+    if (!subjectId) {
+      console.log(chalk.yellow('Usage: context converge --subject=<uuid> [--limit=200] [--include-backfilled]'));
+      return;
+    }
+
+    pauseReadline();
+    const spinner = ora('Gathering event-tagged memories...').start();
+    try {
+      const client = this.getClient(context);
+      const byId = new Map<string, MemoryEntry>();
+
+      for (const type of EVENT_TYPES) {
+        const result = await client.listMemories({
+          status: 'active',
+          tags: [eventTag(type)],
+          limit,
+          sort: 'created_at',
+          order: 'desc',
+        });
+
+        if (result.error) {
+          spinner.fail(chalk.red(`Converge failed while reading event:${type}: ${result.error}`));
+          return;
+        }
+
+        for (const memory of result.data?.data ?? []) {
+          if (!includeBackfilled && memory.tags?.includes(TAG_BACKFILLED)) continue;
+          byId.set(memory.id, memory);
+        }
+      }
+
+      const events = Array.from(byId.values())
+        .map((memory): ConvergedEvent => ({
+          memory,
+          types: this.eventTypesFor(memory),
+        }))
+        .filter(event => event.types.length > 0)
+        .sort((a, b) => Date.parse(b.memory.created_at) - Date.parse(a.memory.created_at))
+        .slice(0, limit);
+
+      if (events.length === 0) {
+        spinner.succeed(chalk.gray('No event-tagged memories found for convergence.'));
+        context.lastResult = { events: [], distribution: {} };
+        return;
+      }
+
+      const distribution = this.eventDistribution(events);
+      const conclusionsResult = await client.listInferredConclusions({
+        subject_id: subjectId,
+        limit: 12,
+      });
+      const conclusions = conclusionsResult.data?.conclusions ?? [];
+      const conclusionDigest = conclusions
+        .map((c, i) => `${i + 1}. [${c.conclusion_type ?? 'unknown'} ${(c.confidence ?? 0).toFixed(2)}] ${c.content}`)
+        .join('\n');
+
+      spinner.text = 'Synthesizing convergence...';
+      const question = this.buildConvergenceQuestion({
+        subjectId,
+        events,
+        distribution,
+        conclusionDigest,
+      });
+      const answerResult = await client.askProfile(subjectId, question);
+
+      if (answerResult.error) {
+        spinner.fail(chalk.red(`Converge synthesis failed: ${answerResult.error}`));
+        return;
+      }
+
+      spinner.succeed(chalk.green(`Converged ${events.length} event-tagged memor${events.length === 1 ? 'y' : 'ies'}`));
+      this.printConvergence(
+        distribution,
+        answerResult.data?.answer ?? '',
+        this.formatApiError(conclusionsResult.error),
+      );
+
+      context.lastResult = {
+        subject_id: subjectId,
+        event_count: events.length,
+        distribution,
+        answer: answerResult.data?.answer,
+        confidence: answerResult.data?.confidence,
+        conclusions,
+        event_ids: events.map(event => event.memory.id),
+      };
+    } catch (error) {
+      spinner.fail(chalk.red(`Converge failed: ${error instanceof Error && error.message ? error.message : String(error)}`));
+    } finally {
+      resumeReadline();
+    }
+  }
+
+  private eventTypesFor(memory: MemoryEntry): EventType[] {
+    const types = new Set<EventType>();
+    for (const tag of memory.tags ?? []) {
+      const type = eventTypeFromTag(tag);
+      if (type) types.add(type);
+    }
+    return Array.from(types);
+  }
+
+  private eventDistribution(events: ConvergedEvent[]): Record<EventType, number> {
+    const distribution = Object.fromEntries(EVENT_TYPES.map(type => [type, 0])) as Record<EventType, number>;
+    for (const event of events) {
+      for (const type of event.types) {
+        distribution[type] += 1;
+      }
+    }
+    return distribution;
+  }
+
+  private formatEventDigest(events: ConvergedEvent[]): string {
+    return events.map((event, index) => {
+      const createdAt = event.memory.created_at ? event.memory.created_at.slice(0, 10) : 'unknown-date';
+      const content = event.memory.content.replace(/\s+/g, ' ').slice(0, 360);
+      return [
+        `${index + 1}. id=${event.memory.id}`,
+        `   date=${createdAt}`,
+        `   types=${event.types.map(type => eventTag(type)).join(', ')}`,
+        `   title=${event.memory.title}`,
+        `   content=${content}`,
+      ].join('\n');
+    }).join('\n\n');
+  }
+
+  private buildConvergenceQuestion(input: {
+    subjectId: string;
+    events: ConvergedEvent[];
+    distribution: Record<EventType, number>;
+    conclusionDigest: string;
+  }): string {
+    const distributionLines = EVENT_TYPES
+      .map(type => `- ${type}: ${input.distribution[type]}`)
+      .join('\n');
+    const topRevisits = input.events
+      .filter(event => event.types.includes('revisit'))
+      .slice(0, 5)
+      .map(event => event.memory.id)
+      .join(', ') || 'none';
+
+    return `You are synthesizing across ${input.events.length} captured events for subject ${input.subjectId}.
+
+Event distribution:
+${distributionLines}
+- top revisit event IDs: ${topRevisits}
+
+Pre-reasoned conclusions:
+${input.conclusionDigest || '(none available)'}
+
+Captured events with provenance:
+${this.formatEventDigest(input.events)}
+
+Produce exactly three blocks:
+
+MIND: Structural patterns across decisions and insights. What is this user systematically building toward? Where are decisions diverging from stated commitments?
+
+HEART: Emotional and motivational patterns across frustrations, abandons, and revisits. What keeps pulling them back? What keeps draining them?
+
+CONCIERGE: 1-3 concrete next actions. Each action must cite at least one event ID as provenance and answer what the user's past self would thank their present self for doing now.`;
+  }
+
+  private printConvergence(
+    distribution: Record<EventType, number>,
+    answer: string,
+    conclusionsError?: string,
+  ): void {
+    console.log(chalk.cyan('\nEvent distribution:'));
+    for (const type of EVENT_TYPES) {
+      console.log(chalk.gray(`  ${type.padEnd(12)} ${distribution[type]}`));
+    }
+    if (conclusionsError) {
+      console.log(chalk.yellow(`\nConclusions unavailable: ${conclusionsError}`));
+    }
+    console.log(chalk.cyan('\nConvergence:\n'));
+    console.log(answer.trim() || chalk.gray('(empty answer)'));
+    console.log('');
+  }
+
+  private formatApiError(error: unknown): string | undefined {
+    if (!error) return undefined;
+    if (typeof error === 'string') return error;
+    if (error instanceof Error) return error.message;
+    if (typeof error === 'object') {
+      const maybe = error as { message?: unknown; error?: unknown };
+      if (typeof maybe.message === 'string') return maybe.message;
+      if (typeof maybe.error === 'string') return maybe.error;
+    }
+    return String(error);
   }
 
   // Phase 2: Living Memory Profile commands

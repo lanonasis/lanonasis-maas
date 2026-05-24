@@ -7,6 +7,8 @@ vi.mock('ora', () => ({
     start: () => ({
       succeed: () => {},
       fail: () => {},
+      get text() { return ''; },
+      set text(_value: string) {},
     }),
   }),
 }));
@@ -93,6 +95,84 @@ describe('MemoryCommands', () => {
 
     expect(mockClient.updateMemory).toHaveBeenCalledWith(memoryId, {
       content: 'replace this content',
+    });
+  });
+
+  it('converges event-tagged memories through profile synthesis', async () => {
+    const memoriesByTag: Record<string, any[]> = {
+      'event:decision': [{
+        id: 'mem-decision',
+        title: 'Use event ontology',
+        content: 'We decided to use event tags as the convergence spine.',
+        memory_type: 'project',
+        status: 'active',
+        access_count: 0,
+        user_id: 'user-1',
+        tags: ['event:decision'],
+        created_at: '2026-05-24T10:00:00Z',
+        updated_at: '2026-05-24T10:00:00Z',
+      }],
+      'event:frustration': [{
+        id: 'mem-frustration',
+        title: 'Thin wrappers are not enough',
+        content: 'The implementation keeps collapsing into memory search.',
+        memory_type: 'project',
+        status: 'active',
+        access_count: 0,
+        user_id: 'user-1',
+        tags: ['event:frustration'],
+        created_at: '2026-05-24T11:00:00Z',
+        updated_at: '2026-05-24T11:00:00Z',
+      }],
+      'event:insight': [{
+        id: 'mem-insight',
+        title: 'Convergence needs provenance',
+        content: 'Insight connects event IDs to next actions.',
+        memory_type: 'knowledge',
+        status: 'active',
+        access_count: 0,
+        user_id: 'user-1',
+        tags: ['event:insight', 'backfilled:true'],
+        created_at: '2026-05-24T12:00:00Z',
+        updated_at: '2026-05-24T12:00:00Z',
+      }],
+    };
+    const mockClient = {
+      listMemories: vi.fn().mockImplementation(async (options: { tags?: string[] }) => ({
+        data: { data: memoriesByTag[options.tags?.[0] ?? ''] ?? [] },
+      })),
+      listInferredConclusions: vi.fn().mockResolvedValue({
+        data: { conclusions: [{ conclusion_type: 'pattern', confidence: 0.82, content: 'The user values substance over wrappers.' }] },
+      }),
+      askProfile: vi.fn().mockResolvedValue({
+        data: { answer: 'MIND: Build toward convergence.\nHEART: Thin wrappers drain trust.\nCONCIERGE: Cite mem-decision.', confidence: 0.9 },
+      }),
+    };
+
+    (commands as any).client = mockClient;
+    await commands.contextConverge(['--subject=subject-1', '--limit=20'], context);
+
+    expect(mockClient.listMemories).toHaveBeenCalledWith(expect.objectContaining({
+      tags: ['event:decision'],
+      status: 'active',
+      limit: 20,
+    }));
+    expect(mockClient.listInferredConclusions).toHaveBeenCalledWith({
+      subject_id: 'subject-1',
+      limit: 12,
+    });
+    expect(mockClient.askProfile).toHaveBeenCalledTimes(1);
+    expect(mockClient.askProfile.mock.calls[0][0]).toBe('subject-1');
+    expect(mockClient.askProfile.mock.calls[0][1]).toContain('mem-decision');
+    expect(mockClient.askProfile.mock.calls[0][1]).toContain('MIND: Structural patterns');
+    expect(context.lastResult).toMatchObject({
+      subject_id: 'subject-1',
+      event_count: 2,
+      distribution: {
+        decision: 1,
+        frustration: 1,
+        insight: 0,
+      },
     });
   });
 });
