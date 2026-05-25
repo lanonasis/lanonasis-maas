@@ -10,6 +10,7 @@ import chalk from 'chalk';
 import ora from 'ora';
 import { CommandContext } from '../config/types.js';
 import { withSpinner } from '../utils/spinner-utils.js';
+import { eventTag, isEventType, EVENT_TYPES, type EventType } from '../events/index.js';
 
 const VALID_MEMORY_TYPES = [
   'context',
@@ -57,13 +58,14 @@ export class MemoryCommands {
   
   async create(args: string[], context: CommandContext) {
     if (args.length < 2) {
-      console.log(chalk.yellow('Usage: create <title> <content> [--type=<type>] [--tags=tag1,tag2]'));
+      console.log(chalk.yellow('Usage: create <title> <content> [--type=<type>] [--tags=tag1,tag2] [--event=<event-type>]'));
       return;
     }
-    
-    // Parse arguments for type and tags
+
+    // Parse arguments for type, tags, and event
     let memory_type: MemoryType = 'context';
     let tags: string[] = [];
+    let eventTypeFlag: EventType | undefined;
     const filteredArgs: string[] = [];
 
     for (let i = 0; i < args.length; i++) {
@@ -82,11 +84,29 @@ export class MemoryCommands {
         }
       } else if (arg.startsWith('--tags=')) {
         tags = arg.substring(7).split(',').map(t => t.trim()).filter(Boolean);
+      } else if (arg.startsWith('--event=')) {
+        const candidate = arg.substring(8);
+        if (isEventType(candidate)) {
+          eventTypeFlag = candidate;
+        } else {
+          console.log(
+            chalk.yellow(
+              `Warning: Invalid event type "${candidate}". Ignoring.\n` +
+              `Valid event types: ${EVENT_TYPES.join(', ')}`
+            )
+          );
+        }
       } else {
         filteredArgs.push(arg);
       }
     }
-    
+
+    // Prepend event tag if --event was provided (dedup against existing tags)
+    if (eventTypeFlag) {
+      const tag = eventTag(eventTypeFlag);
+      if (!tags.includes(tag)) tags = [tag, ...tags];
+    }
+
     if (filteredArgs.length < 2) {
       console.log(chalk.yellow('Error: Title and content are required'));
       return;
