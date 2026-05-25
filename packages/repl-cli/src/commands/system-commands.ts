@@ -1,5 +1,6 @@
 import chalk from 'chalk';
 import { CommandContext } from '../config/types.js';
+import { getPersonaRegistry } from '../personas/registry.js';
 
 export class SystemCommands {
   async mode(args: string[], context: CommandContext) {
@@ -20,9 +21,11 @@ export class SystemCommands {
   }
   
   async status(args: string[], context: CommandContext) {
+    const persona = getPersonaRegistry().active();
     console.log(chalk.cyan('REPL Status'));
     console.log(chalk.gray('═'.repeat(40)));
     console.log(`Mode: ${chalk.white(context.mode)}`);
+    console.log(`Persona: ${chalk.white(persona.label)} ${chalk.gray(`(${persona.name})`)}`);
     console.log(`API: ${chalk.white(context.config.apiUrl)}`);
     console.log(`MCP: ${context.config.useMCP ? chalk.green('Enabled') : chalk.red('Disabled')}`);
     console.log(`Auth: ${context.config.authToken ? chalk.green('Configured') : chalk.yellow('Not configured')}`);
@@ -41,6 +44,11 @@ export class SystemCommands {
     console.log('  list [limit]            - List recent memories');
     console.log('  get <id>                - Get a specific memory');
     console.log('  delete <id>             - Delete a memory');
+    console.log('');
+    console.log(chalk.yellow('Persona:'));
+    console.log('  persona                 - Show active persona');
+    console.log('  persona list            - List available personas');
+    console.log('  persona switch <name>   - Switch active persona (mind/heart/concierge/lzero)');
     console.log('');
     console.log(chalk.yellow('System Commands:'));
     console.log('  mode <remote|local>     - Switch operation mode');

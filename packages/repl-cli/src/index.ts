@@ -59,6 +59,7 @@ program
   .option('--ai-router <url>', 'Override AI router URL')
   .option('--token <token>', 'Authentication token')
   .option('--model <model>', 'Model label/override (default: L-Zero)')
+  .option('--config <path>', 'Path to a custom repl-config.json (enables side-by-side persona configs)')
   .action(async (options) => {
     // Try to get stored token if not provided
     let authToken = options.token;
@@ -72,7 +73,7 @@ program
       aiRouterUrl: options.aiRouter,
       authToken: authToken || undefined,
       openaiModel: options.model
-    });
+    }, { configPath: options.config });
 
     const repl = new ReplEngine(config);
     await repl.start();
@@ -287,8 +288,9 @@ program
 program
   .command('config')
   .description('Show current configuration')
-  .action(async () => {
-    const config = await loadConfig({});
+  .option('--config <path>', 'Path to a custom repl-config.json')
+  .action(async (options) => {
+    const config = await loadConfig({}, { configPath: options.config });
     console.log(chalk.cyan('Current Configuration:'));
     // Mask sensitive values
     const safeConfig = {
