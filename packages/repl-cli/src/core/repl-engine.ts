@@ -249,6 +249,16 @@ export class ReplEngine {
     // Capture-event ontology (tag, untag, detect, types)
     this.registry.register('event', (args, ctx) => this.eventCommands.run(args, ctx), ['ev']);
 
+    // Context convergence (Phase B): synthesize event:* memories via Mind/Heart/Concierge
+    this.registry.register('context', async (args, ctx) => {
+      const sub = args[0];
+      if (sub === 'converge') {
+        await this.memoryCommands.contextConverge(args.slice(1), ctx);
+      } else {
+        console.log(chalk.yellow('Usage: context converge --subject=<uuid> [--limit=200] [--include-backfilled]'));
+      }
+    }, ['ctx']);
+
     // System commands
     this.registry.register('mode', (args, ctx) => this.systemCommands.mode(args, ctx));
     this.registry.register('status', (args, ctx) => this.systemCommands.status(args, ctx));
@@ -753,6 +763,7 @@ export class ReplEngine {
     console.log(chalk.gray('    event tag <id> <type>   - Add event:<type> tag to a memory'));
     console.log(chalk.gray('    event untag <id> [type] - Remove event tag(s) from a memory'));
     console.log(chalk.gray('    create ... --event=<t>  - Save a memory pre-tagged with event:<t>'));
+    console.log(chalk.gray('    context converge --subject=<id> - Synthesize event:* memories'));
 
     console.log(chalk.white('\n  System Commands:'));
     console.log(chalk.gray('    nl [on|off]             - Toggle natural language mode'));
