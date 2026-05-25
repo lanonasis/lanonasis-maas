@@ -114,3 +114,12 @@ mcp-server/
 .claude/settings.local.json
 .cursor/settings.local.json
 .windsurf/settings.local.json
+
+# Pi taskplane runtime state — per-developer, regenerates from base templates.
+# We commit project rules in .pi/agents/supervisor.md (shared) but exclude
+# audit logs, metrics, and the local migrations ledger.
+.pi/teams/
+.pi/taskplane.json
+# cli/ subpackage has no project-specific Pi rules yet (template-only supervisor).
+# Ignore the whole tree; un-ignore (or `git add -f`) when project rules are added.
+cli/.pi/
