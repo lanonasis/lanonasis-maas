@@ -49,6 +49,21 @@ const VALID_MEMORY_STATUSES = [
 type MemoryType = (typeof VALID_MEMORY_TYPES)[number];
 type MemoryStatus = (typeof VALID_MEMORY_STATUSES)[number];
 
+/**
+ * Minimum non-backfilled event-tagged memories required before
+ * `/context converge` calls askProfile() for Mind/Heart/Concierge synthesis.
+ *
+ * Below this floor, the prompt template — which always asks for three
+ * structured blocks — invites the model to fabricate patterns from
+ * insufficient signal. We instead surface the events themselves and
+ * tell the user to capture more before synthesizing.
+ *
+ * Three was chosen because Mind/Heart/Concierge synthesizes across three
+ * lenses; with fewer events than lenses, distribution is structurally
+ * thin and any "pattern" is a hallucination.
+ */
+const MIN_EVENTS_FOR_CONVERGENCE = 3;
+
 interface ConvergedEvent {
   memory: MemoryEntry;
   types: EventType[];
@@ -565,11 +580,37 @@ export class MemoryCommands {
 
       if (events.length === 0) {
         spinner.succeed(chalk.gray('No event-tagged memories found for convergence.'));
-        context.lastResult = { events: [], distribution: {} };
+        context.lastResult = { events: [], distribution: {}, low_signal: true };
         return;
       }
 
       const distribution = this.eventDistribution(events);
+
+      // Low-signal guard: with fewer than MIN_EVENTS_FOR_CONVERGENCE events,
+      // skip askProfile entirely. The Mind/Heart/Concierge prompt cannot
+      // honestly synthesize across so few data points; surfacing the raw
+      // events is more useful (and more truthful) than fabricated patterns.
+      if (events.length < MIN_EVENTS_FOR_CONVERGENCE) {
+        spinner.succeed(chalk.yellow(
+          `Only ${events.length} event-tagged memor${events.length === 1 ? 'y' : 'ies'} captured — ` +
+          `need at least ${MIN_EVENTS_FOR_CONVERGENCE} for convergence.`
+        ));
+        console.log(chalk.gray('\nEvents found:'));
+        for (const event of events) {
+          const tagList = event.types.map(t => eventTag(t)).join(', ');
+          console.log(chalk.gray(`  [${tagList}] ${event.memory.title} (${event.memory.id})`));
+        }
+        console.log(chalk.gray('\nCapture more events with `create ... --event=<type>` or `event tag <id> <type>`,'));
+        console.log(chalk.gray('then re-run `context converge` to synthesize.'));
+        context.lastResult = {
+          subject_id: subjectId,
+          event_count: events.length,
+          distribution,
+          low_signal: true,
+          event_ids: events.map(e => e.memory.id),
+        };
+        return;
+      }
       const conclusionsResult = await client.listInferredConclusions({
         subject_id: subjectId,
         limit: 12,
