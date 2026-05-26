@@ -35,15 +35,13 @@ try {
   // ── 1. Registry exercises ───────────────────────────────────────────
   console.log('\n[1] PersonaRegistry');
   // Paths are relative to this file's location (tests/smoke/persona.mjs).
-  // The dist path is preferred for end-to-end coverage; the source-tree
-  // fallback lets the script run pre-build via tsx.
-  const { getPersonaRegistry, BUILTIN_PERSONAS } = await import('../../dist/index.js')
-    .catch(async () => {
-      return await import('../../src/personas/registry.ts').then(async (m) => ({
-        getPersonaRegistry: m.getPersonaRegistry,
-        BUILTIN_PERSONAS: (await import('../../src/personas/builtin.ts')).BUILTIN_PERSONAS,
-      }));
-    });
+  // We import from src/ directly — dist/index.js is the CLI entry and
+  // does NOT re-export persona helpers (would require a separate
+  // package surface), so destructuring from dist returns `undefined`
+  // for these symbols and fails the smoke. Always go to source via
+  // the tsx runtime (this script is run with `bunx tsx`).
+  const { getPersonaRegistry } = await import('../../src/personas/registry.ts');
+  const { BUILTIN_PERSONAS } = await import('../../src/personas/builtin.ts');
 
   const registry = getPersonaRegistry();
   const list = registry.list();
