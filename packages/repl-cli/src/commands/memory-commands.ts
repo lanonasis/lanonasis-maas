@@ -565,6 +565,11 @@ export class MemoryCommands {
 
         for (const memory of result.data?.data ?? []) {
           if (!includeBackfilled && memory.tags?.includes(TAG_BACKFILLED)) continue;
+          // Cross-subject contamination guard: the SDK's listMemories has no
+          // subject_id filter today, so events from other users in the same
+          // org would otherwise leak into this subject's synthesis. Drop any
+          // memory whose user_id doesn't match the requested subject.
+          if (memory.user_id !== subjectId) continue;
           byId.set(memory.id, memory);
         }
       }

@@ -107,7 +107,7 @@ describe('MemoryCommands', () => {
         memory_type: 'project',
         status: 'active',
         access_count: 0,
-        user_id: 'user-1',
+        user_id: 'subject-1',
         tags: ['event:decision'],
         created_at: '2026-05-24T10:00:00Z',
         updated_at: '2026-05-24T10:00:00Z',
@@ -119,7 +119,7 @@ describe('MemoryCommands', () => {
         memory_type: 'project',
         status: 'active',
         access_count: 0,
-        user_id: 'user-1',
+        user_id: 'subject-1',
         tags: ['event:frustration'],
         created_at: '2026-05-24T11:00:00Z',
         updated_at: '2026-05-24T11:00:00Z',
@@ -131,7 +131,7 @@ describe('MemoryCommands', () => {
         memory_type: 'knowledge',
         status: 'active',
         access_count: 0,
-        user_id: 'user-1',
+        user_id: 'subject-1',
         tags: ['event:insight', 'backfilled:true'],
         created_at: '2026-05-24T12:00:00Z',
         updated_at: '2026-05-24T12:00:00Z',
@@ -143,7 +143,7 @@ describe('MemoryCommands', () => {
         memory_type: 'project',
         status: 'active',
         access_count: 0,
-        user_id: 'user-1',
+        user_id: 'subject-1',
         tags: ['event:commitment'],
         created_at: '2026-05-24T13:00:00Z',
         updated_at: '2026-05-24T13:00:00Z',
@@ -216,7 +216,7 @@ describe('MemoryCommands', () => {
       memory_type: 'project',
       status: 'active',
       access_count: 0,
-      user_id: 'user-1',
+      user_id: 'subject-low',
       tags: ['event:commitment'],
       created_at: '2026-05-24T10:00:00Z',
       updated_at: '2026-05-24T10:00:00Z',
@@ -253,7 +253,7 @@ describe('MemoryCommands', () => {
         memory_type: 'project',
         status: 'active',
         access_count: 0,
-        user_id: 'user-1',
+        user_id: 'subject-2',
         tags: ['event:decision'],
         created_at: '2026-05-24T09:00:00Z',
         updated_at: '2026-05-24T09:00:00Z',
@@ -265,7 +265,7 @@ describe('MemoryCommands', () => {
         memory_type: 'project',
         status: 'active',
         access_count: 0,
-        user_id: 'user-1',
+        user_id: 'subject-2',
         tags: ['event:frustration'],
         created_at: '2026-05-24T10:00:00Z',
         updated_at: '2026-05-24T10:00:00Z',
@@ -287,5 +287,76 @@ describe('MemoryCommands', () => {
       event_count: 2,
       low_signal: true,
     });
+  });
+
+  it('converge: drops other-user memories before synthesis (cross-subject contamination guard)', async () => {
+    // Subject under test
+    const me = 'subject-target';
+    const intruder = 'subject-other-user';
+
+    // 4 event-tagged memories total: 3 belong to `me`, 1 belongs to another user.
+    // Without the user_id filter, the other user's `event:insight` would leak
+    // into `me`'s Mind/Heart/Concierge synthesis — that's the contamination
+    // this test guards against. With the filter, only 3 events reach synthesis.
+    const memoriesByTag: Record<string, any[]> = {
+      'event:decision': [{
+        id: 'mem-mine-d', user_id: me, tags: ['event:decision'],
+        title: 'My decision', content: 'we chose A over B for my project',
+        memory_type: 'project', status: 'active', access_count: 0,
+        created_at: '2026-05-24T09:00:00Z', updated_at: '2026-05-24T09:00:00Z',
+      }],
+      'event:commitment': [{
+        id: 'mem-mine-c', user_id: me, tags: ['event:commitment'],
+        title: 'My commitment', content: 'I will ship by Friday',
+        memory_type: 'project', status: 'active', access_count: 0,
+        created_at: '2026-05-24T10:00:00Z', updated_at: '2026-05-24T10:00:00Z',
+      }],
+      'event:insight': [
+        {
+          id: 'mem-mine-i', user_id: me, tags: ['event:insight'],
+          title: 'My insight', content: 'these two problems are the same',
+          memory_type: 'knowledge', status: 'active', access_count: 0,
+          created_at: '2026-05-24T11:00:00Z', updated_at: '2026-05-24T11:00:00Z',
+        },
+        {
+          id: 'mem-intruder-i', user_id: intruder, tags: ['event:insight'],
+          title: 'Someone elses insight', content: 'sensitive content from another user',
+          memory_type: 'knowledge', status: 'active', access_count: 0,
+          created_at: '2026-05-24T12:00:00Z', updated_at: '2026-05-24T12:00:00Z',
+        },
+      ],
+    };
+    const mockClient = {
+      listMemories: vi.fn().mockImplementation(async (opts: { tags?: string[] }) => ({
+        data: { data: memoriesByTag[opts.tags?.[0] ?? ''] ?? [] },
+      })),
+      listInferredConclusions: vi.fn().mockResolvedValue({ data: { conclusions: [] } }),
+      askProfile: vi.fn().mockResolvedValue({
+        data: { answer: 'MIND: ...\nHEART: ...\nCONCIERGE: ...', confidence: 0.8 },
+      }),
+    };
+    (commands as any).client = mockClient;
+
+    await commands.contextConverge([`--subject=${me}`], context);
+
+    // Synthesis fires (3 of mine ≥ MIN_EVENTS_FOR_CONVERGENCE)
+    expect(mockClient.askProfile).toHaveBeenCalledTimes(1);
+
+    // The prompt must include only the requesting subject's events
+    const prompt = mockClient.askProfile.mock.calls[0][1] as string;
+    expect(prompt).toContain('mem-mine-d');
+    expect(prompt).toContain('mem-mine-c');
+    expect(prompt).toContain('mem-mine-i');
+    expect(prompt).not.toContain('mem-intruder-i');
+    expect(prompt).not.toContain('sensitive content from another user');
+
+    expect(context.lastResult).toMatchObject({
+      subject_id: me,
+      event_count: 3,
+      event_ids: expect.arrayContaining(['mem-mine-d', 'mem-mine-c', 'mem-mine-i']),
+    });
+    // Defensive: the other user's id must not appear anywhere in event_ids
+    const ids = (context.lastResult as any).event_ids as string[];
+    expect(ids).not.toContain('mem-intruder-i');
   });
 });

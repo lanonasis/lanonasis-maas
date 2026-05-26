@@ -77,8 +77,38 @@ export function stripAllEventTags(tags: string[]): string[] {
     && !t.startsWith('abandoned-from:'));
 }
 
-/** Strip only `event:<type>` (leave other event tags + payload tags). */
+/**
+ * Payload-tag prefixes associated with each event type. When an
+ * `event:<type>` tag is removed, the orphaned payload tags get removed
+ * too — leaving `due:friday` on a memory that's no longer marked
+ * `event:commitment` is semantic drift.
+ *
+ * Only event types with payload tags are listed; the rest have an
+ * empty array and the strip is a no-op for payload tags.
+ */
+const PAYLOAD_PREFIXES_BY_TYPE: Record<EventType, readonly string[]> = {
+  decision:    [],
+  commitment:  ['due:'],
+  frustration: ['tool:'],
+  surprise:    [],
+  insight:     [],
+  revisit:     ['revisit-of:'],
+  abandon:     ['abandoned-from:'],
+};
+
+/**
+ * Strip `event:<type>` and any payload tags that belong to that type.
+ * Leaves other `event:*` tags and unrelated tags untouched.
+ *
+ * Example: stripEventTypeTag(['event:commitment','due:friday','other'], 'commitment')
+ *   → ['other']   (event:commitment AND due:friday both removed)
+ */
 export function stripEventTypeTag(tags: string[], type: EventType): string[] {
   const target = eventTag(type);
-  return tags.filter(t => t !== target);
+  const payloadPrefixes = PAYLOAD_PREFIXES_BY_TYPE[type];
+  return tags.filter(t => {
+    if (t === target) return false;
+    for (const p of payloadPrefixes) if (t.startsWith(p)) return false;
+    return true;
+  });
 }

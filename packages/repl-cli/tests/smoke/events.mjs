@@ -116,9 +116,37 @@ try {
   assert(!oneStripped.includes('event:decision'),
     'stripEventTypeTag removes event:decision');
   assert(oneStripped.includes('event:commitment') && oneStripped.includes('due:friday'),
-    'stripEventTypeTag leaves other event tags intact');
+    'stripEventTypeTag(decision) leaves event:commitment + due:friday intact (different type, different payload)');
   assert(oneStripped.includes('other-tag'),
     'stripEventTypeTag preserves non-event tags');
+
+  // Fix 3: stripping a type ALSO strips that type's own payload tags
+  // (otherwise removing event:commitment would orphan due:friday — semantic drift)
+  const commitmentStripped = stripEventTypeTag(tagsBefore, 'commitment');
+  assert(!commitmentStripped.includes('event:commitment'),
+    'stripEventTypeTag(commitment) removes event:commitment');
+  assert(!commitmentStripped.includes('due:friday'),
+    'stripEventTypeTag(commitment) ALSO removes orphaned due:* payload (no semantic drift)');
+  assert(commitmentStripped.includes('event:decision'),
+    'stripEventTypeTag(commitment) leaves unrelated event types alone');
+  assert(commitmentStripped.includes('other-tag'),
+    'stripEventTypeTag(commitment) preserves non-event tags');
+
+  // Spot-check the rest of the payload-prefix mapping
+  const revisitTags = ['event:revisit', 'revisit-of:abc-123', 'other-tag'];
+  const revisitStripped = stripEventTypeTag(revisitTags, 'revisit');
+  assert(!revisitStripped.includes('revisit-of:abc-123'),
+    'stripEventTypeTag(revisit) removes revisit-of:* payload');
+
+  const abandonTags = ['event:abandon', 'abandoned-from:xyz-789', 'other-tag'];
+  const abandonStripped = stripEventTypeTag(abandonTags, 'abandon');
+  assert(!abandonStripped.includes('abandoned-from:xyz-789'),
+    'stripEventTypeTag(abandon) removes abandoned-from:* payload');
+
+  const frustrationTags = ['event:frustration', 'tool:bun', 'other-tag'];
+  const frustrationStripped = stripEventTypeTag(frustrationTags, 'frustration');
+  assert(!frustrationStripped.includes('tool:bun'),
+    'stripEventTypeTag(frustration) removes tool:* payload');
 
   // ── 3. Type guards ───────────────────────────────────────────────────
   console.log('\n[3] Type guards');
