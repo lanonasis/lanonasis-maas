@@ -1,6 +1,6 @@
 {
   "name": "@lanonasis/cli",
-  "version": "3.9.15",
+  "version": "3.10.0",
   "description": "Professional CLI for LanOnasis Memory as a Service (MaaS) with MCP support, seamless inline editing, and enterprise-grade security",
   "keywords": [
     "lanonasis",
@@ -25,6 +25,7 @@
   },
   "author": "LanOnasis Team",
   "license": "MIT",
+  "private": false,
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -55,6 +56,8 @@
     "@lanonasis/mem-intel-sdk": "2.1.0",
     "@lanonasis/oauth-client": "2.0.4",
     "@lanonasis/security-sdk": "1.0.5",
+    "@lanonasis/privacy-sdk": "workspace:*",
+    "@lanonasis/secret-prescan": "workspace:*",
     "@modelcontextprotocol/sdk": "^1.28.0",
     "axios": "^1.14.0",
     "chalk": "^5.6.2",
@@ -85,6 +88,9 @@
     "ts-jest": "^29.4.6",
     "typescript": "^6.0.2"
   },
+  "bundledDependencies": [
+    "@lanonasis/secret-prescan"
+  ],
   "overrides": {
     "@jest/transform": "^30.3.0",
     "@hono/node-server": "^1.19.10",
@@ -100,7 +106,7 @@
     "test-exclude": "^8.0.0"
   },
   "scripts": {
-    "build": "rimraf dist && tsc -p tsconfig.json && chmod +x dist/index.js dist/mcp-server-entry.js 2>/dev/null || true",
+    "build": "rimraf dist && tsc -p tsconfig.json && (chmod +x dist/index.js dist/mcp-server-entry.js 2>/dev/null || true)",
     "prepublishOnly": "npm run build",
     "postinstall": "node scripts/postinstall.js",
     "test": "[ -f node_modules/jest/bin/jest.js ] || bun install --no-save; node --experimental-vm-modules node_modules/jest/bin/jest.js",
