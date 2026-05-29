@@ -10,6 +10,7 @@ import { configCommands } from './commands/config.js';
 import { orgCommands } from './commands/organization.js';
 import { mcpCommands } from './commands/mcp.js';
 import apiKeysCommand from './commands/api-keys.js';
+import prescanCommand from './commands/prescan.js';
 import { CLIConfig } from './utils/config.js';
 import { APIClient } from './utils/api.js';
 import { getMCPClient } from './utils/mcp-client.js';
@@ -493,6 +494,8 @@ orgCommands(orgCmd);
 // API Key management commands (require auth)
 requireAuth(apiKeysCommand);
 program.addCommand(apiKeysCommand);
+// Prescan commands (no auth required — local file scanner)
+program.addCommand(prescanCommand);
 // Dashboard management commands (require auth)
 const dashboardCmd = program
     .command('dashboard')
