@@ -648,19 +648,36 @@ async function handleVendorKeyFlow(config) {
     ]);
     await handleVendorKeyAuth(vendorKey, config);
 }
+function isHeadlessEnvironment() {
+    if (process.env.SSH_CONNECTION || process.env.SSH_CLIENT || process.env.SSH_TTY)
+        return true;
+    if (!process.stdout.isTTY)
+        return true;
+    if (process.platform === 'linux' && !process.env.DISPLAY && !process.env.WAYLAND_DISPLAY)
+        return true;
+    return false;
+}
 async function handleOAuthFlow(config) {
     console.log();
     console.log(chalk.yellow('🌐 Browser-Based OAuth2 Authentication'));
     console.log(chalk.gray('Secure authentication using OAuth2 with PKCE'));
     console.log();
-    const { openBrowser } = await inquirer.prompt([
-        {
-            type: 'confirm',
-            name: 'openBrowser',
-            message: 'Open browser for OAuth2 authentication?',
-            default: true
-        }
-    ]);
+    const headless = isHeadlessEnvironment();
+    if (headless) {
+        console.log(chalk.yellow('⚠️  Headless/remote environment detected — skipping browser flow'));
+        console.log(chalk.gray('   Use the manual token paste path below instead.'));
+        console.log();
+    }
+    const { openBrowser } = headless
+        ? { openBrowser: false }
+        : await inquirer.prompt([
+            {
+                type: 'confirm',
+                name: 'openBrowser',
+                message: 'Open browser for OAuth2 authentication?',
+                default: true
+            }
+        ]);
     if (!openBrowser) {
         // Fallback: manual token paste for headless/remote environments
         console.log();

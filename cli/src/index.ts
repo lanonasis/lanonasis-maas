@@ -12,7 +12,7 @@ import { configCommands } from './commands/config.js';
 import { orgCommands } from './commands/organization.js';
 import { mcpCommands } from './commands/mcp.js';
 import apiKeysCommand from './commands/api-keys.js';
-import { prescanCommand } from './commands/prescan/index.js';
+import prescanCommand from './commands/prescan.js';
 import { CLIConfig } from './utils/config.js';
 import { APIClient, UserProfile } from './utils/api.js';
 import { getMCPClient } from './utils/mcp-client.js';
