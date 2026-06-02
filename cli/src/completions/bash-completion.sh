@@ -16,7 +16,7 @@ _lanonasis_completions() {
             # Main commands
             local commands=$(echo "$completion_data" | jq -r '.commands[]?.name // empty' 2>/dev/null)
             if [[ -z "$commands" ]]; then
-                commands="init login auth logout status health docs memory mem topic topics config org organization api-keys mcp dashboard documentation sdk api rest deploy deployment service services"
+                commands="init login auth logout status health docs memory mem topic topics config org organization api-keys prescan mcp dashboard documentation sdk api rest deploy deployment service services"
             fi
             COMPREPLY=($(compgen -W "$commands" -- "$cur"))
             ;;
@@ -34,6 +34,9 @@ _lanonasis_completions() {
                     ;;
                 config)
                     COMPREPLY=($(compgen -W "get set list reset" -- "$cur"))
+                    ;;
+                prescan)
+                    COMPREPLY=($(compgen -W "run status" -- "$cur"))
                     ;;
                 api-keys)
                     COMPREPLY=($(compgen -W "list create revoke rotate" -- "$cur"))

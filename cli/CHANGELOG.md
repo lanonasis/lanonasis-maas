@@ -1,5 +1,19 @@
 # Changelog - @lanonasis/cli
 
+## [3.10.0] - 2026-05-26
+
+### ✨ New Features
+
+- **Secret prescan commands (`lanonasis prescan`)**: New command group for scanning files and directories for secrets and PII before MIRA context extraction. Provides machine-parseable output and CI-friendly exit codes.
+  - `lanonasis prescan scan <path>` — Scans an entire directory tree. Reports are value-stripped (no raw secrets in output). Emits structured `---PRESCAN SUMMARY---` block for piping/scripting. Exit codes: `0`=safe, `1`=flagged, `2`=quarantined.
+  - `lanonasis prescan audit <file>` — Audits a single file. Supports `--verbose` for per-detection detail including type, sensitivity, confidence, masked sample, and applicable regulations. CI-friendly exit codes.
+  - `lanonasis prescan safe <file>` — Boolean gate: checks if a file is safe for MIRA extraction. Exits `0` if safe, `1` otherwise.
+- **Prescan does not require authentication** — runs entirely locally against the `@lanonasis/secret-prescan` engine and `@lanonasis/privacy-sdk` pattern registry.
+
+### 📦 Package
+
+- Added `"private": false` to enable registry sync audit tooling to track this package across npm and GitHub Packages.
+
 ## [3.9.15] - 2026-04-04
 
 ### 🐛 Bug Fixes

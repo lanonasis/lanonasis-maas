@@ -265,6 +265,29 @@ export async function generateCompletionData() {
                 ]
             },
             {
+                name: 'prescan',
+                description: 'Local filesystem prescan for secrets/PII',
+                subcommands: [
+                    {
+                        name: 'run',
+                        description: 'Run prescan on a directory',
+                        options: [
+                            { name: '<path>', description: 'Root directory to scan', type: 'string', required: true },
+                            { name: '--exclude', description: 'Glob patterns to exclude', type: 'string' },
+                            { name: '--json', description: 'Output machine-parseable JSON', type: 'boolean' },
+                            { name: '--save', description: 'Save report to ~/.lanonasis/security/prescan/', type: 'boolean' },
+                            { name: '--fail-on', description: 'Exit non-zero threshold', type: 'choice', choices: ['none', 'flagged', 'quarantined'] },
+                            { name: '--ci', description: 'CI mode', type: 'boolean' }
+                        ]
+                    },
+                    {
+                        name: 'status',
+                        description: 'Show last prescan state and statistics',
+                        options: []
+                    }
+                ]
+            },
+            {
                 name: 'mcp',
                 description: 'Model Context Protocol commands',
                 subcommands: [

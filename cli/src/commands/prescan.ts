@@ -2,7 +2,7 @@ import { Command } from 'commander';
 import chalk from 'chalk';
 import { homedir } from 'os';
 import { join, basename } from 'path';
-import { existsSync, readFileSync, readdirSync, statSync } from 'fs';
+import { existsSync, readFileSync, readdirSync, statSync, mkdirSync } from 'fs';
 import { PrivacySDK } from '@lanonasis/privacy-sdk';
 import {
   prescan,
@@ -39,7 +39,6 @@ const PRESCAN_REPORT_DIR = join(homedir(), '.lanonasis', 'security', 'prescan');
 // ─────────────────────────────────────────────
 
 function ensureReportDir(): void {
-  const { mkdirSync } = require('fs');
   if (!existsSync(PRESCAN_REPORT_DIR)) {
     mkdirSync(PRESCAN_REPORT_DIR, { recursive: true, mode: 0o700 });
   }
@@ -83,14 +82,14 @@ function countPatterns(): number {
 }
 
 function validatePath(path: string): void {
-  const fs = require('fs');
-  if (!fs.existsSync(path)) {
+  try {
+    if (!statSync(path).isDirectory()) {
+      console.error(colors.error(`✖ Path is not a directory: ${path}`));
+      process.exit(1);
+    }
+  } catch (err: unknown) {
+    const code = err instanceof Error ? err.message : String(err);
     console.error(colors.error(`✖ Path does not exist: ${path}`));
-    process.exit(1);
-  }
-  const stat = fs.statSync(path);
-  if (!stat.isDirectory()) {
-    console.error(colors.error(`✖ Path is not a directory: ${path}`));
     process.exit(1);
   }
 }

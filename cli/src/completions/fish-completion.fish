@@ -46,6 +46,7 @@ complete -c lanonasis -f -n '__fish_use_subcommand' -a 'config' -d 'Configuratio
 complete -c lanonasis -f -n '__fish_use_subcommand' -a 'org' -d 'Organization management'
 complete -c lanonasis -f -n '__fish_use_subcommand' -a 'organization' -d 'Organization management (alias)'
 complete -c lanonasis -f -n '__fish_use_subcommand' -a 'api-keys' -d 'API key management'
+complete -c lanonasis -f -n '__fish_use_subcommand' -a 'prescan' -d 'Local filesystem prescan for secrets/PII'
 complete -c lanonasis -f -n '__fish_use_subcommand' -a 'mcp' -d 'Model Context Protocol commands'
 complete -c lanonasis -f -n '__fish_use_subcommand' -a 'dashboard' -d 'Dashboard management'
 complete -c lanonasis -f -n '__fish_use_subcommand' -a 'documentation' -d 'Documentation management'
@@ -101,6 +102,10 @@ complete -c lanonasis -f -n '__fish_lanonasis_using_command api-keys' -a 'list' 
 complete -c lanonasis -f -n '__fish_lanonasis_using_command api-keys' -a 'create' -d 'Create a new API key'
 complete -c lanonasis -f -n '__fish_lanonasis_using_command api-keys' -a 'revoke' -d 'Revoke an API key'
 complete -c lanonasis -f -n '__fish_lanonasis_using_command api-keys' -a 'rotate' -d 'Rotate an API key'
+
+# Prescan subcommands
+complete -c lanonasis -f -n '__fish_lanonasis_using_command prescan' -a 'run' -d 'Run prescan on a directory'
+complete -c lanonasis -f -n '__fish_lanonasis_using_command prescan' -a 'status' -d 'Show last prescan state and statistics'
 
 # MCP subcommands
 complete -c lanonasis -f -n '__fish_lanonasis_using_command mcp' -a 'status' -d 'Show MCP server status'

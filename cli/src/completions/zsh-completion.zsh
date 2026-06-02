@@ -32,6 +32,9 @@ _lanonasis() {
                 config)
                     _lanonasis_config_commands
                     ;;
+                prescan)
+                    _lanonasis_prescan_commands
+                    ;;
                 api-keys)
                     _lanonasis_apikeys_commands
                     ;;
@@ -69,6 +72,7 @@ _lanonasis_commands() {
         'org:Organization management'
         'organization:Organization management (alias)'
         'api-keys:API key management'
+        'prescan:Local filesystem prescan for secrets/PII'
         'mcp:Model Context Protocol commands'
         'dashboard:Dashboard management'
         'documentation:Documentation management'
@@ -147,6 +151,14 @@ _lanonasis_apikeys_commands() {
         'rotate:Rotate an API key'
     )
     _describe 'api-keys commands' subcommands
+}
+
+_lanonasis_prescan_commands() {
+    local subcommands; subcommands=(
+        'run:Run prescan on a directory'
+        'status:Show last prescan state and statistics'
+    )
+    _describe 'prescan commands' subcommands
 }
 
 _lanonasis_mcp_commands() {
