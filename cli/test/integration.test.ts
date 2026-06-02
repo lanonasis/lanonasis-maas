@@ -24,6 +24,34 @@ const TEST_CLI_VENDOR_KEY = process.env.TEST_CLI_VENDOR_KEY || '';
 
 const describeHttp = RUN_HTTP_INTEGRATION ? describe : describe.skip;
 
+function extractJsonFromOutput<T>(output: string): T {
+  const trimmed = output.trim();
+  if (!trimmed) {
+    throw new Error('Expected JSON output but received an empty string');
+  }
+
+  try {
+    return JSON.parse(trimmed) as T;
+  } catch {
+    const lines = trimmed.split('\n');
+    for (let i = 0; i < lines.length; i += 1) {
+      const line = lines[i].trimStart();
+      if (!line.startsWith('{') && !line.startsWith('[')) {
+        continue;
+      }
+
+      const candidate = lines.slice(i).join('\n').trim();
+      try {
+        return JSON.parse(candidate) as T;
+      } catch {
+        // Keep scanning until we find a parseable JSON payload.
+      }
+    }
+
+    throw new Error(`Unable to locate JSON payload in output: ${trimmed}`);
+  }
+}
+
 // Helper to run CLI commands with timeout
 async function runCli(args: string, options: { env?: Record<string, string>; stdin?: string; timeout?: number } = {}): Promise<{
   stdout: string;
@@ -254,6 +282,13 @@ describe('CLI Integration - Command Execution', () => {
 });
 
 describeHttp('CLI Integration - Live API', () => {
+  const liveApiEnv = {
+    HOME: process.env.HOME || '',
+    LANONASIS_VENDOR_KEY: TEST_CLI_VENDOR_KEY,
+    LANONASIS_FORCE_API: 'true',
+    CLI_FORCE_API: 'true'
+  };
+
   beforeAll(async () => {
     // Verify API is accessible
     if (!TEST_CLI_VENDOR_KEY) {
@@ -384,5 +419,71 @@ describeHttp('CLI Integration - Live API', () => {
     });
     expect(getResult.exitCode).toBe(0);
     expect(getResult.stdout).toContain(testValue);
+  });
+
+  describe('api-keys REST path (--no-mcp mode)', () => {
+    it('covers create/get/update/delete via /api/v1/api-keys', async () => {
+      const uniqueSuffix = randomUUID().slice(0, 8);
+      const keyName = `it-api-key-${uniqueSuffix}`;
+      const updatedName = `${keyName}-updated`;
+      const commandPrefix = `--no-mcp --api-url ${TEST_CLI_API_URL} api-keys`;
+
+      const createResult = await runCli(
+        `${commandPrefix} create --name "${keyName}" --access-level team --expires-in-days 1`,
+        { env: liveApiEnv, timeout: 30000 }
+      );
+      expect(createResult.exitCode).toBe(0);
+
+      const keyIdMatch = createResult.stdout.match(/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i);
+      expect(keyIdMatch).toBeTruthy();
+      const keyId = keyIdMatch?.[1] as string;
+
+      const getResult = await runCli(
+        `${commandPrefix} get ${keyId} --json`,
+        { env: liveApiEnv, timeout: 30000 }
+      );
+      expect(getResult.exitCode).toBe(0);
+      const createdKey = extractJsonFromOutput<{ id: string; name: string }>(getResult.stdout);
+      expect(createdKey.id).toBe(keyId);
+      expect(createdKey.name).toBe(keyName);
+
+      const updateResult = await runCli(
+        `${commandPrefix} update ${keyId} --name "${updatedName}"`,
+        { env: liveApiEnv, timeout: 30000 }
+      );
+      expect(updateResult.exitCode).toBe(0);
+
+      const updatedGetResult = await runCli(
+        `${commandPrefix} get ${keyId} --json`,
+        { env: liveApiEnv, timeout: 30000 }
+      );
+      expect(updatedGetResult.exitCode).toBe(0);
+      const updatedKey = extractJsonFromOutput<{ id: string; name: string }>(updatedGetResult.stdout);
+      expect(updatedKey.id).toBe(keyId);
+      expect(updatedKey.name).toBe(updatedName);
+
+      const deleteResult = await runCli(
+        `${commandPrefix} delete ${keyId} --force`,
+        { env: liveApiEnv, timeout: 30000 }
+      );
+      expect(deleteResult.exitCode).toBe(0);
+
+      const afterDeleteResult = await runCli(
+        `${commandPrefix} get ${keyId} --json`,
+        { env: liveApiEnv, timeout: 30000 }
+      );
+      expect(afterDeleteResult.exitCode).not.toBe(0);
+      expect(`${afterDeleteResult.stdout}\n${afterDeleteResult.stderr}`).toMatch(/404|not found|missing/i);
+    });
+
+    it('reports analytics usage as unsupported on current auth-gateway', async () => {
+      const result = await runCli(
+        `--no-mcp --api-url ${TEST_CLI_API_URL} api-keys analytics usage --json`,
+        { env: liveApiEnv, timeout: 15000 }
+      );
+
+      expect(result.exitCode).not.toBe(0);
+      expect(`${result.stdout}\n${result.stderr}`).toMatch(/not exposed by the current auth-gateway API/i);
+    });
   });
 });

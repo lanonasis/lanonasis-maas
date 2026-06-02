@@ -426,7 +426,8 @@ export async function quickStartCommand() {
             commands: [
                 { cmd: 'lanonasis topic create --name "Project"', desc: 'Create topic' },
                 { cmd: 'lanonasis mcp status', desc: 'Check MCP server' },
-                { cmd: 'lanonasis api-keys list', desc: 'Manage API keys' }
+                { cmd: 'lanonasis api-keys list', desc: 'Manage API keys' },
+                { cmd: 'lanonasis prescan run <path>', desc: 'Prescan filesystem for secrets/PII' }
             ]
         }
     ];

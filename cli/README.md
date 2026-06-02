@@ -1,11 +1,11 @@
-# @lanonasis/cli v3.9.13 - Auth Refresh Reliability
+# @lanonasis/cli v3.10.0 - Secret Prescan
 
 [![NPM Version](https://img.shields.io/npm/v/@lanonasis/cli)](https://www.npmjs.com/package/@lanonasis/cli)
 [![Downloads](https://img.shields.io/npm/dt/@lanonasis/cli)](https://www.npmjs.com/package/@lanonasis/cli)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Golden Contract](https://img.shields.io/badge/Onasis--Core-v0.1%20Compliant-gold)](https://api.lanonasis.com/.well-known/onasis.json)
 
-🎉 **NEW IN v3.9.13**: JWT/password CLI sessions now refresh through the real auth-gateway OAuth token contract, password login persists refresh metadata correctly, the MCP client no longer uses stale refresh routes, and the bundled `@lanonasis/mem-intel-sdk` is updated to `2.1.0` for scoped intelligence query support.
+🎉 **NEW IN v3.10.0**: Secret prescan commands for scanning files and directories for secrets/PII before MIRA context extraction — CI-friendly exit codes, machine-parseable output, value-stripped reports. No authentication required.
 
 ## 🚀 Quick Start
 
@@ -33,6 +33,37 @@ onasis health                                   # Verify system health
 # Create your first memory
 onasis memory create --title "Welcome" --content "My first memory"
 ```
+
+## 🔍 Secret Prescan (v3.10.0+)
+
+Scan files and directories for secrets and PII before MIRA context extraction. Reports are value-stripped — no raw secrets ever appear in output.
+
+```bash
+# Scan a directory tree
+lanonasis prescan scan ./src
+lanonasis prescan scan ./src --output ~/.hermes/private/context-scans/
+
+# Audit a single file (CI-friendly, exit codes: 0=safe 1=flagged 2=quarantined)
+lanonasis prescan audit ./config/secrets.ts --verbose
+
+# Boolean safety gate (used in scripts and pre-commit hooks)
+lanonasis prescan safe ./src/utils/api.ts && echo "safe to extract"
+```
+
+**Machine-parseable output** for piping and CI integration:
+```
+---PRESCAN SUMMARY---
+total_files:42
+safe:40
+flagged:1
+quarantined:1
+total_detections:3
+report_path:/path/to/report.json
+---QUARANTINED FILES---
+QUARANTINED:src/config/prod.ts
+```
+
+**No authentication required** — runs entirely locally.
 
 ## ✨ Professional CLI UX (v3.9.0+)
 
