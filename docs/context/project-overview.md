@@ -1,6 +1,6 @@
 # LanOnasis MaaS - Project Overview
 
-**Last verified:** 2026-05-16
+**Last verified:** 2026-05-26
 **Primary source for platform truth:** `/.devops/context-engineering/`
 **Role of this document:** MaaS-specific orientation and handoff
 
@@ -54,9 +54,27 @@ Use this split when reasoning about the app:
 | `src/routes/` | local route surface including memory, intelligence, profiles, auth, metrics |
 | `src/middleware/auth-aligned.ts` | current standalone auth and request-shaping middleware |
 | `src/services/` | app-local service layer |
-| `cli/package.json` | current published CLI metadata and binaries |
+| `cli/package.json` | current published CLI metadata and binaries (`@lanonasis/cli` v3.9.15) |
 | `package.json` | source of truth for app-local scripts |
 | `packages/` | SDK/package ownership map |
+| `apps/mcp-core/` | MCP server — the only app present in this repo's `apps/` directory |
+
+## Packages (Actual Inventory)
+
+All packages live under `packages/` within this repo:
+
+| Package | npm name | Version |
+|---------|----------|---------|
+| `lanonasis-sdk` | `@lanonasis/sdk` | 1.2.0 |
+| `memory-client` | `@lanonasis/memory-client` | 2.2.1 |
+| `memory-sdk` | `@lanonasis/memory-sdk-standalone` | 1.1.0 |
+| `recall-forge` | `@lanonasis/recall-forge` | 1.1.1 |
+| `claude-memory` | `@lanonasis/claude-memory` | 0.1.0 |
+| `repl-cli` | `@lanonasis/repl-cli` | 1.0.0 |
+| `ide-extension-core` | (internal) | — |
+| `memory-engine` | (internal, no package.json) | — |
+
+> **Note:** `@lanonasis/mem-intel-sdk` and `@lanonasis/security-sdk` are external packages consumed by `cli/` and the root app — they are NOT in this repo's `packages/` directory.
 
 ## Navigation
 
@@ -68,6 +86,7 @@ Use this split when reasoning about the app:
 | Claude/OpenClaw integrations | `components/claude-memory.md`, `components/recall-forge.md` |
 | editor integration support | `components/ide-extension-core.md` and `components/ide-extensions/*.md` |
 | local commands and workflows | `workflows/development.md` |
+| Paperclip agent context | See Org Chart at `~/.paperclip/instances/default/companies/a52b7ba3*/org-chart.md` |
 
 ## Tooling Reality
 
@@ -80,24 +99,29 @@ For reliable execution:
 
 ## Commands That Matter Most
 
-These are the app-level commands verified from `apps/lanonasis-maas/package.json`:
+Prefer **`bun`** for all tasks — this is a Bun workspace. Commands verified from `package.json`:
 
 ```bash
-npm run dev
-npm run build
-npm run test
-npm run type-check
-npm run lint
-npm run db:migrate
-npm run db:seed
+bun run dev          # start standalone Express server (tsx watch)
+bun run build        # tsc + tsc-alias
+bun run test         # jest
+bun run type-check   # tsc --noEmit
+bun run lint         # eslint src/**/*.ts
+bun run db:migrate   # tsx src/db/migrate.ts
+bun run db:seed      # tsx src/db/seed.ts
 ```
 
-CLI package commands verified from `apps/lanonasis-maas/cli/package.json`:
+CLI commands (from `cli/package.json`, `@lanonasis/cli` v3.9.15):
 
 ```bash
-npm run build --prefix cli
+npm run build --prefix cli   # rimraf dist && tsc
 npm test --prefix cli
 ```
+
+CLI binaries (verified from `cli/package.json`):
+- `onasis` → `dist/index.js`
+- `lanonasis` → `dist/index.js`
+- `lanonasis-mcp` → `dist/mcp-server-entry.js`
 
 ## Auth Notes
 
