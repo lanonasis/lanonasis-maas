@@ -28,6 +28,9 @@ yarn-error.log*
 coverage/
 .nyc_output/
 
+# TestSprite — keep generated reports/test code, ignore transient run artifacts
+testsprite_tests/tmp/
+
 # IDE
 .vscode/
 .idea/
