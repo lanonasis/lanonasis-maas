@@ -107,11 +107,18 @@ Pre-existing issues found while capturing the baseline (independent of TestSprit
 |---|---|---|
 | Test style | Unit + integration, heavily mocked | AI-generated E2E (UI flows) + API contract/security |
 | Where it runs | Local | TestSprite cloud |
-| Tests executed | 174 (124 + 50); mcp-core 0 | _tbd_ |
-| Pass / fail | 174 / 0 (+ 2 mcp-core suites broken) | _tbd_ |
-| Real coverage | ~0.71% statements | _n/a (behavioral, not line coverage)_ |
-| Bugs surfaced | 0 runtime (2 pre-existing compile failures) | _tbd — the point of the exercise_ |
-| Setup cost | already present | MCP install + running app + browser config |
+| Tests executed | 174 (124 + 50); mcp-core 0 | 10 (backend, smoke run) |
+| Pass / fail | 174 / 0 (+ 2 mcp-core suites broken) | 9 / 1 (90%) — the 1 fail is a dead-DB artifact, not a bug |
+| Real coverage | ~0.71% statements | n/a (black-box: auth/scope, error JSON, security headers) |
+| Bugs surfaced | 0 runtime (2 pre-existing compile failures) | 0 product bugs in smoke config; **but the run exposed 2 boot-blocking bugs** (auth-aligned type-import; MetricsCollector not exported) the mocked unit suite never caught |
+| Setup cost | already present | MCP install + key + getting the server to actually boot |
+
+### Smoke-run result (2026-06-07, backend)
+- 10 backend tests generated and executed in TestSprite cloud against a live local server on a **dummy DB / no credentials**.
+- 9/10 passed; the passes validate auth + `INVALID_PROJECT_SCOPE` enforcement, well-formed error JSON, and security headers (`X-Content-Type-Options`, `X-Frame-Options`, `WWW-Authenticate`). Only `GET /api/v1/services` was a true happy-path pass.
+- TC001 (`/health`) "failed" `==200` vs `503` — correct degraded reporting against the dead DB, **not a defect**.
+- Full report: `testsprite_tests/testsprite-mcp-test-report.md`. Dashboard: project `eb7bcd98-040c-4aec-bdf7-f401d876af4e`.
+- **Headline:** the highest-value defects came from making the server bootable, not from the test execution. For real business-logic coverage, re-run against local/staging Supabase with a seeded user + valid token.
 
 ---
 
