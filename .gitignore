@@ -126,3 +126,5 @@ mcp-server/
 # cli/ subpackage has no project-specific Pi rules yet (template-only supervisor).
 # Ignore the whole tree; un-ignore (or `git add -f`) when project rules are added.
 cli/.pi/
+
+testsprite_tests/tmp/config.json

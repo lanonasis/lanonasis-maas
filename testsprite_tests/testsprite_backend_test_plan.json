@@ -1,0 +1,52 @@
+[
+  {
+    "id": "TC001",
+    "title": "get_overall_service_health_status",
+    "description": "Verify that GET /api/v1/health returns a 200 status with overall service health and dependency information without requiring authentication."
+  },
+  {
+    "id": "TC002",
+    "title": "exchange_oauth_authorization_code_for_access_token",
+    "description": "Test POST /api/v1/auth/oauth/token with a valid authorization code to ensure it returns a 200 status and a valid access token."
+  },
+  {
+    "id": "TC003",
+    "title": "basic_authentication_login_with_valid_credentials",
+    "description": "Test POST /api/v1/auth/basic/login with valid email and password to receive a 200 response containing a JWT token and user object."
+  },
+  {
+    "id": "TC004",
+    "title": "create_memory_with_valid_data",
+    "description": "Verify POST /api/v1/memories with valid bearer token and required fields (title, content, memory_type) returns 201 with the created memory object."
+  },
+  {
+    "id": "TC005",
+    "title": "get_intelligence_job_status_by_id",
+    "description": "Test GET /api/v1/intelligence/jobs/:id with a valid job id and bearer token returns 200 with job status and progress details."
+  },
+  {
+    "id": "TC006",
+    "title": "get_subject_profile_by_subject_id",
+    "description": "Verify GET /api/v1/profiles/:subject_id with bearer token returns 200 with the current subject profile data."
+  },
+  {
+    "id": "TC007",
+    "title": "create_api_key_with_valid_project_context",
+    "description": "Test POST /api/v1/api-keys with bearer token and valid project association returns 201 with the new API key details."
+  },
+  {
+    "id": "TC008",
+    "title": "issue_proxy_token_for_mcp_session_key",
+    "description": "Verify POST /api/v1/mcp/api-keys/sessions/:sessionId/keys/:keyName/proxy-token with bearer token returns 200 with a session-scoped proxy token."
+  },
+  {
+    "id": "TC009",
+    "title": "get_prometheus_metrics_with_authorization",
+    "description": "Test GET /api/v1/metrics with valid bearer token returns 200 with Prometheus-formatted metrics text."
+  },
+  {
+    "id": "TC010",
+    "title": "list_registered_services_without_authentication",
+    "description": "Verify GET /api/v1/services returns 200 with a list of registered services without requiring authentication."
+  }
+]
