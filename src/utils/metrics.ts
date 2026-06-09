@@ -8,7 +8,7 @@ interface MetricValue {
 }
 
 // In-memory metrics storage (in production, use Redis or proper metrics system)
-class MetricsCollector {
+export class MetricsCollector {
   private metrics: Map<string, MetricValue> = new Map();
   private counters: Map<string, number> = new Map();
   private histograms: Map<string, number[]> = new Map();
