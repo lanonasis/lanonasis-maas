@@ -10,7 +10,7 @@ import { resolveOrganizationId } from '@/services/organizationResolver';
 const supabase = createClient(config.SUPABASE_URL, config.SUPABASE_SERVICE_KEY);
 
 // Import the proper types from our centralized type definitions
-import { UnifiedUser, AuthenticatedUser } from '@/types/express-auth';
+import type { UnifiedUser, AuthenticatedUser } from '@/types/express-auth';
 
 // ============================================
 // CORE ALIGNMENT: Request ID Extension
