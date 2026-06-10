@@ -120,8 +120,7 @@ const runCommand = new Command('run')
   .option('--save', 'Write report to ~/.lanonasis/security/prescan/')
   .option(
     '--fail-on <threshold>',
-    'Exit non-zero if classification meets threshold: quarantined or flagged',
-    'none'
+    'Exit non-zero if classification meets threshold: none, quarantined, or flagged'
   )
   .option(
     '--ci',
@@ -131,7 +130,7 @@ const runCommand = new Command('run')
     validatePath(path);
 
     const ciMode = options.ci ?? false;
-    const failOn = ciMode ? 'quarantined' : (options.failOn ?? 'none');
+    const failOn = options.failOn ?? (ciMode ? 'quarantined' : 'none');
 
     const config: ScanConfig = {
       target_path: path,

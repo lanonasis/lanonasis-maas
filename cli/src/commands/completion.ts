@@ -42,6 +42,9 @@ export interface CompletionData {
     outputFormats: string[];
     sortOptions: string[];
     authMethods: string[];
+    prescanOutputFormats: string[];
+    prescanFailOnChoices: string[];
+    prescanClassifications: string[];
   };
 }
 
@@ -320,6 +323,23 @@ export async function generateCompletionData(): Promise<CompletionData> {
             name: 'status',
             description: 'Show last prescan state and statistics',
             options: []
+          },
+          {
+            name: 'audit',
+            description: 'Audit a single file for secret/PII extraction risk',
+            options: [
+              { name: '<file>', description: 'File to audit', type: 'string', required: true },
+              { name: '--threshold', description: 'Detection confidence threshold', type: 'number' },
+              { name: '--verbose', description: 'Print detection summary details', type: 'boolean' }
+            ]
+          },
+          {
+            name: 'safe',
+            description: 'Check whether a file is safe for extraction',
+            options: [
+              { name: '<file>', description: 'File to check', type: 'string', required: true },
+              { name: '--threshold', description: 'Detection confidence threshold', type: 'number' }
+            ]
           }
         ]
       },
@@ -407,7 +427,10 @@ export async function generateCompletionData(): Promise<CompletionData> {
       memoryTypes,
       outputFormats: ['table', 'json', 'yaml', 'csv'],
       sortOptions: ['created_at', 'updated_at', 'last_accessed', 'access_count'],
-      authMethods: ['vendor_key', 'oauth', 'credentials']
+      authMethods: ['vendor_key', 'oauth', 'credentials'],
+      prescanOutputFormats: ['table', 'json'],
+      prescanFailOnChoices: ['none', 'flagged', 'quarantined'],
+      prescanClassifications: ['SAFE', 'FLAGGED', 'QUARANTINED', 'ERROR']
     }
   };
 

@@ -26,6 +26,9 @@ export interface CompletionData {
         outputFormats: string[];
         sortOptions: string[];
         authMethods: string[];
+        prescanOutputFormats: string[];
+        prescanFailOnChoices: string[];
+        prescanClassifications: string[];
     };
 }
 export declare function generateCompletionData(): Promise<CompletionData>;

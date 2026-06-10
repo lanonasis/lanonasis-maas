@@ -427,7 +427,10 @@ export async function quickStartCommand() {
                 { cmd: 'lanonasis topic create --name "Project"', desc: 'Create topic' },
                 { cmd: 'lanonasis mcp status', desc: 'Check MCP server' },
                 { cmd: 'lanonasis api-keys list', desc: 'Manage API keys' },
-                { cmd: 'lanonasis prescan run <path>', desc: 'Prescan filesystem for secrets/PII' }
+                { cmd: 'lanonasis prescan run <path> --ci', desc: 'Prescan filesystem for secrets/PII' },
+                { cmd: 'lanonasis prescan status', desc: 'Show the latest prescan report summary' },
+                { cmd: 'lanonasis prescan audit <file>', desc: 'Classify a file before extraction' },
+                { cmd: 'lanonasis prescan safe <file>', desc: 'Check whether a file is extraction-safe' }
             ]
         }
     ];
