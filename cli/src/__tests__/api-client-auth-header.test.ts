@@ -45,7 +45,13 @@ describe('APIClient authentication headers', () => {
     // Stub config methods to avoid filesystem/network calls
     config.init = jest.fn().mockResolvedValue(undefined);
     config.discoverServices = jest.fn().mockResolvedValue(undefined);
-    config.get = jest.fn().mockReturnValue({ auth_base: 'https://auth.example.com' });
+    config.get = jest.fn((key: string) => {
+      if (key === 'discoveredServices') return { auth_base: 'https://auth.example.com' };
+      if (key === 'authMethod') return 'vendor_key';
+      if (key === 'forceApi') return true;
+      if (key === 'connectionTransport') return 'api';
+      return undefined;
+    });
     config.getApiUrl = jest.fn().mockReturnValue('https://api.example.com');
     config.getToken = jest.fn().mockReturnValue(undefined);
     config.getVendorKeyAsync = jest.fn().mockResolvedValue('vk_test_123');

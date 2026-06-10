@@ -517,7 +517,7 @@ export class MCPClient {
                 }
             };
             this.sseConnection.onerror = () => {
-                if (process.env.CLI_VERBOSE === 'true') {
+                if (process.env.CLI_VERBOSE === 'true' || process.env.NODE_ENV === 'test') {
                     console.error(chalk.yellow('⚠️  SSE connection error (stream disabled for this session)'));
                 }
                 this.sseConnection?.close();

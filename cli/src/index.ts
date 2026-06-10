@@ -13,11 +13,17 @@ import { orgCommands } from './commands/organization.js';
 import { mcpCommands } from './commands/mcp.js';
 import apiKeysCommand from './commands/api-keys.js';
 import prescanCommand from './commands/prescan.js';
+import { completionCommand, installCompletionsCommand } from './commands/completion.js';
 import { CLIConfig } from './utils/config.js';
 import { APIClient, UserProfile } from './utils/api.js';
 import { getMCPClient } from './utils/mcp-client.js';
 import { dirname, join } from 'path';
+import { readFileSync, existsSync } from 'fs';
+import { fileURLToPath } from 'url';
 import { createOnboardingFlow } from './ux/index.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 // Load environment variables
 config();
@@ -538,6 +544,42 @@ program.addCommand(apiKeysCommand);
 // Prescan commands (no auth required — local file scanner)
 program.addCommand(prescanCommand);
 
+// Completion commands
+program
+  .command('completion')
+  .description('Generate shell completion scripts')
+  .argument('[shell]', 'shell type (bash, zsh, fish)')
+  .action(async (shell?: string) => {
+    if (!shell) {
+      await installCompletionsCommand();
+      return;
+    }
+
+    const completionFiles: Record<string, string> = {
+      bash: 'bash-completion.sh',
+      zsh: 'zsh-completion.zsh',
+      fish: 'fish-completion.fish'
+    };
+    const fileName = completionFiles[shell.toLowerCase()];
+    if (!fileName) {
+      console.error(colors.error(`Unsupported shell: ${shell}`));
+      console.log(colors.info('Supported shells: bash, zsh, fish'));
+      process.exit(1);
+    }
+
+    const candidates = [
+      join(__dirname, 'completions', fileName),
+      join(__dirname, '..', 'src', 'completions', fileName)
+    ];
+    const scriptPath = candidates.find((candidate) => existsSync(candidate));
+    if (!scriptPath) {
+      console.error(colors.error(`Completion script not found: ${fileName}`));
+      process.exit(1);
+    }
+
+    console.log(readFileSync(scriptPath, 'utf8'));
+  });
+
 // Dashboard management commands (require auth)
 const dashboardCmd = program
   .command('dashboard')
@@ -935,6 +977,11 @@ program.configureHelp({
 
 // Parse CLI arguments
 async function main() {
+  if (process.argv.includes('--completion-data')) {
+    await completionCommand();
+    return;
+  }
+
   // Show welcome message if no arguments provided
   if (process.argv.length <= 2) {
     showWelcome();

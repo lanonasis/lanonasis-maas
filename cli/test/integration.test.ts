@@ -125,7 +125,7 @@ describe('CLI Integration - Command Execution', () => {
         env: { HOME: testConfigDir },
       });
       // Health may fail without API but should execute
-      expect(result.stdout).toContain('Health') || expect(result.stderr).toBeTruthy();
+      expect(result.stdout.includes('Health') || result.stderr.length > 0).toBe(true);
     });
 
     it('completion command generates shell completion', async () => {
@@ -149,7 +149,7 @@ describe('CLI Integration - Command Execution', () => {
         env: { HOME: testConfigDir },
       });
       // Should fail but not crash
-      expect(result.exitCode).not.toBe(0) || expect(result.stderr).toBeTruthy();
+      expect(result.exitCode !== 0 || result.stderr.length > 0).toBe(true);
     });
 
     it('whoami command executes', async () => {
@@ -192,7 +192,7 @@ describe('CLI Integration - Command Execution', () => {
         env: { HOME: testConfigDir },
       });
       // Reset may require confirmation
-      expect(result.stdout).toBeDefined() || expect(result.stderr).toBeDefined();
+      expect(result.stdout !== undefined || result.stderr !== undefined).toBe(true);
     });
   });
 
@@ -202,7 +202,7 @@ describe('CLI Integration - Command Execution', () => {
         env: { HOME: testConfigDir },
       });
       // Should fail with auth error, not crash
-      expect(result.stderr).toBeTruthy() || expect(result.exitCode).not.toBe(0);
+      expect(result.stderr.length > 0 || result.exitCode !== 0).toBe(true);
     });
 
     it('memory create validates required fields', async () => {
@@ -210,14 +210,14 @@ describe('CLI Integration - Command Execution', () => {
         env: { HOME: testConfigDir },
       });
       // Should prompt or fail gracefully
-      expect(result.stdout).toBeDefined() || expect(result.stderr).toBeDefined();
+      expect(result.stdout !== undefined || result.stderr !== undefined).toBe(true);
     });
 
     it('memory search requires query', async () => {
       const result = await runCli('memory search', {
         env: { HOME: testConfigDir },
       });
-      expect(result.stderr).toBeTruthy() || expect(result.exitCode).not.toBe(0);
+      expect(result.stderr.length > 0 || result.exitCode !== 0).toBe(true);
     });
   });
 
@@ -226,14 +226,14 @@ describe('CLI Integration - Command Execution', () => {
       const result = await runCli('topic list', {
         env: { HOME: testConfigDir },
       });
-      expect(result.stderr).toBeTruthy() || expect(result.exitCode).not.toBe(0);
+      expect(result.stderr.length > 0 || result.exitCode !== 0).toBe(true);
     });
 
     it('topic create validates name', async () => {
       const result = await runCli('topic create', {
         env: { HOME: testConfigDir },
       });
-      expect(result.stdout).toBeDefined() || expect(result.stderr).toBeDefined();
+      expect(result.stdout !== undefined || result.stderr !== undefined).toBe(true);
     });
   });
 
@@ -256,7 +256,7 @@ describe('CLI Integration - Command Execution', () => {
       const result = await runCli('mcp connect', {
         env: { HOME: testConfigDir },
       });
-      expect(result.stdout).toBeDefined() || expect(result.stderr).toBeDefined();
+      expect(result.stdout !== undefined || result.stderr !== undefined).toBe(true);
     });
   });
 
@@ -266,7 +266,7 @@ describe('CLI Integration - Command Execution', () => {
         env: { HOME: testConfigDir },
       });
       expect(result.exitCode).not.toBe(0);
-      expect(result.stderr).toContain('unknown') || expect(result.stderr).toContain('Usage');
+      expect(result.stderr.includes('unknown') || result.stderr.includes('Usage')).toBe(true);
     });
 
     it('invalid option shows error', async () => {
@@ -274,9 +274,11 @@ describe('CLI Integration - Command Execution', () => {
         env: { HOME: testConfigDir },
       });
       expect(result.exitCode).not.toBe(0);
-      expect(result.stderr).toContain('unknown option') || 
-        expect(result.stderr).toContain('Invalid option') ||
-        expect(result.stderr).toContain('error');
+      expect(
+        result.stderr.includes('unknown option') ||
+        result.stderr.includes('Invalid option') ||
+        result.stderr.includes('error')
+      ).toBe(true);
     });
   });
 });
