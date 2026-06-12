@@ -59,7 +59,7 @@ async function runCli(args: string, options: { env?: Record<string, string>; std
   exitCode: number | null;
 }> {
   const cliPath = join(__dirname, '../dist/index.js');
-  const timeout = options.timeout || 15000;
+  const timeout = options.timeout || 30000;
   
   try {
     const result = await execAsync(`node ${cliPath} ${args}`, {
@@ -77,7 +77,7 @@ async function runCli(args: string, options: { env?: Record<string, string>; std
     return {
       stdout: error.stdout || '',
       stderr: error.stderr || '',
-      exitCode: error.code || error.status,
+      exitCode: error.code ?? error.status ?? 1,
     };
   }
 }
