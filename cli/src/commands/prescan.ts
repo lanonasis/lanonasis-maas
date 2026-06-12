@@ -1,16 +1,8 @@
 import { Command } from 'commander';
 import chalk from 'chalk';
 import { homedir } from 'os';
-import { join, basename } from 'path';
+import { join } from 'path';
 import { existsSync, readFileSync, readdirSync, statSync, mkdirSync } from 'fs';
-import { PrivacySDK } from '@lanonasis/privacy-sdk';
-import {
-  prescan,
-  saveReport,
-  printSummary,
-  getFlaggedFiles,
-  getQuarantinedFiles,
-} from '@lanonasis/secret-prescan';
 import type { ScanConfig, ScanReport } from '@lanonasis/secret-prescan';
 
 // ─────────────────────────────────────────────
@@ -72,13 +64,23 @@ function loadLatestReport(): ScanReport | null {
   }
 }
 
-function countPatterns(): number {
-  try {
-    const { SECRET_PATTERNS } = require('@lanonasis/secret-prescan');
-    return Array.isArray(SECRET_PATTERNS) ? SECRET_PATTERNS.length : 0;
-  } catch {
-    return 0;
-  }
+async function loadPrescanRuntime() {
+  const [{ PrivacySDK }, secretPrescan] = await Promise.all([
+    import('@lanonasis/privacy-sdk'),
+    import('@lanonasis/secret-prescan'),
+  ]);
+
+  return {
+    PrivacySDK,
+    prescan: secretPrescan.prescan,
+    saveReport: secretPrescan.saveReport,
+    printSummary: secretPrescan.printSummary,
+    getFlaggedFiles: secretPrescan.getFlaggedFiles,
+    getQuarantinedFiles: secretPrescan.getQuarantinedFiles,
+    secretPatterns: Array.isArray((secretPrescan as { SECRET_PATTERNS?: unknown }).SECRET_PATTERNS)
+      ? ((secretPrescan as { SECRET_PATTERNS: unknown[] }).SECRET_PATTERNS.length)
+      : 0,
+  };
 }
 
 function validatePath(path: string): void {
@@ -145,57 +147,63 @@ const runCommand = new Command('run')
 
     let report: ScanReport;
     try {
+      const {
+        PrivacySDK,
+        prescan,
+        saveReport,
+        printSummary,
+        getFlaggedFiles,
+        getQuarantinedFiles,
+      } = await loadPrescanRuntime();
       const sdk = new PrivacySDK();
       report = prescan(sdk, config);
+      printSummary(report);
+
+      // --save: write to CLI-owned dir, no mutations/ quarantines
+      let reportPath: string | undefined;
+      if (options.save) {
+        ensureReportDir();
+        reportPath = saveReport(report, PRESCAN_REPORT_DIR);
+        console.error(colors.success(`✅ Report saved to ${reportPath}`));
+      }
+
+      const flaggedFiles = getFlaggedFiles(report);
+      const quarantinedFiles = getQuarantinedFiles(report);
+
+      // JSON output for piping/CI
+      if (options.json || ciMode) {
+        const out = {
+          total_files: report.total_files,
+          safe: report.summary.safe,
+          flagged: report.summary.flagged,
+          quarantined: report.summary.quarantined,
+          errors: report.summary.errors,
+          total_detections: report.summary.total_detections,
+          detection_types: report.summary.detection_types,
+          flagged_files: flaggedFiles,
+          quarantined_files: quarantinedFiles,
+          scan_root: report.scan_root,
+          scanned_at: report.scanned_at,
+          ...(reportPath ? { report_path: reportPath } : {}),
+        };
+        console.log(JSON.stringify(out, null, 2));
+      }
+
+      // Exit codes for CI gating
+      let exitCode = 0;
+      if (failOn === 'quarantined' && quarantinedFiles.length > 0) {
+        console.error(colors.error(`\n🔴 Quarantined files found — fail-on=quarantined`));
+        exitCode = 1;
+      } else if (failOn === 'flagged' && (flaggedFiles.length > 0 || quarantinedFiles.length > 0)) {
+        console.error(colors.warning(`\n⚠️  Flagged or quarantined files found — fail-on=flagged`));
+        exitCode = 1;
+      }
+
+      process.exit(exitCode);
     } catch (err: any) {
       console.error(colors.error(`✖ Prescan failed: ${err.message}`));
       process.exit(1);
     }
-
-    // Print summary (always human-readable unless --json)
-    printSummary(report);
-
-    // --save: write to CLI-owned dir, no mutations/ quarantines
-    let reportPath: string | undefined;
-    if (options.save) {
-      ensureReportDir();
-      reportPath = saveReport(report, PRESCAN_REPORT_DIR);
-      console.error(colors.success(`✅ Report saved to ${reportPath}`));
-    }
-
-    const flaggedFiles = getFlaggedFiles(report);
-    const quarantinedFiles = getQuarantinedFiles(report);
-
-    // JSON output for piping/CI
-    if (options.json || ciMode) {
-      const out = {
-        total_files: report.total_files,
-        safe: report.summary.safe,
-        flagged: report.summary.flagged,
-        quarantined: report.summary.quarantined,
-        errors: report.summary.errors,
-        total_detections: report.summary.total_detections,
-        detection_types: report.summary.detection_types,
-        flagged_files: flaggedFiles,
-        quarantined_files: quarantinedFiles,
-        scan_root: report.scan_root,
-        scanned_at: report.scanned_at,
-        ...(reportPath ? { report_path: reportPath } : {}),
-      };
-      console.log(JSON.stringify(out, null, 2));
-    }
-
-    // Exit codes for CI gating
-    let exitCode = 0;
-    if (failOn === 'quarantined' && quarantinedFiles.length > 0) {
-      console.error(colors.error(`\n🔴 Quarantined files found — fail-on=quarantined`));
-      exitCode = 1;
-    } else if (failOn === 'flagged' && (flaggedFiles.length > 0 || quarantinedFiles.length > 0)) {
-      console.error(colors.warning(`\n⚠️  Flagged or quarantined files found — fail-on=flagged`));
-      exitCode = 1;
-    }
-
-    process.exit(exitCode);
   });
 
 // ─────────────────────────────────────────────
@@ -218,7 +226,7 @@ const statusCommand = new Command('status')
     }
 
     // Pattern count
-    const patternCount = countPatterns();
+    const { secretPatterns: patternCount } = await loadPrescanRuntime();
     console.log(`${colors.highlight('Patterns:')} ${colors.accent(patternCount)} registered`);
 
     // Latest report
