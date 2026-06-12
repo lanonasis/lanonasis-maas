@@ -6,6 +6,10 @@ import { randomUUID } from 'crypto';
 import { ApiKeyStorage } from '@lanonasis/oauth-client';
 import axios from 'axios';
 import type { AxiosInstance, AxiosRequestConfig } from 'axios';
+import { createRequire } from 'module';
+
+const require = createRequire(import.meta.url);
+const packageJson = require('../../package.json') as { version: string };
 
 interface UserProfile {
   email: string;
@@ -375,7 +379,7 @@ export class CLIConfig {
           maxRedirects: 5,
           proxy: false, // Bypass proxy to avoid redirect loops
           headers: {
-            'User-Agent': 'Lanonasis-CLI/3.9.15'
+            'User-Agent': `Lanonasis-CLI/${packageJson.version}`
           }
         });
 

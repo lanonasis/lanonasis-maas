@@ -1,11 +1,11 @@
-# @lanonasis/cli v3.10.0 - Secret Prescan
+# @lanonasis/cli v3.10.1 - Secret Prescan
 
 [![NPM Version](https://img.shields.io/npm/v/@lanonasis/cli)](https://www.npmjs.com/package/@lanonasis/cli)
 [![Downloads](https://img.shields.io/npm/dt/@lanonasis/cli)](https://www.npmjs.com/package/@lanonasis/cli)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Golden Contract](https://img.shields.io/badge/Onasis--Core-v0.1%20Compliant-gold)](https://api.lanonasis.com/.well-known/onasis.json)
 
-🎉 **NEW IN v3.10.0**: Secret prescan commands for scanning files and directories for secrets/PII before MIRA context extraction — CI-friendly exit codes, machine-parseable output, value-stripped reports. No authentication required.
+🎉 **NEW IN v3.10.1**: Secret prescan commands for scanning files and directories for secrets/PII before MIRA context extraction — CI-friendly exit codes, machine-parseable output, value-stripped reports, and clearer local status persistence. No authentication required.
 
 ## 🚀 Quick Start
 
@@ -34,20 +34,22 @@ onasis health                                   # Verify system health
 onasis memory create --title "Welcome" --content "My first memory"
 ```
 
-## 🔍 Secret Prescan (v3.10.0+)
+## 🔍 Secret Prescan (v3.10.1+)
 
 Scan files and directories for secrets and PII before MIRA context extraction. Reports are value-stripped — no raw secrets ever appear in output.
 
 ```bash
 # Scan a directory tree
-lanonasis prescan scan ./src
-lanonasis prescan scan ./src --output ~/.hermes/private/context-scans/
+lanonasis prescan run ./src
 
-# Audit a single file (CI-friendly, exit codes: 0=safe 1=flagged 2=quarantined)
-lanonasis prescan audit ./config/secrets.ts --verbose
+# Save a local report for `prescan status`
+lanonasis prescan run ./src --save
 
-# Boolean safety gate (used in scripts and pre-commit hooks)
-lanonasis prescan safe ./src/utils/api.ts && echo "safe to extract"
+# CI-friendly gate (exit codes: 0=safe 1=flagged 2=quarantined)
+lanonasis prescan run ./src --ci --fail-on flagged
+
+# Show the latest saved local report
+lanonasis prescan status
 ```
 
 **Machine-parseable output** for piping and CI integration:
@@ -58,7 +60,7 @@ safe:40
 flagged:1
 quarantined:1
 total_detections:3
-report_path:/path/to/report.json
+report_path:/Users/example/.lanonasis/security/prescan/report-2026-06-12T00-00-00-000Z.json
 ---QUARANTINED FILES---
 QUARANTINED:src/config/prod.ts
 ```
@@ -605,7 +607,14 @@ onasis health
 
 ## 📝 Version History
 
-### v2.0.0 (Current)
+### v3.10.1 (Current)
+
+- 🔍 **Secret Prescan**: Local secret/PII scanning before MIRA context extraction
+- 🧩 **Lazy Runtime Loading**: Prescan packages load only when prescan commands run
+- 📦 **Aligned Release Metadata**: Version displays and package metadata are synchronized
+- 📊 **Saved Report Status**: `prescan status` summarizes the latest `prescan run --save`
+
+### v2.0.0
 
 - 🎯 **Interactive Dashboard**: Central command center for all operations
 - 🎉 **Welcome Experience**: Guided onboarding for new users

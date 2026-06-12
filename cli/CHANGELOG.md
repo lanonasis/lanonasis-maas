@@ -1,5 +1,17 @@
 # Changelog - @lanonasis/cli
 
+## [3.10.1] - 2026-06-12
+
+### 🐛 Bug Fixes
+
+- **Prescan stays lazy-loaded**: ordinary CLI startup no longer eagerly requires optional prescan runtime packages.
+- **Release metadata now follows package.json**: user-facing CLI version strings and the service-discovery user agent now read the package version instead of stale hardcoded values.
+- **Prescan status explains persistence**: the no-scan state now points operators to `lanonasis prescan run <path> --save`, matching the current local report persistence behavior.
+
+### 📦 Package
+
+- Refreshed release metadata and build output for the 3.10.1 hotfix.
+
 ## [3.10.0] - 2026-05-26
 
 ### ✨ New Features

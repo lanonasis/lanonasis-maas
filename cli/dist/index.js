@@ -72,9 +72,12 @@ program
     if (forceDirectApi) {
         process.env.LANONASIS_FORCE_API = 'true';
     }
+    const isPrescanFlow = actionCommand.name() === 'prescan' ||
+        actionCommand.parent?.name?.() === 'prescan';
     const skipOnboarding = actionCommand.name() === 'init' ||
         actionCommand.name() === 'auth' ||
-        actionCommand.parent?.name?.() === 'auth';
+        actionCommand.parent?.name?.() === 'auth' ||
+        isPrescanFlow;
     if (!skipOnboarding) {
         try {
             const onboardingConfigPath = join(dirname(cliConfig.getConfigPath()), 'onboarding.json');
@@ -104,7 +107,7 @@ program
         actionCommand.parent?.name?.() === 'topic' ||
         actionCommand.name() === 'org' ||
         actionCommand.parent?.name?.() === 'org';
-    if (!forceDirectApi && !isMcpFlow && !isConfigFlow && !isDirectApiFlow && !['init', 'auth', 'login', 'health', 'status'].includes(actionCommand.name())) {
+    if (!forceDirectApi && !isMcpFlow && !isConfigFlow && !isDirectApiFlow && !isPrescanFlow && !['init', 'auth', 'login', 'health', 'status'].includes(actionCommand.name())) {
         try {
             const client = getMCPClient();
             if (!client.isConnectedToServer()) {
@@ -144,7 +147,7 @@ process.on('unhandledRejection', (reason, promise) => {
 // Enhanced welcome message
 const showWelcome = () => {
     console.log();
-    console.log(colors.primary('🚀 LanOnasis Enterprise CLI v3.9.15'));
+    console.log(colors.primary(`🚀 LanOnasis Enterprise CLI v${packageJson.version}`));
     console.log(colors.info('━'.repeat(50)));
     console.log(colors.highlight('Enterprise-grade Memory as a Service, API Management & Infrastructure Orchestration'));
     console.log();
@@ -593,7 +596,7 @@ sdkCmd
     console.log(colors.primary('🔧 SDK Status Check'));
     console.log(colors.info('━'.repeat(40)));
     console.log(`${colors.highlight('Memory Client SDK:')} ${colors.success('@lanonasis/memory-client@2.2.1')}`);
-    console.log(`${colors.highlight('CLI Package:')} ${colors.success('@lanonasis/cli@3.9.15')}`);
+    console.log(`${colors.highlight('CLI Package:')} ${colors.success(`@lanonasis/cli@${packageJson.version}`)}`);
     console.log(`${colors.highlight('NPM Registry:')} ${colors.success('✅ Published')}`);
     console.log(`${colors.highlight('GitHub Packages:')} ${colors.success('✅ Available')}`);
 });
@@ -604,7 +607,7 @@ sdkCmd
     console.log(colors.primary('📦 Available SDK Versions'));
     console.log(colors.info('━'.repeat(40)));
     console.log(`${colors.accent('@lanonasis/memory-client:')} ${colors.success('2.2.1 (latest local source)')}`);
-    console.log(`${colors.accent('@lanonasis/cli:')} ${colors.success('3.9.15 (latest local source)')}`);
+    console.log(`${colors.accent('@lanonasis/cli:')} ${colors.success(`${packageJson.version} (latest local source)`)}`);
     console.log(`${colors.accent('@lanonasis/memory-service:')} ${colors.success('compatibility package')}`);
 });
 // REST API management commands (require auth)
@@ -664,7 +667,7 @@ deployCmd
     console.log(`  REST API: ${colors.success('✅ All endpoints active')}`);
     console.log();
     console.log(colors.highlight('📦 Package Distribution:'));
-    console.log(`  CLI Package: ${colors.success('✅ @lanonasis/cli@3.9.15')}`);
+    console.log(`  CLI Package: ${colors.success(`✅ @lanonasis/cli@${packageJson.version}`)}`);
     console.log(`  SDK Package: ${colors.success('✅ @lanonasis/memory-client@2.2.1')}`);
     console.log(`  Memory Service: ${colors.success('✅ Compatibility routing enabled')}`);
     console.log();
