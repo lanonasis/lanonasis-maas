@@ -221,7 +221,7 @@ const statusCommand = new Command('status')
 
     const dirExists = existsSync(PRESCAN_REPORT_DIR);
     if (!dirExists) {
-      console.log(colors.warning('⚠️  No scans recorded yet — run `lanonasis prescan run <path>` first'));
+      console.log(colors.warning('⚠️  No scans recorded yet — run `lanonasis prescan run <path> --save` first'));
       return;
     }
 

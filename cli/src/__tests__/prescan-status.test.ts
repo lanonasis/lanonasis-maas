@@ -108,6 +108,7 @@ describe('prescan status', () => {
       String(line).includes('No scans recorded yet')
     );
     expect(warningLine).toBeDefined();
+    expect(String(warningLine?.[0])).toContain('lanonasis prescan run <path> --save');
   });
 
   // ── With report present ─────────────────────────────────────────────────

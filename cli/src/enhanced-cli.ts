@@ -19,6 +19,10 @@ import { PowerUserMode } from './core/power-mode.js';
 import { AchievementSystem } from './core/achievements.js';
 import { ProgressIndicator } from './core/progress.js';
 import { CLIConfig } from './utils/config.js';
+import { createRequire } from 'module';
+
+const require = createRequire(import.meta.url);
+const packageJson = require('../package.json') as { version: string };
 
 // Load environment variables
 config();
@@ -40,7 +44,7 @@ const program = new Command();
 program
   .name('onasis')
   .description(chalk.cyan('🧠 Onasis Memory Service - Enhanced CLI Experience'))
-  .version('2.0.0', '-v, --version', 'display version number')
+  .version(packageJson.version, '-v, --version', 'display version number')
   .option('-V, --verbose', 'enable verbose logging')
   .option('--api-url <url>', 'override API URL')
   .option('--output <format>', 'output format (json, table, yaml, minimal)', 'table')
@@ -275,7 +279,7 @@ program
     console.log(chalk.green('✓ API: Connected'));
     console.log(chalk.green('✓ Auth: Valid'));
     console.log(chalk.cyan('  Endpoint: api.lanonasis.com'));
-    console.log(chalk.cyan('  Version: 2.0.0'));
+    console.log(chalk.cyan(`  Version: ${packageJson.version}`));
   }));
 
 // Default action - show interactive dashboard if no command

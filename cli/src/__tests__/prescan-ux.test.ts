@@ -2,7 +2,7 @@
  * Prescan UX Integration Tests
  *
  * Covers:
- * - completion.ts: generateCompletionData includes prescan audit/safe subcommands
+ * - completion.ts: generateCompletionData includes shipped prescan run/status subcommands
  *   and prescan contextual data (output formats, fail-on choices, classifications)
  * - guide.ts: quickStartCommand output includes all four prescan subcommands
  * - Additional behavioral edge cases for prescan run:
@@ -128,30 +128,16 @@ describe('prescan completions', () => {
     expect(optionNames).toContain('--exclude');
   });
 
-  it('generateCompletionData includes prescan audit subcommand', async () => {
+  it('generateCompletionData does not advertise legacy prescan audit/safe subcommands', async () => {
     const { generateCompletionData } = await import('../commands/completion.js');
 
     const data = await generateCompletionData();
     const prescanCmd = data.commands.find((c) => c.name === 'prescan');
     const auditSub = prescanCmd?.subcommands?.find((s) => s.name === 'audit');
-
-    expect(auditSub).toBeDefined();
-    expect(auditSub!.description).toContain('Audit');
-
-    const optionNames = auditSub!.options?.map((o) => o.name) ?? [];
-    expect(optionNames.some((n) => n.includes('--threshold'))).toBe(true);
-    expect(optionNames.some((n) => n.includes('--verbose'))).toBe(true);
-  });
-
-  it('generateCompletionData includes prescan safe subcommand', async () => {
-    const { generateCompletionData } = await import('../commands/completion.js');
-
-    const data = await generateCompletionData();
-    const prescanCmd = data.commands.find((c) => c.name === 'prescan');
     const safeSub = prescanCmd?.subcommands?.find((s) => s.name === 'safe');
 
-    expect(safeSub).toBeDefined();
-    expect(safeSub!.description).toContain('safe');
+    expect(auditSub).toBeUndefined();
+    expect(safeSub).toBeUndefined();
   });
 
   it('generateCompletionData includes prescan contextual data', async () => {
@@ -194,7 +180,7 @@ describe('prescan guide quick-start', () => {
     consoleErrorSpy.mockRestore();
   });
 
-  it('quickStartCommand includes all four prescan subcommands', async () => {
+  it('quickStartCommand includes the shipped prescan subcommands', async () => {
     const { quickStartCommand } = await import('../commands/guide.js');
 
     await quickStartCommand();
@@ -202,8 +188,8 @@ describe('prescan guide quick-start', () => {
     const capturedOutput = (consoleLogSpy as jest.Mock).mock.calls.flatMap((c: any) => c).join('\n');
     expect(capturedOutput).toContain('prescan run');
     expect(capturedOutput).toContain('prescan status');
-    expect(capturedOutput).toContain('prescan audit');
-    expect(capturedOutput).toContain('prescan safe');
+    expect(capturedOutput).not.toContain('prescan audit');
+    expect(capturedOutput).not.toContain('prescan safe');
     expect(capturedOutput).toContain('--ci');
   });
 });

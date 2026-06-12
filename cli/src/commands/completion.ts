@@ -323,23 +323,6 @@ export async function generateCompletionData(): Promise<CompletionData> {
             name: 'status',
             description: 'Show last prescan state and statistics',
             options: []
-          },
-          {
-            name: 'audit',
-            description: 'Audit a single file for secret/PII extraction risk',
-            options: [
-              { name: '<file>', description: 'File to audit', type: 'string', required: true },
-              { name: '--threshold', description: 'Detection confidence threshold', type: 'number' },
-              { name: '--verbose', description: 'Print detection summary details', type: 'boolean' }
-            ]
-          },
-          {
-            name: 'safe',
-            description: 'Check whether a file is safe for extraction',
-            options: [
-              { name: '<file>', description: 'File to check', type: 'string', required: true },
-              { name: '--threshold', description: 'Detection confidence threshold', type: 'number' }
-            ]
           }
         ]
       },
