@@ -4,6 +4,13 @@ All notable changes to `@lanonasis/recall-forge` will be documented in this file
 
 ---
 
+## 1.1.2 — 2026-06-14
+
+### Fixed
+
+- `openclaw recall stats` now accepts the live MaaS stats payload where `most_accessed_memory` and `recent_memories` are full memory objects instead of only strings.
+- Stats output now includes `total_size_bytes` and `avg_access_count` when the backend returns them, matching the LanOnasis CLI stats display.
+
 ## 1.1.1 — 2026-04-04
 
 ### Fixed

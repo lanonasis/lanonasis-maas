@@ -2,7 +2,7 @@
   "id": "recall-forge",
   "kind": "memory",
   "name": "RecallForge",
-  "version": "1.1.0",
+  "version": "1.1.2",
   "description": "Secret-safe memory and context engine for OpenClaw. Fills both memory and contextEngine slots with tiered semantic recall, credential redaction (30+ patterns), PII masking, and prompt injection protection.",
   "uiHints": {
     "apiKey": {

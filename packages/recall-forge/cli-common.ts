@@ -278,6 +278,24 @@ export function assertMemoryStatsShape(stats: unknown): LanMemoryStats {
     );
   }
 
+  if (
+    typedStats.total_size_bytes !== undefined &&
+    typeof typedStats.total_size_bytes !== "number"
+  ) {
+    throw new Error(
+      "Stats endpoint returned an invalid response. total_size_bytes must be numeric.",
+    );
+  }
+
+  if (
+    typedStats.avg_access_count !== undefined &&
+    typeof typedStats.avg_access_count !== "number"
+  ) {
+    throw new Error(
+      "Stats endpoint returned an invalid response. avg_access_count must be numeric.",
+    );
+  }
+
   if (typedStats.recent_activity !== undefined) {
     if (
       !typedStats.recent_activity ||
@@ -360,26 +378,36 @@ export function assertMemoryStatsShape(stats: unknown): LanMemoryStats {
 
   if (
     typedStats.most_accessed_memory !== undefined &&
-    typeof typedStats.most_accessed_memory !== "string"
+    typeof typedStats.most_accessed_memory !== "string" &&
+    (!typedStats.most_accessed_memory ||
+      typeof typedStats.most_accessed_memory !== "object" ||
+      Array.isArray(typedStats.most_accessed_memory))
   ) {
     throw new Error(
-      "Stats endpoint returned an invalid response. most_accessed_memory must be a string.",
+      "Stats endpoint returned an invalid response. most_accessed_memory must be a string or memory object.",
     );
   }
 
   if (
     typedStats.recent_memories !== undefined &&
     (!Array.isArray(typedStats.recent_memories) ||
-      typedStats.recent_memories.some((entry) => typeof entry !== "string"))
+      typedStats.recent_memories.some((entry) => {
+        return (
+          typeof entry !== "string" &&
+          (!entry || typeof entry !== "object" || Array.isArray(entry))
+        );
+      }))
   ) {
     throw new Error(
-      "Stats endpoint returned an invalid response. recent_memories must be an array of strings.",
+      "Stats endpoint returned an invalid response. recent_memories must be an array of strings or memory objects.",
     );
   }
 
   return {
     total_memories: typedStats.total_memories,
     memories_by_type: byType as Record<string, number>,
+    total_size_bytes: typedStats.total_size_bytes as number | undefined,
+    avg_access_count: typedStats.avg_access_count as number | undefined,
     with_embeddings: typedStats.with_embeddings as number | undefined,
     without_embeddings: typedStats.without_embeddings as number | undefined,
     recent_activity: typedStats.recent_activity as
@@ -390,13 +418,48 @@ export function assertMemoryStatsShape(stats: unknown): LanMemoryStats {
     organization_id: typedStats.organization_id as string | undefined,
     generated_at: typedStats.generated_at as string | undefined,
     total_topics: typedStats.total_topics as number | undefined,
-    most_accessed_memory: typedStats.most_accessed_memory as string | undefined,
-    recent_memories: typedStats.recent_memories as string[] | undefined,
+    most_accessed_memory: typedStats.most_accessed_memory as
+      | LanMemoryStats["most_accessed_memory"]
+      | undefined,
+    recent_memories: typedStats.recent_memories as
+      | LanMemoryStats["recent_memories"]
+      | undefined,
   };
+}
+
+function formatBytes(bytes: number): string {
+  if (!Number.isFinite(bytes) || bytes <= 0) return "0 Bytes";
+  const units = ["Bytes", "KB", "MB", "GB", "TB"];
+  const exponent = Math.min(
+    Math.floor(Math.log(bytes) / Math.log(1024)),
+    units.length - 1,
+  );
+  const value = bytes / 1024 ** exponent;
+  return `${value.toFixed(value >= 10 || exponent === 0 ? 0 : 1)} ${units[exponent]}`;
+}
+
+function renderStatsMemory(entry: string | LanMemory): string {
+  if (typeof entry === "string") return entry;
+
+  const title = entry.title || entry.id || "(untitled)";
+  const accessCount = (entry as Record<string, unknown>).access_count;
+  if (typeof accessCount === "number") {
+    return `${title} (${accessCount} times)`;
+  }
+
+  return title;
 }
 
 export function printMemoryStats(stats: LanMemoryStats): void {
   console.log(`Total memories: ${stats.total_memories}`);
+
+  if (typeof stats.total_size_bytes === "number") {
+    console.log(`Total size: ${formatBytes(stats.total_size_bytes)}`);
+  }
+
+  if (typeof stats.avg_access_count === "number") {
+    console.log(`Average access count: ${stats.avg_access_count}`);
+  }
 
   if (stats.organization_id) {
     console.log(`Organization: ${stats.organization_id}`);
@@ -442,14 +505,14 @@ export function printMemoryStats(stats: LanMemoryStats): void {
 
   if (stats.most_accessed_memory) {
     console.log("");
-    console.log(`Most accessed: ${stats.most_accessed_memory}`);
+    console.log(`Most accessed: ${renderStatsMemory(stats.most_accessed_memory)}`);
   }
 
   if (stats.recent_memories && stats.recent_memories.length > 0) {
     console.log("");
     console.log("Recent memories:");
     stats.recent_memories.forEach((entry) => {
-      console.log(`  - ${entry}`);
+      console.log(`  - ${renderStatsMemory(entry)}`);
     });
   }
 

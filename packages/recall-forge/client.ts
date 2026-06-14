@@ -122,6 +122,8 @@ export type LanListParams = {
 export type LanMemoryStats = {
   total_memories: number;
   memories_by_type: Record<string, number>;
+  total_size_bytes?: number;
+  avg_access_count?: number;
   with_embeddings?: number;
   without_embeddings?: number;
   recent_activity?: {
@@ -137,8 +139,8 @@ export type LanMemoryStats = {
   organization_id?: string;
   generated_at?: string;
   total_topics?: number;
-  most_accessed_memory?: string;
-  recent_memories?: string[];
+  most_accessed_memory?: string | LanMemory;
+  recent_memories?: Array<string | LanMemory>;
 };
 
 const UUID_PATTERN =

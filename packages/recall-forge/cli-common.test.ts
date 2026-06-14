@@ -21,6 +21,8 @@ describe("cli-common", () => {
   it("normalizes stats payloads that use by_type", () => {
     const stats = assertMemoryStatsShape({
       total_memories: 3,
+      total_size_bytes: 42,
+      avg_access_count: 1.5,
       by_type: {
         context: 2,
         project: 1,
@@ -40,8 +42,29 @@ describe("cli-common", () => {
       context: 2,
       project: 1,
     });
+    expect(stats.total_size_bytes).toBe(42);
+    expect(stats.avg_access_count).toBe(1.5);
     expect(stats.with_embeddings).toBe(3);
     expect(stats.top_tags).toEqual([{ tag: "alpha", count: 2 }]);
+  });
+
+  it("accepts live stats memory entries for most accessed and recent memories", () => {
+    const memory = {
+      id: "mem_123",
+      title: "Frequently used",
+      content: "body",
+      access_count: 7,
+    };
+
+    const stats = assertMemoryStatsShape({
+      total_memories: 1,
+      memories_by_type: { context: 1 },
+      most_accessed_memory: memory,
+      recent_memories: [memory],
+    });
+
+    expect(stats.most_accessed_memory).toEqual(memory);
+    expect(stats.recent_memories).toEqual([memory]);
   });
 
   it("rejects invalid stats payloads", () => {
