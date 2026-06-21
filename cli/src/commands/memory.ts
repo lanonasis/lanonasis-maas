@@ -1107,7 +1107,26 @@ export function memoryCommands(program: Command): void {
               ...searchOptions,
               threshold,
             });
-            const attemptResults = (attempt.results || attempt.data || []) as MemorySearchResult[];
+            const rawAttemptResults = (attempt.results || attempt.data || []) as unknown[];
+            // The search endpoint wraps each row as `{ memory: <entry>, similarity_score, rank }`
+            // instead of returning memory fields flat like get/list/update do. Unwrap so
+            // title/content/id survive, and map the search row's `type` to `memory_type`
+            // (the field name every other memory command uses).
+            const attemptResults = rawAttemptResults.map((raw) => {
+              if (raw && typeof raw === 'object') {
+                const row = raw as Record<string, unknown>;
+                const inner = row.memory ?? row.data;
+                if (inner && typeof inner === 'object' && typeof (inner as Record<string, unknown>).id === 'string') {
+                  const innerObj = inner as Record<string, unknown>;
+                  return {
+                    ...innerObj,
+                    memory_type: innerObj.memory_type ?? innerObj.type,
+                    similarity_score: row.similarity_score ?? innerObj.similarity_score,
+                  } as MemorySearchResult;
+                }
+              }
+              return raw as MemorySearchResult;
+            });
 
             result = attempt;
             if (attemptResults.length > 0) {
