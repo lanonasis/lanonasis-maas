@@ -84,6 +84,7 @@ CREATE TABLE IF NOT EXISTS memory_entries (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     last_accessed TIMESTAMPTZ,
     access_count INTEGER DEFAULT 0,
+    deleted_at TIMESTAMPTZ,
     
     -- Constraints
     CONSTRAINT memory_entries_title_length CHECK (LENGTH(title) >= 1),
@@ -156,6 +157,7 @@ CREATE INDEX IF NOT EXISTS idx_memory_entries_updated_at ON memory_entries(updat
 CREATE INDEX IF NOT EXISTS idx_memory_entries_last_accessed ON memory_entries(last_accessed DESC NULLS LAST);
 CREATE INDEX IF NOT EXISTS idx_memory_entries_access_count ON memory_entries(access_count DESC);
 CREATE INDEX IF NOT EXISTS idx_memory_entries_tags ON memory_entries USING GIN(tags);
+CREATE INDEX IF NOT EXISTS idx_memory_entries_org_active ON memory_entries(organization_id, created_at DESC) WHERE deleted_at IS NULL;
 
 -- Vector similarity index
 DO $$ BEGIN
@@ -186,7 +188,9 @@ CREATE OR REPLACE FUNCTION match_memories(
   memory_types_param memory_type[] DEFAULT NULL,
   tags_param text[] DEFAULT NULL,
   topic_id_param uuid DEFAULT NULL,
-  user_id_param uuid DEFAULT NULL
+  user_id_param uuid DEFAULT NULL,
+  include_deleted_param boolean DEFAULT false,
+  topic_key_param text DEFAULT NULL
 )
 RETURNS TABLE (
   id uuid,
@@ -204,6 +208,17 @@ RETURNS TABLE (
   access_count integer,
   relevance_score float
 ) LANGUAGE sql STABLE AS $$
+  WITH org_topic_ids AS (
+    -- Only resolve topic_key_param when an explicit organization_id_param is
+    -- given: without it we cannot safely scope the name lookup to one org,
+    -- and "name" (not a nonexistent "topic_key") is the topic's lookup key.
+    SELECT id FROM topics
+    WHERE topic_key_param IS NOT NULL
+      AND organization_id_param IS NOT NULL
+      AND organization_id = organization_id_param
+      AND name = topic_key_param
+    LIMIT 1
+  )
   SELECT
     me.id,
     me.title,
@@ -220,16 +235,104 @@ RETURNS TABLE (
     me.access_count,
     1 - (me.embedding <=> query_embedding) AS relevance_score
   FROM memory_entries me
+  LEFT JOIN org_topic_ids ot ON me.topic_id = ot.id
   WHERE
     (organization_id_param IS NULL OR me.organization_id = organization_id_param)
     AND (memory_types_param IS NULL OR me.memory_type = ANY(memory_types_param))
     AND (tags_param IS NULL OR me.tags && tags_param)
-    AND (topic_id_param IS NULL OR me.topic_id = topic_id_param)
+    AND (
+      topic_id_param IS NOT NULL AND me.topic_id = topic_id_param
+      OR topic_id_param IS NULL AND (
+        topic_key_param IS NULL OR ot.id IS NOT NULL
+      )
+    )
     AND (user_id_param IS NULL OR me.user_id = user_id_param)
     AND (me.embedding <=> query_embedding) < (1 - match_threshold)
     AND me.embedding IS NOT NULL
+    AND (include_deleted_param OR me.deleted_at IS NULL)
   ORDER BY me.embedding <=> query_embedding
   LIMIT match_count;
+$$;
+
+-- Hybrid search function combining semantic + keyword search
+CREATE OR REPLACE FUNCTION hybrid_search_memories(
+  query_text TEXT,
+  query_embedding vector(1536),
+  match_count INTEGER DEFAULT 10,
+  semantic_weight FLOAT DEFAULT 0.7,
+  keyword_weight FLOAT DEFAULT 0.3,
+  min_similarity FLOAT DEFAULT 0.5,
+  filter_user_id UUID DEFAULT NULL,
+  filter_organization_id UUID DEFAULT NULL,
+  include_deleted BOOLEAN DEFAULT false
+)
+RETURNS TABLE(
+  id UUID,
+  title VARCHAR(500),
+  content TEXT,
+  memory_type memory_type,
+  tags TEXT[],
+  metadata JSONB,
+  semantic_similarity FLOAT,
+  keyword_rank FLOAT,
+  combined_score FLOAT,
+  created_at TIMESTAMPTZ,
+  updated_at TIMESTAMPTZ
+) LANGUAGE plpgsql STABLE AS $$
+BEGIN
+  RETURN QUERY
+  WITH semantic_results AS (
+    SELECT
+      me.id,
+      me.title,
+      me.content,
+      me.memory_type,
+      me.tags,
+      me.metadata,
+      (1 - (me.embedding <=> query_embedding)) as semantic_score,
+      me.created_at,
+      me.updated_at
+    FROM memory_entries me
+    WHERE
+      me.embedding IS NOT NULL
+      AND (filter_user_id IS NULL OR me.user_id = filter_user_id)
+      AND (filter_organization_id IS NULL OR me.organization_id = filter_organization_id)
+      AND (include_deleted OR me.deleted_at IS NULL)
+      AND (1 - (me.embedding <=> query_embedding)) > min_similarity
+    ORDER BY me.embedding <=> query_embedding
+    LIMIT match_count * 2
+  ),
+  keyword_results AS (
+    SELECT
+      me.id,
+      ts_rank(
+        to_tsvector('english', COALESCE(me.title, '') || ' ' || COALESCE(me.content, '')),
+        plainto_tsquery('english', query_text)
+      ) as keyword_score
+    FROM memory_entries me
+    WHERE
+      to_tsvector('english', COALESCE(me.title, '') || ' ' || COALESCE(me.content, '')) @@ plainto_tsquery('english', query_text)
+      AND (filter_user_id IS NULL OR me.user_id = filter_user_id)
+      AND (filter_organization_id IS NULL OR me.organization_id = filter_organization_id)
+      AND (include_deleted OR me.deleted_at IS NULL)
+  )
+  SELECT
+    s.id,
+    s.title,
+    s.content,
+    s.memory_type,
+    s.tags,
+    s.metadata,
+    s.semantic_score,
+    COALESCE(k.keyword_score, 0.0) as keyword_rank,
+    (s.semantic_score * semantic_weight + COALESCE(k.keyword_score, 0.0) * keyword_weight) as combined_score,
+    s.created_at,
+    s.updated_at
+  FROM semantic_results s
+  LEFT JOIN keyword_results k ON s.id = k.id
+  ORDER BY combined_score DESC
+  LIMIT match_count;
+END;
 $$;
 
 -- Access tracking function
