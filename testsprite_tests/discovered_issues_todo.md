@@ -7,6 +7,59 @@ list: track them for resolution, and keep the corresponding TestSprite tests
 in the suite (asserting the *correct* behavior) so they stay red until fixed,
 rather than quietly excluding them.
 
+## First real CI run results (2026-06-22)
+
+`production-smoke-test.yml` confirmed working end-to-end after fixing a
+submodule pointer issue (see below): checkout, install, and the contract
+suite all ran against live production from GitHub Actions. **23 passed /
+31 failed of 54** -- real signal, not a broken pipeline. Run:
+https://github.com/thefixer3x/lan-onasis-monorepo/actions/runs/27923367955
+
+- Matches already-tracked gaps exactly (no new info): H-02/H-03,
+  I-02/I-03/I-01/I-05, MT-01/02/03, S-01/03/04/05/06, O-01.
+- B-02/B-03/B-04 failures are a cascade of the known B-01 gap (no
+  `/register` endpoint -> no real user -> login/refresh/logout can't
+  succeed). Not a separate bug.
+- B-05 got 429 (rate-limited) -- the suite was run 4+ times within an hour
+  while debugging; auth-gateway's rate limiter is sensitive. Won't recur
+  under the normal 6h schedule; not a real signal from this run.
+- Several `intelligence-real.test.ts` tests (find-related, predictive-
+  recall, intelligence/memories, behavior-record, behavior-suggest) got
+  inconsistent 401/403/404 here despite passing cleanly in an earlier
+  local run minutes before -- most likely the same rate-limiting noise.
+  **Re-check once isolated from repeated runs** (e.g. via the next natural
+  scheduled run) before treating any of these as real bugs.
+- **New, needs follow-up:**
+  - `M-11` (`/memories/admin/stats`) returned 404 here vs. 403 when curl'd
+    directly earlier the same session. Re-check once rate limits clear --
+    if it's consistently 404, the route may not exist at all (contradicts
+    earlier finding) rather than being correctly role-gated.
+  - `O-08` (revoke without auth) returns 403, not the documented 401.
+    Minor status-code mismatch, not a missing route.
+  - `P-01`/`P-03` (profile get/ask for self) return 404 -- plausibly
+    correct (the dev key's identity may have no compiled profile data
+    yet, which is a legitimate empty-state, not a bug) rather than a
+    route problem. Needs a profile-seeding fixture to test the true
+    happy path.
+  - `M-10` (bulk delete) returned 400 -- possibly a wrong request-body
+    shape in the test itself rather than a backend issue; not yet
+    re-verified in isolation.
+
+## Submodule pointer bug (fixed 2026-06-22)
+
+`packages/memory-intelligence-engine`'s gitlink pointed at commit
+`8e9c7825c190f4a5320b6652ed855b233c33f287`, which existed only in a local
+working copy and was never pushed to
+`github.com/lanonasis/memory-intelligence-engine`. This broke
+`actions/checkout@v4`'s `submodules: recursive` step for **every** workflow
+on the monorepo (confirmed via `nx-ci-test.yml`'s last several runs failing
+identically, including ones from before this session's changes) --
+`git fetch` for that exact commit failed with "not our ref." **Fixed** by
+pushing the missing commit (`git push origin HEAD:main` from inside the
+submodule). Root cause of how it got into this state wasn't investigated
+further -- likely an automated submodule-pointer-bump commit ran against a
+local working copy before that copy's own commit was pushed.
+
 ## Real production route map — Basic Auth / OAuth / API Keys / MCP Sessions (2026-06-22)
 
 Found while running the new `apps/onasis-core/tests/contract/` Vitest suite
