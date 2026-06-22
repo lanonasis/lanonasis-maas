@@ -7,6 +7,89 @@ list: track them for resolution, and keep the corresponding TestSprite tests
 in the suite (asserting the *correct* behavior) so they stay red until fixed,
 rather than quietly excluding them.
 
+## Real production route map — Basic Auth / OAuth / API Keys / MCP Sessions (2026-06-22)
+
+Found while running the new `apps/onasis-core/tests/contract/` Vitest suite
+for the first time: most of the PRD's Basic Auth / OAuth / API Key / MCP
+Session paths 404 on production. Root-caused via source mapping (not test
+fixes) — many are **genuine missing production capability**, not just wrong
+paths in the tests. `apps/lanonasis-maas/src/server.ts` (the standalone
+Express app the PRD describes) is **not in the production request path at
+all** — production's real backing service for `/api/v1/auth/*` is
+`apps/onasis-core/services/auth-gateway/` (proxied via `_redirects`).
+
+| Capability | PRD/assumed path | Real path | Implementing file | Live on production? |
+|---|---|---|---|---|
+| Basic register | `/api/v1/auth/basic/register` | none | n/a | **No — genuine gap.** `auth-gateway/src/routes/auth.routes.ts` has no `/register` (only `/login`, magic-link, OTP). |
+| Basic login | `/api/v1/auth/basic/login` | `/api/v1/auth/login` | `auth-gateway/src/routes/auth.routes.ts:14` | Yes, at the real path — **test path was wrong** |
+| Basic refresh | `/api/v1/auth/basic/refresh` | none | n/a | **No — genuine gap.** No standalone refresh endpoint exists. |
+| Basic logout | `/api/v1/auth/basic/logout` | `/api/v1/auth/logout` | `auth-gateway/src/routes/auth.routes.ts:23` | Yes, at the real path — **test path was wrong** |
+| OAuth client-info | `/api/v1/auth/oauth/client-info` | none on auth-gateway (`/client-info` only exists in the bypassed maas Express app) | `apps/lanonasis-maas/src/routes/auth-router.ts:164` | **No — bypassed app only** |
+| OAuth authorize | `/api/v1/auth/oauth/authorize` | `/oauth/authorize` | `auth-gateway/src/routes/oauth.routes.ts`, via `_redirects` 146-147 | Yes, at the real path — **test path was wrong** |
+| OAuth device | `/api/v1/auth/oauth/device` | `/oauth/device` | `auth-gateway/src/routes/device.routes.ts` | Yes, at the real path — **test path was wrong** |
+| OAuth revoke | `/api/v1/auth/oauth/revoke` | `/oauth/revoke` | `auth-gateway/src/routes/oauth.routes.ts` | Yes, at the real path — **test path was wrong** |
+| API key projects | `/api/v1/api-keys/projects` | `/api/v1/projects` (separate resource) | `auth-gateway/src/routes/projects.routes.ts` | Yes, at the real path — **test path was wrong** |
+| API key CRUD | `/api/v1/api-keys/*` | matches | `auth-gateway/src/routes/api-keys.routes.ts`, `_redirects` 92-93 | Yes — path was correct |
+| API key analytics (usage, security-events) | `/api/v1/api-keys/analytics/*` | none | n/a | **No — genuine gap.** No analytics routes anywhere in auth-gateway. |
+| API key MCP tool grants | `/api/v1/api-keys/mcp/tools` | none on auth-gateway | `apps/lanonasis-maas/src/routes/api-keys.ts:770,826` | **No — bypassed app only** |
+| MCP session request-access/status/proxy-token/resolve/end | `/api/v1/mcp/api-keys/*` | none | `apps/lanonasis-maas/src/routes/mcp-api-keys.ts` (bypassed) | **No — bypassed app only; auth-gateway's `mcp.routes.ts` only has `/mcp/auth` and `/mcp/health`** |
+
+**Next step:** fix the contract test paths that were simply wrong (login,
+logout, oauth authorize/device/revoke, projects). For the genuine gaps
+(register, refresh, analytics, MCP tool grants, MCP session lifecycle),
+keep the tests asserting documented behavior (red on purpose) and decide:
+port these into `auth-gateway/src/routes/` (extend `auth.routes.ts`, add an
+`analytics.routes.ts`, expand `mcp.routes.ts`) or as new Edge Functions, or
+correct the PRD to mark them self-hosted-only like Intelligence/Metrics.
+
+## BLOCKING — TestSprite backend execution itself appears broken (2026-06-22)
+
+- [ ] **Backend test runs report `"passed"` regardless of actual assertion
+      outcome.** A test asserting `False` (guaranteed failure) reported
+      `"status": "passed"` three separate times. `H-02` (`GET
+      /api/v1/health/ready`, confirmed 404 via direct curl run moments
+      apart) also reported `"passed"` against an `assert r.status_code ==
+      200`.
+      **Evidence this isn't real execution:** a clean before/after credit
+      check (`testsprite usage`) showed a run consumed only **0.2 of the
+      stated 2 credits/run** (~10%) — consistent with the sandbox starting
+      and bailing out early rather than completing a real Python execution
+      that imports `requests` and makes HTTP calls. `startedAt` is always
+      `null`; `finishedAt` lands 165–400ms after `createdAt`, too fast for
+      a real cloud sandbox spin-up.
+      **Status:** every "passed" result obtained via the CLI today —
+      including the original health-check test created earlier in this
+      session — should be treated as **unverified**, not confirmed-correct.
+      Test *creation* was completed for Wave 0 (26 scripts at
+      `/tmp/ts_*.py` — not in this repo, never committed, ephemeral), but
+      only 4 were actually submitted before this was caught; the rest were
+      paused.
+      **Confirmed independently via the web dashboard (2026-06-22):** the
+      dashboard shows the same 6 tests (the original health-check test +
+      H-01 + H-02 + 3 sanity-fail tests) as **"6/6 executable tests
+      passed, no failures or blocked"** — including the 3 tests that
+      `assert False` unconditionally. This rules out a CLI-only display
+      bug; the platform itself is recording/aggregating the wrong verdict.
+      The dashboard's own AI summary explicitly concluded "no evidence of
+      broken routes, auth issues, or schema drift" based on this false
+      signal — which would have been actively misleading if treated as a
+      real health signal for H-02 (the `/health/ready` 404 is real,
+      confirmed via direct curl moments before and after the test run).
+      **Reported to TestSprite support (2026-06-22)** — full report at
+      `testsprite_support_report_draft.md`, with the 3 test IDs, the credit
+      anomaly, and the dashboard corroboration.
+      **Support response confirms this is a genuine defect, not a
+      misunderstanding of documented behavior:** per their own status model
+      (`passed` = ran + every assertion held; `failed` = ran + an assertion
+      did not hold; `blocked` = rejected before a verdict), there is no
+      documented path from "assertion evaluated to False" to "passed." They
+      do not have a CLI/dashboard view exposing raw execution logs for
+      *passed* runs, so they're escalating to check backend execution logs
+      for the reported test IDs directly.
+      **Status: waiting on TestSprite's internal log review.** Do not
+      resume backend test creation for this project until they confirm
+      execution is working correctly, or provide a workaround.
+
 ## Fixed this session
 
 - [x] **`api-gateway.js` syntax break** (Netlify Function, `/api/*` catchall) —
