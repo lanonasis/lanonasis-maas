@@ -33,12 +33,13 @@
     },
     {
       "name": "Basic Authentication",
-      "description": "Allow users to register, log in with email/password, refresh JWT access tokens, and log out.",
+      "description": "Allow users to register (self-hosted only; production identity is provisioned centrally in Supabase/mxtsdgkw, not via self-serve signup), log in with email/password, refresh JWT access tokens (production gateway-native; the gateway mints+stores a refresh JWT, redemption endpoint pending), and log out.",
       "user_flows": [
-        "POST /api/v1/auth/basic/register with valid email and password -> Receive 201 indicating account creation -> POST /api/v1/auth/basic/login with valid credentials -> Receive 200 with JWT token and user object -> POST /api/v1/auth/basic/refresh with valid refresh context -> Receive 200 with refreshed access token -> POST /api/v1/auth/basic/logout with bearer token -> Receive 200 confirming session invalidation",
+        "POST /api/v1/auth/basic/login with valid credentials -> Receive 200 with JWT token and user object -> POST /api/v1/auth/basic/logout with bearer token -> Receive 200 confirming session invalidation",
         "POST /api/v1/auth/basic/login with incorrect password -> Receive 401 with invalid credentials error",
-        "POST /api/v1/auth/basic/register with invalid email format or weak password -> Receive 4xx validation error",
-        "POST /api/v1/auth/basic/logout without bearer token -> Receive 401 unauthorized response"
+        "POST /api/v1/auth/basic/logout without bearer token -> Receive 401 unauthorized response",
+        "POST /api/v1/auth/basic/register (self-hosted only) with valid email and password -> Receive 201 indicating account creation",
+        "POST /api/v1/auth/basic/refresh (production gateway-native; redemption endpoint pending, kanban t_9afdf956) with valid refresh context -> Receive 200 with refreshed access token"
       ]
     },
     {
@@ -204,7 +205,7 @@
       },
       {
         "name": "Basic Authentication",
-        "description": "Email/password login, registration, token refresh and logout.",
+        "description": "Email/password login and logout. Registration is self-hosted only (production identity is provisioned centrally in Supabase/mxtsdgkw). Token refresh is a production gateway-native capability (the gateway mints+stores a refresh JWT; redemption endpoint pending, kanban t_9afdf956). NOTE: the auth-gateway's POST /register is OAuth Dynamic Client Registration (RFC 7591), not user signup.",
         "files": [
           "src/routes/auth-basic.ts"
         ],
@@ -213,29 +214,21 @@
             "method": "POST",
             "path": "/api/v1/auth/basic/login",
             "description": "Authenticate with credentials, returns JWT",
-            "auth_required": false,
-            "request_schema": {
-              "body": {
-                "email": "string",
-                "password": "string"
-              }
-            },
-            "response_schema": {
-              "200": "{ token, user }",
-              "401": "Invalid credentials"
-            }
+            "auth_required": false
           },
           {
             "method": "POST",
             "path": "/api/v1/auth/basic/register",
-            "description": "Create a new account",
-            "auth_required": false
+            "description": "Create a new account (self-hosted only)",
+            "auth_required": false,
+            "availability": "self-hosted only"
           },
           {
             "method": "POST",
             "path": "/api/v1/auth/basic/refresh",
-            "description": "Refresh an access token",
-            "auth_required": false
+            "description": "Refresh an access token. Gateway-native: mints+stores a type:'refresh' JWT (utils/jwt.ts, session.service.ts); redemption endpoint pending (kanban t_9afdf956)",
+            "auth_required": false,
+            "availability": "production (redemption pending)"
           },
           {
             "method": "POST",

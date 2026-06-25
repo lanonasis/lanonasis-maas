@@ -70,9 +70,9 @@ all** — production's real backing service for `/api/v1/auth/*` is
 
 | Capability | PRD/assumed path | Real path | Implementing file | Live on production? |
 |---|---|---|---|---|
-| Basic register | `/api/v1/auth/basic/register` | none | n/a | **No — genuine gap.** `auth-gateway/src/routes/auth.routes.ts` has no `/register` (only `/login`, magic-link, OTP). |
+| Basic register | `/api/v1/auth/basic/register` | none (email/pw signup) | n/a | **Decision 2026-06-25: self-hosted-only.** Correction: auth-gateway DOES have `POST /register`, but it is OAuth Dynamic Client Registration (RFC 7591), not user signup. There is NO `supabase.auth.signUp` in the gateway — identity/keys are provisioned in the mxtsdgkw Supabase project and synced (hashed) to ptnrw. Self-serve email/password signup minting orgs on the public edge conflicts with that model → marked self-hosted-only (like Intelligence/Metrics). Do NOT port `apps/lanonasis-maas/src/routes/auth-basic.ts` (predates the UAI). |
 | Basic login | `/api/v1/auth/basic/login` | `/api/v1/auth/login` | `auth-gateway/src/routes/auth.routes.ts:14` | Yes, at the real path — **test path was wrong** |
-| Basic refresh | `/api/v1/auth/basic/refresh` | none | n/a | **No — genuine gap.** No standalone refresh endpoint exists. |
+| Basic refresh | `/api/v1/auth/basic/refresh` | none (redemption) | `auth-gateway` (half-built) | **Decision 2026-06-25: implement gateway-native (NOT a maas port).** Correction: refresh is half-built, not absent. `utils/jwt.ts:37` mints a `type:'refresh'` JWT and `services/session.service.ts` stores its hash (`refresh_token_hash`), but no route redeems it. Fix = wire `/v1/auth/refresh` (or extend `/v1/auth/resolve`) to verify the refresh JWT against `session.refresh_token_hash` and re-issue via `generateTokenPair`. Opaque/OAuth path already refreshes via `/oauth/token`; vendor-key needs none. Tracked: kanban `t_9afdf956`. |
 | Basic logout | `/api/v1/auth/basic/logout` | `/api/v1/auth/logout` | `auth-gateway/src/routes/auth.routes.ts:23` | Yes, at the real path — **test path was wrong** |
 | OAuth client-info | `/api/v1/auth/oauth/client-info` | none on auth-gateway (`/client-info` only exists in the bypassed maas Express app) | `apps/lanonasis-maas/src/routes/auth-router.ts:164` | **No — bypassed app only** |
 | OAuth authorize | `/api/v1/auth/oauth/authorize` | `/oauth/authorize` | `auth-gateway/src/routes/oauth.routes.ts`, via `_redirects` 146-147 | Yes, at the real path — **test path was wrong** |
@@ -85,12 +85,22 @@ all** — production's real backing service for `/api/v1/auth/*` is
 | MCP session request-access/status/proxy-token/resolve/end | `/api/v1/mcp/api-keys/*` | none | `apps/lanonasis-maas/src/routes/mcp-api-keys.ts` (bypassed) | **No — bypassed app only; auth-gateway's `mcp.routes.ts` only has `/mcp/auth` and `/mcp/health`** |
 
 **Next step:** fix the contract test paths that were simply wrong (login,
-logout, oauth authorize/device/revoke, projects). For the genuine gaps
-(register, refresh, analytics, MCP tool grants, MCP session lifecycle),
-keep the tests asserting documented behavior (red on purpose) and decide:
-port these into `auth-gateway/src/routes/` (extend `auth.routes.ts`, add an
-`analytics.routes.ts`, expand `mcp.routes.ts`) or as new Edge Functions, or
-correct the PRD to mark them self-hosted-only like Intelligence/Metrics.
+logout, oauth authorize/device/revoke, projects).
+
+**RESOLVED 2026-06-25 (operator review, SEYE) — register/refresh:** the gateway
+was re-validated directly (it is a Unified Auth Interface / UAI — `middleware/auth.ts`
+→ `resolveToUAI`, aggregating username/pw→JWT, browser→opaque OAuth token,
+vendor-key→API-key). The original "port to auth-gateway OR mark self-hosted-only"
+binary was rejected because porting `auth-basic.ts` predates the UAI. Split:
+- **register** → self-hosted-only (centralized provisioning in mxtsdgkw → ptnrw; no
+  self-serve signup on the public edge). PRD corrected.
+- **refresh** → implement gateway-native redemption of the already-minted/stored
+  refresh JWT (kanban `t_9afdf956`); do not port maas.
+
+For the remaining genuine gaps (analytics, MCP tool grants, MCP session lifecycle),
+keep the tests asserting documented behavior (red on purpose) and decide: port into
+`auth-gateway/src/routes/` (add `analytics.routes.ts`, expand `mcp.routes.ts`) or as
+new Edge Functions, or correct the PRD to mark them self-hosted-only.
 
 ## BLOCKING — TestSprite backend execution itself appears broken (2026-06-22)
 
@@ -210,10 +220,10 @@ correct the PRD to mark them self-hosted-only like Intelligence/Metrics.
       (confirm before writing tests or documenting them as public).
       Possible naming collision: `intelligence-profiles` vs.
       `apps/lanonasis-maas`'s own `/api/v1/profiles/:subject_id` — clarify
-      which is canonical, or whether they're intentionally distinct.
+      - [x] **PRD's "Basic Auth" feature (`/register`, `/refresh`) does not exist on `api.lanonasis.com`.** Marked self-hosted-only in PRD (standard_prd.json), following Intelligence/Metrics pattern. Decision via operator review (SEYE) at t_b4ed5068 comment (2026-06-25).
 
-- [ ] **PRD's "Metrics" feature (MT-01–MT-04: `/metrics`, `/metrics/json`)
-      does not exist on `api.lanonasis.com`.** Both routes 404. Same
+      - [ ] **PRD's "Metrics" feature (MT-01–MT-04: `/metrics`, `/metrics/json`)
+            does not exist on `api.lanonasis.com`.** Both routes 404. Same
       self-hosted-Express-only pattern as Intelligence. Needs: decide if
       production should expose metrics somewhere (Prometheus scraping target?
       a different path?) or correct the PRD.
