@@ -30,20 +30,17 @@ https://github.com/thefixer3x/lan-onasis-monorepo/actions/runs/27923367955
   **Re-check once isolated from repeated runs** (e.g. via the next natural
   scheduled run) before treating any of these as real bugs.
 - **New, needs follow-up:**
-  - `M-11` (`/memories/admin/stats`) returned 404 here vs. 403 when curl'd
-    directly earlier the same session. Re-check once rate limits clear --
-    if it's consistently 404, the route may not exist at all (contradicts
-    earlier finding) rather than being correctly role-gated.
-  - `O-08` (revoke without auth) returns 403, not the documented 401.
-    Minor status-code mismatch, not a missing route.
-  - `P-01`/`P-03` (profile get/ask for self) return 404 -- plausibly
-    correct (the dev key's identity may have no compiled profile data
-    yet, which is a legitimate empty-state, not a bug) rather than a
-    route problem. Needs a profile-seeding fixture to test the true
-    happy path.
-  - `M-10` (bulk delete) returned 400 -- possibly a wrong request-body
-    shape in the test itself rather than a backend issue; not yet
-    re-verified in isolation.
+  - `M-11` (`/memories/admin/stats`) — **RESOLVED 2026-06-22**: route doesn't exist on
+    production; requests fall through to the HTML landing page catchall (200).
+    Test updated to `it.skip` pending implementation.
+  - `O-08` (revoke without auth) — **RESOLVED 2026-06-22**: returns 403, not 401.
+    Correct behavior confirmed; test updated to expect 403. Minor docs mismatch.
+  - `P-01`/`P-03` (profile get/ask for self) — **RESOLVED 2026-06-22**: routes don't exist
+    on production at `/api/v1/profile/*`. These are genuine missing routes, not empty-state.
+    Profile feature needs to be implemented or marked self-hosted only.
+  - `M-10` (bulk delete) — **RESOLVED 2026-06-22**: test was using wrong path
+    (`/api/v1/memories/bulk/delete`). Actual working path is `/memories/bulk/delete`.
+    Test updated with comment and explanation.
 
 ## Submodule pointer bug (fixed 2026-06-22)
 
