@@ -1,9 +1,13 @@
-import { describe, it, expect, jest, beforeEach } from '@jest/globals';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { Request, Response, NextFunction } from 'express';
 
 describe('Authentication Middleware', () => {
   let mockReq: Partial<Request>;
-  let mockRes: jest.Mocked<Partial<Response>>;
+  let mockRes: {
+    status: ReturnType<typeof vi.fn>;
+    json: ReturnType<typeof vi.fn>;
+    locals: Record<string, unknown>;
+  };
   let mockNext: NextFunction;
 
   beforeEach(() => {
@@ -14,11 +18,11 @@ describe('Authentication Middleware', () => {
       params: {}
     };
     mockRes = {
-      status: jest.fn<Response['status']>().mockReturnThis(),
-      json: jest.fn<Response['json']>().mockReturnThis(),
+      status: vi.fn().mockReturnThis(),
+      json: vi.fn().mockReturnThis(),
       locals: {}
-    } as jest.Mocked<Partial<Response>>;
-    mockNext = jest.fn();
+    };
+    mockNext = vi.fn();
   });
 
   describe('API Key Authentication', () => {

@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from '@jest/globals';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { CLIConfig } from '../../cli/src/utils/config';
 import * as fs from 'fs/promises';
 import * as path from 'path';

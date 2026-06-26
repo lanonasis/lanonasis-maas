@@ -1,11 +1,11 @@
-import { describe, it, expect, jest, beforeEach } from '@jest/globals';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 // Mock Supabase client
 const mockSupabase = {
-  from: jest.fn(),
-  rpc: jest.fn(),
+  from: vi.fn(),
+  rpc: vi.fn(),
   auth: {
-    getUser: jest.fn()
+    getUser: vi.fn()
   }
 };
 
@@ -13,15 +13,15 @@ describe('MemoryService', () => {
   let memoryService: any;
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     // Mock memory service
     memoryService = {
-      createMemory: jest.fn(),
-      getMemory: jest.fn(),
-      updateMemory: jest.fn(),
-      deleteMemory: jest.fn(),
-      searchMemories: jest.fn(),
-      generateEmbedding: jest.fn()
+      createMemory: vi.fn(),
+      getMemory: vi.fn(),
+      updateMemory: vi.fn(),
+      deleteMemory: vi.fn(),
+      searchMemories: vi.fn(),
+      generateEmbedding: vi.fn()
     };
   });
 

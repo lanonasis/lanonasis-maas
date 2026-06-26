@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, afterAll, jest } from '@jest/globals';
+import { describe, expect, it, vi } from 'vitest';
 
 type LoginPayload = { email: string; password: string };
 type LoginResult = { token: string; user: { id: string; email: string } };
@@ -15,7 +15,7 @@ describe('Authentication Routes', () => {
   describe('POST /api/v1/auth/login', () => {
     it('should authenticate valid credentials', async () => {
       // Mock implementation - will be connected to actual auth service
-      const mockLogin = jest.fn(async (_payload: LoginPayload): Promise<LoginResult> => ({
+      const mockLogin = vi.fn(async (_payload: LoginPayload): Promise<LoginResult> => ({
         token: 'jwt_token_123',
         user: { id: '1', email: 'test@example.com' }
       }));
@@ -30,7 +30,7 @@ describe('Authentication Routes', () => {
     });
 
     it('should reject invalid credentials', async () => {
-      const mockLogin = jest.fn(async (_payload: LoginPayload): Promise<never> => {
+      const mockLogin = vi.fn(async (_payload: LoginPayload): Promise<never> => {
         throw new Error('Invalid credentials');
       });
       
@@ -62,7 +62,7 @@ describe('Authentication Routes', () => {
 
   describe('POST /api/v1/auth/register', () => {
     it('should register new user', async () => {
-      const mockRegister = jest.fn(async (_payload: RegisterPayload): Promise<RegisterResult> => ({
+      const mockRegister = vi.fn(async (_payload: RegisterPayload): Promise<RegisterResult> => ({
         user: {
           id: 'user_123',
           email: 'newuser@example.com',
@@ -88,7 +88,7 @@ describe('Authentication Routes', () => {
         async () => { throw new Error('User already exists'); }
       ];
 
-      const mockRegister = jest.fn(async (_payload: MinimalRegisterPayload): Promise<{ success: boolean }> => {
+      const mockRegister = vi.fn(async (_payload: MinimalRegisterPayload): Promise<{ success: boolean }> => {
         const handler = responses.shift();
         if (!handler) {
           throw new Error('No handler configured');
@@ -104,7 +104,7 @@ describe('Authentication Routes', () => {
     });
 
     it('should hash passwords before storage', async () => {
-      const mockHashPassword = jest.fn<(password: string) => string>();
+      const mockHashPassword = vi.fn<(password: string) => string>();
       mockHashPassword.mockImplementation((password: string) => {
         return `hashed_${password}`;
       });
@@ -117,7 +117,7 @@ describe('Authentication Routes', () => {
 
   describe('JWT Token Handling', () => {
     it('should generate valid JWT tokens', () => {
-      const mockGenerateToken = jest.fn<(payload: JwtPayload) => string>();
+      const mockGenerateToken = vi.fn<(payload: JwtPayload) => string>();
       mockGenerateToken.mockReturnValue('valid.jwt.token');
       const token = mockGenerateToken({ userId: '123' });
       
@@ -126,7 +126,7 @@ describe('Authentication Routes', () => {
     });
 
     it('should verify JWT tokens', () => {
-      const mockVerifyToken = jest.fn<(token: string) => DecodedJwt>();
+      const mockVerifyToken = vi.fn<(token: string) => DecodedJwt>();
       mockVerifyToken.mockReturnValue({
         userId: '123',
         exp: Date.now() + 3600000
@@ -138,7 +138,7 @@ describe('Authentication Routes', () => {
     });
 
     it('should reject expired tokens', () => {
-      const mockVerifyToken = jest.fn().mockImplementation(() => {
+      const mockVerifyToken = vi.fn().mockImplementation(() => {
         throw new Error('Token expired');
       });
       
