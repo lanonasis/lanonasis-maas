@@ -520,12 +520,14 @@
             "method": "GET",
             "path": "/api/v1/metrics",
             "description": "Prometheus metrics exposition",
+            "availability": "self-hosted-only",
             "auth_required": true
           },
           {
             "method": "GET",
             "path": "/api/v1/metrics/json",
             "description": "Metrics as JSON",
+            "availability": "self-hosted-only",
             "auth_required": true
           }
         ]
