@@ -1,4 +1,5 @@
 import { config } from 'dotenv';
+import { afterAll, beforeAll, vi } from 'vitest';
 
 // Load test environment variables
 config({ path: '.env.test' });
@@ -18,10 +19,10 @@ const originalConsole = { ...console };
 
 beforeAll(() => {
   // Suppress console output during tests unless explicitly needed
-  console.log = jest.fn();
-  console.info = jest.fn();
-  console.warn = jest.fn();
-  console.error = jest.fn();
+  console.log = vi.fn();
+  console.info = vi.fn();
+  console.warn = vi.fn();
+  console.error = vi.fn();
 });
 
 afterAll(() => {
@@ -29,16 +30,13 @@ afterAll(() => {
   Object.assign(console, originalConsole);
 });
 
-// Global test timeout
-jest.setTimeout(30000);
-
 // Mock OpenAI API
-jest.mock('openai', () => {
+vi.mock('openai', () => {
   return {
     __esModule: true,
-    default: jest.fn().mockImplementation(() => ({
+    default: vi.fn().mockImplementation(() => ({
       embeddings: {
-        create: jest.fn().mockResolvedValue({
+        create: vi.fn().mockResolvedValue({
           data: [{
             embedding: new Array(1536).fill(0).map(() => Math.random())
           }]
@@ -49,38 +47,38 @@ jest.mock('openai', () => {
 });
 
 // Mock Supabase client
-jest.mock('@supabase/supabase-js', () => {
+vi.mock('@supabase/supabase-js', () => {
   return {
-    createClient: jest.fn(() => ({
-      from: jest.fn(() => ({
-        select: jest.fn().mockReturnThis(),
-        insert: jest.fn().mockReturnThis(),
-        update: jest.fn().mockReturnThis(),
-        delete: jest.fn().mockReturnThis(),
-        eq: jest.fn().mockReturnThis(),
-        single: jest.fn().mockResolvedValue({ data: null, error: null }),
-        then: jest.fn().mockResolvedValue({ data: [], error: null })
+    createClient: vi.fn(() => ({
+      from: vi.fn(() => ({
+        select: vi.fn().mockReturnThis(),
+        insert: vi.fn().mockReturnThis(),
+        update: vi.fn().mockReturnThis(),
+        delete: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        single: vi.fn().mockResolvedValue({ data: null, error: null }),
+        then: vi.fn().mockResolvedValue({ data: [], error: null })
       })),
-      rpc: jest.fn().mockResolvedValue({ data: [], error: null })
+      rpc: vi.fn().mockResolvedValue({ data: [], error: null })
     }))
   };
 });
 
 // Mock Redis client
-jest.mock('redis', () => {
+vi.mock('redis', () => {
   return {
-    createClient: jest.fn(() => ({
-      connect: jest.fn().mockResolvedValue(undefined),
-      disconnect: jest.fn().mockResolvedValue(undefined),
-      get: jest.fn().mockResolvedValue(null),
-      set: jest.fn().mockResolvedValue('OK'),
-      del: jest.fn().mockResolvedValue(1)
+    createClient: vi.fn(() => ({
+      connect: vi.fn().mockResolvedValue(undefined),
+      disconnect: vi.fn().mockResolvedValue(undefined),
+      get: vi.fn().mockResolvedValue(null),
+      set: vi.fn().mockResolvedValue('OK'),
+      del: vi.fn().mockResolvedValue(1)
     }))
   };
 });
 
-jest.mock('@lanonasis/security-sdk/hash-utils', () => {
+vi.mock('@lanonasis/security-sdk/hash-utils', () => {
   return {
-    ensureApiKeyHash: jest.fn((value: string) => `mock-hash-${value}`)
+    ensureApiKeyHash: vi.fn((value: string) => `mock-hash-${value}`)
   };
 }, { virtual: true });

@@ -1,4 +1,4 @@
-import { describe, it, expect } from '@jest/globals';
+import { describe, expect, it } from 'vitest';
 import { createTestApiClient, type ApiClientInstance } from '../utils/test-api-client';
 
 let apiClient: ApiClientInstance;

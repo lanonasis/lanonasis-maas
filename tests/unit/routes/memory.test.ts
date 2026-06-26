@@ -1,19 +1,19 @@
-import { describe, it, expect, jest, beforeEach } from '@jest/globals';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 describe('Memory API Routes', () => {
   let mockMemoryService: any;
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     mockMemoryService = {
-      create: jest.fn(),
-      findById: jest.fn(),
-      findAll: jest.fn(),
-      update: jest.fn(),
-      delete: jest.fn(),
-      search: jest.fn(),
-      bulkImport: jest.fn(),
-      bulkExport: jest.fn()
+      create: vi.fn(),
+      findById: vi.fn(),
+      findAll: vi.fn(),
+      update: vi.fn(),
+      delete: vi.fn(),
+      search: vi.fn(),
+      bulkImport: vi.fn(),
+      bulkExport: vi.fn()
     };
   });
 

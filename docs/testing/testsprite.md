@@ -1,6 +1,6 @@
 # TestSprite MCP — Automated E2E / Bug-Hunt Testing
 
-TestSprite is an **AI testing agent** that runs as an MCP server. Unlike our jest/vitest
+TestSprite is an **AI testing agent** that runs as an MCP server. Unlike our Vitest
 suites (unit + integration, run locally), TestSprite analyzes the code, generates its own
 PRD + test plan, generates **fresh** Playwright/Cypress (UI) or API-client (backend) tests,
 **executes them in TestSprite's cloud**, and emits bug reports.
@@ -8,7 +8,7 @@ PRD + test plan, generates **fresh** Playwright/Cypress (UI) or API-client (back
 It does **not** replicate or replace the existing suites — it is a second, independent
 testing layer for comparison and for catching integration/E2E bugs the unit tests can't.
 
-This is wired in **non-disruptively**: nothing about the existing `jest`/`vitest` setup,
+This is wired in **non-disruptively**: nothing about the existing local test setup,
 scripts, or configs changed. TestSprite only adds `.mcp.json`, a `.env` key, and writes its
 own artifacts under `testsprite_tests/`.
 
@@ -80,6 +80,16 @@ Then: `type: "frontend"`, `localPort: 3005`, `testScope: "codebase"`
 ---
 
 ## Baseline: existing suite (for comparison)
+
+The local `apps/lanonasis-maas` backend suite now runs through Nx on Vitest and
+explicitly covers the TestSprite-planned sections for:
+- Health and readiness (`/api/v1/health`, `/ready`, `/live`)
+- Service registry (`/api/v1/services*`)
+- Metrics contract and plan gating (`/api/v1/metrics*`)
+- Auth header semantics, discovery manifest, and `/memory` alias parity
+
+These remain mock-backed contract checks, not a replacement for a live
+TestSprite or production-smoke run.
 
 Captured on current `main` before TestSprite, via the existing scripts:
 

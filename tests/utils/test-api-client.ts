@@ -1,5 +1,5 @@
 import express from 'express';
-import { v4 as uuid } from 'uuid';
+import { randomUUID } from 'node:crypto';
 import request from 'supertest';
 
 interface TestApiClientOptions {
@@ -37,9 +37,46 @@ const ALLOWED_CORS_ORIGINS = [
  */
 function buildMockApp(options: TestApiClientOptions) {
   const app = express();
+  app.use(express.json());
+
+  const validBearer = `Bearer ${options.validJwt}`;
+  const validApiKeyHeaders = (req: express.Request) =>
+    req.get('X-API-Key')?.trim() === options.validApiKey &&
+    req.get('X-Project-Scope')?.trim() === options.validProjectScope;
+
+  const validJwtHeaders = (req: express.Request) =>
+    req.get('Authorization')?.trim() === validBearer &&
+    req.get('X-Project-Scope')?.trim() === options.validProjectScope;
+
+  const ensureAuthenticated = (req: express.Request, res: express.Response) => {
+    const rawProjectScope = req.get('X-Project-Scope');
+    if (typeof rawProjectScope === 'undefined') {
+      unauthorized(req, res, 'AUTH_MISSING_PROJECT_SCOPE', 'Missing required X-Project-Scope header');
+      return false;
+    }
+
+    const projectScope = rawProjectScope.trim();
+    if (!projectScope || projectScope !== options.validProjectScope) {
+      forbidden(req, res, 'INVALID_PROJECT_SCOPE', 'Provided project scope is not authorized');
+      return false;
+    }
+
+    if (validApiKeyHeaders(req) || validJwtHeaders(req)) {
+      return true;
+    }
+
+    const authorizationHeader = req.get('Authorization');
+    if (!authorizationHeader && !req.get('X-API-Key')) {
+      unauthorized(req, res, 'AUTHENTICATION_REQUIRED', 'Authentication credentials were not provided');
+      return false;
+    }
+
+    unauthorized(req, res, 'AUTH_INVALID', 'Authentication failed: invalid credentials');
+    return false;
+  };
 
   app.use((_req, res, next) => {
-    const requestId = uuid();
+    const requestId = randomUUID();
     res.setHeader('X-Request-ID', requestId);
     res.setHeader('X-RateLimit-Limit', '60');
     res.setHeader('X-RateLimit-Remaining', '59');
@@ -115,6 +152,37 @@ function buildMockApp(options: TestApiClientOptions) {
 
   app.get('/health', (_req, res) => {
     res.status(200).json({ status: 'ok', request_id: res.getHeader('X-Request-ID') });
+  });
+
+  app.get('/api/v1/health', (_req, res) => {
+    res.status(200).json({
+      status: 'healthy',
+      dependencies: {
+        database: { status: 'healthy', response_time: 12 },
+        openai: { status: 'healthy', response_time: 33 },
+      },
+      request_id: res.getHeader('X-Request-ID'),
+      timestamp: new Date().toISOString(),
+    });
+  });
+
+  app.get('/api/v1/health/ready', (_req, res) => {
+    res.status(200).json({
+      status: 'ready',
+      dependencies: {
+        database: 'reachable',
+        openai: 'reachable',
+      },
+      timestamp: new Date().toISOString(),
+    });
+  });
+
+  app.get('/api/v1/health/live', (_req, res) => {
+    res.status(200).json({
+      status: 'alive',
+      uptime: 123,
+      timestamp: new Date().toISOString(),
+    });
   });
 
   const unauthorized = (
@@ -236,6 +304,91 @@ function buildMockApp(options: TestApiClientOptions) {
         auth_method: 'jwt',
         project_scope: projectScope,
         request_id: res.getHeader('X-Request-ID'),
+      },
+    });
+  });
+
+  app.get('/api/v1/memory', (req, res) => {
+    if (!ensureAuthenticated(req, res)) {
+      return;
+    }
+
+    res.status(200).json({
+      data: [],
+      meta: {
+        alias: 'memory',
+        request_id: res.getHeader('X-Request-ID'),
+      },
+    });
+  });
+
+  app.get('/api/v1/services', (_req, res) => {
+    res.status(200).json({
+      data: [
+        { id: 'memory', status: 'healthy', protocol: 'https' },
+        { id: 'mcp', status: 'healthy', protocol: 'sse' },
+      ],
+      request_id: res.getHeader('X-Request-ID'),
+    });
+  });
+
+  app.get('/api/v1/services/health', (_req, res) => {
+    res.status(200).json({
+      status: 'healthy',
+      services: {
+        memory: 'healthy',
+        mcp: 'healthy',
+      },
+    });
+  });
+
+  app.get('/api/v1/services/auth/test', (_req, res) => {
+    res.status(200).json({
+      status: 'ok',
+      provider: 'mock-auth',
+    });
+  });
+
+  app.get('/api/v1/services/mcp/test', (_req, res) => {
+    res.status(200).json({
+      status: 'ok',
+      transport: 'sse',
+    });
+  });
+
+  app.post('/api/v1/services/sync', (req, res) => {
+    if (!ensureAuthenticated(req, res)) {
+      return;
+    }
+
+    res.status(200).json({
+      status: 'synced',
+      request_id: res.getHeader('X-Request-ID'),
+      actor: validApiKeyHeaders(req) ? 'api_key' : 'jwt',
+    });
+  });
+
+  app.get('/api/v1/metrics', (req, res) => {
+    if (req.get('Authorization')?.trim() !== validBearer) {
+      return unauthorized(req, res, 'AUTHENTICATION_REQUIRED', 'Authentication credentials were not provided');
+    }
+
+    res.type('text/plain').status(200).send('memory_requests_total 42\n');
+  });
+
+  app.get('/api/v1/metrics/json', (req, res) => {
+    if (req.get('Authorization')?.trim() !== validBearer) {
+      return unauthorized(req, res, 'AUTHENTICATION_REQUIRED', 'Authentication credentials were not provided');
+    }
+
+    if (req.get('X-Plan') !== 'pro') {
+      return forbidden(req, res, 'PLAN_UPGRADE_REQUIRED', 'Current plan does not allow metrics access');
+    }
+
+    res.status(200).json({
+      metrics: {
+        memory_requests_total: 42,
+        active_sessions: 2,
       },
     });
   });

@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, afterAll } from '@jest/globals';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { createTestApiClient, type ApiClientInstance } from '../utils/test-api-client';
 

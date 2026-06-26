@@ -9,14 +9,14 @@
     "dev": "tsx watch src/server.ts",
     "build": "tsc && tsc-alias",
     "start": "node dist/server.js",
-    "test": "jest",
-    "test:watch": "jest --watch",
+    "test": "vitest run --config vitest.config.ts",
+    "test:watch": "vitest --config vitest.config.ts",
     "test:mcp-core": "jest --config apps/mcp-core/jest.config.ts",
-    "test:coverage": "jest --coverage && jest --config apps/mcp-core/jest.config.ts --coverage",
-    "test:conformance": "jest --testPathPattern=conformance --verbose",
-    "test:conformance:discovery": "jest --testPathPattern=conformance/discovery",
-    "test:conformance:auth": "jest --testPathPattern=conformance/auth-headers",
-    "test:all": "npm run test && npm run test:conformance",
+    "test:coverage": "vitest run --config vitest.config.ts --coverage && jest --config apps/mcp-core/jest.config.ts --coverage",
+    "test:conformance": "vitest run --config vitest.config.ts tests/conformance",
+    "test:conformance:discovery": "vitest run --config vitest.config.ts tests/conformance/discovery.test.ts",
+    "test:conformance:auth": "vitest run --config vitest.config.ts tests/conformance/auth-headers.test.ts",
+    "test:all": "bun run test && bun run test:conformance",
     "lint": "bun x eslint src/**/*.ts",
     "lint:fix": "bun x eslint src/**/*.ts --fix",
     "type-check": "tsc --noEmit",
@@ -111,7 +111,8 @@
     "ts-jest": "^29.2.5",
     "tsc-alias": "^1.8.16",
     "tsx": "^4.19.2",
-    "typescript": "^5.7.2"
+    "typescript": "^5.7.2",
+    "vitest": "^4.1.9"
   },
   "engines": {
     "node": ">=18.0.0"
