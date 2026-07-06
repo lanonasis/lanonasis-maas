@@ -1,46 +1,38 @@
 import requests
 
+BASE_URL = "http://localhost:3000"
+SUBJECT_ID = "00000000-0000-4000-8000-000000000001"  # The org id in the token can be a subject id for test if appropriate
+
+HEADERS = {
+    "X-Project-Scope": "lanonasis-maas",
+    "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIwMDAwMDAwMC0wMDAwLTQwMDAtODAwMC0wMDAwMDAwMDAwYWEiLCJ1c2VyX2lkIjoiMDAwMDAwMDAtMDAwMC00MDAwLTgwMDAtMDAwMDAwMDAwMGFhIiwib3JnYW5pemF0aW9uX2lkIjoiMDAwMDAwMDAtMDAwMC00MDAwLTgwMDAtMDAwMDAwMDAwMDAxIiwiZW1haWwiOiJ0ZXN0c3ByaXRlQGxvY2FsLnRlc3QiLCJyb2xlIjoiYWRtaW4iLCJwbGFuIjoiZW50ZXJwcmlzZSIsImlhdCI6MTc4MTAyOTQwMSwiZXhwIjoxNzgxNjM0MjAxfQ.58PJM2eItfRZnEPRpe0kGu2iR4Qw3nok2567FPMeyaA"
+}
+
 def test_get_subject_profile_by_subject_id():
-    base_url = "http://localhost:3000"
-    subject_id = "dummy-subject-id"
-    url = f"{base_url}/api/v1/profiles/{subject_id}"
-    headers = {
-        "Authorization": "Bearer invalid_or_missing_token",
-        "x-api-key": "lano_7bxi41l2sm86scqsyn9e1a92zib7w7rz",
-    }
+    url = f"{BASE_URL}/api/v1/profiles/{SUBJECT_ID}"
     try:
-        response = requests.get(url, headers=headers, timeout=30)
+        response = requests.get(url, headers=HEADERS, timeout=30)
     except requests.RequestException as e:
         assert False, f"Request failed: {e}"
 
-    # Endpoint requires bearer token auth and database access
-    # Expect 401 or 403 (INVALID_PROJECT_SCOPE) or possibly 500/503 due to dummy backend
-    assert response.status_code in [401, 403, 500, 503], \
-        f"Unexpected status code {response.status_code}, response: {response.text}"
-
-    # Check security headers presence if response is a server error or auth failure
-    security_headers = ["Content-Security-Policy", "X-Content-Type-Options", "X-Frame-Options", "Strict-Transport-Security", "Referrer-Policy"]
-    for header in security_headers:
-        assert header in response.headers, f"Missing security header: {header}"
-
-    # Validate error response body schema for auth or server error
+    assert response.status_code == 200, f"Expected status 200, got {response.status_code}"
+    # Response should be JSON with current subject profile data
     try:
-        json_body = response.json()
+        profile_data = response.json()
     except ValueError:
-        json_body = None
+        assert False, "Response is not valid JSON"
 
-    if response.status_code in [401, 403]:
-        # Common auth error response pattern: expect keys like 'error', 'message', or code for INVALID_PROJECT_SCOPE
-        assert isinstance(json_body, dict), "Expected JSON body for auth error"
-        assert "error" in json_body or "message" in json_body, "Missing 'error' or 'message' in auth error response"
-        if "message" in json_body:
-            assert isinstance(json_body["message"], str)
-        if "code" in json_body:
-            # 403 might return code like INVALID_PROJECT_SCOPE
-            assert isinstance(json_body["code"], str)
-    elif response.status_code in [500, 503]:
-        # Server error may have message/reporting keys
-        if json_body:
-            assert "error" in json_body or "message" in json_body, "Expected error info in 5xx response"
+    # Basic validations of profile_data: it should be a dict and contain keys expected in a profile
+    assert isinstance(profile_data, dict), "Profile data should be a dictionary"
+
+    assert "subject_id" in profile_data or "id" in profile_data or "subject" in profile_data, \
+        "Profile data does not contain expected subject identifier key"
+
+    # Additional possible keys to check (example, adapt as necessary)
+    # Assert the returned subject_id matches the requested ID if present explicitly
+    if "subject_id" in profile_data:
+        assert profile_data["subject_id"].lower() == SUBJECT_ID.lower(), "Returned profile subject_id mismatch"
+    elif "id" in profile_data:
+        assert profile_data["id"].lower() == SUBJECT_ID.lower(), "Returned profile id mismatch"
 
 test_get_subject_profile_by_subject_id()

@@ -1,52 +1,77 @@
 import requests
+import uuid
 
 BASE_URL = "http://localhost:3000"
-API_KEYS_ENDPOINT = "/api/v1/api-keys"
+HEADERS = {
+    "X-Project-Scope": "lanonasis-maas",
+    "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIwMDAwMDAwMC0wMDAwLTQwMDAtODAwMC0wMDAwMDAwMDAwYWEiLCJ1c2VyX2lkIjoiMDAwMDAwMDAtMDAwMC00MDAwLTgwMDAtMDAwMDAwMDAwMGFhIiwib3JnYW5pemF0aW9uX2lkIjoiMDAwMDAwMDAtMDAwMC00MDAwLTgwMDAtMDAwMDAwMDAwMDAxIiwiZW1haWwiOiJ0ZXN0c3ByaXRlQGxvY2FsLnRlc3QiLCJyb2xlIjoiYWRtaW4iLCJwbGFuIjoiZW50ZXJwcmlzZSIsImlhdCI6MTc4MTAyOTQwMSwiZXhwIjoxNzgxNjM0MjAxfQ.58PJM2eItfRZnEPRpe0kGu2iR4Qw3nok2567FPMeyaA"
+}
 TIMEOUT = 30
 
-BEARER_TOKEN = "lano_7bxi41l2sm86scqsyn9e1a92zib7w7rz"
-
-
 def test_create_api_key_with_valid_project_context():
-    url = BASE_URL + API_KEYS_ENDPOINT
-    headers = {
-        "Authorization": f"Bearer {BEARER_TOKEN}",
-        "Content-Type": "application/json",
-        "Accept": "application/json"
+    # Step 1: Create a new project (required for valid project association)
+    project_payload = {
+        "name": f"test_project_{uuid.uuid4().hex[:8]}"
     }
-    payload = {
-        "project_id": "dummy-project-id",
-        "name": "test-api-key"
-    }
-
+    project = None
+    api_key = None
     try:
-        response = requests.post(url, json=payload, headers=headers, timeout=TIMEOUT)
-    except requests.exceptions.RequestException as e:
-        assert False, f"Request to create API key failed with exception: {e}"
+        project_response = requests.post(
+            f"{BASE_URL}/api/v1/api-keys/projects",
+            headers=HEADERS,
+            json=project_payload,
+            timeout=TIMEOUT
+        )
+        assert project_response.status_code == 201, f"Expected 201 for project creation, got {project_response.status_code}"
+        project = project_response.json()
+        assert "id" in project and isinstance(project["id"], str), "Project ID missing in response"
 
-    assert response.status_code in {201, 401, 403, 500, 503}, f"Unexpected status code: {response.status_code}"
+        # Step 2: Create an API key with valid project association
+        api_key_payload = {
+            "name": f"test_api_key_{uuid.uuid4().hex[:8]}",
+            "project_id": project["id"]
+        }
 
-    if response.status_code == 201:
-        json_data = response.json()
-        assert any(field in json_data for field in ["id", "key", "name"]), "API key details missing expected fields"
-        assert "X-Content-Type-Options" in response.headers, "Missing security header X-Content-Type-Options"
-        assert "X-Frame-Options" in response.headers, "Missing security header X-Frame-Options"
-    elif response.status_code in {401, 403}:
-        try:
-            text = response.text
-            if response.status_code == 403:
-                assert "INVALID_PROJECT_SCOPE" in text, "Expected INVALID_PROJECT_SCOPE error on 403"
-        except Exception:
-            pass
-        if "WWW-Authenticate" in response.headers:
-            assert isinstance(response.headers["WWW-Authenticate"], str)
-    else:
-        try:
-            _ = response.json()
-        except Exception:
-            pass
-        assert "X-Content-Type-Options" in response.headers, "Missing security header X-Content-Type-Options"
-        assert "X-Frame-Options" in response.headers, "Missing security header X-Frame-Options"
+        api_key_response = requests.post(
+            f"{BASE_URL}/api/v1/api-keys",
+            headers=HEADERS,
+            json=api_key_payload,
+            timeout=TIMEOUT
+        )
+        assert api_key_response.status_code == 201, f"Expected 201 for API key creation, got {api_key_response.status_code}"
+        api_key = api_key_response.json()
+        # Validate returned API key details
+        assert "id" in api_key and isinstance(api_key["id"], str), "API key id missing in response"
+        assert "key" in api_key and isinstance(api_key["key"], str) and api_key["key"], "API key value missing or empty"
+        assert "project_id" in api_key and api_key["project_id"] == project["id"], "Project association incorrect in API key response"
+        assert "name" in api_key and api_key["name"] == api_key_payload["name"], "API key name incorrect"
 
+    finally:
+        # Cleanup: Delete created API key and project if they exist
+        if api_key and "id" in api_key:
+            try:
+                del_api_key_resp = requests.delete(
+                    f"{BASE_URL}/api/v1/api-keys/{api_key['id']}",
+                    headers=HEADERS,
+                    timeout=TIMEOUT
+                )
+                # The delete might return 200 or 204
+                assert del_api_key_resp.status_code in (200, 204), f"Failed to delete API key, status {del_api_key_resp.status_code}"
+            except Exception:
+                pass
+
+        if project and "id" in project:
+            try:
+                del_project_resp = requests.delete(
+                    f"{BASE_URL}/api/v1/api-keys/projects/{project['id']}",
+                    headers=HEADERS,
+                    timeout=TIMEOUT
+                )
+                # Project delete might be supported, else ignore failure
+                if del_project_resp.status_code not in (200, 204, 404):
+                    # Accept 404 if project deletion endpoint might not exist or project already deleted
+                    raise AssertionError(f"Unexpected status code deleting project: {del_project_resp.status_code}")
+            except Exception:
+                pass
 
 test_create_api_key_with_valid_project_context()

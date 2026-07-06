@@ -110,7 +110,7 @@ Pre-existing issues found while capturing the baseline (independent of TestSprit
 | Tests executed | 174 (124 + 50); mcp-core 0 | 10 (backend, smoke run) |
 | Pass / fail | 174 / 0 (+ 2 mcp-core suites broken) | 9 / 1 (90%) — the 1 fail is a dead-DB artifact, not a bug |
 | Real coverage | ~0.71% statements | n/a (black-box: auth/scope, error JSON, security headers) |
-| Bugs surfaced | 0 runtime (2 pre-existing compile failures) | 0 product bugs in smoke config; **but the run exposed 2 boot-blocking bugs** (auth-aligned type-import; MetricsCollector not exported) the mocked unit suite never caught |
+| Bugs surfaced | 0 runtime (2 pre-existing compile failures) | smoke run: 2 boot-blocking bugs (auth-aligned type-import; MetricsCollector not exported); real-DB rerun: search threshold mis-calibrated for `text-embedding-3-small` + `\|\| 0.7` falsy-coalescing override bug — see "Real-DB rerun" below. The mocked unit suite caught none of these. |
 | Setup cost | already present | MCP install + key + getting the server to actually boot |
 
 ### Smoke-run result (2026-06-07, backend)
@@ -119,6 +119,76 @@ Pre-existing issues found while capturing the baseline (independent of TestSprit
 - TC001 (`/health`) "failed" `==200` vs `503` — correct degraded reporting against the dead DB, **not a defect**.
 - Full report: `testsprite_tests/testsprite-mcp-test-report.md`. Dashboard: project `eb7bcd98-040c-4aec-bdf7-f401d876af4e`.
 - **Headline:** the highest-value defects came from making the server bootable, not from the test execution. For real business-logic coverage, re-run against local/staging Supabase with a seeded user + valid token.
+
+### Real-DB rerun (2026-06-09, backend, local Supabase)
+
+Stood up local Supabase (`127.0.0.1:54321` API / `:54322` DB), seeded org
+`00000000-0000-4000-8000-000000000001`, minted an HS256 JWT signed with the local
+JWT secret (org + user claims, role admin), and synced the live `memory_entries`
+facade + `match_memories` RPC from the main CRUD project (`mxtsdgkwzjzlttpotole`)
+into the local DB **read-only against remote, local-only writes** (no `db push`,
+no reset). Then exercised the four core memory endpoints directly with
+`Authorization: Bearer <jwt>` + `X-Project-Scope: lanonasis-maas`.
+
+| Endpoint | Result | Notes |
+|---|---|---|
+| `GET /api/v1/memories` | **200** ✓ | real list, pagination envelope |
+| `POST /api/v1/memories` | **201** ✓ | real row written; OpenAI embedding generated; `organization_id` + `memory_type` persisted |
+| `GET /api/v1/memories/admin/stats` | **200** ✓ | `total_memories`, by-type breakdown, avg access count — all real |
+| `POST /api/v1/memories/search` | **200** ✓ (plumbing) | embedding → `match_memories` RPC → ranked envelope all work; but see findings below |
+
+**Findings from the real-DB path (beyond the 2 boot bugs from the smoke run):**
+
+1. **Search threshold is mis-calibrated for the embedding model.** Service default
+   is `match_threshold = 0.7` (`memoryService.ts:449`), but the configured model is
+   `text-embedding-3-small`, whose cosine scores run much lower than the ada-era
+   models 0.7 implies. Measured against a stored memory: a *strong paraphrase* of the
+   content scored **0.689** and was **dropped**; a loose-topic query scored 0.384.
+   Only verbatim/near-identical content clears 0.7. Net effect on this path: semantic
+   recall is near-zero for anything but exact-text matches. This is a calibration
+   decision, not a "tune later" — it determines whether search returns anything.
+2. **Falsy-coalescing bug on the threshold override** (`memoryService.ts:449`):
+   `match_threshold: filters.threshold || 0.7`. A caller passing `threshold: 0`
+   (legitimately "return all, ranked") is silently coerced to `0.7`. Should be `??`.
+3. **Operational note (not a code bug):** a long-lived *detached* dev server held a
+   broken in-process state and returned `403 ORGANIZATION_REQUIRED` for valid JWTs;
+   the org row, keys, and resolver code were all correct, and a clean restart from
+   on-disk code resolved it. Lesson: don't trust a stale `tsx watch` process that has
+   outlived its launching shell — restart before drawing conclusions.
+
+**Caveat on fidelity:** the local `match_memories` (8-arg form the service calls) was
+**synthesized locally** because the remote project only exposes a 5-arg variant; the
+cosine math is standard (`1 - (embedding <=> q)`) and verified (identical text → 1.000),
+so create/list/stats are faithful, but search *ranking* parity with production isn't
+guaranteed. Production intelligence/search also routes through Supabase Edge Functions,
+not this Express path — so findings 1–2 apply to the standalone/self-hosted path.
+
+#### TestSprite cloud rerun against the real DB (2026-06-09)
+
+Re-ran the 10-test backend suite via `testsprite_generate_code_and_execute`, passing the
+Bearer JWT + `X-Project-Scope` via `additionalInstruction`. Result: **2/10 passed** (down
+from the smoke run's 9/10) — an *expected* inversion: the smoke tests tolerated auth/error
+codes, while these assert strict happy-path 2xx.
+
+- ✅ **TC004 create + delete** — the headline: full create→201→delete cycle against the real
+  DB, with org resolution + embedding write. The smoke run could never reach this.
+- ✅ **TC010** list services (no auth).
+- ❌ Breakdown of the 8 fails: 2 false/cold-start (TC001 health = `openai` probe degraded
+  though DB healthy; TC009 metrics scraped before counters populated — verified valid
+  Prometheus on recheck), 2 TestSprite self-setup artifacts (TC007/TC008 create a project
+  with their own invalid `organizationId` body → server correctly 400s), 3 out-of-scope for
+  this seed (TC002/TC003 no auth users, TC005 EF-bound intelligence), 1 real local gap +
+  error smell (TC006 `memory_profiles` table not synced → returns 500 instead of 404).
+
+Full analysis: `testsprite_tests/testsprite-mcp-test-report.md`. Dashboard project
+`1825762d-7487-451a-9779-aaa65b356699`. Credits after run: 135 → see account.
+
+**Net comparison takeaway:** TestSprite's value here was never the pass percentage. Across
+both runs it surfaced bugs the 174-test, ~0.71%-coverage mocked unit suite never could —
+2 boot-blocking defects (smoke) and a cluster of real-DB findings (search threshold/`||`
+override, health over-degradation, profile 500-vs-404). The unit suite proves units in
+isolation; TestSprite proves the assembled server actually boots, authenticates, and
+persists.
 
 ---
 
