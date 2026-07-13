@@ -6,7 +6,7 @@ def test_get_prometheus_metrics_with_authorization():
     url = f"{base_url}{endpoint}"
     headers = {
         "Authorization": "Bearer dummy_valid_token_for_test_purpose",
-        "x-api-key": "lano_7bxi41l2sm86scqsyn9e1a92zib7w7rz"
+        "x-api-key": "lano_<redacted>"
     }
     timeout = 30
 

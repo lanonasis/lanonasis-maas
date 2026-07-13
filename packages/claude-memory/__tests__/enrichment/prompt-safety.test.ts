@@ -29,10 +29,10 @@ describe("escapeMemoryForPrompt", () => {
 describe("redactSecrets", () => {
   it("redacts API keys", () => {
     expect(
-      redactSecrets("api_key: lano_nmpidur33vcn2t8qh61iffy08ulyerd5"),
+      redactSecrets("api_key: lano_test_redaction_key_000000000000"),
     ).toContain("[REDACTED]");
     expect(
-      redactSecrets("api_key: lano_nmpidur33vcn2t8qh61iffy08ulyerd5"),
+      redactSecrets("api_key: lano_test_redaction_key_000000000000"),
     ).not.toContain("lano_nmpidur");
   });
 

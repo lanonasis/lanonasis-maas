@@ -6,7 +6,7 @@ def test_get_subject_profile_by_subject_id():
     url = f"{base_url}/api/v1/profiles/{subject_id}"
     headers = {
         "Authorization": "Bearer invalid_or_missing_token",
-        "x-api-key": "lano_7bxi41l2sm86scqsyn9e1a92zib7w7rz",
+        "x-api-key": "lano_<redacted>",
     }
     try:
         response = requests.get(url, headers=headers, timeout=30)

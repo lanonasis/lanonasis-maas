@@ -6,7 +6,7 @@ def test_create_memory_with_valid_data():
     headers = {
         "Authorization": "Bearer dummy_valid_token_for_test_purposes",
         "Content-Type": "application/json",
-        "x-api-key": "lano_7bxi41l2sm86scqsyn9e1a92zib7w7rz"
+        "x-api-key": "lano_<redacted>"
     }
     payload = {
         "title": "Test Memory Title",

@@ -1,7 +1,7 @@
 import requests
 
 BASE_URL = "http://localhost:3000"
-API_KEY = "lano_7bxi41l2sm86scqsyn9e1a92zib7w7rz"
+API_KEY = "lano_<redacted>"
 HEADERS = {
     "x-api-key": API_KEY,
     "Authorization": "Bearer dummy_token"

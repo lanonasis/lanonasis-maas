@@ -4,7 +4,7 @@ def test_basic_authentication_login_with_valid_credentials():
     base_url = "http://localhost:3000"
     url = f"{base_url}/api/v1/auth/basic/login"
     headers = {
-        "x-api-key": "lano_7bxi41l2sm86scqsyn9e1a92zib7w7rz",
+        "x-api-key": "lano_<redacted>",
         "Content-Type": "application/json"
     }
     # Valid credentials assumed for test input (though server is dummy/non-functional)
