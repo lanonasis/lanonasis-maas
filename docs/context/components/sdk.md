@@ -4,6 +4,13 @@
 **Version:** 1.2.0
 **Published:** Yes (npm registry)
 
+> **Naming gotcha.** The folder name `packages/lanonasis-sdk/` does **not** match the npm package name — the registry name is `@lanonasis/sdk` (no `lanonasis-` prefix, no `standalone` suffix). The folder → package mapping for the confusing ones:
+>
+> 1. **`@lanonasis/sdk`** lives at `packages/lanonasis-sdk/` (this package).
+> 2. **`@lanonasis/memory-sdk-standalone`** lives at `packages/memory-sdk/` — folder name and npm name diverge here too; see `memory-sdk-standalone.md` for the dual-manifest (`standalone/` subfolder) caveat.
+>
+> **Best practice.** When importing or bumping versions, always trust the `"name"` field in the package's `package.json`, not the folder name.
+
 ---
 
 ## Purpose
