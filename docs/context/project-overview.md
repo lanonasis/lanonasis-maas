@@ -54,7 +54,7 @@ Use this split when reasoning about the app:
 | `src/routes/` | local route surface including memory, intelligence, profiles, auth, metrics |
 | `src/middleware/auth-aligned.ts` | current standalone auth and request-shaping middleware |
 | `src/services/` | app-local service layer |
-| `cli/package.json` | current published CLI metadata and binaries (`@lanonasis/cli` v3.9.15) |
+| `cli/package.json` | current published CLI metadata and binaries (`@lanonasis/cli` v3.11.0) |
 | `package.json` | source of truth for app-local scripts |
 | `packages/` | SDK/package ownership map |
 | `apps/mcp-core/` | MCP server — the only app present in this repo's `apps/` directory |
@@ -111,11 +111,11 @@ bun run db:migrate   # tsx src/db/migrate.ts
 bun run db:seed      # tsx src/db/seed.ts
 ```
 
-CLI commands (from `cli/package.json`, `@lanonasis/cli` v3.9.15):
+CLI commands (from `cli/package.json`, `@lanonasis/cli` v3.11.0):
 
 ```bash
-npm run build --prefix cli   # rimraf dist && tsc
-npm test --prefix cli
+bun run build --prefix cli   # rimraf dist && tsc
+bun test --prefix cli
 ```
 
 CLI binaries (verified from `cli/package.json`):

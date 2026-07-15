@@ -1,25 +1,27 @@
 # AGENTS.md
 
+> **Runner: `bun`.** This workspace uses Bun (`bun.lock`). Prefer `bun run …`, `bun x …`, `bun test`. Reach for `npm` only when a Bun-specific command is unavailable.
+
 This file provides guidance to Codex (Codex.ai/code) when working with code in this repository.
 
 ## Development Commands
 
 ### Main Service
-- **Development**: `npm run dev` - Start development server with hot reload
-- **Build**: `npm run build` - Compile TypeScript to JavaScript
-- **Start**: `npm start` - Start production server
-- **Type Check**: `npm run type-check` - Run TypeScript type checking
-- **Lint**: `npm run lint` - Run ESLint
-- **Test**: `npm test` - Run all tests
-- **Test Coverage**: `npm run test:coverage` - Run tests with coverage report
-- **Database Migration**: `npm run db:migrate` - Apply database migrations
-- **Database Seed**: `npm run db:seed` - Seed database with test data
+- **Development**: `bun run dev` - Start development server with hot reload
+- **Build**: `bun run build` - Compile TypeScript to JavaScript
+- **Start**: `bun start` - Start production server
+- **Type Check**: `bun run type-check` - Run TypeScript type checking
+- **Lint**: `bun run lint` - Run ESLint
+- **Test**: `bun test` - Run all tests
+- **Test Coverage**: `bun run test:coverage` - Run tests with coverage report
+- **Database Migration**: `bun run db:migrate` - Apply database migrations
+- **Database Seed**: `bun run db:seed` - Seed database with test data
 
 ### CLI Tool
-- **Development**: `npm run dev` (from cli/ directory)
-- **Build**: `npm run build` (from cli/ directory) 
+- **Development**: `bun run dev` (from cli/ directory)
+- **Build**: `bun run build` (from cli/ directory) 
 - **Test CLI**: `memory --help` after building
-- **Publish**: `npm publish` (from cli/ directory)
+- **Publish**: `bun publish` (from cli/ directory)
 
 ### Docker & Deployment
 - **Local Development**: `docker-compose up`
@@ -38,7 +40,7 @@ This is an enterprise-grade Memory as a Service (MaaS) microservice with the fol
 - **Health Checks**: Kubernetes-ready health endpoints
 - **Security**: Helmet.js, CORS, input validation
 
-### 2. Authentication System (`src/routes/auth.ts`, `src/middleware/auth.ts`)
+### 2. Authentication System (`src/routes/auth-router.ts`, `src/routes/auth-basic.ts`, `src/middleware/centralAuth.ts`)
 - **JWT-based authentication** with bcrypt password hashing
 - **Multi-tenant support** with organization-based isolation
 - **Role-based access control**: admin, user, viewer roles
@@ -115,14 +117,14 @@ The system uses a comprehensive multi-tenant schema:
 
 ### Services & Logic
 - **Memory service**: `src/services/memoryService.ts`
-- **Authentication**: `src/middleware/auth.ts`
+- **Authentication**: `src/middleware/auth-aligned.ts`
 - **Error handling**: `src/middleware/errorHandler.ts`
 - **Logging**: `src/utils/logger.ts`
 - **Metrics**: `src/utils/metrics.ts`
 
 ### API Routes
 - **Health**: `src/routes/health.ts`
-- **Authentication**: `src/routes/auth.ts` 
+- **Authentication**: `src/routes/auth-router.ts` and `src/routes/auth-basic.ts`
 - **Memory operations**: `src/routes/memory.ts`
 - **Metrics**: `src/routes/metrics.ts`
 

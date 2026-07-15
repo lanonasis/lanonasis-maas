@@ -60,3 +60,8 @@ lanonasis-maas/
 - Each package has its own `package.json` with independent versioning
 - Shared ESLint/TypeScript configs where beneficial
 - CI validates all packages on any change
+
+
+---
+
+> **Status: Superseded (2026).** The PNPM Workspaces recommendation in this ADR is no longer the active choice. This workspace now uses **Bun workspaces** (`bun.lock` is the only lockfile; no `pnpm-workspace.yaml` exists). For canonical ordering of evidence, see ADR-001 in `.devops/context-engineering/architecture/adr-001-monorepo-canonical-truth.md` (manifests → active code → config → narrative docs). This file is retained for historical context; new monorepo decisions should be recorded against the .devops ADR.

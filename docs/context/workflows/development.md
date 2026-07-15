@@ -30,27 +30,27 @@ apps/lanonasis-maas/
 Verified from `apps/lanonasis-maas/package.json`:
 
 ```bash
-npm run dev
-npm run build
-npm start
-npm run test
-npm run test:conformance
-npm run test:coverage
-npm run lint
-npm run type-check
-npm run db:migrate
-npm run db:seed
+bun run dev
+bun run build
+bun start
+bun run test
+bun run test:conformance
+bun run test:coverage
+bun run lint
+bun run type-check
+bun run db:migrate
+bun run db:seed
 ```
 
 Useful grouped scripts:
 
 ```bash
-npm run build:all
-npm run publish:all
-npm run workspace:install
-npm run workspace:build
-npm run workspace:test
-npm run workspace:lint
+bun run build:all
+bun run publish:all
+bun run workspace:install
+bun run workspace:build
+bun run workspace:test
+bun run workspace:lint
 ```
 
 ## CLI Commands
@@ -58,9 +58,9 @@ npm run workspace:lint
 Verified from `apps/lanonasis-maas/cli/package.json`:
 
 ```bash
-npm run build --prefix cli
-npm test --prefix cli
-npm run test:coverage --prefix cli
+bun run build --prefix cli
+bun test --prefix cli
+bun run test:coverage --prefix cli
 ```
 
 Notes:
@@ -73,7 +73,7 @@ Notes:
 ### 1. Install
 
 ```bash
-npm run workspace:install
+bun run workspace:install
 ```
 
 ### 2. Set env
@@ -90,39 +90,39 @@ Common standalone variables:
 ### 3. Run the standalone server
 
 ```bash
-npm run dev
+bun run dev
 ```
 
 ### 4. Build or test what you changed
 
 ```bash
-npm run build
-npm run test
+bun run build
+bun run test
 ```
 
 For CLI-specific work:
 
 ```bash
-npm run build --prefix cli
-npm test --prefix cli
+bun run build --prefix cli
+bun test --prefix cli
 ```
 
 ## Testing Guidance
 
 Use the narrowest command that matches the change:
 
-- standalone server behavior: `npm run test`
-- MCP conformance surface: `npm run test:conformance`
-- CLI behavior: `npm test --prefix cli`
-- broader workspace checks: `npm run workspace:test`
+- standalone server behavior: `bun run test`
+- MCP conformance surface: `bun run test:conformance`
+- CLI behavior: `bun test --prefix cli`
+- broader workspace checks: `bun run workspace:test`
 
 ## Database And Migration Safety
 
 For standalone/local work, app-level migration scripts exist:
 
 ```bash
-npm run db:migrate
-npm run db:seed
+bun run db:migrate
+bun run db:seed
 ```
 
 For live platform databases:
@@ -135,8 +135,8 @@ For live platform databases:
 Verified from `apps/lanonasis-maas/package.json`:
 
 ```bash
-npm run deploy:staging
-npm run deploy:production
+bun run deploy:staging
+bun run deploy:production
 ```
 
 Treat these as app-local deployment helpers, not proof of the full production platform route topology.
@@ -146,9 +146,9 @@ Treat these as app-local deployment helpers, not proof of the full production pl
 ### Clean rebuild
 
 ```bash
-npm run clean
-npm run workspace:install
-npm run workspace:build
+bun run clean
+bun run workspace:install
+bun run workspace:build
 ```
 
 ### Port 3000 already in use

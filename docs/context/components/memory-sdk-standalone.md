@@ -1,8 +1,10 @@
 # @lanonasis/memory-sdk-standalone - Component Context
 
 **Package:** `@lanonasis/memory-sdk-standalone`
-**Version:** 1.1.0
+**Version:** 1.1.0 (canonical source: `packages/memory-sdk/package.json`)
 **Published:** Yes (npm registry)
+
+> **Naming gotcha.** The `packages/memory-sdk/standalone/` subfolder contains a *second* `package.json` (v1.0.1) that publishes a pre-bundled UMD artifact (`lanonasis-memory-sdk.cjs` / `.js`) for drop-in browser/legacy use. The canonical source manifest is the **outer** `packages/memory-sdk/package.json` (v1.1.0, ESM-first). When bumping the version, update the outer manifest and re-run the standalone build; do not hand-edit `standalone/package.json`.
 
 ---
 

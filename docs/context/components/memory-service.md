@@ -73,14 +73,14 @@ That does not mean this app defines the full production auth contract for the pl
 Verified from `apps/lanonasis-maas/package.json`:
 
 ```bash
-npm run dev
-npm run build
-npm start
-npm run test
-npm run lint
-npm run type-check
-npm run db:migrate
-npm run db:seed
+bun run dev
+bun run build
+bun start
+bun run test
+bun run lint
+bun run type-check
+bun run db:migrate
+bun run db:seed
 ```
 
 ## Environment Inputs
@@ -95,6 +95,55 @@ Common standalone variables referenced by this component include:
 - `ALLOWED_ORIGINS`
 
 Treat these as standalone/server inputs, not a complete description of platform production secrets.
+
+## Memory Embeddings & Search
+
+### Embedding model
+
+The default embedding model used by `src/services/memoryService.ts` is:
+
+- `text-embedding-3-small` (1536-dimensional vectors)
+
+It is overridable via environment variables:
+
+- `OPENAI_MODEL` — model name (defaults to `text-embedding-3-small`)
+- `EMBEDDING_PROVIDER` — provider key into `PROVIDER_CONFIG` (defaults to `openai`)
+
+> **Cautions.**
+> - Legacy aligned/enhanced service variants (`memoryService-aligned.ts`, `memoryService-enhanced.ts`) still hard-code `text-embedding-ada-002`. If you depend on those paths, vector dimensions and cost differ.
+> - The `match_memories(...)` RPC signature below assumes `vector(1536)`. Swapping to a different embedding model requires a schema migration (`ALTER FUNCTION match_memories ... query_embedding vector(<dim>)`).
+
+### `match_memories(...)` RPC signature
+
+From `src/db/schema.sql`:
+
+```sql
+match_memories(
+  query_embedding        vector(1536),
+  match_threshold        float     DEFAULT 0.7,
+  match_count            int       DEFAULT 20,
+  organization_id_param  uuid      DEFAULT NULL,
+  memory_types_param     memory_type[] DEFAULT NULL,
+  tags_param             text[]    DEFAULT NULL,
+  topic_id_param         uuid      DEFAULT NULL,
+  user_id_param          uuid      DEFAULT NULL
+)
+RETURNS TABLE (
+  id uuid, title varchar(200), content text,
+  memory_type memory_type, tags text[],
+  topic_id uuid, user_id uuid, organization_id uuid,
+  metadata jsonb,
+  created_at timestamptz, updated_at timestamptz, last_accessed timestamptz,
+  access_count integer,
+  relevance_score float
+)
+```
+
+Notes for callers:
+- `match_threshold` is a cosine-similarity floor; 0.7 is a reasonable starting point for `text-embedding-3-small`.
+- `match_count` caps the returned row count.
+- All filter params (`organization_id_param`, `memory_types_param`, `tags_param`, `topic_id_param`, `user_id_param`) are AND-combined with `NULL` meaning "do not filter on this dimension".
+- `relevance_score` is included in the returned rows; sort by it descending on the client.
 
 ## Known Cautions
 
