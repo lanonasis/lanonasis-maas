@@ -1,6 +1,6 @@
 {
   "name": "@lanonasis/cli",
-  "version": "3.11.0",
+  "version": "3.11.1",
   "description": "Professional CLI for LanOnasis Memory as a Service (MaaS) with MCP support, seamless inline editing, and enterprise-grade security",
   "keywords": [
     "lanonasis",
@@ -50,7 +50,8 @@
     "scripts",
     "README.md",
     "LICENSE",
-    "CHANGELOG.md"
+    "CHANGELOG.md",
+    "SKILL.md"
   ],
   "dependencies": {
     "@lanonasis/mem-intel-sdk": "2.1.0",
@@ -75,6 +76,9 @@
     "word-wrap": "^1.2.5",
     "ws": "^8.20.0",
     "zod": "^4.3.6"
+  },
+  "optionalDependencies": {
+    "@lanonasis/repl-cli": "^1.0.1"
   },
   "devDependencies": {
     "@jest/globals": "^30.3.0",

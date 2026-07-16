@@ -36,6 +36,12 @@ describe('ReplEngine', () => {
     expect(commands).toContain('exit');
     expect(commands).toContain('nl');
     expect(commands).toContain('reset');
+    expect(commands).toContain('health');
+  });
+
+  it('should initialize natural language mode from config', () => {
+    const engine = new ReplEngine({ ...config, nlMode: false });
+    expect(engine['nlMode']).toBe(false);
   });
 
   it('should initialize orchestrator with model configuration', () => {

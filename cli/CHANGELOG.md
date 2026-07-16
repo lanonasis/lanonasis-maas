@@ -1,5 +1,21 @@
 # Changelog - @lanonasis/cli
 
+## [3.11.1] - 2026-07-16
+
+### 🐛 Bug Fixes
+
+- **REPL bridge now preserves concierge endpoint controls**: `lanonasis repl` forwards `--ai-router`, `--model`, and `--config` to `@lanonasis/repl-cli`, so the main CLI entry point can launch the same LZero concierge configuration exposed by `lrepl`.
+- **REPL command help reflects the forwarded options**: `lanonasis repl --help` now documents the AI Router, model, and custom config flags.
+
+### 📦 Package
+
+- Declared `@lanonasis/repl-cli` as an optional dependency so fresh main CLI installs can resolve the REPL bridge when the companion package is available.
+- Added a published `SKILL.md` so Codex/agent runtimes can discover package-specific guidance for CLI, MCP, auth, prescan, REPL bridge, and docs drift work.
+
+### 🧪 Testing
+
+- Added a focused bridge contract smoke test for the `lanonasis repl` forwarding surface. This is not a full end-to-end REPL reliability test.
+
 ## [3.10.1] - 2026-06-12
 
 ### 🐛 Bug Fixes

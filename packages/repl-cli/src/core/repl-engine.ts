@@ -9,6 +9,7 @@ import { getPersonaRegistry } from '../personas/registry.js';
 import { EventCommands } from '../commands/event-commands.js';
 import { NaturalLanguageOrchestrator } from './orchestrator.js';
 import { pauseReadline, resumeReadline } from '../utils/spinner-utils.js';
+import { AIEndpointHealthCheck, quickHealthCheck } from './health-check.js';
 
 export class ReplEngine {
   private rl: readline.Interface;
@@ -41,6 +42,8 @@ export class ReplEngine {
   }
 
   constructor(private config: ReplConfig) {
+    this.nlMode = config.nlMode ?? true;
+
     this.rl = readline.createInterface({
       input: process.stdin,
       output: process.stdout,
@@ -262,6 +265,7 @@ export class ReplEngine {
     // System commands
     this.registry.register('mode', (args, ctx) => this.systemCommands.mode(args, ctx));
     this.registry.register('status', (args, ctx) => this.systemCommands.status(args, ctx));
+    this.registry.register('health', () => this.runHealthCheck());
     this.registry.register('help', () => this.showHelp(), ['?', 'h']);
     this.registry.register('clear', async () => await this.systemCommands.clear());
     this.registry.register('exit', async () => { this.stop(); }, ['quit', 'q']);
@@ -338,6 +342,16 @@ export class ReplEngine {
         console.log('');
       }
     }, ['hist']);
+  }
+
+  private async runHealthCheck() {
+    const results = await quickHealthCheck({
+      aiRouterUrl: this.config.aiRouterUrl,
+      openaiApiKey: this.config.openaiApiKey,
+      apiUrl: this.config.apiUrl
+    });
+    const formatter = new AIEndpointHealthCheck([]);
+    console.log(formatter.formatResults(results));
   }
 
   async start() {
@@ -770,6 +784,7 @@ export class ReplEngine {
     console.log(chalk.gray('    reset                   - Clear conversation history'));
     console.log(chalk.gray('    mode <remote|local>     - Switch operation mode'));
     console.log(chalk.gray('    status                  - Show current status'));
+    console.log(chalk.gray('    health                  - Check AI endpoint health'));
     console.log(chalk.gray('    clear                   - Clear screen'));
     console.log(chalk.gray('    history [search]        - Show command history (with optional filter)'));
     console.log(chalk.gray('    help, ?, h              - Show this help'));
