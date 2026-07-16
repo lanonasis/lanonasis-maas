@@ -34,7 +34,7 @@ export function saveCredentials(credentials: Omit<StoredCredentials, 'created_at
   ensureConfigDir();
 
   const now = Date.now();
-  const expiresAt = credentials.expires_at || (credentials.expires_in
+  const expiresAt = credentials.expires_at ?? (credentials.expires_in
     ? now + (credentials.expires_in * 1000)
     : now + (3600 * 1000)); // Default 1 hour
 

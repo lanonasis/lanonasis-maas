@@ -2,6 +2,20 @@
 
 All notable changes to @lanonasis/repl-cli will be documented in this file.
 
+## [1.0.1] - 2026-07-16
+
+### Fixed
+- Added the advertised `health` command to both top-level `lrepl health` / `onasis-repl health` and the in-session REPL command registry.
+- Corrected package repository, directory, and bug tracker metadata to point at `lanonasis/lanonasis-maas`.
+- Updated the CLI version fallback to match the published package version.
+- Preserved explicit `expires_at` values when saving credentials, including `0`.
+
+### Changed
+- Promoted `nlMode` to a real config field so saved configuration and runtime behavior stay aligned.
+
+### Testing
+- Added regression coverage for health command registration, `nlMode` config initialization, and credential expiry preservation.
+
 ## [1.0.0] - 2026-03-21
 
 ### 🎉 Major Release: LZero Concierge Edition

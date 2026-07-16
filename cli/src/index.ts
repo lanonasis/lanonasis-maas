@@ -416,7 +416,10 @@ program
   .description('Start lightweight REPL session for memory operations')
   .option('--mcp', 'Use MCP mode')
   .option('--api <url>', 'Override API URL')
+  .option('--ai-router <url>', 'Override AI router URL')
   .option('--token <token>', 'Authentication token')
+  .option('--model <model>', 'Model label/override for concierge responses')
+  .option('--config <path>', 'Path to a custom repl-config.json')
   .action(async (options) => {
     try {
       // Try to use the REPL package if available
@@ -493,7 +496,10 @@ program
       
       if (options.mcp) args.push('--mcp');
       if (options.api) args.push('--api', options.api);
+      if (options.aiRouter) args.push('--ai-router', options.aiRouter);
       if (options.token) args.push('--token', options.token);
+      if (options.model) args.push('--model', options.model);
+      if (options.config) args.push('--config', options.config);
       
       const repl = spawn('node', [replPath, ...args], {
         stdio: 'inherit',

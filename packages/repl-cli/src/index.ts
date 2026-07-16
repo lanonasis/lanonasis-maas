@@ -3,6 +3,7 @@
 import { Command } from 'commander';
 import { ReplEngine } from './core/repl-engine.js';
 import { loadConfig } from './config/loader.js';
+import { AIEndpointHealthCheck, quickHealthCheck } from './core/health-check.js';
 import chalk from 'chalk';
 
 // Install global error handlers
@@ -38,7 +39,7 @@ import { dirname, join } from 'path';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const packageJsonPath = join(__dirname, '..', 'package.json');
-let version = '0.9.0';
+let version = '1.0.0';
 try {
   const packageJson = JSON.parse(readFileSync(packageJsonPath, 'utf-8'));
   version = packageJson.version || version;
@@ -77,6 +78,21 @@ program
 
     const repl = new ReplEngine(config);
     await repl.start();
+  });
+
+program
+  .command('health')
+  .description('Check AI endpoint health')
+  .option('--config <path>', 'Path to a custom repl-config.json')
+  .action(async (options) => {
+    const config = await loadConfig({}, { configPath: options.config });
+    const results = await quickHealthCheck({
+      aiRouterUrl: config.aiRouterUrl,
+      openaiApiKey: config.openaiApiKey,
+      apiUrl: config.apiUrl
+    });
+    const formatter = new AIEndpointHealthCheck([]);
+    console.log(formatter.formatResults(results));
   });
 
 program

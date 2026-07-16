@@ -37,6 +37,7 @@ export interface ReplConfig {
   aiRouterApiKey?: string; // Dedicated API key for AI Router (lano_...)
   historyFile: string;
   maxHistorySize: number;
+  nlMode?: boolean;
   // User profile and preferences
   userProfile?: UserProfile;
   userPreferences?: UserPreferences;

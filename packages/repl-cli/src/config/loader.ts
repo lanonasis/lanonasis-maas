@@ -36,6 +36,7 @@ const DEFAULT_CONFIG: ReplConfig = {
   aiRouterApiKey: process.env.AI_ROUTER_API_KEY,
   historyFile: HISTORY_FILE,
   maxHistorySize: DEFAULT_MAX_HISTORY_SIZE,
+  nlMode: true,
   // User profile defaults
   userProfile: {
     name: process.env.USER_NAME || process.env.USER,
