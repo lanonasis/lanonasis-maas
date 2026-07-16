@@ -1,11 +1,11 @@
-# @lanonasis/cli v3.10.1 - Secret Prescan
+# @lanonasis/cli v3.11.0 - Advanced CLI Suite
 
 [![NPM Version](https://img.shields.io/npm/v/@lanonasis/cli)](https://www.npmjs.com/package/@lanonasis/cli)
 [![Downloads](https://img.shields.io/npm/dt/@lanonasis/cli)](https://www.npmjs.com/package/@lanonasis/cli)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Golden Contract](https://img.shields.io/badge/Onasis--Core-v0.1%20Compliant-gold)](https://api.lanonasis.com/.well-known/onasis.json)
 
-🎉 **NEW IN v3.10.1**: Secret prescan commands for scanning files and directories for secrets/PII before MIRA context extraction — CI-friendly exit codes, machine-parseable output, value-stripped reports, and clearer local status persistence. No authentication required.
+🎉 **NEW IN v3.11.0**: Expanded command suite with REPL session management (`onasis repl`), service/deployment orchestration commands (`service`, `deploy`, `dashboard`, `api`), and enhanced MCP auto-connect.
 
 ## 🚀 Quick Start
 
