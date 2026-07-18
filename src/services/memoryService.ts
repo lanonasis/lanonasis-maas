@@ -360,8 +360,6 @@ export class MemoryService {
         organization_id: memory.organization_id,
         user_id: memory.user_id,
         memory_type: memory.memory_type,
-        content_length: data.content?.length,
-        tag_count: data.tags?.length,
         provider: this.provider,
         embedding_model: this.embeddingModel,
         latency_ms: Date.now() - startTime,
@@ -374,7 +372,9 @@ export class MemoryService {
           llm_reconstructor: 'not_enabled',
           embedding: hasContentUpdate ? 'pass' : 'skipped',
           storage: 'pass'
-        }
+        },
+        ...(data.content !== undefined ? { content_length: data.content.length } : {}),
+        ...(data.tags !== undefined ? { tag_count: data.tags.length } : {}),
       });
 
       logPerformance('memory_update', Date.now() - startTime, {
@@ -388,8 +388,6 @@ export class MemoryService {
         action: 'update',
         status: 'error',
         memory_id: id,
-        content_length: data.content?.length,
-        tag_count: data.tags?.length,
         provider: this.provider,
         embedding_model: this.embeddingModel,
         latency_ms: Date.now() - startTime,
@@ -404,7 +402,9 @@ export class MemoryService {
           storage: failureStage === 'storage' ? 'fail' : (hasContentUpdate && failureStage === 'embedding' ? 'skipped' : 'pass')
         },
         failure_stage: failureStage || 'unknown',
-        error_message: error instanceof Error ? error.message : 'unknown error'
+        error_message: error instanceof Error ? error.message : 'unknown error',
+        ...(data.content !== undefined ? { content_length: data.content.length } : {}),
+        ...(data.tags !== undefined ? { tag_count: data.tags.length } : {}),
       });
 
       if (error instanceof InternalServerError) throw error;

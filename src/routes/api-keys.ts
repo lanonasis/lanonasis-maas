@@ -7,6 +7,9 @@ import { logger } from '@/utils/logger';
 
 const router: express.Router = express.Router();
 
+const firstParamValue = (value: string | string[] | undefined): string | undefined =>
+  Array.isArray(value) ? value[0] : value;
+
 // Validation middleware
 const validateRequest = (req: express.Request, res: express.Response, next: express.NextFunction): void => {
   const errors = validationResult(req);
@@ -501,7 +504,7 @@ router.get('/:keyId', [
       return;
     }
 
-    const keyId = req.params.keyId;
+    const keyId = firstParamValue(req.params.keyId);
     if (!keyId) {
       res.status(400).json({ error: 'Key ID is required' });
       return;
@@ -604,7 +607,7 @@ router.put('/:keyId', [
       return;
     }
 
-    const keyId = req.params.keyId;
+    const keyId = firstParamValue(req.params.keyId);
     if (!keyId) {
       res.status(400).json({ error: 'Key ID is required' });
       return;
@@ -663,7 +666,7 @@ router.delete('/:keyId', [
       return;
     }
 
-    const keyId = req.params.keyId;
+    const keyId = firstParamValue(req.params.keyId);
     if (!keyId) {
       res.status(400).json({ error: 'Key ID is required' });
       return;
@@ -1006,7 +1009,7 @@ router.post('/mcp/sessions/:sessionId/proxy-token', [
       return;
     }
 
-    const sessionId = req.params.sessionId;
+    const sessionId = firstParamValue(req.params.sessionId);
     if (!sessionId) {
       res.status(400).json({ error: 'Session ID is required' });
       return;

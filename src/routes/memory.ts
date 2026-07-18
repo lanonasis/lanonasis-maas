@@ -31,6 +31,9 @@ import { logMemoryOperation, logger } from '@/utils/logger';
 const router: Router = Router();
 const memoryService = new MemoryService();
 
+const firstParamValue = (value: string | string[] | undefined): string | undefined =>
+  Array.isArray(value) ? value[0] : value;
+
 /**
  * Resolve user context with intelligent organization ID handling
  * Supports vendor API keys, regular API keys, and JWT tokens
@@ -389,7 +392,7 @@ router.post('/search', asyncHandler(async (req: Request, res: Response) => {
  *         description: Memory not found
  */
 router.get('/:id', asyncHandler(async (req: Request, res: Response) => {
-  const { id } = req.params;
+  const id = firstParamValue(req.params.id);
   if (!id) {
     res.status(400).json({
       error: 'Invalid memory ID',
@@ -474,7 +477,7 @@ router.get('/:id', asyncHandler(async (req: Request, res: Response) => {
  *         description: Access denied
  */
 router.put('/:id', asyncHandler(async (req: Request, res: Response) => {
-  const { id } = req.params;
+  const id = firstParamValue(req.params.id);
   if (!id) {
     res.status(400).json({
       error: 'Invalid memory ID',
@@ -549,7 +552,7 @@ router.put('/:id', asyncHandler(async (req: Request, res: Response) => {
  *         description: Access denied
  */
 router.delete('/:id', asyncHandler(async (req: Request, res: Response) => {
-  const { id } = req.params;
+  const id = firstParamValue(req.params.id);
   if (!id) {
     res.status(400).json({
       error: 'Invalid memory ID',

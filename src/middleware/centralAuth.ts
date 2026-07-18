@@ -6,6 +6,7 @@ import {
   getSessionTokenFromRequest,
   hasSSOfromRequest,
 } from '@lanonasis/oauth-client/server';
+import type { ServerRequest } from '@lanonasis/oauth-client/server';
 
 // Use centralized type definitions
 import '@/types/express-auth';
@@ -26,6 +27,27 @@ interface ApiKeyValidationResult {
   rate_limit_remaining?: number;
   project_scope?: string;
 }
+
+type RequestWithCookies = Request & { cookies?: Record<string, string> };
+
+const firstHeaderValue = (value: string | string[] | undefined): string | undefined =>
+  Array.isArray(value) ? value[0] : value;
+
+const toServerRequest = (req: Request): ServerRequest => {
+  const cookies = (req as RequestWithCookies).cookies;
+  const cookie = firstHeaderValue(req.headers.cookie);
+  const authorization = firstHeaderValue(req.headers.authorization);
+  const apiKey = firstHeaderValue(req.headers['x-api-key']);
+
+  return {
+    ...(cookies ? { cookies } : {}),
+    headers: {
+      ...(cookie ? { cookie } : {}),
+      ...(authorization ? { authorization } : {}),
+      ...(apiKey ? { 'x-api-key': apiKey } : {}),
+    },
+  };
+};
 
 /**
  * Create authentication error with consistent format
@@ -150,7 +172,8 @@ export const centralAuth = async (req: Request, res: Response, next: NextFunctio
 
     // Only enforce project scope for non-SSO requests
     // SSO cookies are set by auth-gateway and don't include project scope header
-    const hasSSOCookies = hasSSOfromRequest(req);
+    const serverReq = toServerRequest(req);
+    const hasSSOCookies = hasSSOfromRequest(serverReq);
 
     if (!hasSSOCookies && projectScope !== 'lanonasis-maas') {
       console.warn(`[${req.id}] Invalid project scope: ${projectScope}`);
@@ -161,8 +184,8 @@ export const centralAuth = async (req: Request, res: Response, next: NextFunctio
     if (hasSSOCookies) {
       console.log(`[${req.id}] Authenticating via SSO cookies`);
 
-      const ssoUser = getSSOUserFromRequest(req);
-      const sessionToken = getSessionTokenFromRequest(req);
+      const ssoUser = getSSOUserFromRequest(serverReq);
+      const sessionToken = getSessionTokenFromRequest(serverReq);
 
       if (ssoUser && sessionToken) {
         // Validate the session token
@@ -170,15 +193,16 @@ export const centralAuth = async (req: Request, res: Response, next: NextFunctio
 
         if (tokenData) {
           // SSO authentication successful
+          const organizationId = (tokenData.organization_id || tokenData.org_id) as string | undefined;
+
           req.user = {
             id: ssoUser.id,
             userId: ssoUser.id,
             email: ssoUser.email,
             role: ssoUser.role,
             plan: (tokenData.plan as string) || 'free',
-            organization_id: (tokenData.organization_id || tokenData.org_id) as string | undefined,
-            organizationId: (tokenData.organization_id || tokenData.org_id) as string | undefined,
             auth_type: 'sso',
+            ...(organizationId ? { organization_id: organizationId, organizationId } : {}),
           };
 
           console.log(`[${req.id}] SSO authentication successful for user ${req.user.id}`);
@@ -229,12 +253,16 @@ export const centralAuth = async (req: Request, res: Response, next: NextFunctio
 
       const decoded = await validateJWT(token);
 
+      const jwtUserId = String(decoded.sub || decoded.user_id || decoded.id || '');
+      const jwtEmail = decoded.email ? String(decoded.email) : undefined;
+      const jwtOrganizationId = decoded.organization_id ? String(decoded.organization_id) : undefined;
+
       req.user = {
-        id: String(decoded.sub || decoded.user_id || decoded.id || ''),
-        email: decoded.email ? String(decoded.email) : undefined,
+        id: jwtUserId,
         plan: decoded.plan ? String(decoded.plan) : 'free',
-        organization_id: decoded.organization_id ? String(decoded.organization_id) : undefined,
-        auth_type: 'jwt'
+        auth_type: 'jwt',
+        ...(jwtEmail ? { email: jwtEmail } : {}),
+        ...(jwtOrganizationId ? { organization_id: jwtOrganizationId, organizationId: jwtOrganizationId } : {}),
       };
 
       console.log(`[${req.id}] JWT authentication successful for user ${req.user?.id || 'unknown'}`);

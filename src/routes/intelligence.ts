@@ -16,6 +16,9 @@ import {
 const router: Router = Router();
 const intelligenceService = new IntelligenceService();
 
+const firstParamValue = (value: string | string[] | undefined): string | undefined =>
+  Array.isArray(value) ? value[0] : value;
+
 // ---------------------------------------------------------------------------
 // Input schemas
 // ---------------------------------------------------------------------------
@@ -60,9 +63,11 @@ router.get(
     try {
       const result = await intelligenceService.listInferredConclusions({
         subject_id: boundary.subjectId,
-        organization_id: boundary.personalSubject ? undefined : boundary.organizationId,
         limit: effectiveLimit,
         include_superseded: includeSuperseded,
+        ...(!boundary.personalSubject && boundary.organizationId
+          ? { organization_id: boundary.organizationId }
+          : {}),
       });
 
       logger.info('conclusions: listed', {
@@ -88,7 +93,7 @@ router.get(
   alignedAuthMiddleware,
   planBasedRateLimit('intelligence'),
   asyncHandler(async (req: Request, res: Response) => {
-    const { id } = req.params;
+    const id = firstParamValue(req.params.id);
     if (!id) {
       res.status(400).json({ error: 'job id is required' });
       return;
