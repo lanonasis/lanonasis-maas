@@ -1,5 +1,11 @@
 # Changelog - @lanonasis/cli
 
+## Unreleased
+
+### 🐛 Bug Fixes
+
+- **Memory search fallback is now explicit and CI-safe**: `memory search` reports lexical fallback metadata in JSON output, supports `--no-fallback`, `--fail-on-fallback`, and `--ci`, and redacts backend error strings before printing them.
+
 ## [3.11.1] - 2026-07-16
 
 ### 🐛 Bug Fixes

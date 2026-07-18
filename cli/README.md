@@ -300,6 +300,9 @@ onasis memory create                      # Prompts for missing fields
 # Search memories
 onasis memory search "api integration"
 onasis memory search "meeting notes" --type context
+onasis memory search "gateway parity" --no-fallback --json
+onasis memory search "gateway parity" --ci
+onasis memory search "gateway parity" --fail-on-fallback
 
 # Memory operations
 onasis memory get <id>                    # Get specific memory

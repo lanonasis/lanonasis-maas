@@ -278,6 +278,31 @@ const lexicalFallbackSearch = async (query, searchOptions) => {
         .sort((a, b) => b.similarity_score - a.similarity_score)
         .slice(0, searchOptions.limit);
 };
+const normalizeSearchFallbackMode = (options) => {
+    if (options.ci || options.fallback === false) {
+        return 'never';
+    }
+    const rawMode = (options.fallbackMode || 'auto').trim().toLowerCase();
+    if (rawMode === 'auto' || rawMode === 'lexical' || rawMode === 'never') {
+        return rawMode;
+    }
+    throw new Error('Invalid --fallback-mode. Expected one of: auto, lexical, never');
+};
+const sanitizeSearchError = (message) => {
+    return message
+        .replace(/Bearer\s+[A-Za-z0-9._~+/=-]+/gi, 'Bearer <redacted>')
+        .replace(/\b(lano|lms)_[A-Za-z0-9._-]{8,}\b/g, '$1_<redacted>')
+        .replace(/\b(sk|pk)_(live|test)_[A-Za-z0-9._-]{8,}\b/g, '$1_$2_<redacted>')
+        .replace(/\b(api[_-]?key|authorization|token)(\s*[:=]\s*)[^\s,;]+/gi, '$1$2<redacted>');
+};
+const toSearchJsonResult = (memory) => ({
+    id: memory.id,
+    title: memory.title,
+    memory_type: memory.memory_type,
+    tags: Array.isArray(memory.tags) ? memory.tags : [],
+    similarity_score: memory.similarity_score,
+    content_preview: truncateText(memory.content, 160) || '',
+});
 const resolveCurrentUserId = async () => {
     const profile = await apiClient.getUserProfile();
     if (!profile?.id) {
@@ -769,14 +794,22 @@ export function memoryCommands(program) {
         .option('--threshold <threshold>', 'similarity threshold (0-1)', '0.55')
         .option('--type <types>', 'filter by memory types (comma-separated)')
         .option('--tags <tags>', 'filter by tags (comma-separated)')
+        .option('--fallback-mode <mode>', 'fallback mode when semantic search returns no results or fails (auto, lexical, never)', 'auto')
+        .option('--no-fallback', 'disable CLI lexical fallback when semantic search fails or returns no results')
+        .option('--fail-on-fallback', 'exit non-zero if CLI lexical fallback is used')
+        .option('--ci', 'CI mode: disable fallback, emit JSON, and fail on backend search errors')
+        .option('--json', 'emit machine-readable JSON output')
         .action(async (queryParts, options) => {
         try {
             const query = Array.isArray(queryParts) ? queryParts.join(' ').trim() : String(queryParts || '').trim();
             if (!query) {
                 console.error(chalk.red('✖ Search query is required'));
                 process.exit(1);
+                return;
             }
-            const spinner = ora(`Searching for "${query}"...`).start();
+            const startedAt = Date.now();
+            const fallbackMode = normalizeSearchFallbackMode(options);
+            const jsonOutput = Boolean(options.json || options.ci);
             const requestedThreshold = clampThreshold(parseFloat(options.threshold || '0.55'));
             const searchOptions = {
                 limit: parseInt(options.limit || '20'),
@@ -794,6 +827,8 @@ export function memoryCommands(program) {
             let thresholdUsed = requestedThreshold;
             let searchStrategy = 'semantic';
             let semanticSearchError = null;
+            let fallbackUsed = false;
+            const spinner = jsonOutput ? null : ora(`Searching for "${query}"...`).start();
             for (const threshold of thresholdPlan) {
                 try {
                     const attempt = await apiClient.searchMemories(query, {
@@ -832,31 +867,70 @@ export function memoryCommands(program) {
                     }
                 }
                 catch (error) {
-                    semanticSearchError = error instanceof Error ? error.message : 'Unknown semantic search error';
+                    semanticSearchError = sanitizeSearchError(error instanceof Error ? error.message : 'Unknown semantic search error');
                     break;
                 }
             }
-            if (results.length === 0) {
+            if (results.length === 0 && fallbackMode !== 'never') {
                 const lexicalResults = await lexicalFallbackSearch(query, searchOptions);
                 if (lexicalResults.length > 0) {
                     results = lexicalResults;
                     searchStrategy = 'cli_lexical_fallback';
+                    fallbackUsed = true;
                 }
             }
-            spinner.stop();
+            if (semanticSearchError && fallbackMode === 'never') {
+                searchStrategy = 'semantic_failed';
+            }
+            spinner?.stop();
+            const totalResults = typeof result?.total_results === 'number' ? result.total_results : results.length;
+            const searchTimeMs = typeof result?.search_time_ms === 'number' ? result.search_time_ms : Date.now() - startedAt;
+            const jsonPayload = {
+                query,
+                total_results: totalResults,
+                results: results.map(toSearchJsonResult),
+                search_strategy: searchStrategy,
+                fallback_used: fallbackUsed,
+                fallback_mode: fallbackMode,
+                semantic_error: semanticSearchError,
+                threshold_requested: requestedThreshold,
+                threshold_used: thresholdUsed,
+                threshold_plan: thresholdPlan,
+                search_time_ms: searchTimeMs,
+            };
             if (results.length === 0) {
-                console.log(chalk.yellow('No memories found matching your search'));
-                if (semanticSearchError) {
-                    console.log(chalk.gray(`Semantic search error: ${semanticSearchError}`));
+                if (jsonOutput) {
+                    console.log(JSON.stringify(jsonPayload, null, 2));
                 }
-                console.log(chalk.gray(`Tried thresholds: ${thresholdPlan.map((t) => t.toFixed(2)).join(', ')}`));
+                else {
+                    console.log(chalk.yellow('No memories found matching your search'));
+                    if (semanticSearchError) {
+                        const fallbackHint = fallbackMode === 'never'
+                            ? 'Lexical fallback is disabled for this run.'
+                            : 'Lexical fallback did not find local matches.';
+                        console.log(chalk.gray(`Semantic search error: ${semanticSearchError}`));
+                        console.log(chalk.gray(fallbackHint));
+                    }
+                    console.log(chalk.gray(`Tried thresholds: ${thresholdPlan.map((t) => t.toFixed(2)).join(', ')}`));
+                }
+                if (semanticSearchError && fallbackMode === 'never') {
+                    process.exit(1);
+                }
                 return;
             }
-            if (semanticSearchError && searchStrategy === 'cli_lexical_fallback') {
+            if (jsonOutput) {
+                console.log(JSON.stringify(jsonPayload, null, 2));
+                if ((options.failOnFallback || options.ci) && fallbackUsed) {
+                    process.exit(1);
+                }
+                return;
+            }
+            if (semanticSearchError && fallbackUsed) {
                 console.log(chalk.yellow(`⚠ Semantic search unavailable, using lexical fallback (${semanticSearchError})`));
             }
-            const totalResults = typeof result?.total_results === 'number' ? result.total_results : results.length;
-            const searchTimeMs = typeof result?.search_time_ms === 'number' ? result.search_time_ms : 0;
+            else if (fallbackUsed) {
+                console.log(chalk.yellow('⚠ Semantic search returned no matches; using CLI lexical fallback'));
+            }
             console.log(chalk.blue.bold(`\n🔍 Search Results (${totalResults} found)`));
             console.log(chalk.gray(`Query: "${query}" | Search time: ${searchTimeMs}ms`));
             if (Math.abs(thresholdUsed - requestedThreshold) > 0.0001) {
@@ -882,9 +956,12 @@ export function memoryCommands(program) {
                 }
                 console.log();
             });
+            if ((options.failOnFallback || options.ci) && fallbackUsed) {
+                process.exit(1);
+            }
         }
         catch (error) {
-            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+            const errorMessage = sanitizeSearchError(error instanceof Error ? error.message : 'Unknown error');
             console.error(chalk.red('✖ Search failed:'), errorMessage);
             process.exit(1);
         }
