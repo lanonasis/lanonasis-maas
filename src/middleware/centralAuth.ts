@@ -6,7 +6,6 @@ import {
   getSessionTokenFromRequest,
   hasSSOfromRequest,
 } from '@lanonasis/oauth-client/server';
-import type { ServerRequest } from '@lanonasis/oauth-client/server';
 
 // Use centralized type definitions
 import '@/types/express-auth';
@@ -29,11 +28,12 @@ interface ApiKeyValidationResult {
 }
 
 type RequestWithCookies = Request & { cookies?: Record<string, string> };
+type OAuthServerRequest = Parameters<typeof hasSSOfromRequest>[0];
 
 const firstHeaderValue = (value: string | string[] | undefined): string | undefined =>
   Array.isArray(value) ? value[0] : value;
 
-const toServerRequest = (req: Request): ServerRequest => {
+const toServerRequest = (req: Request): OAuthServerRequest => {
   const cookies = (req as RequestWithCookies).cookies;
   const cookie = firstHeaderValue(req.headers.cookie);
   const authorization = firstHeaderValue(req.headers.authorization);
