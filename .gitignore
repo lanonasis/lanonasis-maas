@@ -74,6 +74,7 @@ config.local.json
 **/*key*
 **/*token*
 **/*password*
+!packages/recall-forge/extraction/secret-redactor.ts
 .cache_ggshield
 *.backup
 
