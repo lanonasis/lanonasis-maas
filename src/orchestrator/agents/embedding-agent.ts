@@ -6,7 +6,7 @@
 import { BaseAgent, AgentConfig, AgentRequest, AgentResponse } from './base-agent.js';
 
 export class EmbeddingAgent extends BaseAgent {
-  private openaiApiKey: string;
+  private openaiApiKey: string | undefined;
   private embeddingModel: string;
   private cache: Map<string, number[]> = new Map();
 

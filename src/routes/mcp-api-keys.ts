@@ -5,6 +5,9 @@ import { logger } from '../utils/logger.js';
 
 const router: express.Router = express.Router();
 
+const firstParamValue = (value: string | string[] | undefined): string | undefined =>
+  Array.isArray(value) ? value[0] : value;
+
 // Validation middleware
 const validateRequest = (req: express.Request, res: express.Response, next: express.NextFunction): void => {
   const errors = validationResult(req);
@@ -205,8 +208,8 @@ router.post('/sessions/:sessionId/keys/:keyName/proxy-token', [
   param('keyName').isLength({ min: 1 }).withMessage('Key name is required')
 ], validateRequest, async (req: express.Request, res: express.Response) => {
   try {
-    const sessionId = req.params.sessionId;
-    const keyName = req.params.keyName;
+    const sessionId = firstParamValue(req.params.sessionId);
+    const keyName = firstParamValue(req.params.keyName);
     
     if (!sessionId || !keyName) {
       res.status(400).json({ error: 'Session ID and key name are required' });
@@ -284,7 +287,7 @@ router.post('/proxy-tokens/:proxyToken/resolve', [
   param('proxyToken').isLength({ min: 1 }).withMessage('Proxy token is required')
 ], validateRequest, async (req: express.Request, res: express.Response) => {
   try {
-    const proxyToken = req.params.proxyToken;
+    const proxyToken = firstParamValue(req.params.proxyToken);
     
     if (!proxyToken) {
       res.status(400).json({ error: 'Proxy token is required' });

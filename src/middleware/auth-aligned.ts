@@ -485,7 +485,7 @@ export const requireAdmin = (req: Request, res: Response, next: NextFunction): v
 /**
  * Rate limiting based on user plan
  */
-export const planBasedRateLimit = () => {
+export const planBasedRateLimit = (_feature?: string) => {
   const limits: Record<string, { requests: number; window: number }> = {
     free: { requests: 60, window: 60000 }, // 60 requests per minute
     pro: { requests: 300, window: 60000 }, // 300 requests per minute

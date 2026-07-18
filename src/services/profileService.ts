@@ -16,7 +16,7 @@ export class DatabaseError extends Error {
 
 export class ExternalServiceError extends Error {
   status: number;
-  body?: string;
+  body: string | undefined;
   constructor(message: string, status: number, body?: string) {
     super(message);
     this.name = 'ExternalServiceError';
@@ -78,7 +78,7 @@ export class ProfileService {
   private metrics = new MetricsCollector();
 
   constructor() {
-    this.supabase = createClient(config.SUPABASE_URL, config.SUPABASE_SERVICE_KEY, {
+    this.supabase = createClient(config.SUPABASE_URL!, config.SUPABASE_SERVICE_KEY!, {
       auth: { persistSession: false },
     });
   }
