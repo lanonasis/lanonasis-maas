@@ -518,8 +518,8 @@ export const planBasedRateLimit = () => {
 };
 
 /**
- * Ensure user exists in maas.users with an organization
- * ALIGNED: Uses maas schema for MaaS-specific user data
+ * Ensure user exists in public.users with an organization
+ * ALIGNED: Uses public schema for user data (was maas.users)
  */
 export async function ensureMaasUser(userId: string, email?: string): Promise<void> {
   try {
