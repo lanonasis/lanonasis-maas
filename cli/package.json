@@ -57,7 +57,7 @@
     "@lanonasis/mem-intel-sdk": "2.1.0",
     "@lanonasis/oauth-client": "2.0.4",
     "@lanonasis/security-sdk": "1.0.5",
-    "@lanonasis/privacy-sdk": "^1.0.0",
+    "@lanonasis/privacy-sdk": "^1.0.1",
     "@lanonasis/secret-prescan": "^0.1.0",
     "@modelcontextprotocol/sdk": "^1.28.0",
     "axios": "^1.14.0",
