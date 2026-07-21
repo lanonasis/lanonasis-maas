@@ -1,11 +1,16 @@
 # Changelog - @lanonasis/cli
 
-## Unreleased
+## [3.11.2] - 2026-07-21
 
 ### 🐛 Bug Fixes
 
 - **Memory search fallback is now explicit and CI-safe**: `memory search` reports lexical fallback metadata in JSON output, supports `--no-fallback`, `--fail-on-fallback`, and `--ci`, and redacts backend error strings before printing them.
 - **Prescan installs are now self-contained**: bundled `@lanonasis/privacy-sdk` alongside `@lanonasis/secret-prescan` so global CLI reinstalls cannot leave prescan resolving through an empty or missing nested privacy SDK package.
+
+### 🧪 Release Verification
+
+- Verified the 3.11.1 REPL bridge fix remains present in the rebuilt `dist/index.js`: `lanonasis repl --help` still documents `--ai-router`, `--model`, and `--config`, and the bridge still forwards those options to `@lanonasis/repl-cli`.
+- Verified the 3.11.2 packed artifact includes both bundled prescan runtime packages: `@lanonasis/privacy-sdk` and `@lanonasis/secret-prescan`.
 
 ## [3.11.1] - 2026-07-16
 
