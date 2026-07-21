@@ -6,6 +6,7 @@
 
 - **Memory search fallback is now explicit and CI-safe**: `memory search` reports lexical fallback metadata in JSON output, supports `--no-fallback`, `--fail-on-fallback`, and `--ci`, and redacts backend error strings before printing them.
 - **Prescan installs are now self-contained**: bundled `@lanonasis/privacy-sdk` alongside `@lanonasis/secret-prescan` so global CLI reinstalls cannot leave prescan resolving through an empty or missing nested privacy SDK package.
+- **Prescan bundles the corrected privacy detector**: CLI now depends on `@lanonasis/privacy-sdk@^1.0.1`, which rejects IBAN-shaped transcript noise with ISO 13616 mod-97 validation before MIRA extraction.
 
 ### 🧪 Release Verification
 
