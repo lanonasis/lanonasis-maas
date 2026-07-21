@@ -1,6 +1,6 @@
 {
   "name": "@lanonasis/cli",
-  "version": "3.11.1",
+  "version": "3.11.2",
   "description": "Professional CLI for LanOnasis Memory as a Service (MaaS) with MCP support, seamless inline editing, and enterprise-grade security",
   "keywords": [
     "lanonasis",
@@ -93,6 +93,7 @@
     "typescript": "^6.0.2"
   },
   "bundledDependencies": [
+    "@lanonasis/privacy-sdk",
     "@lanonasis/secret-prescan"
   ],
   "overrides": {
