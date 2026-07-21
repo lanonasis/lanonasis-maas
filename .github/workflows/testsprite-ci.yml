@@ -1,0 +1,78 @@
+# TestSprite CI Workflow
+#
+# Runs existing CLI Jest tests through the TestSprite infrastructure.
+# This workflow provides a discoverable test surface for the TestSprite
+# GitHub App Pre-Check, which scans for .github/workflows/*.yml files
+# referencing the TestSprite action.
+#
+# TestSprite Pre-Check currently scans the repo root for jest.config.*
+# files. The root-level jest.config.cjs (newly added) makes all 26 CLI
+# test files discoverable from the root, resolving the "No tests detected"
+# error on PRs.
+#
+# Prerequisites:
+#   - TESTSPRITE_API_KEY set as a repository secret
+#   - TestSprite project created in the TestSprite dashboard
+#   - Tests registered in the TestSprite project
+#
+# For now, the primary fix is the root-level jest.config.cjs + test:cli
+# script in package.json. This workflow is an optional additional integration.
+
+name: TestSprite
+
+on:
+  pull_request:
+    paths:
+      - 'cli/**'
+      - 'jest.config.cjs'
+      - 'package.json'
+  workflow_dispatch:
+
+jobs:
+  unit-tests:
+    name: CLI Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install CLI dependencies
+        run: |
+          cd cli
+          bun install --frozen-lockfile
+
+      - name: Build CLI
+        run: |
+          cd cli
+          bun run build
+
+      - name: Smoke test — prescan command resolves
+        run: |
+          cd cli
+          node dist/index.js prescan --help 2>&1 | head -20
+
+      - name: Run CLI unit tests
+        run: |
+          cd cli
+          bun run test -- --testPathIgnorePatterns 'test/(integration|load)\.' --testTimeout 60000
+        timeout-minutes: 5
+
+  testsprite-e2e:
+    name: TestSprite E2E (if configured)
+    runs-on: ubuntu-latest
+    if: ${{ secrets.TESTSPRITE_API_KEY != '' }}
+    needs: unit-tests
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run TestSprite E2E
+        uses: TestSprite/run-action@v1
+        with:
+          testsprite-api-key: ${{ secrets.TESTSPRITE_API_KEY }}
+          base_url: 'https://api.lanonasis.com'
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          blocking: 'true'
