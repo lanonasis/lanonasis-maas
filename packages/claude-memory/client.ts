@@ -281,6 +281,7 @@ export class LanonasisClient {
     const authHeader = await this.resolveAuthHeader();
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
+      "X-Lanonasis-Client-Id": "claude",
       [authHeader.name]: authHeader.value,
     };
     if (this.projectId.trim()) {

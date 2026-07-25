@@ -4,6 +4,12 @@ import chalk from 'chalk';
 import Table from 'cli-table3';
 import { apiClient } from '../utils/api.js';
 import { formatDate, truncateText } from '../utils/formatting.js';
+import {
+  displayConsumer,
+  parseConsumer,
+  VALID_KEY_CONSUMERS,
+  type ApiKeyConsumer,
+} from './api-consumer.js';
 
 // Enhanced VPS-style color scheme
 const colors = {
@@ -21,9 +27,7 @@ const AUTH_API_KEYS_BASE = '/api/v1/api-keys';
 const PROJECTS_API_BASE = '/api/v1/api-keys/projects';
 const VALID_ACCESS_LEVELS = ['public', 'authenticated', 'team', 'admin', 'enterprise'] as const;
 const VALID_KEY_CONTEXTS = ['personal', 'team', 'enterprise'] as const;
-const VALID_KEY_CONSUMERS = ['claude', 'hermes', 'openclaw'] as const;
 type ApiKeyContext = typeof VALID_KEY_CONTEXTS[number];
-type ApiKeyConsumer = typeof VALID_KEY_CONSUMERS[number];
 
 interface PlatformApiKey {
   id: string;
@@ -83,27 +87,6 @@ function parseKeyContext(keyContext?: string): ApiKeyContext | undefined {
   }
 
   throw new Error('Invalid key context. Allowed: personal, team, enterprise');
-}
-
-function parseConsumer(consumer?: string): ApiKeyConsumer | undefined {
-  if (!consumer) {
-    return undefined;
-  }
-
-  const normalized = consumer.trim().toLowerCase();
-  if (!normalized) {
-    return undefined;
-  }
-
-  if ((VALID_KEY_CONSUMERS as readonly string[]).includes(normalized)) {
-    return normalized as ApiKeyConsumer;
-  }
-
-  throw new Error('Invalid consumer. Allowed: claude, hermes, openclaw');
-}
-
-function displayConsumer(key: Pick<PlatformApiKey, 'consumer' | 'name'>): string {
-  return key.consumer || /^\[(claude|hermes|openclaw)\]\s+/i.exec(key.name)?.[1]?.toLowerCase() || '—';
 }
 
 function exitUnsupported(feature: string, guidance: string[]) {
@@ -327,7 +310,9 @@ apiKeysCommand
           ...keyData,
           ...answers,
           key_context: parseKeyContext(typeof answers.key_context === 'string' ? answers.key_context : undefined) ?? keyData.key_context,
-          consumer: parseConsumer(typeof answers.consumer === 'string' ? answers.consumer : undefined) ?? keyData.consumer,
+          consumer: typeof answers.consumer === 'string'
+            ? parseConsumer(answers.consumer)
+            : keyData.consumer,
           description: typeof answers.description === 'string'
             ? answers.description.trim() || undefined
             : keyData.description,
