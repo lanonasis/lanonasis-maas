@@ -21,7 +21,9 @@ const AUTH_API_KEYS_BASE = '/api/v1/api-keys';
 const PROJECTS_API_BASE = '/api/v1/api-keys/projects';
 const VALID_ACCESS_LEVELS = ['public', 'authenticated', 'team', 'admin', 'enterprise'] as const;
 const VALID_KEY_CONTEXTS = ['personal', 'team', 'enterprise'] as const;
+const VALID_KEY_CONSUMERS = ['claude', 'hermes', 'openclaw'] as const;
 type ApiKeyContext = typeof VALID_KEY_CONTEXTS[number];
+type ApiKeyConsumer = typeof VALID_KEY_CONSUMERS[number];
 
 interface PlatformApiKey {
   id: string;
@@ -30,6 +32,7 @@ interface PlatformApiKey {
   key?: string;
   user_id: string;
   access_level: string;
+  consumer?: ApiKeyConsumer | null;
   key_context?: ApiKeyContext | null;
   permissions: string[];
   service: string;
@@ -80,6 +83,27 @@ function parseKeyContext(keyContext?: string): ApiKeyContext | undefined {
   }
 
   throw new Error('Invalid key context. Allowed: personal, team, enterprise');
+}
+
+function parseConsumer(consumer?: string): ApiKeyConsumer | undefined {
+  if (!consumer) {
+    return undefined;
+  }
+
+  const normalized = consumer.trim().toLowerCase();
+  if (!normalized) {
+    return undefined;
+  }
+
+  if ((VALID_KEY_CONSUMERS as readonly string[]).includes(normalized)) {
+    return normalized as ApiKeyConsumer;
+  }
+
+  throw new Error('Invalid consumer. Allowed: claude, hermes, openclaw');
+}
+
+function displayConsumer(key: Pick<PlatformApiKey, 'consumer' | 'name'>): string {
+  return key.consumer || /^\[(claude|hermes|openclaw)\]\s+/i.exec(key.name)?.[1]?.toLowerCase() || '—';
 }
 
 function exitUnsupported(feature: string, guidance: string[]) {
@@ -214,6 +238,7 @@ apiKeysCommand
   .option('-d, --description <description>', 'API key description (optional)')
   .option('--access-level <level>', 'Access level (public, authenticated, team, admin, enterprise)', 'team')
   .option('--key-context <context>', 'Optional memory context (personal, team, enterprise)')
+  .option('--consumer <consumer>', 'Optional consumer binding (claude, hermes, openclaw)')
   .option('--expires-in-days <days>', 'Expiration in days (default: 365)', '365')
   .option('--scopes <scopes>', 'Comma-separated scopes (optional)')
   .option('--interactive', 'Interactive mode')
@@ -221,6 +246,7 @@ apiKeysCommand
     try {
       const accessLevel = (options.accessLevel || 'team').toLowerCase();
       const keyContext = parseKeyContext(options.keyContext);
+      const consumer = parseConsumer(options.consumer);
       const expiresInDays = parseInt(options.expiresInDays, 10);
 
       if (!VALID_ACCESS_LEVELS.includes(accessLevel as typeof VALID_ACCESS_LEVELS[number])) {
@@ -233,6 +259,7 @@ apiKeysCommand
       let keyData: any = {
         name: options.name,
         access_level: accessLevel,
+        consumer,
         key_context: keyContext,
         expires_in_days: expiresInDays,
         description: options.description?.trim() || undefined,
@@ -272,6 +299,16 @@ apiKeysCommand
             default: keyData.key_context || ''
           },
           {
+            type: 'select',
+            name: 'consumer',
+            message: 'Consumer binding:',
+            choices: [
+              { name: 'unbound / reusable (default)', value: '' },
+              ...VALID_KEY_CONSUMERS.map((entry) => ({ name: entry, value: entry })),
+            ],
+            default: keyData.consumer || ''
+          },
+          {
             type: 'number',
             name: 'expires_in_days',
             message: 'Expires in days:',
@@ -290,6 +327,7 @@ apiKeysCommand
           ...keyData,
           ...answers,
           key_context: parseKeyContext(typeof answers.key_context === 'string' ? answers.key_context : undefined) ?? keyData.key_context,
+          consumer: parseConsumer(typeof answers.consumer === 'string' ? answers.consumer : undefined) ?? keyData.consumer,
           description: typeof answers.description === 'string'
             ? answers.description.trim() || undefined
             : keyData.description,
@@ -304,6 +342,7 @@ apiKeysCommand
       console.log(`${colors.highlight('Key ID:')} ${colors.primary(apiKey.id)}`);
       console.log(`${colors.highlight('Name:')} ${colors.accent(apiKey.name)}`);
       console.log(`${colors.highlight('Access Level:')} ${colors.info(apiKey.access_level || keyData.access_level)}`);
+      console.log(`${colors.highlight('Consumer:')} ${colors.info(displayConsumer({ consumer: apiKey.consumer ?? keyData.consumer, name: apiKey.name || keyData.name }))}`);
       console.log(`${colors.highlight('Key Context:')} ${colors.info(apiKey.key_context || keyData.key_context || 'legacy')}`);
       console.log(`${colors.highlight('Permissions:')} ${colors.muted((apiKey.permissions || keyData.scopes || []).join(', ') || 'legacy:full_access')}`);
       if (apiKey.expires_at) {
@@ -352,7 +391,7 @@ apiKeysCommand
       console.log(colors.info('═'.repeat(80)));
 
       const table = new Table({
-        head: ['ID', 'Name', 'Access', 'Context', 'Permissions', 'Service', 'Status', 'Expires'].map(h => colors.accent(h)),
+        head: ['ID', 'Name', 'Consumer', 'Access', 'Context', 'Permissions', 'Service', 'Status', 'Expires'].map(h => colors.accent(h)),
         style: { head: [], border: [] }
       });
 
@@ -362,6 +401,7 @@ apiKeysCommand
         table.push([
           truncateText(key.id, 20),
           key.name,
+          displayConsumer(key),
           key.access_level,
           key.key_context || 'legacy',
           truncateText((key.permissions || []).join(', ') || 'legacy:full_access', 28),
@@ -403,6 +443,7 @@ apiKeysCommand
         console.log(`${colors.highlight('Description:')} ${colors.muted(apiKey.description)}`);
       }
       console.log(`${colors.highlight('Access Level:')} ${colors.warning(apiKey.access_level)}`);
+      console.log(`${colors.highlight('Consumer:')} ${colors.info(displayConsumer(apiKey))}`);
       console.log(`${colors.highlight('Key Context:')} ${colors.info(apiKey.key_context || 'legacy')}`);
       console.log(`${colors.highlight('Permissions:')} ${colors.muted((apiKey.permissions || []).join(', ') || 'legacy:full_access')}`);
       console.log(`${colors.highlight('Service Scope:')} ${colors.info(apiKey.service || 'all')}`);
