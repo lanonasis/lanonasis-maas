@@ -20,6 +20,9 @@
 
 name: TestSprite
 
+permissions:
+  contents: read
+
 on:
   pull_request:
     paths:
@@ -34,6 +37,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
@@ -61,13 +66,31 @@ jobs:
           bun run test -- --testPathIgnorePatterns 'test/(integration|load)\.' --testTimeout 60000
         timeout-minutes: 5
 
+  check-secret:
+    name: Check TestSprite configuration
+    runs-on: ubuntu-latest
+    outputs:
+      has-key: ${{ steps.check.outputs.has-key }}
+    steps:
+      - id: check
+        env:
+          TESTSPRITE_API_KEY: ${{ secrets.TESTSPRITE_API_KEY }}
+        run: |
+          if [ -n "$TESTSPRITE_API_KEY" ]; then
+            echo "has-key=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has-key=false" >> "$GITHUB_OUTPUT"
+          fi
+
   testsprite-e2e:
     name: TestSprite E2E (if configured)
     runs-on: ubuntu-latest
-    if: ${{ secrets.TESTSPRITE_API_KEY != '' }}
-    needs: unit-tests
+    needs: [unit-tests, check-secret]
+    if: needs.check-secret.outputs.has-key == 'true'
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - name: Run TestSprite E2E
         uses: TestSprite/run-action@v1
