@@ -17,7 +17,7 @@
     "test:conformance": "vitest run --config vitest.config.ts tests/conformance",
     "test:conformance:discovery": "vitest run --config vitest.config.ts tests/conformance/discovery.test.ts",
     "test:conformance:auth": "vitest run --config vitest.config.ts tests/conformance/auth-headers.test.ts",
-    "test:all": "bun run test && bun run test:cli",
+    "test:all": "bun run test && bun run test:conformance && bun run test:cli",
     "lint": "bun x eslint src/**/*.ts",
     "lint:fix": "bun x eslint src/**/*.ts --fix",
     "type-check": "tsc --noEmit",
