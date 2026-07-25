@@ -53,6 +53,24 @@ describe("LanonasisClient", () => {
     expect(options.headers["X-Project-Scope"]).toBeUndefined();
   });
 
+  it("identifies requests as the Claude consumer", async () => {
+    mockFetch.mockResolvedValue(
+      mockJsonResponse({ status: "ok", version: "1.0.0" }),
+    );
+    const client = new LanonasisClient({
+      apiKey: "lano_test",
+      projectId: "",
+      baseUrl: "https://api.lanonasis.com",
+    });
+
+    await client.getHealth();
+
+    const options = mockFetch.mock.calls[0][1] as {
+      headers: Record<string, string>;
+    };
+    expect(options.headers["X-Lanonasis-Client-Id"]).toBe("claude");
+  });
+
   it("sends X-Project-Scope header when explicit scope is configured", async () => {
     mockFetch.mockResolvedValue(
       mockJsonResponse({ status: "ok", version: "1.0.0" }),
