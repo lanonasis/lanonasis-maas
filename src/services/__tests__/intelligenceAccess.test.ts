@@ -27,6 +27,15 @@ describe('intelligence subject boundary', () => {
     });
   });
 
+  it('allows a personal subject without inventing organization context', () => {
+    expect(
+      resolveIntelligenceSubjectBoundary({ id: 'user-1', auth_type: 'jwt' }, 'user-1'),
+    ).toEqual({
+      subjectId: 'user-1',
+      personalSubject: true,
+    });
+  });
+
   it('rejects non-personal subject reads without organization context', () => {
     expect(
       resolveIntelligenceSubjectBoundary({ id: 'user-1', auth_type: 'jwt' }, 'team-subject'),

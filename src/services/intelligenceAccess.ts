@@ -31,7 +31,11 @@ export function resolveIntelligenceSubjectBoundary(
 
   // Personal subject — always allowed
   if (personalSubject) {
-    return { subjectId: requestedSubjectId, organizationId, personalSubject };
+    return {
+      subjectId: requestedSubjectId,
+      personalSubject,
+      ...(organizationId ? { organizationId } : {}),
+    };
   }
 
   // Org user accessing a non-personal subject — must verify it belongs to org

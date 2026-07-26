@@ -5,6 +5,7 @@ import {
   getSSOUserFromRequest,
   getSessionTokenFromRequest,
   hasSSOfromRequest,
+  type ServerRequest,
 } from '@lanonasis/oauth-client/server';
 
 // Use centralized type definitions
@@ -35,6 +36,16 @@ const createAuthError = (message: string, code: string, status = 401): AuthError
   error.status = status;
   error.code = code;
   return error;
+};
+
+const toOAuthServerRequest = (req: Request): ServerRequest => {
+  const cookieHeader = req.headers.cookie;
+  const parsedCookies = (req as Request & { cookies?: Record<string, string> }).cookies;
+
+  return {
+    ...(parsedCookies ? { cookies: parsedCookies } : {}),
+    ...(cookieHeader ? { headers: { cookie: cookieHeader } } : {}),
+  };
 };
 
 /**
@@ -150,7 +161,8 @@ export const centralAuth = async (req: Request, res: Response, next: NextFunctio
 
     // Only enforce project scope for non-SSO requests
     // SSO cookies are set by auth-gateway and don't include project scope header
-    const hasSSOCookies = hasSSOfromRequest(req);
+    const oauthRequest = toOAuthServerRequest(req);
+    const hasSSOCookies = hasSSOfromRequest(oauthRequest);
 
     if (!hasSSOCookies && projectScope !== 'lanonasis-maas') {
       console.warn(`[${req.id}] Invalid project scope: ${projectScope}`);
@@ -161,8 +173,8 @@ export const centralAuth = async (req: Request, res: Response, next: NextFunctio
     if (hasSSOCookies) {
       console.log(`[${req.id}] Authenticating via SSO cookies`);
 
-      const ssoUser = getSSOUserFromRequest(req);
-      const sessionToken = getSessionTokenFromRequest(req);
+      const ssoUser = getSSOUserFromRequest(oauthRequest);
+      const sessionToken = getSessionTokenFromRequest(oauthRequest);
 
       if (ssoUser && sessionToken) {
         // Validate the session token
@@ -170,18 +182,18 @@ export const centralAuth = async (req: Request, res: Response, next: NextFunctio
 
         if (tokenData) {
           // SSO authentication successful
+          const organizationId = (tokenData.organization_id || tokenData.org_id) as string | undefined;
           req.user = {
             id: ssoUser.id,
             userId: ssoUser.id,
             email: ssoUser.email,
             role: ssoUser.role,
             plan: (tokenData.plan as string) || 'free',
-            organization_id: (tokenData.organization_id || tokenData.org_id) as string | undefined,
-            organizationId: (tokenData.organization_id || tokenData.org_id) as string | undefined,
             auth_type: 'sso',
+            ...(organizationId ? { organization_id: organizationId, organizationId } : {}),
           };
 
-          console.log(`[${req.id}] SSO authentication successful for user ${req.user.id}`);
+          console.log(`[${req.id}] SSO authentication successful for user ${ssoUser.id}`);
           return next();
         } else {
           console.warn(`[${req.id}] SSO token validation failed, trying other auth methods`);
