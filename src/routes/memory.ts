@@ -27,6 +27,7 @@ interface SearchMemoryFilters {
   user_id?: string;
 }
 import { logMemoryOperation, logger } from '@/utils/logger';
+import { getScalarRouteParam } from '@/utils/request';
 
 const router: Router = Router();
 const memoryService = new MemoryService();
@@ -389,7 +390,7 @@ router.post('/search', asyncHandler(async (req: Request, res: Response) => {
  *         description: Memory not found
  */
 router.get('/:id', asyncHandler(async (req: Request, res: Response) => {
-  const { id } = req.params;
+  const id = getScalarRouteParam(req.params.id);
   if (!id) {
     res.status(400).json({
       error: 'Invalid memory ID',
@@ -474,7 +475,7 @@ router.get('/:id', asyncHandler(async (req: Request, res: Response) => {
  *         description: Access denied
  */
 router.put('/:id', asyncHandler(async (req: Request, res: Response) => {
-  const { id } = req.params;
+  const id = getScalarRouteParam(req.params.id);
   if (!id) {
     res.status(400).json({
       error: 'Invalid memory ID',
@@ -549,7 +550,7 @@ router.put('/:id', asyncHandler(async (req: Request, res: Response) => {
  *         description: Access denied
  */
 router.delete('/:id', asyncHandler(async (req: Request, res: Response) => {
-  const { id } = req.params;
+  const id = getScalarRouteParam(req.params.id);
   if (!id) {
     res.status(400).json({
       error: 'Invalid memory ID',

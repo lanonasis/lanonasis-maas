@@ -2,6 +2,7 @@ import express from 'express';
 import { param, body, validationResult } from 'express-validator';
 import { apiKeyService } from '../services/apiKeyService.js';
 import { logger } from '../utils/logger.js';
+import { getScalarRouteParam } from '../utils/request.js';
 
 const router: express.Router = express.Router();
 
@@ -205,8 +206,8 @@ router.post('/sessions/:sessionId/keys/:keyName/proxy-token', [
   param('keyName').isLength({ min: 1 }).withMessage('Key name is required')
 ], validateRequest, async (req: express.Request, res: express.Response) => {
   try {
-    const sessionId = req.params.sessionId;
-    const keyName = req.params.keyName;
+    const sessionId = getScalarRouteParam(req.params.sessionId);
+    const keyName = getScalarRouteParam(req.params.keyName);
     
     if (!sessionId || !keyName) {
       res.status(400).json({ error: 'Session ID and key name are required' });
@@ -284,7 +285,7 @@ router.post('/proxy-tokens/:proxyToken/resolve', [
   param('proxyToken').isLength({ min: 1 }).withMessage('Proxy token is required')
 ], validateRequest, async (req: express.Request, res: express.Response) => {
   try {
-    const proxyToken = req.params.proxyToken;
+    const proxyToken = getScalarRouteParam(req.params.proxyToken);
     
     if (!proxyToken) {
       res.status(400).json({ error: 'Proxy token is required' });
@@ -374,7 +375,7 @@ router.get('/sessions/:sessionId/status', [
   param('sessionId').isLength({ min: 1 }).withMessage('Session ID is required')
 ], validateRequest, async (req: express.Request, res: express.Response) => {
   try {
-    const sessionId = req.params.sessionId;
+    const sessionId = getScalarRouteParam(req.params.sessionId);
     
     if (!sessionId) {
       res.status(400).json({ error: 'Session ID is required' });
@@ -437,7 +438,7 @@ router.post('/sessions/:sessionId/end', [
   param('sessionId').isLength({ min: 1 }).withMessage('Session ID is required')
 ], validateRequest, async (req: express.Request, res: express.Response) => {
   try {
-    const sessionId = req.params.sessionId;
+    const sessionId = getScalarRouteParam(req.params.sessionId);
     
     if (!sessionId) {
       res.status(400).json({ error: 'Session ID is required' });
