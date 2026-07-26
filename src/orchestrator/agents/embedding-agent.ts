@@ -6,7 +6,7 @@
 import { BaseAgent, AgentConfig, AgentRequest, AgentResponse } from './base-agent.js';
 
 export class EmbeddingAgent extends BaseAgent {
-  private openaiApiKey: string;
+  private openaiApiKey: string | undefined;
   private embeddingModel: string;
   private cache: Map<string, number[]> = new Map();
 
@@ -91,6 +91,13 @@ export class EmbeddingAgent extends BaseAgent {
           cached: true,
           dimensions: this.cache.get(cacheKey)?.length || 0
         }
+      };
+    }
+
+    if (!this.openaiApiKey) {
+      return {
+        success: false,
+        error: 'OpenAI API key is not configured'
       };
     }
 
@@ -224,6 +231,13 @@ export class EmbeddingAgent extends BaseAgent {
 
     // Generate embeddings for uncached texts
     if (uncachedTexts.length > 0) {
+      if (!this.openaiApiKey) {
+        return {
+          success: false,
+          error: 'OpenAI API key is not configured'
+        };
+      }
+
       try {
         const response = await fetch('https://api.openai.com/v1/embeddings', {
           method: 'POST',

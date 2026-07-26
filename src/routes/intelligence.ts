@@ -38,7 +38,7 @@ router.get(
   '/conclusions',
   validateProjectScope,
   alignedAuthMiddleware,
-  planBasedRateLimit('intelligence'),
+  planBasedRateLimit(),
   asyncHandler(async (req: Request, res: Response) => {
     const parsed = conclusionsQuerySchema.safeParse(req.query);
     if (!parsed.success) {
@@ -60,7 +60,9 @@ router.get(
     try {
       const result = await intelligenceService.listInferredConclusions({
         subject_id: boundary.subjectId,
-        organization_id: boundary.personalSubject ? undefined : boundary.organizationId,
+        ...(!boundary.personalSubject && boundary.organizationId
+          ? { organization_id: boundary.organizationId }
+          : {}),
         limit: effectiveLimit,
         include_superseded: includeSuperseded,
       });
@@ -86,7 +88,7 @@ router.get(
   '/jobs/:id',
   validateProjectScope,
   alignedAuthMiddleware,
-  planBasedRateLimit('intelligence'),
+  planBasedRateLimit(),
   asyncHandler(async (req: Request, res: Response) => {
     const { id } = req.params;
     if (!id) {
@@ -124,7 +126,7 @@ router.post(
   '/flush',
   validateProjectScope,
   alignedAuthMiddleware,
-  planBasedRateLimit('intelligence'),
+  planBasedRateLimit(),
   asyncHandler(async (req: Request, res: Response) => {
     const parsed = flushRequestSchema.safeParse(req.body);
     if (!parsed.success) {

@@ -16,7 +16,7 @@ export class DatabaseError extends Error {
 
 export class ExternalServiceError extends Error {
   status: number;
-  body?: string;
+  body: string | undefined;
   constructor(message: string, status: number, body?: string) {
     super(message);
     this.name = 'ExternalServiceError';

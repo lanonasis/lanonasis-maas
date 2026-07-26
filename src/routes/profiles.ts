@@ -31,7 +31,7 @@ router.get(
   '/:subject_id',
   validateProjectScope,
   alignedAuthMiddleware,
-  planBasedRateLimit('intelligence'),
+  planBasedRateLimit(),
   asyncHandler(async (req: Request, res: Response) => {
     const startTime = Date.now();
     const parsedParams = profileParamsSchema.safeParse(req.params);
@@ -76,7 +76,7 @@ router.get(
   '/:subject_id/versions',
   validateProjectScope,
   alignedAuthMiddleware,
-  planBasedRateLimit('intelligence'),
+  planBasedRateLimit(),
   asyncHandler(async (req: Request, res: Response) => {
     const startTime = Date.now();
     const parsedParams = profileParamsSchema.safeParse(req.params);
@@ -120,7 +120,7 @@ router.post(
   '/:subject_id/ask',
   validateProjectScope,
   alignedAuthMiddleware,
-  planBasedRateLimit('intelligence'),
+  planBasedRateLimit(),
   asyncHandler(async (req: Request, res: Response) => {
     const startTime = Date.now();
     const parsedParams = profileParamsSchema.safeParse(req.params);
