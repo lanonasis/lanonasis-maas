@@ -5,7 +5,6 @@ import {
   getSSOUserFromRequest,
   getSessionTokenFromRequest,
   hasSSOfromRequest,
-  type ServerRequest,
 } from '@lanonasis/oauth-client/server';
 
 // Use centralized type definitions
@@ -29,6 +28,8 @@ interface ApiKeyValidationResult {
   project_scope?: string;
 }
 
+type OAuthServerRequest = Parameters<typeof hasSSOfromRequest>[0];
+
 /**
  * Create authentication error with consistent format
  */
@@ -39,7 +40,7 @@ const createAuthError = (message: string, code: string, status = 401): AuthError
   return error;
 };
 
-const toOAuthServerRequest = (req: Request): ServerRequest => {
+const toOAuthServerRequest = (req: Request): OAuthServerRequest => {
   const cookieHeader = req.headers.cookie;
   const parsedCookies = (req as Request & { cookies?: Record<string, string> }).cookies;
 
