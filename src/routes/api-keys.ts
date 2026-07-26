@@ -4,6 +4,7 @@ import { alignedAuthMiddleware } from '@/middleware/auth-aligned';
 import { apiKeyService } from '@/services/apiKeyService';
 import type { ApiKey } from '@/services/apiKeyService';
 import { logger } from '@/utils/logger';
+import { getScalarRouteParam } from '@/utils/request';
 
 const router: express.Router = express.Router();
 
@@ -501,7 +502,7 @@ router.get('/:keyId', [
       return;
     }
 
-    const keyId = req.params.keyId;
+    const keyId = getScalarRouteParam(req.params.keyId);
     if (!keyId) {
       res.status(400).json({ error: 'Key ID is required' });
       return;
@@ -604,7 +605,7 @@ router.put('/:keyId', [
       return;
     }
 
-    const keyId = req.params.keyId;
+    const keyId = getScalarRouteParam(req.params.keyId);
     if (!keyId) {
       res.status(400).json({ error: 'Key ID is required' });
       return;
@@ -663,7 +664,7 @@ router.delete('/:keyId', [
       return;
     }
 
-    const keyId = req.params.keyId;
+    const keyId = getScalarRouteParam(req.params.keyId);
     if (!keyId) {
       res.status(400).json({ error: 'Key ID is required' });
       return;
@@ -1006,7 +1007,7 @@ router.post('/mcp/sessions/:sessionId/proxy-token', [
       return;
     }
 
-    const sessionId = req.params.sessionId;
+    const sessionId = getScalarRouteParam(req.params.sessionId);
     if (!sessionId) {
       res.status(400).json({ error: 'Session ID is required' });
       return;

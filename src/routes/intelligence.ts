@@ -12,6 +12,7 @@ import {
   canReadIntelligenceSubject,
   resolveIntelligenceSubjectBoundary,
 } from '@/services/intelligenceAccess';
+import { getScalarRouteParam } from '@/utils/request';
 
 const router: Router = Router();
 const intelligenceService = new IntelligenceService();
@@ -90,7 +91,7 @@ router.get(
   alignedAuthMiddleware,
   planBasedRateLimit(),
   asyncHandler(async (req: Request, res: Response) => {
-    const { id } = req.params;
+    const id = getScalarRouteParam(req.params.id);
     if (!id) {
       res.status(400).json({ error: 'job id is required' });
       return;
