@@ -10,6 +10,7 @@ import {
 
 // Use centralized type definitions
 import '@/types/express-auth';
+import { resolveVerifiedSSOIdentity } from '@/middleware/ssoIdentity';
 
 interface AuthError extends Error {
   status: number;
@@ -181,19 +182,33 @@ export const centralAuth = async (req: Request, res: Response, next: NextFunctio
         const tokenData = await validateSSOToken(sessionToken);
 
         if (tokenData) {
-          // SSO authentication successful
-          const organizationId = (tokenData.organization_id || tokenData.org_id) as string | undefined;
+          const verifiedIdentity = resolveVerifiedSSOIdentity(tokenData, ssoUser.id);
+          if (!verifiedIdentity.ok) {
+            throw createAuthError(
+              verifiedIdentity.code === 'SSO_IDENTITY_MISMATCH'
+                ? 'SSO identity does not match the verified session'
+                : 'SSO session is missing required identity claims',
+              verifiedIdentity.code,
+            );
+          }
+
+          const { identity } = verifiedIdentity;
           req.user = {
-            id: ssoUser.id,
-            userId: ssoUser.id,
-            email: ssoUser.email,
-            role: ssoUser.role,
-            plan: (tokenData.plan as string) || 'free',
+            id: identity.id,
+            userId: identity.id,
+            email: identity.email,
+            role: identity.role,
+            plan: identity.plan,
             auth_type: 'sso',
-            ...(organizationId ? { organization_id: organizationId, organizationId } : {}),
+            ...(identity.organizationId
+              ? {
+                  organization_id: identity.organizationId,
+                  organizationId: identity.organizationId,
+                }
+              : {}),
           };
 
-          console.log(`[${req.id}] SSO authentication successful for user ${ssoUser.id}`);
+          console.log(`[${req.id}] SSO authentication successful for user ${identity.id}`);
           return next();
         } else {
           console.warn(`[${req.id}] SSO token validation failed, trying other auth methods`);

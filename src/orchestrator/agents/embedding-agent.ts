@@ -94,6 +94,13 @@ export class EmbeddingAgent extends BaseAgent {
       };
     }
 
+    if (!this.openaiApiKey) {
+      return {
+        success: false,
+        error: 'OpenAI API key is not configured'
+      };
+    }
+
     try {
       const response = await fetch('https://api.openai.com/v1/embeddings', {
         method: 'POST',
@@ -224,6 +231,13 @@ export class EmbeddingAgent extends BaseAgent {
 
     // Generate embeddings for uncached texts
     if (uncachedTexts.length > 0) {
+      if (!this.openaiApiKey) {
+        return {
+          success: false,
+          error: 'OpenAI API key is not configured'
+        };
+      }
+
       try {
         const response = await fetch('https://api.openai.com/v1/embeddings', {
           method: 'POST',
