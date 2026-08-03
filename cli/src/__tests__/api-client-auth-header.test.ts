@@ -120,12 +120,12 @@ describe('APIClient authentication headers', () => {
     const handler = requestHandlers[0];
     const updated = await handler({
       headers: {},
-      url: '/api/v1/memories/search',
-      method: 'post'
+      url: '/api/v1/topics',
+      method: 'get'
     });
 
     expect(updated.baseURL).toBe('https://api.example.com');
-    expect(updated.url).toBe('/api/v1/memories/search');
+    expect(updated.url).toBe('/api/v1/topics');
     expect(updated.headers.Authorization).toBe('Bearer oauth-token-xyz');
     expect(updated.headers['X-Auth-Method']).toBe('jwt');
   });
@@ -150,8 +150,8 @@ describe('APIClient authentication headers', () => {
     const handler = requestHandlers[0];
     const updated = await handler({
       headers: {},
-      url: '/api/v1/memories/search',
-      method: 'post'
+      url: '/api/v1/topics',
+      method: 'get'
     });
 
     expect(updated.baseURL).toBe('https://api.example.com');
