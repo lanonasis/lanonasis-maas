@@ -2,51 +2,131 @@
   {
     "id": "TC001",
     "title": "get_overall_service_health_status",
-    "description": "Verify that GET /api/v1/health returns a 200 status with overall service health and dependency information without requiring authentication."
+    "description": "Verify that GET /api/v1/health returns a 200 status with overall service health and dependency information without requiring authentication.",
+    "method": "GET",
+    "path": "/api/v1/health",
+    "authRequired": false,
+    "productionStatus": "200 OK",
+    "localCoverage": "tests/conformance/backend-contract.test.ts, tests/e2e/health.test.ts.skip",
+    "testSpriteId": "0acdff40-8216-43ce-be0d-c15ba4c6c9e0",
+    "testSpriteStatus": "passed",
+    "notes": "Covered in production smoke tests. E2E local test is currently .skip."
   },
   {
     "id": "TC002",
     "title": "exchange_oauth_authorization_code_for_access_token",
-    "description": "Test POST /api/v1/auth/oauth/token with a valid authorization code to ensure it returns a 200 status and a valid access token."
+    "description": "Test POST /api/v1/auth/oauth/token with a valid authorization code to ensure it returns a 200 status and a valid access token.",
+    "method": "POST",
+    "path": "/api/v1/auth/oauth/token",
+    "authRequired": false,
+    "productionStatus": "404 Not Found",
+    "localCoverage": "missing",
+    "testSpriteId": null,
+    "testSpriteStatus": "not-created",
+    "notes": "Only exists on standalone MaaS Express server; not registered on api.lanonasis.com."
   },
   {
     "id": "TC003",
     "title": "basic_authentication_login_with_valid_credentials",
-    "description": "Test POST /api/v1/auth/basic/login with valid email and password to receive a 200 response containing a JWT token and user object."
+    "description": "Test POST /api/v1/auth/basic/login with valid email and password to receive a 200 response containing a JWT token and user object.",
+    "method": "POST",
+    "path": "/api/v1/auth/basic/login",
+    "authRequired": false,
+    "productionStatus": "404 Not Found",
+    "localCoverage": "missing",
+    "testSpriteId": null,
+    "testSpriteStatus": "not-created",
+    "notes": "Only exists on standalone MaaS Express server; not registered on api.lanonasis.com."
   },
   {
     "id": "TC004",
     "title": "create_memory_with_valid_data",
-    "description": "Verify POST /api/v1/memories with valid bearer token and required fields (title, content, memory_type) returns 201 with the created memory object."
+    "description": "Verify POST /api/v1/memories with valid bearer token and required fields (title, content, memory_type) returns 201 with the created memory object.",
+    "method": "POST",
+    "path": "/api/v1/memories",
+    "authRequired": true,
+    "productionStatus": "401 Unauthorized",
+    "localCoverage": "tests/unit/routes/memory.test.ts, tests/integration/memory.test.ts.skip",
+    "testSpriteId": "5196a932-4d6a-4007-95d8-ac1b25d3526e",
+    "testSpriteStatus": "passed",
+    "notes": "Covered as auth-gate test on production (401 without creds). Happy path requires valid API key/token."
   },
   {
     "id": "TC005",
     "title": "get_intelligence_job_status_by_id",
-    "description": "Test GET /api/v1/intelligence/jobs/:id with a valid job id and bearer token returns 200 with job status and progress details."
+    "description": "Test GET /api/v1/intelligence/jobs/:id with a valid job id and bearer token returns 200 with job status and progress details.",
+    "method": "GET",
+    "path": "/api/v1/intelligence/jobs/:id",
+    "authRequired": true,
+    "productionStatus": "404 Not Found",
+    "localCoverage": "missing",
+    "testSpriteId": null,
+    "testSpriteStatus": "not-created",
+    "notes": "Only exists on standalone MaaS Express server; not registered on api.lanonasis.com."
   },
   {
     "id": "TC006",
     "title": "get_subject_profile_by_subject_id",
-    "description": "Verify GET /api/v1/profiles/:subject_id with bearer token returns 200 with the current subject profile data."
+    "description": "Verify GET /api/v1/profiles/:subject_id with bearer token returns 200 with the current subject profile data.",
+    "method": "GET",
+    "path": "/api/v1/profiles/:subject_id",
+    "authRequired": true,
+    "productionStatus": "404 Not Found",
+    "localCoverage": "missing",
+    "testSpriteId": null,
+    "testSpriteStatus": "not-created",
+    "notes": "Only exists on standalone MaaS Express server; not registered on api.lanonasis.com."
   },
   {
     "id": "TC007",
     "title": "create_api_key_with_valid_project_context",
-    "description": "Test POST /api/v1/api-keys with bearer token and valid project association returns 201 with the new API key details."
+    "description": "Test POST /api/v1/api-keys with bearer token and valid project association returns 201 with the new API key details.",
+    "method": "POST",
+    "path": "/api/v1/api-keys",
+    "authRequired": true,
+    "productionStatus": "401 Unauthorized",
+    "localCoverage": "missing",
+    "testSpriteId": "37b9327b-c11a-47c1-a41e-16150c5025c9",
+    "testSpriteStatus": "passed",
+    "notes": "Covered as auth-gate test on production (401 without creds). Happy path requires valid API key/token."
   },
   {
     "id": "TC008",
     "title": "issue_proxy_token_for_mcp_session_key",
-    "description": "Verify POST /api/v1/mcp/api-keys/sessions/:sessionId/keys/:keyName/proxy-token with bearer token returns 200 with a session-scoped proxy token."
+    "description": "Verify POST /api/v1/mcp/api-keys/sessions/:sessionId/keys/:keyName/proxy-token with bearer token returns 200 with a session-scoped proxy token.",
+    "method": "POST",
+    "path": "/api/v1/mcp/api-keys/sessions/:sessionId/keys/:keyName/proxy-token",
+    "authRequired": true,
+    "productionStatus": "404 Not Found",
+    "localCoverage": "missing",
+    "testSpriteId": null,
+    "testSpriteStatus": "not-created",
+    "notes": "Only exists on standalone MaaS Express server; not registered on api.lanonasis.com."
   },
   {
     "id": "TC009",
     "title": "get_prometheus_metrics_with_authorization",
-    "description": "Test GET /api/v1/metrics with valid bearer token returns 200 with Prometheus-formatted metrics text."
+    "description": "Test GET /api/v1/metrics with valid bearer token returns 200 with Prometheus-formatted metrics text.",
+    "method": "GET",
+    "path": "/api/v1/metrics",
+    "authRequired": true,
+    "productionStatus": "404 Not Found",
+    "localCoverage": "tests/conformance/backend-contract.test.ts",
+    "testSpriteId": null,
+    "testSpriteStatus": "not-created",
+    "notes": "Only exists on standalone MaaS Express server; not registered on api.lanonasis.com."
   },
   {
     "id": "TC010",
     "title": "list_registered_services_without_authentication",
-    "description": "Verify GET /api/v1/services returns 200 with a list of registered services without requiring authentication."
+    "description": "Verify GET /api/v1/services returns 200 with a list of registered services without requiring authentication.",
+    "method": "GET",
+    "path": "/api/v1/services",
+    "authRequired": false,
+    "productionStatus": "404 Not Found",
+    "localCoverage": "tests/conformance/backend-contract.test.ts",
+    "testSpriteId": "c7f625c6-2b4e-4bad-9204-3a5215b48ae2",
+    "testSpriteStatus": "passed",
+    "notes": "Converted to gap test: readiness probe /health/ready is not exposed in production (404)."
   }
 ]
