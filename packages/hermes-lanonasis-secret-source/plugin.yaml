@@ -1,0 +1,9 @@
+name: hermes-lanonasis-secret-source
+version: 0.1.0
+kind: secret-source
+description: >
+  LanOnasis secret source — materializes provider credentials from the
+  LanOnasis secrets manager into env vars at Hermes startup. Wireframe:
+  conforms to the SecretSource ABC but returns NOT_CONFIGURED until the
+  secrets-manager backend stabilizes.
+entry_point: hermes_lanonasis_secret_source:register
