@@ -71,6 +71,10 @@ config.local.json
 *.p12
 *.pfx
 **/*secret*
+# The Hermes secret-source plugin package is a legit source tree (not a
+# secret file) — un-ignore it while keeping the blanket pattern for files.
+!packages/hermes-lanonasis-secret-source/
+!packages/hermes-lanonasis-secret-source/**
 **/*key*
 **/*token*
 **/*password*
