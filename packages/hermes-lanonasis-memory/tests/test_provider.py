@@ -537,7 +537,9 @@ class TestRegisterEntryPoint:
         assert isinstance(registered, LanonasisMemoryProvider)
         assert registered.name == "lanonasis"
 
-    def test_register_raises_if_ctx_lacks_method(self):
+    def test_register_is_defensive_without_method(self):
+        # In this Hermes build, memory providers are directory-discovered;
+        # the general PluginContext has no register_memory_provider(), so
+        # register() must no-op quietly instead of raising.
         from hermes_lanonasis_memory import register
-        with pytest.raises(AttributeError):
-            register(object())
+        register(object())  # must not raise

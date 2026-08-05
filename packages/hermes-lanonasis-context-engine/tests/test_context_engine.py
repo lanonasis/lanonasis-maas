@@ -55,7 +55,10 @@ class TestAbcConformance:
         eps = importlib.metadata.entry_points(group="hermes_agent.plugins")
         matches = [ep for ep in eps if ep.name == "lanonasis-context"]
         assert matches, "entry point 'lanonasis-context' not registered"
-        assert callable(matches[0].load())
+        mod = matches[0].load()
+        assert callable(getattr(mod, "register", None)), (
+            "entry point must resolve to a module exposing register()"
+        )
 
 
 # ---------------------------------------------------------------------------

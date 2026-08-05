@@ -27,6 +27,12 @@ Registers the `hermes_agent.plugins` entry point so `hermes plugins list`
 shows the plugin. **This alone is not enough for `hermes memory status`**
 — pair it with Option B's symlink.
 
+> Entry-point format: `lanonasis = "hermes_lanonasis_memory"` (the MODULE,
+> not `module:register`). The plugin manager calls `ep.load()` and then
+> looks up `.register` on the result; pointing at `:register` makes
+> `ep.load()` return the function itself, which breaks discovery with
+> "no register() function" warnings.
+
 ### Option B — flat symlink into the user plugins dir (required for discovery)
 
 ```bash

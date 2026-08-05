@@ -22,7 +22,7 @@ test = [
 # This is one of two supported install paths (the other is dropping the
 # package directory directly under $HERMES_HOME/plugins/memory/<name>/).
 [project.entry-points."hermes_agent.plugins"]
-lanonasis = "hermes_lanonasis_memory:register"
+lanonasis = "hermes_lanonasis_memory"
 
 [tool.setuptools.packages.find]
 include = ["hermes_lanonasis_memory*"]
