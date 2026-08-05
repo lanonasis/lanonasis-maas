@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "hermes-lanonasis-memory"
+version = "0.2.0"
+description = "LanOnasis MaaS memory provider for Hermes Agent"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+  "httpx>=0.27.0",
+  "pydantic>=2.0.0",
+]
+
+[project.optional-dependencies]
+test = [
+  "pytest>=8.0.0",
+]
+
+# Register the package with Hermes' pip-installed plugin discovery.
+# This is one of two supported install paths (the other is dropping the
+# package directory directly under $HERMES_HOME/plugins/memory/<name>/).
+[project.entry-points."hermes_agent.plugins"]
+lanonasis = "hermes_lanonasis_memory:register"
+
+[tool.setuptools.packages.find]
+include = ["hermes_lanonasis_memory*"]

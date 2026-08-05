@@ -128,3 +128,9 @@ mcp-server/
 cli/.pi/
 
 testsprite_tests/tmp/config.json
+
+# Python artifacts (hermes-lanonasis-memory plugin)
+__pycache__/
+*.pyc
+*.egg-info/
+.pytest_cache/
