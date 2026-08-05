@@ -16,7 +16,7 @@ test = [
 ]
 
 [project.entry-points."hermes_agent.plugins"]
-lanonasis-context = "hermes_lanonasis_context_engine:register"
+lanonasis-context = "hermes_lanonasis_context_engine"
 
 [build-system]
 requires = ["setuptools>=68"]

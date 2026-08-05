@@ -16,7 +16,7 @@ test = [
 ]
 
 [project.entry-points."hermes_agent.plugins"]
-lanonasis-secrets = "hermes_lanonasis_secret_source:register"
+lanonasis-secrets = "hermes_lanonasis_secret_source"
 
 [build-system]
 requires = ["setuptools>=68"]

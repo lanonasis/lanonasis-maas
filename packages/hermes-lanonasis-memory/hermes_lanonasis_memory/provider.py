@@ -987,13 +987,23 @@ class LanonasisMemoryProvider(MemoryProvider):
 
 # Top-level entry point used by ``plugins/memory/<name>/`` discovery.
 def register(ctx: Any) -> None:
-    """Register this provider with the plugin context (MemoryManager)."""
+    """Register this provider with the plugin context (MemoryManager).
+
+    NOTE: this Hermes build discovers memory providers via the DIRECTORY
+    scan (``$HERMES_HOME/plugins/<name>/``) with a ``_ProviderCollector``
+    ctx — the general plugin manager's ``PluginContext`` has no
+    ``register_memory_provider()`` method. When called with such a ctx
+    (e.g. via the ``hermes_agent.plugins`` entry-point group), fail
+    quietly: the directory path is the real registration route and the
+    entry point exists only for ``hermes plugins list`` visibility and
+    future builds.
+    """
     provider = LanonasisMemoryProvider()
     register_fn = getattr(ctx, "register_memory_provider", None)
     if register_fn is None:
-        raise AttributeError(
-            "PluginContext missing register_memory_provider() — "
-            "this provider requires a Hermes runtime with the MemoryProvider "
-            "plugin system active."
+        _logger.debug(
+            "register(ctx) without register_memory_provider — skipping "
+            "(memory providers are directory-discovered in this build)"
         )
+        return
     register_fn(provider)

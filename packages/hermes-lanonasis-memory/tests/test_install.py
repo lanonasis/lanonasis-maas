@@ -83,7 +83,12 @@ class TestImportPath:
             f"pip install -e . into the Hermes venv to register it."
         )
         loader = matches[0].load()
-        assert callable(loader), "entry point must resolve to a callable register(ctx)"
+        # Documented convention: the entry point resolves to a MODULE whose
+        # register() is the plugin entry. (module:register would resolve to
+        # the function itself, which the plugin manager cannot use.)
+        assert callable(getattr(loader, "register", None)), (
+            "entry point must resolve to a module exposing register(ctx)"
+        )
 
     def test_register_actually_registers_a_provider(self):
         """register(ctx) must hand a MemoryProvider to the context."""
