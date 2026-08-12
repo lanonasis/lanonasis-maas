@@ -377,20 +377,26 @@ export class APIClient {
             }
             // Determine the correct API base URL:
             // - Auth endpoints -> auth.lanonasis.com
-            // - Memory/MCP operations (JWT or vendor key) -> mcp.lanonasis.com (the memory service)
+            // - Memory operations -> mcp.lanonasis.com (the memory service)
             // - Other direct API calls -> api.lanonasis.com (vendor AI proxy)
+            //
+            // NOTE: memory endpoints are intentionally NOT part of forceDirectApi.
+            // api.lanonasis.com is the vendor AI proxy, NOT the memory service, and
+            // routing memory ops there returns 500. `--no-mcp` / forceApi disables
+            // the MCP auto-connect and routes *non-memory* endpoints to the vendor
+            // proxy, but memory operations MUST always go to mcp.lanonasis.com.
             let apiBaseUrl;
-            const useMcpServer = !forceDirectApi && !isAuthEndpoint && (prefersTokenAuth || useVendorKeyAuth || isMemoryEndpoint);
+            const useMcpServer = !isAuthEndpoint && (isMemoryEndpoint || (!forceDirectApi && (prefersTokenAuth || useVendorKeyAuth)));
             if (isAuthEndpoint || isAuthGatewayManagementEndpoint) {
                 apiBaseUrl = discoveredServices?.auth_base || 'https://auth.lanonasis.com';
-            }
-            else if (forceDirectApi) {
-                // Explicit force: direct to api.lanonasis.com for troubleshooting.
-                apiBaseUrl = this.config.getApiUrl();
             }
             else if (useMcpServer) {
                 // Memory service lives at mcp.lanonasis.com — accepts JWT, OAuth, and vendor keys.
                 apiBaseUrl = 'https://mcp.lanonasis.com/api/v1';
+            }
+            else if (forceDirectApi) {
+                // Explicit force: direct to api.lanonasis.com for troubleshooting.
+                apiBaseUrl = this.config.getApiUrl();
             }
             else {
                 apiBaseUrl = this.config.getApiUrl();
@@ -436,7 +442,7 @@ export class APIClient {
             // Add project scope for Golden Contract compliance
             config.headers['X-Project-Scope'] = 'lanonasis-maas';
             if (process.env.CLI_VERBOSE === 'true') {
-                const transportMode = forceDirectApi ? 'api-forced' : (useMcpServer ? 'mcp-http' : 'api');
+                const transportMode = useMcpServer ? 'mcp-http' : (forceDirectApi ? 'api-forced' : 'api');
                 config.headers['X-Transport-Mode'] = transportMode;
                 console.log(chalk.dim(`→ ${config.method?.toUpperCase()} ${config.url} [${requestId}]`));
                 console.log(chalk.dim(`  transport=${transportMode} baseURL=${config.baseURL}`));
@@ -525,13 +531,29 @@ export class APIClient {
     }
     // Memory operations - aligned with REST API canonical endpoints
     // All memory endpoints use /api/v1/memories path (plural, per REST conventions)
+    //
+    // NOTE: The deployed memory gateway (mcp.lanonasis.com) persists the type via
+    // the `type` field, while the MaaS schema and Supabase edge functions accept
+    // `memory_type` (and `type` as an alias). To make the type persist across every
+    // gateway/schema layer we send BOTH `memory_type` and `type` on create/update.
+    withTypeAlias(payload) {
+        const memoryType = payload.memory_type;
+        if (memoryType === undefined) {
+            return payload;
+        }
+        return { ...payload, type: memoryType };
+    }
     async createMemory(data) {
-        const response = await this.client.post('/api/v1/memories', data);
+        const response = await this.client.post('/api/v1/memories', this.withTypeAlias(data));
         return this.normalizeMemoryEntry(response.data);
     }
     async getMemories(params = {}) {
+        // The deployed memory gateway filters the list via the `type` query param
+        // while the MaaS schema accepts `memory_type` (and `type` alias). Send both
+        // so the filter applies regardless of which gateway/schema layer is live.
+        const requestParams = this.withTypeAlias(params);
         try {
-            const response = await this.client.get('/api/v1/memories', { params });
+            const response = await this.client.get('/api/v1/memories', { params: requestParams });
             return response.data;
         }
         catch (error) {
@@ -547,6 +569,7 @@ export class APIClient {
                 };
                 if (params.memory_type) {
                     listPayload.memory_type = params.memory_type;
+                    listPayload.type = params.memory_type;
                 }
                 if (params.tags) {
                     listPayload.tags = Array.isArray(params.tags)
@@ -707,14 +730,14 @@ export class APIClient {
     async updateMemory(id, data) {
         const resolvedId = await this.resolveMemoryId(id);
         try {
-            const response = await this.client.put(`/api/v1/memories/${encodeURIComponent(resolvedId)}`, data);
+            const response = await this.client.put(`/api/v1/memories/${encodeURIComponent(resolvedId)}`, this.withTypeAlias(data));
             return this.normalizeMemoryEntry(response.data);
         }
         catch (error) {
             if (this.shouldUseLegacyMemoryRpcFallback(error) || error?.response?.status === 404) {
                 const fallback = await this.client.post('/api/v1/memory/update', {
                     id: resolvedId,
-                    ...data
+                    ...this.withTypeAlias(data)
                 });
                 const payload = fallback.data && typeof fallback.data === 'object'
                     ? fallback.data.data ?? fallback.data

@@ -1,4 +1,4 @@
-# @lanonasis/cli v3.11.0 - Advanced CLI Suite
+# @lanonasis/cli v3.11.2 - Advanced CLI Suite
 
 [![NPM Version](https://img.shields.io/npm/v/@lanonasis/cli)](https://www.npmjs.com/package/@lanonasis/cli)
 [![Downloads](https://img.shields.io/npm/dt/@lanonasis/cli)](https://www.npmjs.com/package/@lanonasis/cli)
@@ -33,6 +33,83 @@ onasis health                                   # Verify system health
 # Create your first memory
 onasis memory create --title "Welcome" --content "My first memory"
 ```
+
+## 📖 Usage Guide (command reference)
+
+This section is the agent-facing usage guide for `@lanonasis/cli`. The command tree below is derived from `src/index.ts` and the `src/commands/*` modules (source of truth). Regenerate the live surface anytime with `lanonasis -h` / `lanonasis <command> -h` from a built checkout.
+
+### Binaries & aliases
+
+| Binary | Notes |
+|---|---|
+| `lanonasis` | canonical bin (`dist/index.js`) |
+| `onasis` | package.json bin alias |
+| `lanonasis-mcp` | MCP server entry (`dist/mcp-server-entry.js`) |
+| `memory`, `maas` | commander aliases for the root program (not package.json bins) |
+
+### Global options (apply to all commands)
+
+| Option | Meaning |
+|---|---|
+| `-h, --help` | show command help |
+| `-V, --version` | show version |
+| `-v, --verbose` | verbose logging |
+| `--api-url <url>` | override API base URL |
+| `--output <format>` | `table` (default) \| `json` \| `yaml` |
+| `--no-mcp` | disable MCP route, use direct API |
+
+> ⚠️ **Pitfall — do NOT use `--no-mcp` for memory operations.** Verified live: `--no-mcp` forces `baseURL` to `https://api.lanonasis.com` (the vendor AI proxy), which returns an empty HTML page for `/api/v1/memories/<id>` — the CLI surfaces this as `Request failed with status code 500`. The default route sends memory ops to `https://mcp.lanonasis.com/api/v1/memory/<id>` (the real memory service). Source: `src/utils/api.ts:638-640` ("api.lanonasis.com is the vendor AI proxy, NOT the memory service. Memory operations must go to mcp.lanonasis.com."). `--no-mcp` is only meaningful for non-memory service commands.
+
+### Top-level commands
+
+| Command | Alias | Purpose |
+|---|---|---|
+| `init` | | initialize CLI configuration |
+| `auth` | `login` | authentication: `login`, `logout`, `status`, `diagnose` |
+| `mcp` | | MCP server/client ops: `init`, `connect`, `disconnect`, `status`, `tools`, `call`, `config`, `server`, `diagnose` |
+| `memory` | `mem` | memory CRUD + sessions + intelligence (see below) |
+| `repl` | | lightweight REPL for memory ops (`--mcp`, `--api`, `--ai-router`, `--token`, `--model`, `--config`) |
+| `topic` | `topics` | topic management: `create`, `list`, `get`, `update`, `delete` |
+| `config` | | config management: `set`, `get`, `show`, `list`, `set-api-url`, `test`, `discover`, `endpoints`, `set-override`, `clear-overrides`, `validate`, `backup`, `restore`, `reset` |
+| `org` | `organization` | organization management |
+| `api-keys` | `keys` | API keys: `project create/list`, `create/list/get/update/delete`, `mcp register-tool/list-tools/request-access`, `usage` |
+| `prescan` | | secret/PII scan: `run <path>` (`--save`, `--ci`, `--fail-on`), `status`, `audit <file>`, `safe <file>` |
+| `completion` | | shell completions |
+| `dashboard` | `dash` | interactive dashboard |
+| `documentation` | `doc` | documentation |
+| `sdk` | | SDK info/generation |
+| `api` | `rest` | direct REST operations |
+| `deploy` | `deployment` | deployment orchestration |
+| `service` | `services` | service management |
+| `status` | | overall status |
+| `whoami` | | current identity |
+| `health` | `check` | comprehensive health check (`--verbose`) |
+| `docs` | | docs access |
+
+### `memory` subcommands
+
+| Subcommand | Alias | Key options |
+|---|---|---|
+| `create` | `add` | `-t/--title`, `-c/--content`, `--type`, `--tags`, `--topic-id`, `-i/--interactive`, `--json <json>` (title, content, type/memory_type, tags[], topic_id), `--content-file <path>` |
+| `save-session` | | `-t/--title` (default `Session summary`), `--type` (default `project`), `--tags`, `--test-summary` |
+| `list-sessions` | | `-p/--page`, `-l/--limit`, `--type`, `--tags`, `--sort`, `--order` |
+| `load-session` | | `<id>` |
+| `delete-session` | | `<id>`, `-f/--force` |
+| `list` | `ls` | `-p/--page`, `-l/--limit`, `--type`, `--tags`, `--user-id`, `--sort`, `--order` |
+| `search` | | `<query...>`, `-l/--limit`, `--threshold`, `--type`, `--tags`, `--fallback-mode`, `--no-fallback`, `--fail-on-fallback`, `--ci`, `--json` |
+| `get` | `show` | `<id>` |
+| `update` | | `<id>`, `-t/--title`, `-c/--content`, `--type`, `--tags`, `-i/--interactive` |
+| `delete` | `rm` | `<id>`, `-f/--force` |
+| `stats` | | memory statistics |
+| `intelligence` | | `health`, `suggest-tags <memory-id>`, `related <memory-id>`, `detect-duplicates` (shared: `--organization-id`, `--topic-id`, `--scope`, `--json`) |
+
+### Field naming contract — `memory_type` vs `type`
+
+- **Wire format is `memory_type`.** The CLI REST client (`src/utils/api.ts`), the MaaS REST server schema (`src/types/memory-aligned.ts`), and the CLI MCP server (`src/mcp/server/lanonasis-server.ts`) all use `memory_type`.
+- **`type` is only an alias at the Supabase Edge Function layer**: `memory-create` (`const memoryType = body.memory_type || body.type`) and `memory-search` (`url.searchParams.get("type")`).
+- CLI input (`--type` flag or `--json '{"type": ...}'`) is coerced to `memory_type` before it is sent.
+- On create/update/list the CLI sends **both** `memory_type` and `type` (alias) so the type persists and the list filter applies regardless of which gateway/schema layer is live (`src/utils/api.ts` `withTypeAlias`).
+- Search responses may return `type` on the row; the CLI normalizes to `memory_type` (`src/commands/memory.ts:1170`).
 
 ## 🔍 Secret Prescan (v3.10.1+)
 
