@@ -699,15 +699,17 @@ async function handleVendorKeyAuth(vendorKey: string, config: CLIConfig): Promis
 
     // Explicit vendor-key auth should not inherit stale bearer tokens or cached identities
     // from a previous login session. Keep the process pinned to the intended service key.
-    await config.setAndSave('token', undefined);
-    await config.setAndSave('refresh_token', undefined);
-    await config.setAndSave('token_expires_at', undefined);
-    await config.setAndSave('tokenExpiry', undefined);
-    await config.setAndSave('user', undefined);
-
+    // Assign all reset fields in memory, then persist atomically in a single save so an
+    // interrupted write cannot leave a half-cleared session.
+    config.set('token', undefined);
+    config.set('refresh_token', undefined);
+    config.set('token_expires_at', undefined);
+    config.set('tokenExpiry', undefined);
+    config.set('user', undefined);
     // Explicitly set authMethod to vendor_key when user does explicit vendor key auth
     // This overrides any previous OAuth authMethod.
-    await config.setAndSave('authMethod', 'vendor_key');
+    config.set('authMethod', 'vendor_key');
+    await config.save();
 
     // Resolve the live profile immediately so subsequent status/whoami calls don't fall
     // back to stale cached emails from a different account.

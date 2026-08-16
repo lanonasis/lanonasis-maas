@@ -75,7 +75,11 @@ describe('loginCommand vendor-key path', () => {
   });
 
   afterEach(async () => {
-    process.env.HOME = previousHome;
+    if (previousHome === undefined) {
+      delete process.env.HOME;
+    } else {
+      process.env.HOME = previousHome;
+    }
     if (previousSkipValidation === undefined) {
       delete process.env.SKIP_SERVER_VALIDATION;
     } else {
