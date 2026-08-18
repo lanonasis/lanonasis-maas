@@ -5,4 +5,4 @@ description: >
   LanOnasis context engine — per-turn context selection and compaction
   backed by the LanOnasis memory DAG. Skeleton/wireframe: conforms to the
   Hermes ContextEngine ABC but fails open until the backend is configured.
-entry_point: hermes_lanonasis_context_engine:register
+entry_point: hermes_lanonasis_context_engine

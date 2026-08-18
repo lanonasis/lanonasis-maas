@@ -207,6 +207,7 @@ export declare class APIClient {
     constructor();
     login(email: string, password: string): Promise<AuthResponse>;
     register(email: string, password: string, organizationName?: string): Promise<AuthResponse>;
+    private withTypeAlias;
     createMemory(data: CreateMemoryRequest): Promise<MemoryEntry>;
     getMemories(params?: GetMemoriesParams): Promise<PaginatedResponse<MemoryEntry>>;
     getMemory(id: string): Promise<MemoryEntry>;
