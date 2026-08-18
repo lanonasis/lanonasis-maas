@@ -10,6 +10,7 @@ import { EventCommands } from '../commands/event-commands.js';
 import { NaturalLanguageOrchestrator } from './orchestrator.js';
 import { pauseReadline, resumeReadline } from '../utils/spinner-utils.js';
 import { AIEndpointHealthCheck, quickHealthCheck } from './health-check.js';
+import { saveConfig } from '../config/loader.js';
 
 export class ReplEngine {
   private rl: readline.Interface;
@@ -75,6 +76,7 @@ export class ReplEngine {
       aiRouterAuthToken: config.aiRouterAuthToken || config.authToken,
       aiRouterApiKey: config.aiRouterApiKey,
       l0: config.l0,
+      agentMemorySessionId: config.agentMemorySessionId,
       userContext: config.userContext
     });
 
@@ -291,9 +293,14 @@ export class ReplEngine {
       }
     });
 
-    // Clear conversation history
+    // Clear conversation history — starts a new session-memory session too
+    // (when configured), so the abandoned session's events never bleed
+    // into the fresh one.
     this.registry.register('reset', async () => {
-      this.orchestrator.clearHistory();
+      const newSessionId = this.orchestrator.regenerateSession();
+      if (newSessionId) {
+        saveConfig({ agentMemorySessionId: newSessionId });
+      }
       console.log(chalk.green('✨ Conversation history cleared'));
     });
 
