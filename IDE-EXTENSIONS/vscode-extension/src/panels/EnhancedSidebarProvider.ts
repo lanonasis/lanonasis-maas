@@ -19,6 +19,25 @@ interface ApiKeyRecord {
     createdAt?: string | Date;
 }
 
+/**
+ * Timeout for AI router calls. Bounds the worst case before the chat degrades
+ * to plain memory search — the old un-wired path could hang 30-60s with no
+ * answer at all.
+ */
+const AI_ROUTER_TIMEOUT_MS = 45_000;
+
+/** Thrown when the router returns HTTP 429. Carries Retry-After so the UI can
+ * surface a wait hint instead of retrying in a hot loop. */
+class AIRouterRateLimitError extends Error {
+    readonly retryAfterSeconds?: number;
+
+    constructor(retryAfterSeconds?: number) {
+        super('AI router rate limit exceeded');
+        this.name = 'AIRouterRateLimitError';
+        this.retryAfterSeconds = retryAfterSeconds;
+    }
+}
+
 export class EnhancedSidebarProvider implements vscode.WebviewViewProvider {
     public static readonly viewType = 'lanonasis.sidebar';
     private _view?: vscode.WebviewView;
@@ -332,7 +351,11 @@ export class EnhancedSidebarProvider implements vscode.WebviewViewProvider {
 
         // Support both string and object format
         const query = typeof queryData === 'string' ? queryData : queryData.query;
-        const attachedMemories = typeof queryData === 'object' && queryData.attachedMemories ? queryData.attachedMemories : [];
+        const rawAttached = typeof queryData === 'object' && Array.isArray(queryData.attachedMemories) ? queryData.attachedMemories : [];
+        const attachedMemories = rawAttached.filter((m): m is { id: string; title: string; content: string } =>
+            !!m && typeof m === 'object' && typeof m.content === 'string'
+        );
+        const attachedMemoryIds = Array.from(new Set(attachedMemories.map(m => m.id).filter(Boolean)));
 
         try {
             // Send loading state
@@ -342,36 +365,31 @@ export class EnhancedSidebarProvider implements vscode.WebviewViewProvider {
             });
 
             // Build attached context from provided memories (content included from frontend)
-            let attachedContext = '';
-            if (attachedMemories.length > 0) {
-                attachedContext = '\n\n## Attached Context:\n' +
-                    attachedMemories.map((m, i) =>
-                        `**${i + 1}. ${m.title}**\n${m.content.substring(0, 500)}${m.content.length > 500 ? '...' : ''}`
-                    ).join('\n\n');
-            }
+            const attachedContext = this.buildAttachedContext(attachedMemories);
 
-            // Use semantic search to find additional relevant memories
-            const searchResults = await this._bridge.searchMemories(query);
+            // Primary path: ask the Onasis AI Router for a synthesized answer.
+            try {
+                const synthesized = await this.queryAIRouter(query, attachedContext);
 
-            // Combine attached and searched memories (dedupe by id)
-            const attachedMemoryIds = attachedMemories.map(m => m.id);
-
-            // Format results as a chat response
-            const response = this.formatChatResponse(query, searchResults, attachedContext);
-
-            this._view.webview.postMessage({
-                type: 'chatResponse',
-                data: {
-                    query,
-                    response,
-                    memories: searchResults.slice(0, 5), // Include top 5 relevant memories
-                    attachedMemoryIds
+                // Memories are supplementary to the synthesized answer — a search
+                // failure must never sink a good answer.
+                let searchResults: Array<{ title: string; content: string }> = [];
+                try {
+                    searchResults = await this._bridge.searchMemories(query);
+                } catch (searchError) {
+                    console.warn('[EnhancedSidebarProvider] Memory search failed (chat answer unaffected):', this.safeErrorMessage(searchError));
                 }
-            });
+
+                this.postChatResponse(query, synthesized, searchResults, attachedMemoryIds);
+            } catch (routerError) {
+                // Degradation path: the concierge must never go fully silent.
+                // A degraded-but-working memory-search response beats a broken one.
+                await this.handleAIRouterFailure(query, attachedContext, attachedMemoryIds, routerError);
+            }
         } catch (error) {
             this._view.webview.postMessage({
                 type: 'chatError',
-                data: `Failed to process query: ${error instanceof Error ? error.message : String(error)}`
+                data: `Failed to process query: ${this.safeErrorMessage(error)}`
             });
         } finally {
             this._view.webview.postMessage({
@@ -379,6 +397,204 @@ export class EnhancedSidebarProvider implements vscode.WebviewViewProvider {
                 data: false
             });
         }
+    }
+
+    /**
+     * Router base URL, resolved from extension settings so users can point the
+     * sidebar chat at a custom deployment without a code change.
+     */
+    private getAIRouterUrl(): string {
+        const config = vscode.workspace.getConfiguration('lanonasis');
+        const configured = config.get<string>('aiRouterUrl', 'https://ai.vortexcore.app');
+        const url = (configured || 'https://ai.vortexcore.app').trim().replace(/\/+$/, '');
+        return url || 'https://ai.vortexcore.app';
+    }
+
+    /**
+     * Resolve the stored credential WITHOUT prompting. The chat flow must never
+     * raise a second credential prompt — if nothing is stored, we silently
+     * degrade to plain memory search.
+     */
+    private async resolveRouterCredential(): Promise<string | null> {
+        if (!this._apiKeyService) return null;
+        try {
+            const credential = await this._apiKeyService.getCredentials();
+            return credential?.token?.trim() ? credential.token.trim() : null;
+        } catch (error) {
+            console.warn('[EnhancedSidebarProvider] Failed to resolve credentials for AI router:', this.safeErrorMessage(error));
+            return null;
+        }
+    }
+
+    /**
+     * Auth header selection — mirrors repl-cli's ai-router-client.ts exactly so
+     * all surfaces agree: `lano_*` keys go in X-API-Key, anything else (OAuth
+     * JWT / raw bearer) goes in Authorization.
+     */
+    private buildRouterAuthHeaders(token: string): Record<string, string> {
+        if (token.startsWith('lano_')) {
+            return { 'X-API-Key': token };
+        }
+        if (token.toLowerCase().startsWith('bearer ')) {
+            return { 'Authorization': token };
+        }
+        return { 'Authorization': `Bearer ${token}` };
+    }
+
+    /**
+     * Call POST {router}/api/v1/ai-chat with use_case=memory-analysis.
+     * The router's promptComposer owns persona/identity server-side — no
+     * client-side system prompt here. Returns the synthesized answer text.
+     *
+     * Throws on any failure (network, timeout, non-200, 429) so the caller can
+     * degrade; never retries in a hot loop.
+     */
+    private async queryAIRouter(query: string, attachedContext: string): Promise<string> {
+        const token = await this.resolveRouterCredential();
+        if (!token) {
+            throw new Error('No stored credentials — falling back to memory search.');
+        }
+
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), AI_ROUTER_TIMEOUT_MS);
+
+        const userContent = attachedContext ? `${query}\n\n${attachedContext}` : query;
+
+        let response: Response;
+        try {
+            response = await fetch(`${this.getAIRouterUrl()}/api/v1/ai-chat`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...this.buildRouterAuthHeaders(token),
+                },
+                body: JSON.stringify({
+                    use_case: 'memory-analysis',
+                    messages: [{ role: 'user', content: userContent }],
+                }),
+                signal: controller.signal,
+            });
+        } catch (error) {
+            // Network failure or timeout — both degrade to memory search.
+            throw new Error(`AI router unreachable: ${this.safeErrorMessage(error)}`);
+        } finally {
+            clearTimeout(timeout);
+        }
+
+        if (response.status === 429) {
+            const headerValue = response.headers.get('Retry-After');
+            const parsedHeader = headerValue ? parseInt(headerValue, 10) : Number.NaN;
+            let bodySeconds: number | undefined;
+            try {
+                const body = await response.json() as { error?: { retry_after_seconds?: number } };
+                bodySeconds = body?.error?.retry_after_seconds;
+            } catch {
+                // Body parsing is best-effort; the header is authoritative.
+            }
+            throw new AIRouterRateLimitError(
+                Number.isFinite(bodySeconds) ? bodySeconds as number : (Number.isFinite(parsedHeader) ? parsedHeader : undefined)
+            );
+        }
+
+        if (!response.ok) {
+            throw new Error(`AI router request failed: ${response.status} ${response.statusText}`);
+        }
+
+        let data: { response?: unknown; message?: { content?: unknown } };
+        try {
+            data = await response.json();
+        } catch {
+            throw new Error('AI router returned an unreadable response');
+        }
+
+        // Router contract (verified 2026-08-19): `response` is the answer;
+        // `message.content` is the OpenAI-style alias some surfaces use.
+        const answer = (typeof data.response === 'string' && data.response.trim())
+            ? data.response.trim()
+            : (typeof data.message?.content === 'string' ? data.message.content.trim() : '');
+
+        if (!answer) {
+            throw new Error('AI router returned an empty response');
+        }
+
+        return answer;
+    }
+
+    /**
+     * Fallback path for chat: plain semantic memory search, formatted exactly
+     * like the pre-wiring behavior. A 429 additionally surfaces the router's
+     * Retry-After to the user instead of retrying in a hot loop.
+     */
+    private async handleAIRouterFailure(
+        query: string,
+        attachedContext: string,
+        attachedMemoryIds: string[],
+        routerError: unknown,
+    ): Promise<void> {
+        let searchResults: Array<{ title: string; content: string }>;
+        try {
+            searchResults = await this._bridge.searchMemories(query);
+        } catch (searchError) {
+            // Both the router AND the search failed — surface a clear error
+            // rather than nothing.
+            this._view?.webview.postMessage({
+                type: 'chatError',
+                data: `Failed to process query: ${this.safeErrorMessage(searchError)}`
+            });
+            return;
+        }
+
+        let response = this.formatChatResponse(query, searchResults, attachedContext);
+
+        if (routerError instanceof AIRouterRateLimitError) {
+            const seconds = routerError.retryAfterSeconds;
+            const waitHint = Number.isFinite(seconds)
+                ? ` in ~${seconds}s`
+                : ' shortly';
+            response = `⏳ **Rate limit reached** — the AI assistant is busy. Please try again${waitHint}.\n\nMeanwhile, here's what I found in your memories:\n\n${response}`;
+            // Note: a 429 must NOT be retried in a loop; this is the terminal
+            // response for this query.
+        } else {
+            console.warn('[EnhancedSidebarProvider] AI router unavailable, using memory search fallback:', this.safeErrorMessage(routerError));
+        }
+
+        this.postChatResponse(query, response, searchResults, attachedMemoryIds);
+    }
+
+    private postChatResponse(
+        query: string,
+        response: string,
+        searchResults: Array<{ title: string; content: string }>,
+        attachedMemoryIds: string[],
+    ): void {
+        this._view?.webview.postMessage({
+            type: 'chatResponse',
+            data: {
+                query,
+                response,
+                memories: searchResults.slice(0, 5), // Include top 5 relevant memories
+                attachedMemoryIds
+            }
+        });
+    }
+
+    private buildAttachedContext(attachedMemories: Array<{ id: string; title: string; content: string }>): string {
+        if (attachedMemories.length === 0) {
+            return '';
+        }
+
+        return '\n\n## Attached Context:\n' +
+            attachedMemories.map((m, i) =>
+                `**${i + 1}. ${m.title}**\n${m.content.substring(0, 500)}${m.content.length > 500 ? '...' : ''}`
+            ).join('\n\n');
+    }
+
+    /**
+     * Error text safe to log / show to the user. Never includes request
+     * headers, tokens, or bodies — just the message.
+     */
+    private safeErrorMessage(error: unknown): string {
+        return error instanceof Error ? error.message : String(error);
     }
 
     private formatChatResponse(

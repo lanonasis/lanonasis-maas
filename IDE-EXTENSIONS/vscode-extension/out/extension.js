@@ -13887,6 +13887,52 @@ var init_client = __esm({
         const { apiKey, authToken, ...safeConfig } = this.config;
         return safeConfig;
       }
+      // ============================================================
+      // Phase 1: Reasoning / Inference
+      // ============================================================
+      /**
+       * List pre-reasoned inferred conclusions for a subject.
+       */
+      async listInferredConclusions(opts) {
+        const params = new URLSearchParams({ subject_id: opts.subject_id });
+        if (opts.limit) params.set("limit", String(opts.limit));
+        if (opts.include_superseded) params.set("include_superseded", "true");
+        return this.request(
+          `/intelligence/conclusions?${params.toString()}`
+        );
+      }
+      /**
+       * Get the status of an async reasoning job.
+       */
+      async getReasoningJobStatus(jobId) {
+        const result = await this.request(`/intelligence/jobs/${jobId}`);
+        if (result.error) return { data: void 0, error: result.error };
+        return { data: result.data.job, error: void 0 };
+      }
+      /**
+       * Force-immediate reasoning for a subject (bypass cron threshold).
+       */
+      async flushReasoningQueue(subject_id) {
+        return this.request(
+          "/intelligence/flush",
+          { method: "POST", body: JSON.stringify({ subject_id }) }
+        );
+      }
+      // Phase 2: Living Memory Profile
+      async getProfile(subject_id) {
+        return this.request(`/profiles/${subject_id}`);
+      }
+      async getProfileHistory(subject_id, limit = 20) {
+        return this.request(
+          `/profiles/${subject_id}/versions?limit=${limit}`
+        );
+      }
+      async askProfile(subject_id, question) {
+        return this.request(
+          `/profiles/${subject_id}/ask`,
+          { method: "POST", body: JSON.stringify({ question }) }
+        );
+      }
     };
   }
 });
@@ -16020,6 +16066,14 @@ var PrototypeUIBridge = class {
 };
 
 // src/panels/EnhancedSidebarProvider.ts
+var AI_ROUTER_TIMEOUT_MS = 45e3;
+var AIRouterRateLimitError = class extends Error {
+  constructor(retryAfterSeconds) {
+    super("AI router rate limit exceeded");
+    this.name = "AIRouterRateLimitError";
+    this.retryAfterSeconds = retryAfterSeconds;
+  }
+};
 var EnhancedSidebarProvider = class {
   constructor(_extensionUri, memoryService, apiKeyService, cacheBridge, onboardingService, offlineService, offlineQueue) {
     this._extensionUri = _extensionUri;
@@ -16282,36 +16336,33 @@ var EnhancedSidebarProvider = class {
   async handleChatQuery(queryData) {
     if (!this._view) return;
     const query = typeof queryData === "string" ? queryData : queryData.query;
-    const attachedMemories = typeof queryData === "object" && queryData.attachedMemories ? queryData.attachedMemories : [];
+    const rawAttached = typeof queryData === "object" && Array.isArray(queryData.attachedMemories) ? queryData.attachedMemories : [];
+    const attachedMemories = rawAttached.filter(
+      (m) => !!m && typeof m === "object" && typeof m.content === "string"
+    );
+    const attachedMemoryIds = Array.from(new Set(attachedMemories.map((m) => m.id).filter(Boolean)));
     try {
       this._view.webview.postMessage({
         type: "chatLoading",
         data: true
       });
-      let attachedContext = "";
-      if (attachedMemories.length > 0) {
-        attachedContext = "\n\n## Attached Context:\n" + attachedMemories.map(
-          (m, i) => `**${i + 1}. ${m.title}**
-${m.content.substring(0, 500)}${m.content.length > 500 ? "..." : ""}`
-        ).join("\n\n");
-      }
-      const searchResults = await this._bridge.searchMemories(query);
-      const attachedMemoryIds = attachedMemories.map((m) => m.id);
-      const response = this.formatChatResponse(query, searchResults, attachedContext);
-      this._view.webview.postMessage({
-        type: "chatResponse",
-        data: {
-          query,
-          response,
-          memories: searchResults.slice(0, 5),
-          // Include top 5 relevant memories
-          attachedMemoryIds
+      const attachedContext = this.buildAttachedContext(attachedMemories);
+      try {
+        const synthesized = await this.queryAIRouter(query, attachedContext);
+        let searchResults = [];
+        try {
+          searchResults = await this._bridge.searchMemories(query);
+        } catch (searchError) {
+          console.warn("[EnhancedSidebarProvider] Memory search failed (chat answer unaffected):", this.safeErrorMessage(searchError));
         }
-      });
+        this.postChatResponse(query, synthesized, searchResults, attachedMemoryIds);
+      } catch (routerError) {
+        await this.handleAIRouterFailure(query, attachedContext, attachedMemoryIds, routerError);
+      }
     } catch (error46) {
       this._view.webview.postMessage({
         type: "chatError",
-        data: `Failed to process query: ${error46 instanceof Error ? error46.message : String(error46)}`
+        data: `Failed to process query: ${this.safeErrorMessage(error46)}`
       });
     } finally {
       this._view.webview.postMessage({
@@ -16319,6 +16370,168 @@ ${m.content.substring(0, 500)}${m.content.length > 500 ? "..." : ""}`
         data: false
       });
     }
+  }
+  /**
+   * Router base URL, resolved from extension settings so users can point the
+   * sidebar chat at a custom deployment without a code change.
+   */
+  getAIRouterUrl() {
+    const config2 = vscode5.workspace.getConfiguration("lanonasis");
+    const configured = config2.get("aiRouterUrl", "https://ai.vortexcore.app");
+    const url2 = (configured || "https://ai.vortexcore.app").trim().replace(/\/+$/, "");
+    return url2 || "https://ai.vortexcore.app";
+  }
+  /**
+   * Resolve the stored credential WITHOUT prompting. The chat flow must never
+   * raise a second credential prompt — if nothing is stored, we silently
+   * degrade to plain memory search.
+   */
+  async resolveRouterCredential() {
+    if (!this._apiKeyService) return null;
+    try {
+      const credential = await this._apiKeyService.getCredentials();
+      return credential?.token?.trim() ? credential.token.trim() : null;
+    } catch (error46) {
+      console.warn("[EnhancedSidebarProvider] Failed to resolve credentials for AI router:", this.safeErrorMessage(error46));
+      return null;
+    }
+  }
+  /**
+   * Auth header selection — mirrors repl-cli's ai-router-client.ts exactly so
+   * all surfaces agree: `lano_*` keys go in X-API-Key, anything else (OAuth
+   * JWT / raw bearer) goes in Authorization.
+   */
+  buildRouterAuthHeaders(token) {
+    if (token.startsWith("lano_")) {
+      return { "X-API-Key": token };
+    }
+    if (token.toLowerCase().startsWith("bearer ")) {
+      return { "Authorization": token };
+    }
+    return { "Authorization": `Bearer ${token}` };
+  }
+  /**
+   * Call POST {router}/api/v1/ai-chat with use_case=memory-analysis.
+   * The router's promptComposer owns persona/identity server-side — no
+   * client-side system prompt here. Returns the synthesized answer text.
+   *
+   * Throws on any failure (network, timeout, non-200, 429) so the caller can
+   * degrade; never retries in a hot loop.
+   */
+  async queryAIRouter(query, attachedContext) {
+    const token = await this.resolveRouterCredential();
+    if (!token) {
+      throw new Error("No stored credentials \u2014 falling back to memory search.");
+    }
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), AI_ROUTER_TIMEOUT_MS);
+    const userContent = attachedContext ? `${query}
+
+${attachedContext}` : query;
+    let response;
+    try {
+      response = await fetch(`${this.getAIRouterUrl()}/api/v1/ai-chat`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...this.buildRouterAuthHeaders(token)
+        },
+        body: JSON.stringify({
+          use_case: "memory-analysis",
+          messages: [{ role: "user", content: userContent }]
+        }),
+        signal: controller.signal
+      });
+    } catch (error46) {
+      throw new Error(`AI router unreachable: ${this.safeErrorMessage(error46)}`);
+    } finally {
+      clearTimeout(timeout);
+    }
+    if (response.status === 429) {
+      const headerValue = response.headers.get("Retry-After");
+      const parsedHeader = headerValue ? parseInt(headerValue, 10) : Number.NaN;
+      let bodySeconds;
+      try {
+        const body = await response.json();
+        bodySeconds = body?.error?.retry_after_seconds;
+      } catch {
+      }
+      throw new AIRouterRateLimitError(
+        Number.isFinite(bodySeconds) ? bodySeconds : Number.isFinite(parsedHeader) ? parsedHeader : void 0
+      );
+    }
+    if (!response.ok) {
+      throw new Error(`AI router request failed: ${response.status} ${response.statusText}`);
+    }
+    let data;
+    try {
+      data = await response.json();
+    } catch {
+      throw new Error("AI router returned an unreadable response");
+    }
+    const answer = typeof data.response === "string" && data.response.trim() ? data.response.trim() : typeof data.message?.content === "string" ? data.message.content.trim() : "";
+    if (!answer) {
+      throw new Error("AI router returned an empty response");
+    }
+    return answer;
+  }
+  /**
+   * Fallback path for chat: plain semantic memory search, formatted exactly
+   * like the pre-wiring behavior. A 429 additionally surfaces the router's
+   * Retry-After to the user instead of retrying in a hot loop.
+   */
+  async handleAIRouterFailure(query, attachedContext, attachedMemoryIds, routerError) {
+    let searchResults;
+    try {
+      searchResults = await this._bridge.searchMemories(query);
+    } catch (searchError) {
+      this._view?.webview.postMessage({
+        type: "chatError",
+        data: `Failed to process query: ${this.safeErrorMessage(searchError)}`
+      });
+      return;
+    }
+    let response = this.formatChatResponse(query, searchResults, attachedContext);
+    if (routerError instanceof AIRouterRateLimitError) {
+      const seconds = routerError.retryAfterSeconds;
+      const waitHint = Number.isFinite(seconds) ? ` in ~${seconds}s` : " shortly";
+      response = `\u23F3 **Rate limit reached** \u2014 the AI assistant is busy. Please try again${waitHint}.
+
+Meanwhile, here's what I found in your memories:
+
+${response}`;
+    } else {
+      console.warn("[EnhancedSidebarProvider] AI router unavailable, using memory search fallback:", this.safeErrorMessage(routerError));
+    }
+    this.postChatResponse(query, response, searchResults, attachedMemoryIds);
+  }
+  postChatResponse(query, response, searchResults, attachedMemoryIds) {
+    this._view?.webview.postMessage({
+      type: "chatResponse",
+      data: {
+        query,
+        response,
+        memories: searchResults.slice(0, 5),
+        // Include top 5 relevant memories
+        attachedMemoryIds
+      }
+    });
+  }
+  buildAttachedContext(attachedMemories) {
+    if (attachedMemories.length === 0) {
+      return "";
+    }
+    return "\n\n## Attached Context:\n" + attachedMemories.map(
+      (m, i) => `**${i + 1}. ${m.title}**
+${m.content.substring(0, 500)}${m.content.length > 500 ? "..." : ""}`
+    ).join("\n\n");
+  }
+  /**
+   * Error text safe to log / show to the user. Never includes request
+   * headers, tokens, or bodies — just the message.
+   */
+  safeErrorMessage(error46) {
+    return error46 instanceof Error ? error46.message : String(error46);
   }
   formatChatResponse(query, memories, attachedContext) {
     let response = "";
@@ -17788,6 +18001,20 @@ var ApiKeyService = class {
       }
     }
     return credentials;
+  }
+  /**
+   * Returns the currently stored credential (lano_* API key or OAuth token)
+   * WITHOUT prompting the user. Used by non-interactive flows (e.g. the
+   * sidebar chat) that must degrade silently instead of raising a second
+   * credential prompt. Returns null when nothing is stored.
+   */
+  async getCredentials() {
+    try {
+      return await this.secureApiKeyService.getStoredCredentials();
+    } catch (error46) {
+      console.warn("[ApiKeyService] Failed to read stored credentials:", error46);
+      return null;
+    }
   }
   looksLikeJwt(token) {
     const parts = token.split(".");

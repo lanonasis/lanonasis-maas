@@ -469,6 +469,11 @@
           "default": false,
           "markdownDescription": "Use Onasis Gateway for centralized API management. Default is direct REST API connection."
         },
+        "lanonasis.aiRouterUrl": {
+          "type": "string",
+          "default": "https://ai.vortexcore.app",
+          "markdownDescription": "Onasis AI Router base URL used by the sidebar chat (\"Ask me anything\") for synthesized answers. Defaults to the hosted router; change only if using a custom router deployment."
+        },
         "lanonasis.authUrl": {
           "type": "string",
           "default": "https://auth.lanonasis.com",
