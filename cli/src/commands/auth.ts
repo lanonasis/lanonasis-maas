@@ -6,7 +6,7 @@ import crypto from 'crypto';
 import http from 'http';
 import url from 'url';
 import axios from 'axios';
-import { apiClient } from '../utils/api.js';
+import { APIClient, apiClient } from '../utils/api.js';
 import { CLIConfig } from '../utils/config.js';
 
 // Color scheme
@@ -697,10 +697,30 @@ async function handleVendorKeyAuth(vendorKey: string, config: CLIConfig): Promis
   try {
     await config.setVendorKey(vendorKey);
 
+    // Explicit vendor-key auth should not inherit stale bearer tokens or cached identities
+    // from a previous login session. Keep the process pinned to the intended service key.
+    // Assign all reset fields in memory, then persist atomically in a single save so an
+    // interrupted write cannot leave a half-cleared session.
+    config.set('token', undefined);
+    config.set('refresh_token', undefined);
+    config.set('token_expires_at', undefined);
+    config.set('tokenExpiry', undefined);
+    config.set('user', undefined);
     // Explicitly set authMethod to vendor_key when user does explicit vendor key auth
-    // This overrides any previous OAuth authMethod
-    await config.set('authMethod', 'vendor_key');
+    // This overrides any previous OAuth authMethod.
+    config.set('authMethod', 'vendor_key');
     await config.save();
+
+    // Resolve the live profile immediately so subsequent status/whoami calls don't fall
+    // back to stale cached emails from a different account.
+    try {
+      const profileClient = new APIClient();
+      profileClient.noExit = true;
+      const profile = await profileClient.getUserProfile();
+      await config.updateCurrentUserProfile(profile as unknown as Record<string, unknown>);
+    } catch {
+      // Best effort only — the vendor key is already validated and should still be usable.
+    }
 
     // Test the vendor key with a health check
     await apiClient.get('/health');
