@@ -1208,6 +1208,12 @@ export class EnhancedSidebarProvider implements vscode.WebviewViewProvider {
                 (function() {
                     const vscode = acquireVsCodeApi();
                     window.vscode = vscode;
+                    // Exposes this load's CSP nonce so the bundle can set
+                    // __webpack_nonce__ before any lazy-loaded chunk is
+                    // requested — otherwise webpack's dynamically-injected
+                    // <script> tags for those chunks carry no nonce and the
+                    // CSP silently blocks them.
+                    window.__lanonasisCspNonce = "${nonce}";
                 })();
             </script>
             <script nonce="${nonce}">

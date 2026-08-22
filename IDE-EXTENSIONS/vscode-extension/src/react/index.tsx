@@ -9,15 +9,26 @@ declare global {
       getState: () => unknown;
       setState: (state: unknown) => void;
     };
+    __lanonasisCspNonce?: string;
   }
-  
+
   // VS Code webview API function
   function acquireVsCodeApi(): {
     postMessage: (message: { type: string; data?: unknown; [key: string]: unknown }) => void;
     getState: () => unknown;
     setState: (state: unknown) => void;
   };
+
+  var __webpack_nonce__: string;
 }
+
+// The extension's webview HTML sets a per-load CSP nonce on window before this
+// bundle's <script> tag runs. Without assigning it here, webpack's runtime has
+// no nonce to put on the <script> tags it injects for lazy-loaded chunks (e.g.
+// `lazy(() => import('./App'))` below) — the strict `script-src 'nonce-...'`
+// CSP silently blocks those un-nonced tags, so the chunk never loads and the
+// UI is stuck on the Suspense fallback forever.
+__webpack_nonce__ = window.__lanonasisCspNonce || '';
 
 const App = lazy(() => import('./App'));
 
