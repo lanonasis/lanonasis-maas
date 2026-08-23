@@ -75,6 +75,8 @@ config.local.json
 # secret file) — un-ignore it while keeping the blanket pattern for files.
 !packages/hermes-lanonasis-secret-source/
 !packages/hermes-lanonasis-secret-source/**
+# recall-forge's secret redactor is source code, not a secret file
+!packages/recall-forge/extraction/secret-redactor.ts
 **/*key*
 **/*token*
 **/*password*
