@@ -14,6 +14,39 @@ import { exec as execCb } from 'node:child_process';
 import { promisify } from 'node:util';
 const exec = promisify(execCb);
 const MAX_JSON_OPTION_BYTES = 1024 * 1024; // 1 MiB guardrail for CLI JSON flags
+let transportResolver = async (noMcp) => {
+    const t = await createIntelligenceTransport();
+    if (noMcp) {
+        return { mode: 'api' };
+    }
+    return t;
+};
+/**
+ * Card 2 (2026-07-18): replaced by the testability seam above so that
+ * `.cli.test.ts` can substitute a stub without touching this file.
+ */
+export const __setIntelligenceTransportResolver = (next) => {
+    transportResolver = next;
+};
+/**
+ * Resolve an intelligence transport honoring the global `--no-mcp` flag
+ * (commander exposes it on the root program) AND an explicit per-subcommand
+ * `--no-mcp` override. We accept both for parity with how the rest of the
+ * CLI surfaces the toggle.
+ */
+const resolveIntelligenceContextTransport = async (program, localNoMcp) => {
+    let programWideNoMcp = false;
+    try {
+        programWideNoMcp =
+            Boolean((program.optsWithGlobals && program.optsWithGlobals()?.mcp === false)) ||
+                Boolean((program.parent?.optsWithGlobals && program.parent.optsWithGlobals()?.mcp === false));
+    }
+    catch {
+        programWideNoMcp = false;
+    }
+    const wantRest = Boolean(localNoMcp) || programWideNoMcp;
+    return transportResolver(wantRest);
+};
 const MEMORY_TYPE_CHOICES = [
     'context',
     'project',
@@ -1263,12 +1296,53 @@ export function memoryCommands(program) {
         .option('--topic-id <id>', 'Optional topic context')
         .option('--scope <scope>', `Optional query scope (${QUERY_SCOPE_CHOICES.join(', ')})`)
         .option('--memory-types <types>', `Optional comma-separated memory types (${MEMORY_TYPE_CHOICES.join(', ')})`)
+        // Card 2 (2026-07-18): dry-run is the default for the destructive mode;
+        // callers must add `--delete --confirm` to actually remove rows.
+        .option('--dry-run', 'Detection + verification only (no delete). Default true for --delete mode.', false)
+        .option('--delete', 'Enable destructive mode; pass an explicit allowlist of duplicate IDs.', false)
+        .option('--confirm', 'Required to authorize --delete execution (dry_run=false).', false)
+        .option('--duplicate-ids <ids>', 'Comma-separated IDs to remove (used with --delete).')
+        .option('--no-mcp', 'Force REST /api/v1 path over the MCP SDK (parity check).')
         .option('--json', 'Output raw JSON payload')
         .action(async (options) => {
         try {
             const spinner = ora('Detecting duplicates...').start();
-            const transport = await createIntelligenceTransport();
             const userId = await resolveCurrentUserId();
+            // Decide between scan (default) and delete.
+            const isDeleteMode = Boolean(options.delete);
+            const duplicateIds = (options.duplicateIds ?? '')
+                .split(',')
+                .map((s) => s.trim())
+                .filter(Boolean);
+            if (isDeleteMode) {
+                if (duplicateIds.length === 0) {
+                    spinner.stop();
+                    console.error(chalk.red('✖ --delete requires --duplicate-ids <id1,id2,...>'));
+                    process.exit(2);
+                }
+                if (!options.confirm) {
+                    // Default for --delete: dry_run=true. Operator must add --confirm.
+                    options.confirm = false;
+                }
+                const dryRun = !options.confirm;
+                const transport = await resolveIntelligenceContextTransport(intelligence, options.mcp === false);
+                const result = await postIntelligenceEndpoint(transport, '/intelligence/detect-duplicates', {
+                    user_id: userId,
+                    mode: 'delete',
+                    dry_run: dryRun,
+                    duplicate_ids: duplicateIds,
+                    response_format: 'json',
+                    ...buildIntelligenceContextPayload(options),
+                });
+                spinner.stop();
+                if (dryRun) {
+                    console.log(chalk.yellow(`⚠ Dry-run only. ${dryRun && !options.confirm ? 'Pass --confirm to actually delete.' : ''}`));
+                }
+                printIntelligenceResult(dryRun ? '🧪 Delete Dry-Run' : '🧨 Delete Executed', result, options);
+                return;
+            }
+            // Scan mode (default): unchanged behaviour, parity-aware transport.
+            const transport = await resolveIntelligenceContextTransport(intelligence, options.mcp === false);
             const result = await postIntelligenceEndpoint(transport, '/intelligence/detect-duplicates', {
                 user_id: userId,
                 similarity_threshold: Math.max(0, Math.min(1, parseFloat(options.threshold || '0.88'))),
@@ -1295,13 +1369,14 @@ export function memoryCommands(program) {
         .option('--topic-id <id>', 'Optional topic context')
         .option('--scope <scope>', `Optional query scope (${QUERY_SCOPE_CHOICES.join(', ')})`)
         .option('--memory-types <types>', `Optional comma-separated memory types (${MEMORY_TYPE_CHOICES.join(', ')})`)
+        .option('--no-mcp', 'Force REST /api/v1 path over the MCP SDK (parity check).')
         .option('--json', 'Output raw JSON payload')
         .action(async (options) => {
         try {
             const spinner = ora('Extracting insights...').start();
-            const transport = await createIntelligenceTransport();
             const userId = await resolveCurrentUserId();
             const memoryType = options.type ? coerceMemoryType(options.type) : undefined;
+            const transport = await resolveIntelligenceContextTransport(intelligence, options.mcp === false);
             if (options.type && !memoryType) {
                 throw new Error(`Invalid type "${options.type}". Expected one of: ${MEMORY_TYPE_CHOICES.join(', ')}`);
             }
@@ -1330,12 +1405,13 @@ export function memoryCommands(program) {
         .option('--topic-id <id>', 'Optional topic context')
         .option('--scope <scope>', `Optional query scope (${QUERY_SCOPE_CHOICES.join(', ')})`)
         .option('--memory-types <types>', `Optional comma-separated memory types (${MEMORY_TYPE_CHOICES.join(', ')})`)
+        .option('--no-mcp', 'Force REST /api/v1 path over the MCP SDK (parity check).')
         .option('--json', 'Output raw JSON payload')
         .action(async (options) => {
         try {
             const spinner = ora('Analyzing memory patterns...').start();
-            const transport = await createIntelligenceTransport();
             const userId = await resolveCurrentUserId();
+            const transport = await resolveIntelligenceContextTransport(intelligence, options.mcp === false);
             const result = await postIntelligenceEndpoint(transport, '/intelligence/analyze-patterns', {
                 user_id: userId,
                 time_range_days: Math.max(1, Math.min(365, parseInt(options.days || '30', 10))),

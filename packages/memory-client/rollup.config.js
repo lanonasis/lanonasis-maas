@@ -41,6 +41,7 @@ export default [
         tsconfig: './tsconfig.json',
         declaration: false,
         declarationMap: false,
+        composite: false,
         outDir: 'dist/core'
       }),
     ],
@@ -80,6 +81,7 @@ export default [
         tsconfig: './tsconfig.json',
         declaration: false,
         declarationMap: false,
+        composite: false,
         outDir: 'dist/node'
       }),
     ],
@@ -119,6 +121,7 @@ export default [
         tsconfig: './tsconfig.json',
         declaration: false,
         declarationMap: false,
+        composite: false,
         outDir: 'dist/react',
         jsx: 'react'
       }),
@@ -159,6 +162,7 @@ export default [
         tsconfig: './tsconfig.json',
         declaration: false,
         declarationMap: false,
+        composite: false,
         outDir: 'dist/vue',
         skipLibCheck: true
       }),
@@ -199,6 +203,7 @@ export default [
         tsconfig: './tsconfig.json',
         declaration: false,
         declarationMap: false,
+        composite: false,
         outDir: 'dist/presets'
       }),
     ],
@@ -245,6 +250,7 @@ export default [
         tsconfig: './tsconfig.json',
         declaration: false,
         declarationMap: false,
+        composite: false,
       }),
     ],
     external: ['zod', 'child_process', 'util', 'fs', 'os', 'react', 'vue'],

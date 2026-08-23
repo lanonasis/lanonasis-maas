@@ -114,7 +114,16 @@ export function buildAIRouterAuthHeaders(token: string): Record<string, string> 
  *   - `message.content` is the OpenAI-style alias (fallback)
  */
 function parseAIRouterResponse(raw: unknown): AIRouterChatResponse {
-  const data = raw as Record<string, unknown>;
+  const data = raw as {
+    response?: string;
+    message?: { content?: string; tool_calls?: unknown };
+    tool_calls?: unknown;
+    done?: boolean;
+    done_reason?: string;
+    usage?: unknown;
+    onasis_metadata?: unknown;
+    error?: unknown;
+  };
 
   const answer =
     typeof data?.response === 'string'
@@ -146,7 +155,7 @@ function parseAIRouterResponse(raw: unknown): AIRouterChatResponse {
     },
     done: Boolean(data?.done ?? true),
     done_reason: (data?.done_reason as string) || 'stop',
-    tool_calls: data.tool_calls ?? data.message?.tool_calls ?? [],
+    tool_calls: (data.tool_calls as unknown[] | undefined) ?? (data.message?.tool_calls as unknown[] | undefined) ?? [],
     usage: (data?.usage as {
       prompt_tokens: number;
       completion_tokens: number;
@@ -244,7 +253,7 @@ export class AIRouterClient {
 
       let bodySeconds: number | undefined;
       try {
-        const body = await response.json();
+        const body = (await response.json()) as { error?: { retry_after_seconds?: number } } | undefined;
         bodySeconds =
           (body?.error as Record<string, unknown>)?.retry_after_seconds as
             | number
