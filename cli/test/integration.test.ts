@@ -423,12 +423,12 @@ describeHttp('CLI Integration - Live API', () => {
     expect(getResult.stdout).toContain(testValue);
   });
 
-  describe('api-keys REST path (--no-mcp mode)', () => {
+  describe('api-keys direct REST path', () => {
     it('covers create/get/update/delete via /api/v1/api-keys', async () => {
       const uniqueSuffix = randomUUID().slice(0, 8);
       const keyName = `it-api-key-${uniqueSuffix}`;
       const updatedName = `${keyName}-updated`;
-      const commandPrefix = `--no-mcp --api-url ${TEST_CLI_API_URL} api-keys`;
+      const commandPrefix = `--api-url ${TEST_CLI_API_URL} api-keys`;
 
       const createResult = await runCli(
         `${commandPrefix} create --name "${keyName}" --access-level team --expires-in-days 1`,

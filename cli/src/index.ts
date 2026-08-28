@@ -17,6 +17,7 @@ import { completionCommand, installCompletionsCommand } from './commands/complet
 import { CLIConfig } from './utils/config.js';
 import { APIClient, UserProfile } from './utils/api.js';
 import { getMCPClient } from './utils/mcp-client.js';
+import { isDirectApiFlow } from './utils/transport-routing.js';
 import { dirname, join } from 'path';
 import { readFileSync, existsSync } from 'fs';
 import { fileURLToPath } from 'url';
@@ -116,13 +117,11 @@ program
     const isConfigFlow = actionCommand.name() === 'config' ||
       actionCommand.parent?.name?.() === 'config';
     // Memory, topic, org, and key commands use the direct REST API — skip MCP auto-connect
-    const isDirectApiFlow = actionCommand.name() === 'memory' ||
-      actionCommand.parent?.name?.() === 'memory' ||
-      actionCommand.name() === 'topic' ||
-      actionCommand.parent?.name?.() === 'topic' ||
-      actionCommand.name() === 'org' ||
-      actionCommand.parent?.name?.() === 'org';
-    if (!forceDirectApi && !isMcpFlow && !isConfigFlow && !isDirectApiFlow && !isPrescanFlow && !['init', 'auth', 'login', 'health', 'status'].includes(actionCommand.name())) {
+    const directApiFlow = isDirectApiFlow(
+      actionCommand.name(),
+      actionCommand.parent?.name?.(),
+    );
+    if (!forceDirectApi && !isMcpFlow && !isConfigFlow && !directApiFlow && !isPrescanFlow && !['init', 'auth', 'login', 'health', 'status'].includes(actionCommand.name())) {
       try {
         const client = getMCPClient();
         if (!client.isConnectedToServer()) {
