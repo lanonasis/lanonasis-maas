@@ -128,5 +128,18 @@
     "testSpriteId": "c7f625c6-2b4e-4bad-9204-3a5215b48ae2",
     "testSpriteStatus": "passed",
     "notes": "Converted to gap test: readiness probe /health/ready is not exposed in production (404)."
+  },
+  {
+    "id": "CLI-ADVISORY",
+    "title": "cli_integration_suite_coverage_advisory",
+    "description": "The CLI integration suite (cli/test/integration.test.ts, offline portion) is a REQUIRED release gate owned by GitHub Actions (monorepo ci.yml cli-integration job + lanonasis-maas cli-tests.yml). The default `onasis api-keys ...` transport path is asserted deterministically there (no --no-mcp required, no MCP initialization attempted). Live-service API-key scenarios are explicitly opt-in via RUN_CLI_HTTP_INTEGRATION. This TestSprite project does NOT gate on the CLI suite; CLI coverage is advisory here and must not be treated as a release signal.",
+    "method": "N/A",
+    "path": "cli/test/integration.test.ts",
+    "authRequired": false,
+    "productionStatus": "N/A",
+    "localCoverage": "cli/test/integration.test.ts (offline describe blocks)",
+    "testSpriteId": null,
+    "testSpriteStatus": "advisory",
+    "notes": "CLI coverage is CI-owned (required offline integration job); TestSprite status for CLI is advisory only and never blocks release."
   }
 ]
