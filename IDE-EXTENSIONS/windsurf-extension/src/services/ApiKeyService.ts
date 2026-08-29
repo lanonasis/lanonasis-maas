@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { AuthenticationService } from '../auth/AuthenticationService';
 
 export interface ApiKey {
     id: string;
@@ -47,6 +48,7 @@ export interface CreateProjectRequest {
 export class ApiKeyService {
     private config: vscode.WorkspaceConfiguration;
     private baseUrl: string = 'https://mcp.lanonasis.com';
+    private authService: AuthenticationService | null = null;
 
     constructor() {
         this.config = vscode.workspace.getConfiguration('lanonasis');
@@ -66,16 +68,26 @@ export class ApiKeyService {
         this.updateConfig();
     }
 
+    setAuthService(authService: AuthenticationService): void {
+        this.authService = authService;
+    }
+
     private async makeRequest<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-        const apiKey = this.config.get<string>('apiKey');
-        if (!apiKey) {
-            throw new Error('API key not configured. Please set your API key in settings.');
+        let authHeader = await this.authService?.getAuthenticationHeader();
+
+        if (!authHeader) {
+            const apiKey = this.config.get<string>('apiKey');
+            authHeader = apiKey ? `Bearer ${apiKey}` : null;
+        }
+
+        if (!authHeader) {
+            throw new Error('API key not configured. Please authenticate using the "Lanonasis: Authenticate" command.');
         }
 
         const url = `${this.baseUrl}${endpoint}`;
         const headers = {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${apiKey}`,
+            'Authorization': authHeader,
             ...options.headers
         };
 
