@@ -41,9 +41,9 @@ export async function activate(context: vscode.ExtensionContext) {
     // Initialize Windsurf AI Assistant
     const aiAssistant = new WindsurfAiAssistant(memoryService);
 
-    // Initialize sidebar provider (modern UI) — wire ApiKeyService for AI router chat
+    // Initialize sidebar provider (modern UI) with its secure router credential source.
     const sidebarProvider = new MemorySidebarProvider(context.extensionUri, memoryService as any);
-    sidebarProvider.setApiKeyService(apiKeyService as any);
+    sidebarProvider.setCredentialService(secureAuthService);
 
     context.subscriptions.push(
         vscode.window.registerWebviewViewProvider(

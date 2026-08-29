@@ -52,6 +52,7 @@ export async function activate(context: vscode.ExtensionContext) {
     
     // Initialize sidebar provider (modern UI)
     const sidebarProvider = new MemorySidebarProvider(context.extensionUri, memoryService as any);
+    sidebarProvider.setCredentialService(secureAuthService);
     context.subscriptions.push(
         vscode.window.registerWebviewViewProvider(
             MemorySidebarProvider.viewType,
