@@ -333,7 +333,7 @@
     "watch": "tsc -watch -p ./",
     "pretest": "echo \"Running focused Cursor extension unit tests\"",
     "lint": "eslint src --ext ts",
-    "test": "tsx --test src/services/sidebar-credential-wiring.test.ts",
+    "test": "bun test src/services/sidebar-credential-wiring.test.ts",
     "package": "vsce package",
     "publish": "vsce publish"
   },
