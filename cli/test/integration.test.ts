@@ -12,6 +12,7 @@ import { promisify } from 'util';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { randomUUID } from 'crypto';
+import { existsSync } from 'fs';
 
 const execAsync = promisify(exec);
 const __filename = fileURLToPath(import.meta.url);
@@ -23,6 +24,25 @@ const TEST_CLI_API_URL = process.env.TEST_CLI_API_URL || 'http://localhost:3000/
 const TEST_CLI_VENDOR_KEY = process.env.TEST_CLI_VENDOR_KEY || '';
 
 const describeHttp = RUN_HTTP_INTEGRATION ? describe : describe.skip;
+const describeMcp = process.env.RUN_CLI_MCP_INTEGRATION === 'true' ? describe : describe.skip;
+
+// Resolve the CLI binary. Integration tests must exercise the SAME artifact the
+// supported build command produces (cli/dist/index.js), never an unstated
+// prebuilt binary. The path is overridable via ONASIS_CLI_BIN (e.g. a CI
+// workspace layout); we fail fast with an actionable message when the artifact
+// is missing instead of silently executing a stale/absent file.
+function resolveCliBin(): string {
+  const override = process.env.ONASIS_CLI_BIN;
+  const cliBin = override || join(__dirname, '../dist/index.js');
+  if (!existsSync(cliBin)) {
+    throw new Error(
+      `CLI artifact not found at ${cliBin}. Run the supported build command first ` +
+      `(monorepo root: \`bun run build:cli\`, or in cli/: \`bun install --frozen-lockfile && bun run build\`). ` +
+      `Integration tests must run against a freshly built artifact, not a prebuilt cli/dist.`
+    );
+  }
+  return cliBin;
+}
 
 function extractJsonFromOutput<T>(output: string): T {
   const trimmed = output.trim();
@@ -58,7 +78,7 @@ async function runCli(args: string, options: { env?: Record<string, string>; std
   stderr: string;
   exitCode: number | null;
 }> {
-  const cliPath = join(__dirname, '../dist/index.js');
+  const cliPath = resolveCliBin();
   const timeout = options.timeout || 30000;
   
   try {
@@ -120,6 +140,9 @@ describe('CLI Integration - Command Execution', () => {
       expect(result.stdout).toContain('Commands:');
     });
 
+  });
+
+  describeHttp('HTTP system commands', () => {
     it('health command returns status', async () => {
       const result = await runCli('health', {
         env: { HOME: testConfigDir },
@@ -128,10 +151,21 @@ describe('CLI Integration - Command Execution', () => {
       expect(result.stdout.includes('Health') || result.stderr.length > 0).toBe(true);
     });
 
+  });
+
+  describe('Local system commands', () => {
     it('completion command generates shell completion', async () => {
-      const result = await runCli('completion bash');
+      // `completion` is a local-only command: it must never attempt MCP
+      // auto-connect or touch the network (regression: it used to hang the
+      // suite for the full jest timeout while trying to reach the MCP server).
+      const result = await runCli('completion bash', {
+        env: { HOME: testConfigDir, CLI_VERBOSE: 'true' },
+        timeout: 15000,
+      });
       expect(result.exitCode).toBe(0);
       expect(result.stdout).toContain('completion');
+      const combined = `${result.stdout}\n${result.stderr}`;
+      expect(combined).not.toMatch(/Connecting to .*MCP|MCP connected/i);
     });
   });
 
@@ -144,6 +178,9 @@ describe('CLI Integration - Command Execution', () => {
       expect(result.stdout).toBeDefined();
     });
 
+  });
+
+  describeHttp('HTTP auth commands', () => {
     it('auth login with invalid vendor key fails gracefully', async () => {
       const result = await runCli('auth login --vendor-key invalid_key_123', {
         env: { HOME: testConfigDir },
@@ -152,6 +189,9 @@ describe('CLI Integration - Command Execution', () => {
       expect(result.exitCode !== 0 || result.stderr.length > 0).toBe(true);
     });
 
+  });
+
+  describe('Local auth commands', () => {
     it('whoami command executes', async () => {
       const result = await runCli('whoami', {
         env: { HOME: testConfigDir },
@@ -188,15 +228,20 @@ describe('CLI Integration - Command Execution', () => {
     });
 
     it('config reset executes', async () => {
-      const result = await runCli('config reset', {
+      // `--force` skips the interactive confirm prompt so the command is
+      // deterministic in a non-TTY test runner.
+      const result = await runCli('config reset --force', {
         env: { HOME: testConfigDir },
+        timeout: 15000,
       });
-      // Reset may require confirmation
       expect(result.stdout !== undefined || result.stderr !== undefined).toBe(true);
     });
   });
 
-  describe('Memory commands (without auth)', () => {
+  // Default memory and topic routes may use MCP when it is configured. Keep
+  // these contract probes opt-in so the required offline gate has no network
+  // dependency.
+  describeMcp('Memory commands (without auth)', () => {
     it('memory list fails gracefully without auth', async () => {
       const result = await runCli('memory list', {
         env: { HOME: testConfigDir },
@@ -221,7 +266,7 @@ describe('CLI Integration - Command Execution', () => {
     });
   });
 
-  describe('Topic commands (without auth)', () => {
+  describeMcp('Topic commands (without auth)', () => {
     it('topic list fails gracefully without auth', async () => {
       const result = await runCli('topic list', {
         env: { HOME: testConfigDir },
@@ -237,7 +282,9 @@ describe('CLI Integration - Command Execution', () => {
     });
   });
 
-  describe('MCP commands', () => {
+// MCP commands require a reachable MCP service. They are intentionally opt-in
+// so the required offline suite cannot hang on a network connection attempt.
+describeMcp('MCP commands', () => {
     it('mcp status executes', async () => {
       const result = await runCli('mcp status', {
         env: { HOME: testConfigDir },
@@ -280,6 +327,54 @@ describe('CLI Integration - Command Execution', () => {
         result.stderr.includes('error')
       ).toBe(true);
     });
+  });
+});
+
+describe('CLI Integration - Default API-key transport (offline, deterministic)', () => {
+  let testConfigDir: string;
+
+  beforeEach(async () => {
+    testConfigDir = join(__dirname, 'tmp-config-' + randomUUID().slice(0, 8));
+    await execAsync(`mkdir -p ${testConfigDir}`);
+  });
+
+  afterEach(async () => {
+    try {
+      await execAsync(`rm -rf ${testConfigDir}`);
+    } catch {
+      // Ignore cleanup errors
+    }
+  });
+
+  it('routes api-keys through the default transport without --no-mcp and without MCP init', async () => {
+    // The default `onasis api-keys ...` path must work WITHOUT `--no-mcp` and
+    // must NOT attempt MCP initialization. In an isolated, unauthenticated
+    // HOME it must fail fast with an auth error — not hang trying to connect
+    // to an MCP server, and not require the user to pass --no-mcp.
+    const result = await runCli('api-keys list --json', {
+      env: { HOME: testConfigDir, CLI_VERBOSE: 'true' },
+      timeout: 20000,
+    });
+
+    const combined = `${result.stdout}\n${result.stderr}`;
+    // Deterministic offline outcome: auth required, not an MCP connection.
+    expect(combined).toMatch(/Authentication required|auth login/i);
+    // Prove the default transport was used: the verbose flag line must show
+    // no_mcp=false (i.e. we did NOT have to pass --no-mcp).
+    expect(combined).toContain('no_mcp=false');
+    // Prove no MCP initialization was attempted.
+    expect(combined).not.toMatch(/Connecting to .*MCP|MCP connected|MCP auto-connect/i);
+  });
+
+  it('shows api-keys help without MCP initialization', async () => {
+    const result = await runCli('api-keys --help', {
+      env: { HOME: testConfigDir, CLI_VERBOSE: 'true' },
+      timeout: 15000,
+    });
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toContain('Manage API keys');
+    const combined = `${result.stdout}\n${result.stderr}`;
+    expect(combined).not.toMatch(/Connecting to .*MCP|MCP connected/i);
   });
 });
 

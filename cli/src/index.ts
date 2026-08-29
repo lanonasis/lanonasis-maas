@@ -88,6 +88,19 @@ program
     const isPrescanFlow =
       actionCommand.name() === 'prescan' ||
       actionCommand.parent?.name?.() === 'prescan';
+    // Local-only commands that must never attempt MCP auto-connect: shell
+    // completion, docs, diagnostics, and auth lifecycle are all self-contained
+    // and must stay deterministic offline (a regression here used to hang the
+    // CLI integration suite for the full jest timeout).
+    const isLocalFlow =
+      actionCommand.name() === 'completion' ||
+      actionCommand.parent?.name?.() === 'completion' ||
+      actionCommand.name() === 'docs' ||
+      actionCommand.parent?.name?.() === 'docs' ||
+      actionCommand.name() === 'diagnose' ||
+      actionCommand.parent?.name?.() === 'diagnose' ||
+      actionCommand.name() === 'whoami' ||
+      actionCommand.parent?.name?.() === 'whoami';
     const skipOnboarding =
       actionCommand.name() === 'init' ||
       actionCommand.name() === 'auth' ||
@@ -121,7 +134,7 @@ program
       actionCommand.name(),
       actionCommand.parent?.name?.(),
     );
-    if (!forceDirectApi && !isMcpFlow && !isConfigFlow && !directApiFlow && !isPrescanFlow && !['init', 'auth', 'login', 'health', 'status'].includes(actionCommand.name())) {
+    if (!forceDirectApi && !isMcpFlow && !isConfigFlow && !directApiFlow && !isPrescanFlow && !isLocalFlow && !['init', 'auth', 'login', 'health', 'status'].includes(actionCommand.name())) {
       try {
         const client = getMCPClient();
         if (!client.isConnectedToServer()) {
