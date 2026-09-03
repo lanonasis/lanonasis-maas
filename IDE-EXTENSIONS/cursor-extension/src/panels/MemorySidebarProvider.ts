@@ -8,29 +8,18 @@ import {
     AIRouterRateLimitError,
     AIRouterTimeoutError,
 } from '@lanonasis/ide-extension-core';
+import {
+    resolveRouterCredential,
+    type RouterCredentialService,
+} from '../services/sidebar-credential-wiring';
 
 const AI_ROUTER_TIMEOUT_MS = 45000; // 45 seconds
 
 // ---------------------------------------------------------------------------
-// Credential interface — mirrors SecureApiKeyService.StoredCredential so we
-// can type the return of getCredentials() without importing the service.
-// ---------------------------------------------------------------------------
-interface StoredCredential {
-    type: 'oauth' | 'apiKey';
-    token: string;
-    refreshToken?: string;
-    expiresAt?: number;
-}
-
-/** Minimal ApiKeyService surface the sidebar needs. */
-interface ApiKeyServiceLike {
-    getCredentials(): Promise<StoredCredential | null>;
-}
-
 export class MemorySidebarProvider implements vscode.WebviewViewProvider {
     public static readonly viewType = 'lanonasis.sidebar';
     private _view: vscode.WebviewView | null = null;
-    private _apiKeyService: ApiKeyServiceLike | null = null;
+    private _credentialService: RouterCredentialService | null = null;
 
     constructor(
         private readonly _extensionUri: vscode.Uri,
@@ -38,11 +27,11 @@ export class MemorySidebarProvider implements vscode.WebviewViewProvider {
     ) {}
 
     /**
-     * Expose ApiKeyService to the sidebar so chat queries can resolve
+     * Expose the secure credential service so chat queries can resolve
      * credentials without prompting the user.
      */
-    setApiKeyService(service: ApiKeyServiceLike): void {
-        this._apiKeyService = service;
+    setCredentialService(service: RouterCredentialService): void {
+        this._credentialService = service;
     }
 
     // ──────────────────────────────────────────────────
@@ -306,13 +295,7 @@ export class MemorySidebarProvider implements vscode.WebviewViewProvider {
     }
 
     private async resolveRouterCredential(): Promise<string | null> {
-        if (!this._apiKeyService) return null;
-        try {
-            const credential = await this._apiKeyService.getCredentials();
-            return credential?.token?.trim() ? credential.token.trim() : null;
-        } catch {
-            return null;
-        }
+        return resolveRouterCredential(this._credentialService);
     }
 
     private async queryAIRouter(query: string, attachedContext: string): Promise<string> {

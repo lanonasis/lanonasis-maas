@@ -50,15 +50,10 @@ export class ApiKeyService {
     private baseUrl: string;
     private authService: AuthenticationService | null = null;
 
-    constructor(context?: vscode.ExtensionContext) {
+    constructor() {
         this.config = vscode.workspace.getConfiguration('lanonasis');
         this.baseUrl = '';
         this.updateConfig();
-        
-        // Initialize auth service if context provided (for secure storage access)
-        if (context) {
-            this.authService = new AuthenticationService(context);
-        }
     }
 
     private updateConfig(): void {

@@ -10,7 +10,7 @@ import {
  * to the shared SecureApiKeyService + adapter.
  */
 export class AuthenticationService {
-  private status: AuthStatus = { authenticated: false, method: 'unknown' };
+  private status: AuthStatus = { isAuthenticated: false };
 
   constructor(
     private adapter: IIDEAdapter,
@@ -24,7 +24,7 @@ export class AuthenticationService {
 
     async checkAuthenticationStatus(): Promise<boolean> {
     this.status = await this.secureAuth.getAuthStatus();
-    return this.status.authenticated;
+    return this.status.isAuthenticated;
     }
 
     async authenticateWithBrowser(cancellationToken?: vscode.CancellationToken): Promise<boolean> {
@@ -49,7 +49,7 @@ export class AuthenticationService {
 
     async logout(): Promise<void> {
     await this.secureAuth.clearCredentials();
-    this.status = { authenticated: false, method: 'unknown' };
+    this.status = { isAuthenticated: false };
     }
 
     async getAuthenticationHeader(): Promise<string | null> {
@@ -67,6 +67,6 @@ export class AuthenticationService {
     }
 
     isAuthenticated(): boolean {
-    return this.status.authenticated;
+    return this.status.isAuthenticated;
             }
 }

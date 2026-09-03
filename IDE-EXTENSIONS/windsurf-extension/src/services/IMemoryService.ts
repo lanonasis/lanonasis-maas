@@ -1,4 +1,4 @@
-import { CreateMemoryRequest, SearchMemoryRequest, MemoryEntry, MemorySearchResult } from '../types/memory-aligned';
+import { CreateMemoryRequest, UpdateMemoryRequest, SearchMemoryRequest, MemoryEntry, MemorySearchResult } from '../types/memory';
 
 /**
  * Common interface for Memory Services
@@ -7,7 +7,7 @@ export interface IMemoryService {
   isAuthenticated(): boolean;
   testConnection(apiKey?: string): Promise<void>;
   createMemory(memory: CreateMemoryRequest): Promise<MemoryEntry>;
-  updateMemory(id: string, memory: Partial<CreateMemoryRequest>): Promise<MemoryEntry>;
+  updateMemory(id: string, memory: UpdateMemoryRequest): Promise<MemoryEntry>;
   searchMemories(query: string, options?: Partial<SearchMemoryRequest>): Promise<MemorySearchResult[]>;
   getMemory(id: string): Promise<MemoryEntry>;
   listMemories(limit?: number): Promise<MemoryEntry[]>;

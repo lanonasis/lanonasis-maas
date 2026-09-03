@@ -85,7 +85,9 @@ export default [
         outDir: 'dist/node'
       }),
     ],
-    external: ['zod', 'child_process', 'util', 'fs', 'os', '../core/client', '../core/types'],
+    // Keep the relative core modules in this bundle. Externalizing them leaves
+    // dist/node importing files that are not published beside the Node entry.
+    external: ['zod', 'child_process', 'util', 'fs', 'os'],
   },
 
   // Node Type Definitions
@@ -96,7 +98,7 @@ export default [
       format: 'esm',
     },
     plugins: [dts()],
-    external: ['zod', 'child_process', 'util', 'fs', 'os', '../core/client', '../core/types'],
+    external: ['zod', 'child_process', 'util', 'fs', 'os'],
   },
 
   // ========================================

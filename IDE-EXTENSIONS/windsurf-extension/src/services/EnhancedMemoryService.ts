@@ -1,14 +1,11 @@
 import * as vscode from 'vscode';
 import { AuthenticationService } from '../auth/AuthenticationService';
-import { 
-  EnhancedMemoryClient, 
-  createEnhancedMemoryClient,
-  ConfigPresets,
-  Environment,
-  type EnhancedMemoryClientConfig,
-  type OperationResult,
-  type CLICapabilities
-} from '@lanonasis/memory-client';
+import type {
+  EnhancedMemoryClient,
+  EnhancedMemoryClientConfig,
+  OperationResult,
+  CLICapabilities
+} from '@lanonasis/memory-client/node' with { "resolution-mode": "import" };
 import { 
     MemoryEntry, 
     CreateMemoryRequest, 
@@ -66,11 +63,10 @@ export class EnhancedMemoryService {
       
       // Use Cursor-optimized configuration
       const clientConfig: EnhancedMemoryClientConfig = {
-        ...ConfigPresets.ideExtension(token),
         apiUrl: this.baseUrl,
         
         // Cursor-specific optimizations
-        preferCLI: Environment.supportsCLI && vscode.workspace.getConfiguration('lanonasis').get<boolean>('preferCLI', true),
+        preferCLI: vscode.workspace.getConfiguration('lanonasis').get<boolean>('preferCLI', true),
         enableMCP: vscode.workspace.getConfiguration('lanonasis').get<boolean>('enableMCP', true),
         cliDetectionTimeout: vscode.workspace.getConfiguration('lanonasis').get<number>('cliDetectionTimeout', 2000),
         verbose: vscode.workspace.getConfiguration('lanonasis').get<boolean>('verboseLogging', false),
@@ -79,6 +75,7 @@ export class EnhancedMemoryService {
         authToken: token
       };
 
+      const { EnhancedMemoryClient } = await import('@lanonasis/memory-client/node');
       this.client = new EnhancedMemoryClient(clientConfig);
       
       // Initialize and detect CLI capabilities
@@ -204,7 +201,7 @@ export class EnhancedMemoryService {
       const result = await this.client.createMemory(mappedRequest as any);
       
       if (result.error) {
-        throw new Error(result.error);
+        throw new Error(result.error.message);
       }
       
       this.showOperationFeedback('create', result);
@@ -225,7 +222,7 @@ export class EnhancedMemoryService {
       const result = await this.client.updateMemory(id, mappedRequest as any);
       
       if (result.error) {
-        throw new Error(result.error);
+        throw new Error(result.error.message);
       }
       
       this.showOperationFeedback('update', result);
@@ -241,7 +238,7 @@ export class EnhancedMemoryService {
       const result = await this.client.deleteMemory(id);
       
       if (result.error) {
-        throw new Error(result.error);
+        throw new Error(result.error.message);
       }
       
       this.showOperationFeedback('delete', result);
@@ -257,7 +254,7 @@ export class EnhancedMemoryService {
       const result = await this.client.getMemory(id);
       
       if (result.error) {
-        throw new Error(result.error);
+        throw new Error(result.error.message);
       }
       
       return this.convertSDKMemoryEntry(result.data);
@@ -278,7 +275,7 @@ export class EnhancedMemoryService {
       const result = await this.client.searchMemories(sdkSearchRequest as any);
       
       if (result.error) {
-        throw new Error(result.error);
+        throw new Error(result.error.message);
       }
       
       // Show search performance info in verbose mode
@@ -317,7 +314,7 @@ export class EnhancedMemoryService {
       });
       
       if (result.error) {
-        throw new Error(result.error);
+        throw new Error(result.error.message);
       }
       
       // Convert to expected format for Cursor
@@ -341,7 +338,7 @@ export class EnhancedMemoryService {
       const result = await this.client.getMemoryStats();
       
       if (result.error) {
-        throw new Error(result.error);
+        throw new Error(result.error.message);
       }
       
       return (result.data || {}) as MemoryStats;

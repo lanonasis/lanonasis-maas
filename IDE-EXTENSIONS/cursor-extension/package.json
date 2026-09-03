@@ -328,12 +328,12 @@
     }
   },
   "scripts": {
-    "vscode:prepublish": "npm run compile",
+    "vscode:prepublish": "bun run compile",
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
-    "pretest": "echo \"Skipping extension pretest in monorepo Nx run\"",
+    "pretest": "echo \"Running focused Cursor extension unit tests\"",
     "lint": "eslint src --ext ts",
-    "test": "echo \"Skipping extension integration tests in monorepo Nx run\"",
+    "test": "bun test src/services/sidebar-credential-wiring.test.ts",
     "package": "vsce package",
     "publish": "vsce publish"
   },
