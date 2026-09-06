@@ -1,0 +1,79 @@
+{
+  "name": "@lanonasis/pi-lanonasis-memory",
+  "version": "0.1.0",
+  "description": "🧠 Pi extension that wires LanOnasis MaaS persistent memory into a coding session. Phase 1 scaffold: a single /echo smoke command and a version-aware min-SDK check.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "pi-extension.json"
+  ],
+  "pi": {
+    "extensions": ["./dist/index.js"],
+    "name": "@lanonasis/pi-lanonasis-memory",
+    "displayName": "LanOnasis MaaS Memory (Phase 1 scaffold)"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit --skipLibCheck",
+    "test": "vitest run --config vitest.config.ts",
+    "test:watch": "vitest --config vitest.config.ts",
+    "check:min-sdk": "node scripts/check-min-sdk.mjs",
+    "prepublishOnly": "npm run build && npm test"
+  },
+  "dependencies": {
+    "@lanonasis/memory-client": "^2.2.0"
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": ">=0.80.1",
+    "@earendil-works/pi-ai": ">=0.80.1"
+  },
+  "peerDependenciesMeta": {
+    "@earendil-works/pi-coding-agent": { "optional": false },
+    "@earendil-works/pi-ai": { "optional": true }
+  },
+  "devDependencies": {
+    "@earendil-works/pi-coding-agent": "^0.85.1",
+    "@earendil-works/pi-ai": "^0.85.1",
+    "@types/node": "^20.11.0",
+    "typescript": "^5.4.0",
+    "vitest": "^2.1.0"
+  },
+  "keywords": [
+    "pi-package",
+    "pi-extension",
+    "memory",
+    "persistent-memory",
+    "lanonasis",
+    "maas",
+    "memory-as-a-service",
+    "agent-memory"
+  ],
+  "author": {
+    "name": "Lanonasis Team",
+    "url": "https://lanonasis.com"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/lanonasis/lanonasis-maas.git",
+    "directory": "packages/pi-lanonasis-memory"
+  },
+  "homepage": "https://github.com/lanonasis/lanonasis-maas/tree/main/packages/pi-lanonasis-memory#readme",
+  "bugs": {
+    "url": "https://github.com/lanonasis/lanonasis-maas/issues"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "name": "@lanonasis/pi-lanonasis-memory",
+  "version": "0.1.0",
+  "description": "Phase 1 scaffold: a single /echo command and the minimum Pi SDK plumbing for LanOnasis MaaS persistent memory.",
+  "entry": "./dist/index.js",
+  "source": "./src/index.ts",
+  "extensions": ["./src/index.ts", "./dist/index.js"],
+  "commands": [
+    {
+      "name": "echo",
+      "description": "Phase 1 smoke — reverses its argument.",
+      "handler": "src/commands/echo.ts"
+    }
+  ],
+  "storage_roots": {
+    "global": "~/.pi/agent/pi-lanonasis-memory",
+    "project": ".pi/memory",
+    "sessions_db": "~/.pi/agent/pi-lanonasis-memory/sessions.db"
+  },
+  "memory_client": {
+    "package": "@lanonasis/memory-client",
+    "subexport": "./node",
+    "provider": "createNodeMemoryClient"
+  },
+  "min_pi_sdk": {
+    "@earendil-works/pi-coding-agent": ">=0.80.1",
+    "@earendil-works/pi-ai": ">=0.80.1"
+  }
+}
