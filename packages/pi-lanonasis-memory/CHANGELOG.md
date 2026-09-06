@@ -5,6 +5,92 @@ All notable changes to `@lanonasis/pi-lanonasis-memory` are documented in this f
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [Unreleased] — Phase 3 (SQLite FTS5 store)
+
+### Added
+
+- `src/store/sqlite.ts` — minimal SQLite opener.
+  - Runtime priority: `bun:sqlite` (Bun) → `node:sqlite` (Node.js >= 22.5).
+  - Both bindings loaded via `createRequire(import.meta.url)` so the
+    built-in `node:` specifier resolves naturally under vite/vitest
+    (the dynamic `await import('node:sqlite')` form is broken by vite's
+    import-analysis pass — see inline comment).
+  - Throws a clear Error if neither binding is available.
+  - Wraps both runtimes behind a tiny `SqliteDatabase` interface so the
+    MemoryStore can stay runtime-agnostic.
+  - **No native module dependency.** Same pattern as recall-forge's
+    extraction layer (review C.4 evidence anchor).
+- `src/store/schema.ts` — FTS5 schema mirroring pi-hermes-memory.
+  - `memories` table (id, target, category, title, content, tags JSON,
+    failure_reason, created_at, updated_at, maas_synced_at, maas_id,
+    last_accessed_at).
+  - `memories_fts` virtual table (title, content, tags, content='memories',
+    content_rowid='rowid', tokenize='porter unicode61').
+  - 3 sync triggers (insert / delete / update) keep FTS in lockstep with
+    the base table.
+  - `extension_metadata` table records `schema_version` for future
+    migration branching.
+  - Reserved `maas_synced_at` / `maas_id` columns so Phase 5 sync has
+    nothing to migrate.
+  - Scoped down from upstream: no `messages` / `sessions` tables yet
+    (Phase 6 brings those with hook ingest).
+- `src/store/memory.ts` — `MemoryStore` class.
+  - `add(input)` — validates input, runs `scanForWrite(content, mode)`,
+    runs `scanForWrite(title, mode)`, blocks or redacts, inserts.
+    Block-mode (default) refuses on any secret or threat; redact-mode
+    replaces detected secrets and persists cleaned text.
+  - `get(id)` — touches `last_accessed_at` (cheap audit trail).
+  - `list({ limit, cursor, target })` — newest first, target filter,
+    cursor pagination.
+  - `search({ query, limit, target, category })` — FTS5 MATCH with
+    per-token quoting, BM25-derived rank inverted to 0..1 score, FTS5
+    `snippet()` highlights, target/category filters.
+  - `replace(id, patch)` — fetches existing, merges patch, re-runs
+    scanner, blocks or redacts.
+  - `remove(id)` — returns whether a row was deleted; FTS5 trigger keeps
+    the search index in sync.
+  - `stats()` — total memory count.
+  - `close()` — WAL checkpoint then close.
+  - Prepared statements cached at `prepareAll()` time (after schema
+    apply, so bind-to-schema correctness holds).
+- Wired into `src/index.ts` — re-exports `MemoryStore` and `SCHEMA_VERSION`
+  so Phase 4 (markdown mirror) and Phase 5 (MaaS sync) can compose with
+  it.
+- `tests/store/memory.test.ts` (26 tests) — covers schema, validation,
+  round-trip (add → get → list → search → replace → remove), scanner
+  gating (block + redact), FTS5 trigger sync, cursor pagination.
+
+### Scope guard
+
+- ✗ No edits to `repl-cli/`, `openclaw-plugin/`, `recall-forge/`,
+  `claude-memory/`, `memory-client/`.
+- ✗ No MaaS sync yet (Phase 5) — `maas_synced_at` / `maas_id` columns
+  are reserved but always NULL.
+- ✗ No markdown mirror yet (Phase 4) — writes hit SQLite only.
+- ✗ No per-project scoping yet — single-user storage root.
+
+### Test results
+
+- 108 / 108 vitest cases pass (4 Phase 1 + 78 Phase 2 + 26 Phase 3).
+- `npm run typecheck` exits 0.
+- `npm run build` emits `dist/store/{sqlite,memory,schema}.{js,d.ts}`.
+- All 26 Phase 3 store tests run against a real SQLite database
+  (`node:sqlite` under vitest on Node 22.5+) — not mocked.
+
+### Deferred (per Phase 3 scope guard)
+
+- Phase 4 — Markdown mirror (MEMORY.md / USER.md / STANDING.md). Scanner
+  gates every write.
+- Phase 5 — MaaS sync queue (background drain). Reserved columns filled
+  by a new `SyncQueue` that reads `maas_synced_at IS NULL`.
+- Phase 6 — Pi hook ingestion (session_start, session_shutdown,
+  message_end). The scanner gates every persisted hook event.
+- Phase 7 — Real slash commands. The scanner gates every
+  `/memory save` invocation.
+- Phase 8 — `@lanonasis/privacy-sdk` integration for Stage 2 PII
+  detection (currently scoped to a follow-up; the SDK is a dependency
+  candidate but not wired into this phase).
+
 ## [Unreleased] — Phase 2 (pre-write scanner)
 
 ### Added

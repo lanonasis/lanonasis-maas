@@ -1,7 +1,7 @@
 {
   "name": "@lanonasis/pi-lanonasis-memory",
-  "version": "0.1.0",
-  "description": "🧠 Pi extension that wires LanOnasis MaaS persistent memory into a coding session. Phase 1 scaffold: a single /echo smoke command and a version-aware min-SDK check.",
+  "version": "0.2.0",
+  "description": "LanOnasis Memory — Pi extension that wires LanOnasis MaaS persistent memory into a coding session. Local-first (Markdown + SQLite FTS5) with MaaS federation for cross-device sync and profile intelligence. Port of the pi-hermes-memory patterns to LanOnasis.",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",

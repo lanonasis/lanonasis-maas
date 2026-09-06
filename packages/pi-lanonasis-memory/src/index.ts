@@ -28,6 +28,8 @@ import {
   type ScannerConfig,
   type ScannerDecision,
 } from './scanner/scanner.js';
+import { MemoryStore } from './store/memory.js';
+import { SCHEMA_VERSION } from './store/schema.js';
 
 export interface ExtensionContextLike {
   ui: {
@@ -35,7 +37,7 @@ export interface ExtensionContextLike {
   };
 }
 
-export { scanForWrite, scanSecretsOnly, defaultScannerConfig };
+export { scanForWrite, scanSecretsOnly, defaultScannerConfig, MemoryStore, SCHEMA_VERSION };
 export type { ScannerConfig, ScannerDecision };
 
 export default function extension(pi: ExtensionAPI): void {

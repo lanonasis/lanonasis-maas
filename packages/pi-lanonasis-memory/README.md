@@ -2,36 +2,33 @@
 
 A [Pi](https://github.com/badlogic/pi) extension that brings
 [LanOnasis MaaS](https://docs.lanonasis.com) persistent memory into a coding
-session. **Phase 2 ships the pre-write scanner** (block-mode by default) —
+session. **Phase 3 ships the local-first SQLite FTS5 memory store** —
 see
 [`docs/context/architecture/pi-maas-integration-review.md` Appendix C](../../../../docs/context/architecture/pi-maas-integration-review.md)
 for the full 10-phase plan.
 
-## Phase 2 status
+## Phase 3 status
 
 What this release adds:
 
-- **Pre-write scanner** at `src/scanner/` — block-mode by default, refuses
-  any memory entry that contains prompt-injection patterns, invisible
-  Unicode, or credential secrets. The scanner is the non-negotiable
-  pre-write gate per review §2.3; nothing lands in SQLite, the markdown
-  mirror, or the MaaS sync queue without passing it first.
-- **Redact-mode opt-in** via `LANONASIS_PI_MEMORY_REDACT=1` — replaces
-  detected secrets with `[REDACTED:<type>]` markers and persists the
-  cleaned text. Threat patterns still block even in redact mode.
-- **Non-blocking pre-fill probe** via `scanSecretsOnly()` — surfaces
-  secret IDs without raising. Useful for tool-call guards and
-  `/memory-interview` warnings.
-- **Pattern coverage**: 11 prompt-injection threats, 10 invisible-Unicode
-  code points, 20 secret patterns (high + medium severity) — ported from
-  [`chandra447/pi-hermes-memory`](https://github.com/chandra447/pi-hermes-memory)
-  `src/store/content-scanner.ts`. 19 credential patterns + 1 env-var
-  assignment regex — ported from
-  [`@lanonasis/recall-forge`](https://github.com/lanonasis/lanonasis-maas/tree/main/packages/recall-forge)
-  `extraction/secret-redactor.ts`. Total: **39 distinct regex rules**
-  across 2 detection engines + 1 redact engine.
+- **SQLite FTS5 memory store** at `src/store/` — local-first, scanner-gated.
+  - `MemoryStore` class with `add / get / list / search / replace / remove / stats`.
+  - FTS5 schema (memories table + memories_fts virtual table + 3 sync triggers)
+    mirroring the pi-hermes-memory shape, scoped down to memories-only
+    (sessions / messages table arrive in Phase 6).
+  - **No native module dependency.** Uses `bun:sqlite` (when running under Bun)
+    or `node:sqlite` (Node.js >= 22.5) via `createRequire` — same runtime
+    priority as recall-forge's extraction layer.
+  - `porter unicode61` tokenizer (bundled with every SQLite build); trigram
+    is a Phase 8+ optimization.
+  - **Every write is scanner-gated** — the non-negotiable pre-write contract
+    from review §2.3 is enforced in `MemoryStore.add` and `MemoryStore.replace`.
+    Block-mode (default) refuses secret-bearing writes; redact-mode replaces
+    detected secrets and persists cleaned text. Threat patterns always block.
+  - Reserved columns `maas_synced_at` / `maas_id` so Phase 5 sync has nothing
+    to migrate.
 
-Phase 1 still in place:
+Phase 1 + 2 still in place:
 
 - The extension loads in a Pi session without runtime errors.
 - The Pi `ExtensionAPI` surface (`registerCommand`, `pi.on(...)`, `ctx.ui`)
@@ -41,16 +38,18 @@ Phase 1 still in place:
 - `npm run check:min-sdk` type-checks `src/` against the declared Pi SDK
   minimum — no more silent `ERR_PACKAGE_PATH_NOT_EXPORTED` for users on
   Pi 0.80.0 or older.
+- **Pre-write scanner** at `src/scanner/` — 39+ regex rules across
+  2 detection engines + 1 redact engine, block-mode default.
 
-What it does NOT yet do (Phase 3+):
+What it does NOT yet do (Phase 4+):
 
-- Read or write real memories. The MaaS wiring arrives in Phase 3
-  (`LanOnasisMemoryProvider` over `@lanonasis/memory-client/node`).
-- Persist anything to disk or push to MaaS.
-- Wire any of Pi's prompt-injection hooks (`before_provider_request`,
-  `session_start`, `session_shutdown`, `message_end`).
-- Wire the real slash commands (`/memory search`, `/memory save`,
-  `/reflect`, `/memory-skills`, etc.).
+- Markdown mirror (MEMORY.md / USER.md / STANDING.md). The schema reserves
+  columns for it; Phase 4 wires the mirror writes.
+- MaaS sync (background drain). Reserved columns exist; Phase 5 fills them.
+- Per-project scoping (cwd-detected). Single-user storage root for now.
+- Pi hook ingestion (session_start, session_shutdown, message_end).
+- Real slash commands (`/memory search`, `/memory save`, `/reflect`, etc.).
+- `@lanonasis/privacy-sdk` Stage 2 PII integration.
 
 ## Quick start
 
@@ -100,27 +99,39 @@ packages/pi-lanonasis-memory/
 ├── vitest.config.ts          Vitest setup.
 ├── src/
 │   ├── index.ts              Extension entry — `export default function (pi)`.
-│   │                         Also re-exports the scanner API for downstream
-│   │                         Phase 3-5 callers.
+│   │                         Also re-exports the scanner API + MemoryStore
+│   │                         + SCHEMA_VERSION for downstream callers.
 │   ├── commands/
 │   │   └── echo.ts           `/echo` slash command + `runEcho` (testable).
-│   └── scanner/              Phase 2: pre-write scanner.
-│       ├── content-scanner.ts   Block-mode gate. 11 threat + 20 secret
-│       │                        patterns + 10 invisible-Unicode code points.
-│       ├── redactor.ts          Redact-mode replacement. 19 credential
-│       │                        patterns + 1 env-var assignment regex.
-│       └── scanner.ts           Top-level orchestrator. Resolves
-│                                LANONASIS_PI_MEMORY_REDACT and routes to
-│                                block or redact mode.
+│   ├── scanner/              Phase 2: pre-write scanner.
+│   │   ├── content-scanner.ts   Block-mode gate. 11 threat + 20 secret
+│   │   │                        patterns + 10 invisible-Unicode code points.
+│   │   ├── redactor.ts          Redact-mode replacement. 19 credential
+│   │   │                        patterns + 1 env-var assignment regex.
+│   │   └── scanner.ts           Top-level orchestrator. Resolves
+│   │                            LANONASIS_PI_MEMORY_REDACT and routes to
+│   │                            block or redact mode.
+│   └── store/                Phase 3: local-first SQLite FTS5 store.
+│       ├── sqlite.ts            Runtime-priority opener: bun:sqlite →
+│       │                        node:sqlite (via createRequire, no native
+│       │                        module dependency).
+│       ├── schema.ts            FTS5 schema + 3 sync triggers (mirror of
+│       │                        pi-hermes-memory shape, scoped down to
+│       │                        memories-only).
+│       └── memory.ts            MemoryStore class. add/get/list/search/
+│                                replace/remove/stats. Every write gated
+│                                by the scanner.
 ├── tests/
 │   ├── echo.test.ts          Vitest spec for runEcho.
-│   └── scanner/              Phase 2: scanner tests.
-│       ├── content-scanner.test.ts
-│       ├── redactor.test.ts
-│       └── scanner.test.ts
+│   ├── scanner/              Phase 2: scanner tests.
+│   │   ├── content-scanner.test.ts
+│   │   ├── redactor.test.ts
+│   │   └── scanner.test.ts
+│   └── store/                Phase 3: store integration tests.
+│       └── memory.test.ts
 ├── scripts/
 │   └── check-min-sdk.mjs     Min-SDK checker (see lesson in chandra447#149).
-├── CHANGELOG.md              Phase 1 + Phase 2 entries + the deferred backlog.
+├── CHANGELOG.md              Phase 1 + 2 + 3 entries + the deferred backlog.
 ├── README.md                 This file.
 ├── LICENSE                   MIT.
 └── .gitignore
@@ -145,12 +156,12 @@ Phase 1 does not write to them — there is nothing to persist yet.
 - `@lanonasis/repl-cli` (slash-command reference — read-only)
 - `@lanonasis/claude-memory` (session ingest reference — read-only)
 
-## Out of scope (Phase 1 + Phase 2)
+## Out of scope (Phase 1 + 2 + 3)
 
 Anything touching customer data, payments, KYC, credentials, or PHI is
 explicitly **out of scope** for this release beyond the scanner. The
-extension does no I/O beyond argument reversal and in-memory regex
-evaluation — no SQLite writes, no markdown mirror writes, no MaaS
-sync. See the
+extension writes only to its local SQLite database; no markdown mirror
+writes yet (Phase 4), no MaaS sync yet (Phase 5), no hook ingestion
+yet (Phase 6), and no real slash commands yet (Phase 7). See the
 [review doc](../../../../docs/context/architecture/pi-maas-integration-review.md)
 for the deferred Layer-1 storage work and the Layer-2 vision.
