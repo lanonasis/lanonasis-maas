@@ -41,6 +41,9 @@ This review confirms that **Layer 1 can be built quickly** by composing existing
 - Privacy pipeline (reuse recall-forge's 30-pattern redactor before any MaaS write)
 - configDir collision (namespace to `.lanonasis/pi/` not `.lanonasis/`)
 - Env var normalization (reuse `LANONASIS_API_KEY`, don't add `LANONASIS_MAAS_*` variants)
+- **Storage topology: local-first vs MaaS-canonical — resolved by [Appendix C](#appendix-c-template-validation-pi-hermes-memory-resolves-most-gaps)**
+
+> **2026-09-06 update (Derick sign-off).** Appendix C extracts design patterns from the public `chandra447/pi-hermes-memory` template and from a `repl-cli`-focused advisory. **Our lane is the Pi extension only** (`@lanonasis/pi-memory`). Subject scoping = **one subject per user**. Storage = **local-first (Markdown + SQLite FTS5)** inside the extension's storage root. MaaS = cross-device sync + profile intelligence only. Foundation-first ordering approved (C.7).
 
 ---
 
@@ -313,9 +316,210 @@ This lists each implemented Provider-adjacent method with its line number; absen
 
 ---
 
+## Appendix C — pi-hermes-memory as Design Reference (Extension Lane Only)
+
+**Scope guard (2026-09-06, Derick):** This appendix extracts **design patterns** from the public `pi-hermes-memory` template and from an advisory written for `repl-cli` work. We are NOT executing the advisory's `repl-cli/orchestrator.ts` changes — that is a separate workstream. **Our lane is the Pi extension** (`pi install npm:@lanonasis/pi-memory`). Anything below that points at `repl-cli/` files is a *design citation*, not an implementation directive.
+
+**Decisions (2026-09-06, Derick sign-off):**
+- **Subject:** one per user (conclusions converge across everything; per-project via `tags: ['project:<name>']`).
+- **Storage topology:** local-first (Markdown + SQLite FTS5) inside the Pi extension's storage root. MaaS = cross-device sync + profile intelligence only.
+- **Ordering:** Foundation-first (C.7 below).
+
+### C.1 Why the template changes the calculus
+
+[`chandra447/pi-hermes-memory`](https://github.com/chandra447/pi-hermes-memory) (415★, 93 forks, v0.7.10+) is a **Pi extension**, not a fork. It proves that the "compose existing packages" principle the review recommends can be implemented *without* touching Pi's source — `pi install npm:pi-hermes-memory` and you have persistent memory, FTS5 session search, secret scanning, MEMORY.md/USER.md/SKILL.md three-file model, two-tier global+project scoping, background review every 10 turns, auto-consolidation.
+
+That dissolves the original Layer 1 framing ("build a Pi fork with a memory provider"). The review §2.2 fork-vs-extension question becomes irrelevant — we ship a Pi **extension**, Pi's brand is untouched, no upstream divergence.
+
+**What we're building:** a LanOnasis-branded Pi extension that ports the pi-hermes-memory patterns to LanOnasis MaaS federation. Think of it as `pi-hermes-memory` with `lanonasis-memory-client` swapped in for the cross-device sync layer.
+
+### C.2 Pattern extraction (design references, not file citations)
+
+| Pattern (from template / advisory) | Why it matters | Pi-extension adoption |
+|---|---|---|
+| **Local-first + remote-federated** ("local is authoritative, remote is collaboration surface" — git + GitHub model) | Solves cloud-only recall failures; works offline; sub-ms reads | **Adopt 1:1.** Extension writes go to local SQLite immediately; MaaS sync is async, retry-with-backoff. |
+| **Async write, persistent sync queue** (decouple user-perceived latency from network) | Save returns in <10ms; user never blocked on MaaS | **Adopt 1:1.** `src/sync/sync-queue.ts` mirrors the shape; SQLite-backed FIFO. |
+| **Two-tier memory scoping** (global + per-project) | pi-hermes-memory ships this; review §2.1's per-project concern dissolved | **Adopt.** Extension storage root: `~/.pi/agent/lanonasis-pi-memory/` + `~/.pi/agent/projects-memory/<project>/`. Project auto-detected from cwd. |
+| **Three-file memory model** (MEMORY.md facts, USER.md identity, SKILL.md procedures) | pi-hermes-memory's native shape; review §2.11's SOUL.md-vs-MemoryProfile concern dissolved | **Adopt directly.** Bootstrap: ingest SOUL.md as project-scoped memories on first run. MemoryProfile is the runtime, evolving layer from MaaS `askProfile`. |
+| **Content scanner before any write** (29-pattern secret scanner + 20 more from advisory; blocks Anthropic/OpenAI/AWS/GitHub/Slack/Notion/Bearer/SSH + env-var signals + inline `password=`) | Review §2.3's biggest gap. Non-negotiable pre-write gate. | **Adopt + extend.** Port `scanContent()` + `scanSecrets()`; additionally route through `recall-forge`'s 30-pattern redactor. Block-mode by default; redact-mode behind `LANONASIS_PI_MEMORY_REDACT=1`. |
+| **Background review cadence** (every 10 turns / 15 tool calls, not per-turn) | Review §2.10's per-turn ingest problem | **Adopt 1:1.** Uses Pi's `turn_end` hook. Correction-detection on the fly; explicit `/reflect` and `/memory save` always-on. |
+| **Memory categories** (failure, correction, insight, preference, convention, tool-quirk) | Pi-hermes-memory proves structured failure memory works | **Adopt.** Extension exposes a `memory_add(target, content, category?, failure_reason?)` tool with `target ∈ {memory, user, project, failure}`. |
+| **Standing instructions** (small user-authored file injected every session, separate budget) | pi-hermes-memory proves the pattern for prohibitions that must always apply | **Adopt.** `STANDING.md` in extension root; 20-entry / 2,000-char cap; injected via Pi's system-prompt extension. |
+| **`scanSecrets()` pre-fill warnings** (block obvious secrets before they reach LLM) | Advisory's UX win | **Adopt.** Wire into the agent's tool-call guard before any `memory_add` invocation. |
+| **Failure mode from advisory: "Viral TikTok 80% relevance"** (cloud-only recall → keyword pattern-match → hallucination) | The bug the advisory set out to fix. **Not in our lane to fix in `repl-cli`.** | **Cite as design rationale.** The Pi extension inherits this risk too — local-first solves it for Pi users by the same mechanism. |
+
+### C.3 Mapping review gaps → extension resolution
+
+| Review gap | How the extension resolves it |
+|---|---|
+| **2.1 Subject scoping** | **One subject per user.** Per-project isolation via `tags: ['project:<name>']`. User's `LANONASIS_USER_ID` (UUID from MaaS auth) is the single `subject_id`. |
+| **2.2 Fork vs plugin** | **Extension.** `pi install npm:@lanonasis/pi-memory`. No fork cost. |
+| **2.3 Privacy / PII pipeline** | **Non-negotiable.** `scanContent()` + `scanSecrets()` port from template + `recall-forge` 30-pattern redactor + `openclaw-plugin/extraction/secret-redactor.ts`'s `redactSecrets` as a runtime dep. Block-mode default. |
+| **2.4 configDir collision** | **Resolved by namespacing.** Extension root: `~/.pi/agent/lanonasis-pi-memory/`. Project memory: `~/.pi/agent/projects-memory/<project>/`. Both distinct from recall-forge's `~/.lanonasis/` and claude-memory's `~/.lanonasis/hooks/`. |
+| **2.5 Env var normalization** | **Only `LANONASIS_API_KEY` needed.** No `LANONASIS_MAAS_*` variants. Pi-specific additions: `LANONASIS_PI_MEMORY_REDACT`, `LANONASIS_PI_MEMORY_DEBUG`, `LANONASIS_PI_MEMORY_MODE` (`policy-only` default / `legacy-inject` opt-in). |
+| **2.6 Three CLIs in same lane** | **Out of scope for this extension.** Extension sits alongside `@lanonasis/cli`, `onasis-repl`, and Pi itself. Position (b) — TUI sibling. |
+| **2.7 Missing SDK methods** | **Irrelevant for extension.** Local reads use FTS5. MaaS calls go through existing `createMemory`/`searchMemories`/`listInferredConclusions`/`askProfile`. No new endpoints needed. |
+| **2.8 Handoff as memory type** | **Adopt.** `/handoff hermes` → local `memory_add(target='memory', content=<structured-handoff>, tags=['handoff','target:hermes'])`. Hermes reads via local FTS5 tag search; cross-device via MaaS `searchMemories({tags:['handoff','target:hermes']})`. |
+| **2.9 Multi-perspective mode** | **Deferred to Layer 2.** Extension scope v1 does not include Mind/Heart/Concierge. One structured-output orchestrator call (~150 LoC) when Layer 2 starts. |
+| **2.10 Per-turn ingest** | **Adopt template's cadence.** Background review every 10 turns / 15 tool calls. Explicit saves only via `/memory save` / `/reflect`. |
+| **2.11 SOUL.md vs MemoryProfile** | **Adopt three-file model.** SOUL.md → ingest as project memories at startup. USER.md → identity. MEMORY.md → facts. MemoryProfile (MaaS) is the runtime, evolving layer. |
+| **2.12 Reuse `createNodeMemoryClient`** | **Yes for sync layer.** Extension's MaaS client is a wrapper around `createNodeMemoryClient({preferCLI:true, enableMCP:true})`. ~30 LoC. |
+| **2.13 Vendor branding** | **Clean.** Extension is `@lanonasis/pi-memory` on npm. Slash commands stay lowercase (`/memory`, `/reflect`). No "LZero" collision in user strings. |
+| **2.14 Test plan** | **Per the template's standard.** Unit tests for scanner, sync queue, FTS5 schema; integration tests for the MaaS sync round-trip; manual smoke for offline + sync-on-reconnect. (See C.7.) |
+
+### C.4 Extension architecture (our lane)
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  Pi Coding Agent                                                │
+│                                                                 │
+│  ┌──────────────────────────────────────────────────────────┐   │
+│  │  @lanonasis/pi-memory extension  (our deliverable)        │   │
+│  │                                                            │   │
+│  │  src/                                                      │   │
+│  │  ├── index.ts            ← Pi extension entry; registers  │   │
+│  │  │                        tools, slash commands, hooks     │   │
+│  │  ├── store/                                              │   │
+│  │  │   ├── db.ts           ← SQLite FTS5 schema + migrations│   │
+│  │  │   ├── memory.ts       ← MEMORY.md read/write          │   │
+│  │  │   ├── user.ts         ← USER.md read/write             │   │
+│  │  │   ├── skills.ts       ← SKILL.md Pi-native compat      │   │
+│  │  │   └── standing.ts     ← STANDING.md (user-authored)   │   │
+│  │  ├── tools/                                              │   │
+│  │  │   ├── memory_add.ts   ← target=memory|user|project|…   │   │
+│  │  │   ├── memory_search.ts ← FTS5 first, MaaS async enrich │   │
+│  │  │   ├── memory_replace.ts                                   │   │
+│  │  │   ├── memory_remove.ts                                    │   │
+│  │  │   └── skill_manage.ts                                     │   │
+│  │  ├── hooks/                                              │   │
+│  │  │   ├── turn-end.ts     ← background review (10 turns)  │   │
+│  │  │   ├── correction.ts   ← on-the-fly correction capture │   │
+│  │  │   └── session-end.ts  ← finalize + flush sync queue   │   │
+│  │  ├── sync/                                               │   │
+│  │  │   ├── sync-queue.ts   ← SQLite-backed FIFO + backoff  │   │
+│  │  │   ├── maas-client.ts  ← wraps createNodeMemoryClient  │   │
+│  │  │   └── health.ts       ← online/offline detection      │   │
+│  │  ├── scanner/                                            │   │
+│  │  │   ├── scan-content.ts ← port from template            │   │
+│  │  │   ├── scan-secrets.ts ← 29+20 pattern detector        │   │
+│  │  │   └── redact.ts       ← recall-forge 30-pattern layer │   │
+│  │  ├── commands/                                           │   │
+│  │  │   ├── memory-search.ts    ← /memory search <q>         │   │
+│  │  │   ├── memory-save.ts      ← /memory save <text>        │   │
+│  │  │   ├── reflect.ts          ← /reflect                   │   │
+│  │  │   ├── memory-skills.ts    ← /memory-skills [manage]    │   │
+│  │  │   ├── memory-pin.ts       ← /memory-pin [manage]       │   │
+│  │  │   ├── memory-preview.ts   ← /memory-preview-context    │   │
+│  │  │   ├── memory-interview.ts ← /memory-interview (first run)│   │
+│  │  │   └── memory-index.ts     ← /memory-index-sessions     │   │
+│  │  ├── injection/                                          │   │
+│  │  │   └── system-prompt.ts ← <memory-policy> + <standing> │   │
+│  │  └── tests/  (unit + integration + smoke)                │   │
+│  └──────────────────────────────────────────────────────────┘   │
+│                           │                                      │
+│                           ▼                                      │
+│  ┌──────────────────────────────────────────────────────────┐   │
+│  │  Shared: @lanonasis/memory-client (existing package)     │   │
+│  │   createNodeMemoryClient({preferCLI:true, enableMCP:true})│   │
+│  └──────────────────────────────────────────────────────────┘   │
+│                           │                                      │
+└───────────────────────────┼──────────────────────────────────────┘
+                            ▼
+                  api.lanonasis.com (MaaS)
+```
+
+**Storage roots:**
+- `~/.pi/agent/lanonasis-pi-memory/MEMORY.md` — global facts
+- `~/.pi/agent/lanonasis-pi-memory/USER.md` — identity
+- `~/.pi/agent/lanonasis-pi-memory/STANDING.md` — user-authored always-on rules
+- `~/.pi/agent/lanonasis-pi-memory/skills/<slug>/SKILL.md` — Pi-native skills
+- `~/.pi/agent/lanonasis-pi-memory/sessions.db` — SQLite FTS5 session index
+- `~/.pi/agent/projects-memory/<project>/MEMORY.md` — per-project facts
+- `~/.pi/agent/projects-memory/<project>/skills/<slug>/SKILL.md` — per-project skills
+
+**Sync contract:** local write → SQLite + markdown (immediate, durable) → enqueue MaaS payload → background drain (1 write/sec, exponential backoff to 300s, FIFO). On `session_end`, force-flush queue. Health probe every 60s when queue > 0.
+
+### C.5 What this changes about the review's open questions
+
+| Review question | New answer (extension lane) |
+|---|---|
+| 1. Subject scoping | **One subject per user.** `LANONASIS_USER_ID` from MaaS auth. Per-project via tags. |
+| 2. Fork vs extension | **Extension.** `@lanonasis/pi-memory`. |
+| 3. CLI positioning | **Out of scope.** Extension is a Pi-native surface, not a CLI. The review's `memory` / `onasis-repl` / Pi-positioning question stays with the CLI workstream. |
+| 4. Handoff target | **Hermes-Agent** reads via local FTS5 (same machine) or MaaS (cross-device). Handoff memory type works on both. |
+| 5. Server-side endpoints | **None required for v1.** All MaaS calls go through existing SDK methods. |
+| 6. Privacy default | **Block-mode** by default (refuse to persist if secret detected); redact-and-capture available via `LANONASIS_PI_MEMORY_REDACT=1`. |
+
+### C.6 Risks, named honestly
+
+| Risk | Mitigation |
+|---|---|
+| **Scope creep into `repl-cli`** | Hard scope guard: this extension never edits files outside `packages/pi-memory/` and `apps/lanonasis-maas/` doc/config. Cite advisory patterns, don't port its file paths. |
+| Schema drift between local SQLite and MaaS API | `_schema_version` column; sync queue drops 4xx (mismatch) and emits one-time upgrade prompt |
+| Re-sync storms on offline→online | FIFO queue, 1 write/sec rate limit, bulk-merge via `tag:sync-batch` |
+| Privacy regression | `scanContent` + `scanSecrets` + `recall-forge` redactor run *before* both markdown and SQLite write. Pre-fill warning on tool-call guard. |
+| "Two sources of truth" conflict on edit | Local wins on read (authoritative for this CLI user); last-write-wins by `updated_at`; conflicts logged in `sync_queue.last_error` |
+| Native module ABI mismatch (better-sqlite3 vs Node) | Same mitigation as template: prefer `bun:sqlite` || `node:sqlite` (already proven in monorepo via `openclaw-plugin/extraction/sqlite-extractor.ts`); fall back to `better-sqlite3` only if both unavailable, with auto-rebuild. |
+| Pi SDK floor drift (template caught this in their CI) | Mirror the template's `min-sdk` CI job that installs exactly the declared floor and type-checks `src` against it. Catches `peerDependencies` lying. |
+
+### C.7 Deliverables, ordered (Foundation-first per Derick)
+
+| # | Deliverable | LoC band | Validates |
+|---|---|---|---|
+| 1 | **Scaffold.** `packages/pi-memory/` package with `package.json` (`piConfig`, `peerDependencies: @earendil-works/pi-coding-agent >=0.80.1`), `tsconfig.json`, `src/index.ts` entry, `scripts/check-min-sdk.mjs`. | ~150 | Extension loads in Pi; smoke: `/echo` slash command works. |
+| 2 | **Scanner.** `src/scanner/{scan-content, scan-secrets, redact}.ts` — port template's 29 patterns + advisory's 20 more + `recall-forge` 30-pattern redactor. Block-mode default. | ~350 | Unit tests: 57 patterns × 3 modes = green. Pre-fill warning fires on test secrets. |
+| 3 | **SQLite store.** `src/store/db.ts` + `src/store/memory.ts` — FTS5 schema mirroring template's; `memory_add`/`memory_search`/`memory_replace`/`memory_remove` tools. | ~400 | Local-only round-trip works offline. FTS5 query returns hits in <5ms. |
+| 4 | **Markdown mirror.** `src/store/{user,skills,standing}.ts` — three-file model. Bootstrap from existing SOUL.md if present. | ~200 | Writes are atomic (SQLite + markdown). Skills appear in Pi's `skill_manage` listing. |
+| 5 | **MaaS sync layer.** `src/sync/{sync-queue,maas-client,health}.ts` — persistent FIFO + exp backoff; wraps `createNodeMemoryClient`. | ~300 | `save()` returns in <10ms. Offline writes flush on reconnect. Health probe reports queue depth. |
+| 6 | **Hooks + injection.** `src/hooks/{turn-end,correction,session-end}.ts` + `src/injection/system-prompt.ts` — background review every 10 turns; correction capture; `<memory-policy>` + `<standing-instructions>` injection. | ~250 | System prompt contains policy block; standing rules survive across sessions. |
+| 7 | **Slash commands.** `src/commands/*.ts` — `/memory search|save`, `/reflect`, `/memory-skills`, `/memory-pin`, `/memory-preview-context`, `/memory-interview`, `/memory-index-sessions`. | ~350 | All 7 commands functional against the local store. |
+| 8 | **CI.** `scripts/check-min-sdk.mjs` + `.github/workflows/{check,min-sdk,lint,test}.yml` — mirrors template's CI layout. | ~150 | `min-sdk` job proves declared floor matches reality. Lint + test jobs green. |
+| 9 | **Tests.** Unit (scanner, FTS5, sync queue), integration (MaaS round-trip), smoke (offline + sync-on-reconnect, correction capture, standing rule injection). | ~500 | ≥90% line coverage on `scanner/`, `sync/`, `store/`. |
+| 10 | **Manual smoke.** `npm pack` → install via `pi install` → run a session → kill MaaS DNS → confirm local writes still work → restore DNS → confirm queue drains. | — | The "Viral TikTok" failure mode cannot reproduce. |
+
+**Total budget:** ~2,650 LoC new + ~200 LoC tests config. Behind feature flag `LANONASIS_PI_MEMORY_DEBUG=1` for verbose logging. **No edits to `repl-cli/`, `openclaw-plugin/`, `recall-forge/`, `claude-memory/`, or `memory-client/`** — those are cited as references only.
+
+### C.8 Evidence anchors (read-only references, not edit targets)
+
+**Design references (cite, don't import):**
+- `pi-hermes-memory/src/store/db.ts` — SQLite FTS5 schema shape
+- `pi-hermes-memory/src/handlers/content-scanner.ts` — `scanContent()` + `scanSecrets()` port
+- `pi-hermes-memory/src/handlers/review-memory-ops.ts` — background review loop pattern
+- `pi-hermes-memory/scripts/check-min-sdk.mjs` — CI floor verification
+
+**Pattern references (cited for rationale, not code reuse):**
+- `packages/repl-cli/src/core/orchestrator.ts:304` — `fetchRelevantContext` (the call-site the advisory set out to change; cite as the failure mode this extension avoids)
+- `packages/repl-cli/src/core/orchestrator.ts:756` — `fallbackProcessor` (the "80% relevance" pattern-match tier; cite as the bug local-first prevents)
+- `packages/openclaw-plugin/hooks/local-fallback.ts:6` — `LocalFallbackWriter` (markdown write primitive; cite as the pattern this extension reimplements in its own store layer)
+- `packages/openclaw-plugin/extraction/sqlite-extractor.ts:115` — `extractSqlite` (the `bun:sqlite` || `node:sqlite` pattern; cite as the runtime strategy for SQLite access)
+- `packages/openclaw-plugin/extraction/secret-redactor.ts` — `redactSecrets` (redaction primitive; cite as the runtime dep for the redact-mode path)
+
+**Reused (real dependency):**
+- `@lanonasis/memory-client` — `createNodeMemoryClient({preferCLI:true, enableMCP:true})` for the MaaS sync layer.
+
+### C.9 Out of scope (explicit non-goals for v1)
+
+- **Editing `repl-cli/`** — advisory's workstream; this extension does not touch it.
+- **Editing `openclaw-plugin/`** — pattern reference only; extension reimplements its primitives in its own `src/store/`.
+- **Layer 2 features** — `/context converge`, Mind/Heart/Concierge, profile evolution. Deferred.
+- **Multi-perspective system-prompt variants** — deferred to Layer 2.
+- **CLI positioning decisions** — stays with the `memory` / `onasis-repl` workstream.
+
+### C.10 Next decision needed
+
+None blocking. Foundation-first ordering (C.7) is approved (Derick 2026-09-06). Open items that don't block Phase 1:
+
+- npm package name: confirm `@lanonasis/pi-memory` vs `@lanonasis/pi-maas-memory` (the latter matches the doc's filename, the former matches Pi extension naming convention).
+- Storage root: confirm `~/.pi/agent/lanonasis-pi-memory/` is acceptable to Pi's discovery (template uses `~/.pi/agent/pi-hermes-memory/`, so the pattern is precedented).
+- Initial scope of `recall-forge` redactor integration: full port (29 + 20 + 30 = 79 patterns) or staged (29 in v1, +20 in v1.1, +30 in v2)?
+
+Recommend shipping Phase 1–3 first as a feature-flagged MVP behind `LANONASIS_PI_MEMORY_DEBUG=1`, then unlocking in stages.
+
+---
+
 ## Appendix B — Layer 2 Vision (Not in Scope for This Review)
 
-This review focuses on Layer 1 (thin harness) feasibility. The actual product vision lives in Layer 2:
+This review focuses on Layer 1 (local-first hybrid memory). The actual product vision lives in Layer 2:
 
 ### What Layer 2 Enables
 
@@ -336,7 +540,7 @@ This project appears emotionally important because it connects:
 
 Concierge:
 Recommended next actions:
-1. Build only the thin Pi harness first
+1. Ship the local-first hybrid (Layer 1) and let sessions accumulate material
 2. Implement convergence before advanced agent orchestration
 3. Start logging "decision moments" explicitly
 ```
