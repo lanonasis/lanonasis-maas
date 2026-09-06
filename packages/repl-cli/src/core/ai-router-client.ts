@@ -70,17 +70,34 @@ export class AIRouterClient {
 
     if (this.config.authToken) {
       const token = this.config.authToken.trim();
-      // `lano_...` keys must be sent as X-API-Key, not Bearer.
-      // OAuth tokens (long JWT-like strings) should be sent as Bearer
+      // Two supported schemes, chosen by credential type — never guessed:
+      //   lano_*            -> X-API-Key   (auth-gateway API key)
+      //   OAuth / JWT       -> Authorization: Bearer
+      // Anything else is rejected loudly. Previously an unrecognised token fell
+      // through to Bearer, which turned an unsupported credential into an
+      // indistinguishable 401 and cost real debugging time.
       if (token.startsWith('lano_')) {
         headers['X-API-Key'] = token;
       } else if (token.toLowerCase().startsWith('bearer ')) {
         headers['Authorization'] = token;
       } else if (token.includes('.') && token.length > 100) {
-        // Likely an OAuth JWT token - use Bearer
+        // OAuth/JWT access token.
         headers['Authorization'] = `Bearer ${token}`;
+      } else if (token.startsWith('lms_') || token.startsWith('vx_')) {
+        // MaaS-scoped credentials. api.lanonasis.com accepts these; the router
+        // and auth-gateway do not (verified 2026-09-01: lms_ -> 401 on
+        // /v1/auth/resolve, lano_ -> 200). Sending one as Bearer produces a
+        // 401 that looks like a router fault rather than a wrong credential.
+        const prefix = token.slice(0, token.indexOf('_') + 1);
+        throw new Error(
+          `AI Router: '${prefix}' keys are MaaS-scoped and cannot authenticate to the router. ` +
+          `Use a 'lano_' API key or an OAuth access token.`
+        );
       } else {
-        headers['Authorization'] = `Bearer ${token}`;
+        throw new Error(
+          'AI Router: unrecognised credential format. Expected a \'lano_\' API key ' +
+          'or an OAuth/JWT access token.'
+        );
       }
     }
 
@@ -105,7 +122,11 @@ export class AIRouterClient {
     if (request.tool_choice) {
       body.tool_choice = request.tool_choice;
     }
-    if (request.use_case && !headers['X-Use-Case']) {
+    // Sent in the body as well as the X-Use-Case header. The router reads
+    // body.use_case first (resolveUseCaseFromRequest); the previous guard was
+    // unreachable because the header is set from the same value above, so the
+    // body field never shipped.
+    if (request.use_case) {
       body.use_case = request.use_case;
     }
 
@@ -122,11 +143,28 @@ export class AIRouterClient {
 
     const data = await response.json();
 
+    // The router contract is `data.response` (see the service's
+    // INTEGRATION-GUIDE §2). There is deliberately no `data.message.content`
+    // fallback: that shape does not exist on this API, and accepting it meant a
+    // 200 carrying no answer was treated as success instead of falling through
+    // to local synthesis. Tool calls are still read from either position — the
+    // router does emit top-level tool_calls.
+    if (typeof data.response !== 'string' || data.response.trim() === '') {
+      const hasToolCalls =
+        (Array.isArray(data.tool_calls) && data.tool_calls.length > 0) ||
+        (Array.isArray(data.message?.tool_calls) && data.message.tool_calls.length > 0);
+      if (!hasToolCalls) {
+        throw new Error(
+          'AI Router returned 200 without a `response` field — treating as a failed turn.'
+        );
+      }
+    }
+
     // Map AI router response format to expected interface
     const mapped: AIRouterChatResponse = {
       message: {
         role: 'assistant',
-        content: data.response || data.message?.content || '',
+        content: typeof data.response === 'string' ? data.response : '',
         tool_calls: data.message?.tool_calls || data.tool_calls || []
       },
       done: data.done ?? true,

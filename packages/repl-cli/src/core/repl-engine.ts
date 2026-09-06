@@ -11,6 +11,15 @@ import { NaturalLanguageOrchestrator } from './orchestrator.js';
 import { pauseReadline, resumeReadline } from '../utils/spinner-utils.js';
 import { AIEndpointHealthCheck, quickHealthCheck } from './health-check.js';
 import { saveConfig } from '../config/loader.js';
+import { loadCredentials } from '../auth/credentials.js';
+
+// Commands that hit the backend (memory-commands.ts / event-commands.ts) and
+// therefore need a resolved credential. Everything else (help, status, mode,
+// persona, etc.) is local-only and stays usable while logged out.
+const AUTH_REQUIRED_COMMANDS = new Set([
+  'create', 'update', 'edit', 'search', 'list', 'get', 'delete', 'del', 'rm',
+  'conclusions', 'intelligence', 'context', 'ctx', 'event', 'ev',
+]);
 
 export class ReplEngine {
   private rl: readline.Interface;
@@ -23,6 +32,7 @@ export class ReplEngine {
   private eventCommands: EventCommands;
   private orchestrator: NaturalLanguageOrchestrator;
   private nlMode: boolean = true; // Natural language mode enabled by default
+  private isAuthenticated: boolean;
   private sigintHandler?: () => void; // Track SIGINT handler for cleanup
   private errorHandlersInstalled: boolean = false; // Track global error handlers
   private closeHandled: boolean = false; // Track if close event was handled
@@ -44,6 +54,7 @@ export class ReplEngine {
 
   constructor(private config: ReplConfig) {
     this.nlMode = config.nlMode ?? true;
+    this.isAuthenticated = !!config.authToken;
 
     this.rl = readline.createInterface({
       input: process.stdin,
@@ -351,6 +362,17 @@ export class ReplEngine {
     }, ['hist']);
   }
 
+  /**
+   * "Not logged in" (no credentials file was ever written) vs "Login expired"
+   * (a stored session exists but couldn't resolve to a live token) read
+   * differently to a user — distinguish them the same way `auth-status` does.
+   */
+  private authRequiredMessage(): string {
+    return loadCredentials()
+      ? 'Login expired · Please run `onasis-repl login`'
+      : 'Not logged in · Run `onasis-repl login`';
+  }
+
   private async runHealthCheck() {
     const results = await quickHealthCheck({
       aiRouterUrl: this.config.aiRouterUrl,
@@ -375,6 +397,11 @@ export class ReplEngine {
     console.log(chalk.green(welcomeMessage));
     console.log(chalk.cyan('━'.repeat(50)));
     console.log(chalk.gray(`Mode: ${this.context.mode} | API: ${this.config.apiUrl || 'https://api.lanonasis.com'}`));
+    console.log(
+      this.isAuthenticated
+        ? chalk.gray(`Auth: ${chalk.green('✓ Authenticated')}`)
+        : chalk.gray(`Auth: `) + chalk.red(this.authRequiredMessage())
+    );
     console.log(chalk.gray(`Natural Language: ${this.nlMode ? chalk.green('ON') : chalk.yellow('OFF')}`));
     const l0Enabled = this.config.l0?.enabled !== false;
     console.log(chalk.gray(`LZero Orchestrator: ${l0Enabled ? chalk.green('ACTIVE') : chalk.yellow('OFF')}`));
@@ -551,6 +578,17 @@ export class ReplEngine {
     const aliases = this.registry.getAliases();
 
     const isCommand = knownCommands.includes(firstWord) || aliases.has(firstWord);
+    // Alias resolves to its canonical command name for the auth-required check.
+    const resolvedCommand = aliases.get(firstWord) || firstWord;
+
+    const needsAuth = this.nlMode && !isCommand
+      ? true // natural language always ends up at the memory backend or the AI router
+      : AUTH_REQUIRED_COMMANDS.has(resolvedCommand);
+
+    if (needsAuth && !this.isAuthenticated) {
+      console.log(chalk.cyan('\n⏺ ') + chalk.red(this.authRequiredMessage()) + '\n');
+      return;
+    }
 
     try {
       if (this.nlMode && !isCommand) {
