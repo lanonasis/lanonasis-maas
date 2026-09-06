@@ -21,12 +21,22 @@
 
 import type { ExtensionAPI } from '@earendil-works/pi-coding-agent';
 import { registerEchoCommand, runEcho } from './commands/echo.js';
+import {
+  scanForWrite,
+  scanSecretsOnly,
+  defaultScannerConfig,
+  type ScannerConfig,
+  type ScannerDecision,
+} from './scanner/scanner.js';
 
 export interface ExtensionContextLike {
   ui: {
     notify(message: string, level?: 'info' | 'warn' | 'error'): void;
   };
 }
+
+export { scanForWrite, scanSecretsOnly, defaultScannerConfig };
+export type { ScannerConfig, ScannerDecision };
 
 export default function extension(pi: ExtensionAPI): void {
   registerEchoCommand(pi);

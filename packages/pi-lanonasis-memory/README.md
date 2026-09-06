@@ -2,13 +2,36 @@
 
 A [Pi](https://github.com/badlogic/pi) extension that brings
 [LanOnasis MaaS](https://docs.lanonasis.com) persistent memory into a coding
-session. **This is the Phase 1 scaffold** — see
-[`docs/context/architecture/pi-maas-integration-review.md` §3](../../../../docs/context/architecture/pi-maas-integration-review.md)
+session. **Phase 2 ships the pre-write scanner** (block-mode by default) —
+see
+[`docs/context/architecture/pi-maas-integration-review.md` Appendix C](../../../../docs/context/architecture/pi-maas-integration-review.md)
 for the full 10-phase plan.
 
-## Phase 1 status
+## Phase 2 status
 
-What this release proves:
+What this release adds:
+
+- **Pre-write scanner** at `src/scanner/` — block-mode by default, refuses
+  any memory entry that contains prompt-injection patterns, invisible
+  Unicode, or credential secrets. The scanner is the non-negotiable
+  pre-write gate per review §2.3; nothing lands in SQLite, the markdown
+  mirror, or the MaaS sync queue without passing it first.
+- **Redact-mode opt-in** via `LANONASIS_PI_MEMORY_REDACT=1` — replaces
+  detected secrets with `[REDACTED:<type>]` markers and persists the
+  cleaned text. Threat patterns still block even in redact mode.
+- **Non-blocking pre-fill probe** via `scanSecretsOnly()` — surfaces
+  secret IDs without raising. Useful for tool-call guards and
+  `/memory-interview` warnings.
+- **Pattern coverage**: 11 prompt-injection threats, 10 invisible-Unicode
+  code points, 20 secret patterns (high + medium severity) — ported from
+  [`chandra447/pi-hermes-memory`](https://github.com/chandra447/pi-hermes-memory)
+  `src/store/content-scanner.ts`. 19 credential patterns + 1 env-var
+  assignment regex — ported from
+  [`@lanonasis/recall-forge`](https://github.com/lanonasis/lanonasis-maas/tree/main/packages/recall-forge)
+  `extraction/secret-redactor.ts`. Total: **39 distinct regex rules**
+  across 2 detection engines + 1 redact engine.
+
+Phase 1 still in place:
 
 - The extension loads in a Pi session without runtime errors.
 - The Pi `ExtensionAPI` surface (`registerCommand`, `pi.on(...)`, `ctx.ui`)
@@ -19,13 +42,15 @@ What this release proves:
   minimum — no more silent `ERR_PACKAGE_PATH_NOT_EXPORTED` for users on
   Pi 0.80.0 or older.
 
-What it does NOT yet do (Phase 2+):
+What it does NOT yet do (Phase 3+):
 
-- Read or write real memories. The MaaS wiring arrives in Phase 2
+- Read or write real memories. The MaaS wiring arrives in Phase 3
   (`LanOnasisMemoryProvider` over `@lanonasis/memory-client/node`).
-- Scan Pi sessions, persist anything to disk, or push to MaaS.
+- Persist anything to disk or push to MaaS.
 - Wire any of Pi's prompt-injection hooks (`before_provider_request`,
   `session_start`, `session_shutdown`, `message_end`).
+- Wire the real slash commands (`/memory search`, `/memory save`,
+  `/reflect`, `/memory-skills`, etc.).
 
 ## Quick start
 
@@ -75,13 +100,27 @@ packages/pi-lanonasis-memory/
 ├── vitest.config.ts          Vitest setup.
 ├── src/
 │   ├── index.ts              Extension entry — `export default function (pi)`.
-│   └── commands/
-│       └── echo.ts           `/echo` slash command + `runEcho` (testable).
+│   │                         Also re-exports the scanner API for downstream
+│   │                         Phase 3-5 callers.
+│   ├── commands/
+│   │   └── echo.ts           `/echo` slash command + `runEcho` (testable).
+│   └── scanner/              Phase 2: pre-write scanner.
+│       ├── content-scanner.ts   Block-mode gate. 11 threat + 20 secret
+│       │                        patterns + 10 invisible-Unicode code points.
+│       ├── redactor.ts          Redact-mode replacement. 19 credential
+│       │                        patterns + 1 env-var assignment regex.
+│       └── scanner.ts           Top-level orchestrator. Resolves
+│                                LANONASIS_PI_MEMORY_REDACT and routes to
+│                                block or redact mode.
 ├── tests/
-│   └── echo.test.ts          Vitest spec for runEcho.
+│   ├── echo.test.ts          Vitest spec for runEcho.
+│   └── scanner/              Phase 2: scanner tests.
+│       ├── content-scanner.test.ts
+│       ├── redactor.test.ts
+│       └── scanner.test.ts
 ├── scripts/
 │   └── check-min-sdk.mjs     Min-SDK checker (see lesson in chandra447#149).
-├── CHANGELOG.md              Phase 1 entry + the deferred backlog.
+├── CHANGELOG.md              Phase 1 + Phase 2 entries + the deferred backlog.
 ├── README.md                 This file.
 ├── LICENSE                   MIT.
 └── .gitignore
@@ -98,18 +137,20 @@ Phase 1 does not write to them — there is nothing to persist yet.
 | `storage_roots.project`   | `.pi/memory/`                        | 4     | Per-project MEMORY.md / USER.md      |
 | `storage_roots.sessions_db` | `~/.pi/agent/pi-lanonasis-memory/sessions.db` | 3 | SQLite FTS5 session index            |
 
-## Related packages (do NOT edit from here; scope-guard for Phase 1)
+## Related packages (do NOT edit from here; scope-guard for Phase 1+2)
 
-- `@lanonasis/memory-client` (consumed at runtime — wired in Phase 2)
-- `@lanonasis/recall-forge` (privacy pipeline — wired in Phase 2)
+- `@lanonasis/memory-client` (consumed at runtime — wired in Phase 3)
+- `@lanonasis/recall-forge` (privacy pipeline references — read-only;
+  `@lanonasis/privacy-sdk` integration is a Phase 8 follow-up)
 - `@lanonasis/repl-cli` (slash-command reference — read-only)
 - `@lanonasis/claude-memory` (session ingest reference — read-only)
 
-## Out of scope (Phase 1)
+## Out of scope (Phase 1 + Phase 2)
 
 Anything touching customer data, payments, KYC, credentials, or PHI is
-explicitly **out of scope** for this release. The extension does no I/O
-beyond in-process argument reversal. See the
+explicitly **out of scope** for this release beyond the scanner. The
+extension does no I/O beyond argument reversal and in-memory regex
+evaluation — no SQLite writes, no markdown mirror writes, no MaaS
+sync. See the
 [review doc](../../../../docs/context/architecture/pi-maas-integration-review.md)
-§5 for the unanswered questions (subject scoping, fork vs skill, CLI
-positioning) that Phase 0 spike is meant to resolve.
+for the deferred Layer-1 storage work and the Layer-2 vision.
