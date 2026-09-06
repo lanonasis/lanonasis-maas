@@ -5,6 +5,11 @@
   "main": "dist/server.js",
   "type": "module",
   "private": true,
+  "workspaces": [
+    "packages/ide-extension-core",
+    "packages/memory-client",
+    "IDE-EXTENSIONS/*"
+  ],
   "scripts": {
     "dev": "tsx watch src/server.ts",
     "build": "tsc && tsc-alias",
