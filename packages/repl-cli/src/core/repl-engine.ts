@@ -87,7 +87,6 @@ export class ReplEngine {
       aiRouterAuthToken: config.aiRouterAuthToken || config.authToken,
       aiRouterApiKey: config.aiRouterApiKey,
       l0: config.l0,
-      agentMemorySessionId: config.agentMemorySessionId,
       userContext: config.userContext
     });
 
@@ -304,14 +303,9 @@ export class ReplEngine {
       }
     });
 
-    // Clear conversation history — starts a new session-memory session too
-    // (when configured), so the abandoned session's events never bleed
-    // into the fresh one.
+    // Clear conversation history
     this.registry.register('reset', async () => {
-      const newSessionId = this.orchestrator.regenerateSession();
-      if (newSessionId) {
-        saveConfig({ agentMemorySessionId: newSessionId });
-      }
+      this.orchestrator.clearHistory();
       console.log(chalk.green('✨ Conversation history cleared'));
     });
 
@@ -827,7 +821,7 @@ export class ReplEngine {
 
     console.log(chalk.white('\n  System Commands:'));
     console.log(chalk.gray('    nl [on|off]             - Toggle natural language mode'));
-    console.log(chalk.gray('    reset                   - Clear conversation history and start a new session'));
+    console.log(chalk.gray('    reset                   - Clear conversation history'));
     console.log(chalk.gray('    mode <remote|local>     - Switch operation mode'));
     console.log(chalk.gray('    status                  - Show current status'));
     console.log(chalk.gray('    health                  - Check AI endpoint health'));
@@ -839,7 +833,7 @@ export class ReplEngine {
     console.log(chalk.yellow('\n💡 Tips:'));
     console.log(chalk.gray('  • Natural language uses Onasis AI Router by default (OpenAI key optional)'));
     console.log(chalk.gray('  • Use "nl off" to disable NL mode and use commands only'));
-    console.log(chalk.gray('  • Use "reset" to clear conversation context and start a new session'));
+    console.log(chalk.gray('  • Use "reset" to clear conversation context'));
     console.log(chalk.gray('  • Press ↑/↓ arrows to navigate command history'));
     console.log(chalk.gray('  • Press Tab for command completion'));
     console.log(chalk.gray('  • For multi-line input, leave quotes/brackets open'));

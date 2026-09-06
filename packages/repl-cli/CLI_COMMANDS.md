@@ -153,7 +153,7 @@ delete <id>                           Delete a memory
 
 ```
 nl [on|off]          Toggle natural language mode
-reset                Clear conversation history and start a new session
+reset                Clear conversation history
 mode <remote|local>  Switch operation mode
 status               Show current status
 clear                Clear screen
