@@ -151,7 +151,7 @@ lrepl --version          # Show version
 
 **System Commands:**
 - `nl [on|off]` - Toggle natural language mode
-- `reset` - Clear conversation history
+- `reset` - Clear conversation history and start a new session (see [Session Memory](#-session-memory))
 - `mode <remote|local>` - Switch operation mode
 - `status` - Show current status
 - `clear` - Clear screen
@@ -294,6 +294,16 @@ Local Pattern Matching ← Final fallback
 ```
 
 **Validation:** See `AI_ROUTER_VALIDATION.md` and `QUICK_REFERENCE.md`
+
+## 🧠 Session Memory
+
+Conversation history can persist across REPL restarts instead of resetting every time you launch `lrepl start`.
+
+- **Automatic** - No configuration needed. If `aiRouterUrl` is set (the default), the CLI generates and saves a session id to `~/.lanonasis/repl-config.json` the first time you connect, and reuses it on future launches to resume the same conversation.
+- **Proxied, not direct** - History is stored server-side via `onasis-ai-router`'s session-memory routes, authenticated with the same credential already used for chat. The CLI never holds a raw storage credential.
+- **Auto-summarized** - Long-running sessions are summarized server-side so conversation context doesn't grow unbounded.
+- **Graceful degradation** - If no AI Router is configured, or the router doesn't support session memory, the REPL falls back to in-process-only history (the pre-existing behavior) with no errors surfaced to you.
+- **`reset` starts fresh** - Running `reset` clears local history and starts a brand-new session, instead of just clearing what's in memory.
 
 ## 📚 Documentation
 

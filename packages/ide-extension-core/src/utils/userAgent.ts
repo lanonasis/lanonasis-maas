@@ -5,6 +5,12 @@
  * @module userAgent
  */
 
+// Minimal browser globals declaration — this package builds with lib: ES2020
+// (no DOM lib), but the code must detect the browser environment at runtime.
+declare const navigator:
+  | { platform?: string; userAgent?: string }
+  | undefined;
+
 /**
  * Generate a standardized User-Agent header string for IDE extensions
  *
@@ -78,7 +84,7 @@ export function detectArchitecture(): string {
     return process.arch;
   }
   // Browser environment - limited detection
-  if (typeof navigator !== 'undefined') {
+  if (typeof navigator !== 'undefined' && navigator.userAgent) {
     const ua = navigator.userAgent;
     if (/\barm\b/i.test(ua) || /\baarch64\b/i.test(ua)) return 'arm64';
     if (/\bx86_64\b/i.test(ua) || /\bwow64\b/i.test(ua) || /\bwin64\b/i.test(ua)) return 'x64';

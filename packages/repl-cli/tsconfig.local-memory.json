@@ -1,0 +1,37 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "lib": ["ES2022", "DOM"],
+    "moduleResolution": "bundler",
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "strict": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "noEmit": true,
+    "rootDir": "..",
+    "typeRoots": [
+      "/Users/seyederick/DevOps/projects/active/lan-onasis-monorepo/node_modules/.bun/@types+node@26.4.1/node_modules/@types"
+    ],
+    "baseUrl": "./src",
+    "paths": {
+      "@lanonasis/memory-client": [
+        "../../../../memory-client/src"
+      ]
+    }
+  },
+  "include": [
+    "src/local-memory/**/*.ts",
+    "src/core/orchestrator.ts",
+    "src/core/repl-engine.ts",
+    "src/commands/memory-commands.ts",
+    "src/config/types.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "tests"
+  ]
+}

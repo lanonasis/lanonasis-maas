@@ -1,4 +1,5 @@
 import { readFileSync, existsSync, mkdirSync, writeFileSync } from 'fs';
+import { randomUUID } from 'crypto';
 import { dirname, resolve } from 'path';
 import { ReplConfig } from './types.js';
 import {
@@ -57,6 +58,8 @@ const DEFAULT_CONFIG: ReplConfig = {
     enableTrends: true,
     enableContentCreation: true
   },
+  // Session memory (proxied through onasis-ai-router — see types.ts).
+  agentMemorySessionId: process.env.AGENT_MEMORY_SESSION_ID,
   // Legacy userContext (for backwards compatibility)
   userContext: process.env.USER_NAME || process.env.USER ? {
     name: process.env.USER_NAME || process.env.USER
@@ -107,6 +110,16 @@ export async function loadConfig(
   // Priority: aiRouterApiKey (lano_...) > aiRouterAuthToken > authToken
   if (!merged.aiRouterAuthToken && !merged.aiRouterApiKey && merged.authToken) {
     merged.aiRouterAuthToken = merged.authToken;
+  }
+
+  // Generate a stable session id the first time an AI router is configured
+  // (session memory rides on the same connection), so a resumed REPL
+  // continues the same conversation instead of starting fresh every run.
+  // Persisted via saveConfig (merges against on-disk content only) so
+  // transient CLI overrides in `merged` never get baked into the saved file.
+  if (merged.aiRouterUrl && !merged.agentMemorySessionId) {
+    merged.agentMemorySessionId = randomUUID();
+    saveConfig({ agentMemorySessionId: merged.agentMemorySessionId }, { configPath: target });
   }
 
   return merged;

@@ -2,6 +2,18 @@
 
 All notable changes to @lanonasis/repl-cli will be documented in this file.
 
+## [1.1.0] - 2026-08-18
+
+### Added
+- **Session Memory** - Conversation history now persists across REPL restarts, proxied through `onasis-ai-router`'s `/api/v1/session-memory/*` routes instead of holding a raw storage credential in the published package. Automatic once `aiRouterUrl` is configured (the default) — a stable session id is generated and saved to `~/.lanonasis/repl-config.json` on first connect, with no new required config or env var.
+  - Hydrates prior conversation turns (including any auto-generated summary of older history) at startup.
+  - Persists each user/assistant turn as the conversation happens; failures degrade silently to the previous in-process-only behavior.
+  - `reset` now starts a brand-new session (previously it only cleared local, in-process history).
+  - Entirely backward compatible: with no `aiRouterUrl` configured, or if the router doesn't support these routes, behavior is unchanged from 1.0.1.
+
+### Testing
+- Added `tests/smoke/session-memory.mjs`, a live (non-mocked) functional smoke test verifying session hydration and `reset` behavior against a real router.
+
 ## [1.0.1] - 2026-07-16
 
 ### Fixed

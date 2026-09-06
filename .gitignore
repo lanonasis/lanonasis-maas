@@ -71,6 +71,12 @@ config.local.json
 *.p12
 *.pfx
 **/*secret*
+# The Hermes secret-source plugin package is a legit source tree (not a
+# secret file) — un-ignore it while keeping the blanket pattern for files.
+!packages/hermes-lanonasis-secret-source/
+!packages/hermes-lanonasis-secret-source/**
+# recall-forge's secret redactor is source code, not a secret file
+!packages/recall-forge/extraction/secret-redactor.ts
 **/*key*
 **/*token*
 **/*password*
@@ -128,3 +134,9 @@ mcp-server/
 cli/.pi/
 
 testsprite_tests/tmp/config.json
+
+# Python artifacts (hermes-lanonasis-memory plugin)
+__pycache__/
+*.pyc
+*.egg-info/
+.pytest_cache/
