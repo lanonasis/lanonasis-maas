@@ -7,7 +7,7 @@ export default [
   // Production source files - with type-aware linting
   {
     files: ['src/**/*.ts'],
-    ignores: ['**/*.test.ts', '**/*.spec.ts', '**/*.d.ts'],
+    ignores: ['**/*.test.ts', '**/*.spec.ts'],
     languageOptions: {
       parser: tsparser,
       parserOptions: {
@@ -17,8 +17,6 @@ export default [
         setTimeout: 'readonly',
         clearTimeout: 'readonly',
         fetch: 'readonly',
-        Response: 'readonly',
-        RequestInit: 'readonly',
         AbortSignal: 'readonly',
         window: 'readonly',
         globalThis: 'readonly',
@@ -47,8 +45,6 @@ export default [
         setTimeout: 'readonly',
         clearTimeout: 'readonly',
         fetch: 'readonly',
-        Response: 'readonly',
-        RequestInit: 'readonly',
         AbortSignal: 'readonly',
         window: 'readonly',
         globalThis: 'readonly',

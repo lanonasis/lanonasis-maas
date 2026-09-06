@@ -1,5 +1,4 @@
 import { MemoryClient, createMemoryClient } from '@lanonasis/memory-client';
-import { randomUUID } from 'crypto';
 import chalk from 'chalk';
 import ora from 'ora';
 
@@ -13,7 +12,6 @@ import {
 
 // Onasis AI Router client
 import { AIRouterClient } from './ai-router-client';
-import { AgentMemoryClient } from './agent-memory-client';
 import type { L0Config } from '../config/types.js';
 import { DEFAULT_OPENAI_MODEL } from '../config/constants.js';
 import type { Persona } from '../personas/types.js';
@@ -27,9 +25,6 @@ export interface OrchestratorConfig {
   aiRouterAuthToken?: string;
   aiRouterApiKey?: string; // Dedicated API key for AI Router (lano_...)
   l0?: L0Config;
-  // Stable session id for the session-memory proxy (see agent-memory-client.ts).
-  // When absent, conversation history stays in-process-only, as before.
-  agentMemorySessionId?: string;
   userContext?: {
     name?: string;
     projects?: string[];
@@ -70,8 +65,6 @@ export class NaturalLanguageOrchestrator {
   private l0Orchestrator?: L0Orchestrator;
   private l0Config: Required<Pick<L0Config, 'enabled' | 'enableCampaigns' | 'enableTrends' | 'enableContentCreation'>>;
   private aiRouterClient?: AIRouterClient;
-  private agentMemoryClient?: AgentMemoryClient;
-  private sessionId?: string;
 
   private formatError(error: unknown): string {
     if (error instanceof Error && error.message) return error.message;
@@ -81,37 +74,6 @@ export class NaturalLanguageOrchestrator {
     } catch {
       return String(error);
     }
-  }
-
-  /**
-   * Fire-and-forget write to session memory. Never throws — a memory-write
-   * failure must not break the chat flow, same fail-soft contract as every
-   * other optional-enrichment call in this class.
-   */
-  private async persistTurn(role: 'USER' | 'ASSISTANT', text: string): Promise<void> {
-    if (!this.agentMemoryClient || !this.sessionId || !text) return;
-    try {
-      await this.agentMemoryClient.addEvent(this.sessionId, role, text);
-    } catch {
-      // Silently fail — session memory is durability/continuity, not
-      // correctness. The turn already happened locally either way.
-    }
-  }
-
-  /**
-   * Start a new session: local history resets to just the system prompt,
-   * and (when session memory is configured) a fresh sessionId is adopted so
-   * the abandoned session's events are never mixed with the new one.
-   * Returns the new sessionId so the caller (ReplEngine) can persist it via
-   * saveConfig — this class does no config file I/O itself.
-   */
-  regenerateSession(): string | undefined {
-    this.conversationHistory = this.conversationHistory.slice(0, 1);
-    if (this.agentMemoryClient) {
-      this.sessionId = randomUUID();
-      return this.sessionId;
-    }
-    return undefined;
   }
 
   private resolveOpenAIModel(): string {
@@ -184,15 +146,6 @@ export class NaturalLanguageOrchestrator {
         authToken: routerKey,
         defaultUseCase: 'repl-nlp',
       });
-
-      // Session memory rides the same router connection + credential — it's
-      // a proxy to Redis Agent Memory, not a separate direct client (see
-      // agent-memory-client.ts for why). Only active once a sessionId has
-      // been generated (config/loader.ts does this once aiRouterUrl is set).
-      if (config.agentMemorySessionId) {
-        this.agentMemoryClient = new AgentMemoryClient({ baseUrl: config.aiRouterUrl, authToken: routerKey });
-        this.sessionId = config.agentMemorySessionId;
-      }
     }
 
     // Initialize conversation with enhanced system prompt
@@ -208,33 +161,6 @@ export class NaturalLanguageOrchestrator {
    */
   async initializeContext(): Promise<void> {
     if (this.contextInitialized) return;
-
-    // Resume prior session-memory turns, if any, before anything else touches
-    // conversationHistory — cross-restart continuity for a resumed REPL.
-    if (this.agentMemoryClient && this.sessionId) {
-      try {
-        const session = await this.agentMemoryClient.getSession(this.sessionId);
-
-        if (session.summary) {
-          this.conversationHistory.push({
-            role: 'system',
-            content: `[Summary of earlier conversation]: ${session.summary.text}`
-          });
-        }
-
-        for (const event of session.events) {
-          const text = event.content.map((c) => c.text).join('\n');
-          if (!text) continue;
-          this.conversationHistory.push({
-            role: event.role === 'ASSISTANT' ? 'assistant' : 'user',
-            content: text
-          });
-        }
-      } catch (error) {
-        // Silently fail — session memory is optional enrichment, same as
-        // the preferences/context search below.
-      }
-    }
 
     try {
       // Search for user preferences and profile information
@@ -404,10 +330,6 @@ Remember: You are LZero - be helpful, conversational, and make the experience fe
       role: 'user',
       content: userMessage
     });
-    // Persist the raw input, not the memory-context-augmented userMessage —
-    // the injected context is prompt engineering, not part of the actual
-    // conversation transcript.
-    await this.persistTurn('USER', input);
 
     // If no AI backend is available, fall back to pattern matching.
     if (!this.aiRouterClient && !this.openaiApiKey) {
@@ -417,7 +339,6 @@ Remember: You are LZero - be helpful, conversational, and make the experience fe
         role: 'assistant',
         content: response.response
       });
-      await this.persistTurn('ASSISTANT', response.response);
       return response;
     }
 
@@ -446,7 +367,6 @@ Remember: You are LZero - be helpful, conversational, and make the experience fe
         role: 'assistant',
         content: response.response
       });
-      await this.persistTurn('ASSISTANT', response.response);
 
       // Include fetched context in the response for display
       if (relevantContext.length > 0 && !response.action) {
@@ -495,7 +415,6 @@ Remember: You are LZero - be helpful, conversational, and make the experience fe
         role: 'assistant',
         content: response.response
       });
-      await this.persistTurn('ASSISTANT', response.response);
       return response;
     }
   }

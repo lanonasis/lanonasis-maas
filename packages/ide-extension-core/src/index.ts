@@ -21,8 +21,5 @@ export { WindsurfAdapter, createWindsurfAdapter } from './adapters/WindsurfAdapt
 // Export services
 export { SecureApiKeyService } from './services/SecureApiKeyService';
 
-// Export services
-export { AIRouterClient, AIRouterRateLimitError, AIRouterTimeoutError, buildAIRouterAuthHeaders } from './services/ai-router-client';
-
 // Export utilities
 export * from './utils/crypto';
