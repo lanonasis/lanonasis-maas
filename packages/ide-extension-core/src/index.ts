@@ -1,6 +1,6 @@
 /**
  * @lanonasis/ide-extension-core
- * 
+ *
  * Shared core library for Lanonasis IDE extensions
  * Provides type-safe, platform-agnostic abstractions for:
  * - Memory management
@@ -20,6 +20,12 @@ export { WindsurfAdapter, createWindsurfAdapter } from './adapters/WindsurfAdapt
 
 // Export services
 export { SecureApiKeyService } from './services/SecureApiKeyService';
+export {
+  AIRouterClient,
+  AIRouterRateLimitError,
+  AIRouterTimeoutError,
+  buildAIRouterAuthHeaders,
+} from './services/ai-router-client';
 
 // Export utilities
 export * from './utils/crypto';

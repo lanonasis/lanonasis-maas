@@ -262,6 +262,11 @@
           "default": true,
           "markdownDescription": "Enable automatic OAuth2 authentication with browser redirect"
         },
+        "lanonasis.aiRouterUrl": {
+          "type": "string",
+          "default": "https://ai.vortexcore.app",
+          "markdownDescription": "Onasis AI Router base URL for sidebar chat queries (\"Ask me anything\"). Uses `POST /api/v1/ai-chat` with the same auth pattern as the vscode extension."
+        },
         "lanonasis.defaultMemoryType": {
           "type": "string",
           "enum": [
