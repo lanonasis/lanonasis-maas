@@ -192,11 +192,14 @@ describe('CLI Integration - Command Execution', () => {
   });
 
   describe('Local auth commands', () => {
-    it('whoami command executes', async () => {
+    it('whoami exits without initializing MCP', async () => {
       const result = await runCli('whoami', {
-        env: { HOME: testConfigDir },
+        env: { HOME: testConfigDir, CLI_VERBOSE: 'true' },
+        timeout: 15000,
       });
-      expect(result.stdout).toBeDefined();
+      expect(result.exitCode).not.toBe(124);
+      const combined = `${result.stdout}\n${result.stderr}`;
+      expect(combined).not.toMatch(/Connecting to .*MCP|MCP connected|MCP auto-connect/i);
     });
   });
 

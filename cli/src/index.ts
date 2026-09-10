@@ -26,8 +26,9 @@ import { createOnboardingFlow } from './ux/index.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-// Load environment variables
-config();
+// Load environment variables without writing dotenv's banner to stdout. CLI
+// commands are commonly piped, so startup diagnostics must stay opt-in.
+config({ quiet: true });
 
 import { createRequire } from 'module';
 const require = createRequire(import.meta.url);

@@ -781,10 +781,14 @@ export class MCPClient {
     this.healthCheckInterval = setInterval(async () => {
       await this.performHealthCheck();
     }, 30000);
+    // Monitoring is useful while a long-lived MCP command is active, but it
+    // must not keep one-shot CLI commands alive after their work is complete.
+    this.healthCheckInterval.unref();
 
     // Perform initial health check
     const initialDelay = process.env.NODE_ENV === 'test' ? 50 : 5000;
     this.healthCheckTimeout = setTimeout(() => this.performHealthCheck(), initialDelay);
+    this.healthCheckTimeout.unref();
   }
 
   /**
