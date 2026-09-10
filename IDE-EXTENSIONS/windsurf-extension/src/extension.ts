@@ -43,6 +43,8 @@ export async function activate(context: vscode.ExtensionContext) {
     
     // Initialize sidebar provider (modern UI)
     const sidebarProvider = new MemorySidebarProvider(context.extensionUri, memoryService as any);
+    // Wire ApiKeyService for sidebar AI router chat
+    sidebarProvider.setApiKeyService(apiKeyService as any);
     context.subscriptions.push(
         vscode.window.registerWebviewViewProvider(
             MemorySidebarProvider.viewType,
