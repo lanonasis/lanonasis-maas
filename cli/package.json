@@ -111,7 +111,7 @@
     "test-exclude": "^8.0.0"
   },
   "scripts": {
-    "build": "rimraf dist && tsc -p tsconfig.json && (chmod +x dist/index.js dist/mcp-server-entry.js 2>/dev/null || true)",
+    "build": "node_modules/.bin/rimraf dist && node_modules/.bin/tsc -p tsconfig.json && (chmod +x dist/index.js dist/mcp-server-entry.js 2>/dev/null || true)",
     "prepublishOnly": "npm run build",
     "postinstall": "node scripts/postinstall.js",
     "test": "[ -f node_modules/jest/bin/jest.js ] || bun install --no-save; node --experimental-vm-modules node_modules/jest/bin/jest.js",
