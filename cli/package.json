@@ -78,7 +78,7 @@
     "zod": "^4.3.6"
   },
   "optionalDependencies": {
-    "@lanonasis/repl-cli": "^1.0.1"
+    "@lanonasis/repl-cli": "^1.1.0"
   },
   "devDependencies": {
     "@jest/globals": "^30.3.0",

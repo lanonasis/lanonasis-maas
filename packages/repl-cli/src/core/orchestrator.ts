@@ -428,11 +428,13 @@ Remember: You are LZero - be helpful, conversational, and make the experience fe
       rlInterface.pause();
     }
 
-    const spinner = ora('Processing...').start();
+    // P1: Show "thinking..." indicator BEFORE the API call starts.
+    // Without this the user sees nothing for 2-3s and may think the REPL is frozen.
+    const spinner = ora('Thinking…').start();
 
     try {
       const response = await this.callOpenAI();
-      spinner.stop();
+      spinner.succeed(chalk.green('✓ Processed'));
 
       // Resume readline after spinner stops
       if (rlInterface) {
@@ -469,21 +471,25 @@ Remember: You are LZero - be helpful, conversational, and make the experience fe
       // Log the actual error for debugging
       const errorMessage = this.formatError(error);
 
-      // Check for specific error types to provide better feedback
+      // P2 + P6: Softer, more conversational error messages that match
+      // the "concierge" persona — never expose technical jargon to the user.
       if (errorMessage.includes('401') || errorMessage.includes('Unauthorized') || errorMessage.includes('AUTH_REQUIRED')) {
-        console.log(chalk.yellow('\n⚠️  AI Router authentication failed.'));
-        console.log(chalk.gray('  The AI Router (ai.vortexcore.app) requires a valid API key.'));
-        console.log(chalk.gray('  Set AI_ROUTER_API_KEY env var or use --ai-router-key option.'));
-        console.log(chalk.gray('  Falling back to pattern matching...\n'));
+        console.log(chalk.yellow('\n⚠️  My AI brain is having trouble authenticating.'));
+        console.log(chalk.gray('  It might be a token issue. Run "health" to check services, or try again in a moment.'));
+        console.log(chalk.gray('  Falling back to local mode…\n'));
       } else if (errorMessage.includes('429') || errorMessage.includes('rate limit')) {
-        console.log(chalk.yellow('\n⚠️  Rate limited. Please wait a moment.'));
+        console.log(chalk.yellow('\n⚠️  AI service is busy right now — please wait about 30 seconds and try again.'));
       } else if (errorMessage.includes('timeout') || errorMessage.includes('ECONNREFUSED') || errorMessage.includes('network')) {
-        console.log(chalk.yellow('\n⚠️  Network issue connecting to AI service.'));
-        console.log(chalk.gray('  Falling back to pattern matching...\n'));
+        console.log(chalk.yellow('\n⚠️  I can\'t reach my AI service right now.'));
+        console.log(chalk.gray('  Check your internet connection, or run "health" to see which services are available.'));
+        console.log(chalk.gray('  Falling back to local mode…\n'));
+      } else {
+        console.log(chalk.yellow('\n⚠️  Something went wrong while processing your request.'));
+        console.log(chalk.gray('  The REPL is still running — try again or type "help" for help.\n'));
       }
 
       // Fall back to basic processing with personality and context
-      console.log(chalk.gray('Falling back to pattern matching...\n'));
+      console.log(chalk.gray('Falling back to local mode…\n'));
       const response = await this.fallbackProcessor(input, relevantContext);
       this.conversationHistory.push({
         role: 'assistant',
@@ -628,9 +634,6 @@ Remember: You are LZero - be helpful, conversational, and make the experience fe
     let toolCalls: any[] | undefined;
 
     if (this.aiRouterClient) {
-      const startTime = Date.now();
-      console.log(chalk.cyan('[LZero]') + chalk.gray(' Processing request...'));
-
       try {
         const response = await this.aiRouterClient.chat({
           messages: this.conversationHistory,
@@ -640,23 +643,16 @@ Remember: You are LZero - be helpful, conversational, and make the experience fe
           max_tokens: maxTokens,
           tool_choice: toolChoice,
         });
-        const latency = Date.now() - startTime;
-        console.log(chalk.green('[LZero]') + chalk.gray(` ✓ Processed (${latency}ms)`));
         message = response.message;
         toolCalls = message.tool_calls;
-      } catch (error) {
-        const latency = Date.now() - startTime;
-        console.log(chalk.yellow('[LZero]') + chalk.gray(` Using enhanced mode (${latency}ms)`));
-        console.log(chalk.gray('  → Switching to backup intelligence...'));
-        // Fall through to OpenAI
+      } catch {
+        // AI Router failed — fall through to OpenAI fallback silently.
+        // The user sees the spinner, not internal routing details.
       }
     }
 
     // Fallback to OpenAI if AI Router not configured or failed
     if (!message && this.openaiApiKey) {
-      const startTime = Date.now();
-      console.log(chalk.cyan('[LZero]') + chalk.gray(' Backup intelligence active'));
-
       const response = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
         headers: {
@@ -678,8 +674,6 @@ Remember: You are LZero - be helpful, conversational, and make the experience fe
       }
 
       const data: any = await response.json();
-      const latency = Date.now() - startTime;
-      console.log(chalk.green('[LZero]') + chalk.gray(` ✓ Backup processed (${latency}ms)`));
       message = data.choices[0].message;
       toolCalls = message.tool_calls;
     }

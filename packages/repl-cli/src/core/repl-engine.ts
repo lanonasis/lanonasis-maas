@@ -613,8 +613,8 @@ export class ReplEngine {
       console.log(chalk.cyan('\n💡 LZero: ') + chalk.white("I'm having trouble connecting to my brain right now. Let me try to help anyway..."));
       console.log(chalk.gray('\nYou can try:'));
       console.log(chalk.gray('  • Using direct commands: create, search, list, get, delete'));
-      console.log(chalk.gray('  • Checking your network connection'));
-      console.log(chalk.gray('  • Running "status" to check configuration\n'));
+      console.log(chalk.gray('  • Running "health" to check which services are available'));
+      console.log(chalk.gray('  • Typing "help" to see all available commands\n'));
       return;
     } finally {
       // CRITICAL FIX: Always resume readline after processing
