@@ -54,11 +54,11 @@
     "SKILL.md"
   ],
   "dependencies": {
-    "@lanonasis/mem-intel-sdk": "file:../../../packages/memory-intelligence-engine/mem-intelligence-sdk",
+    "@lanonasis/mem-intel-sdk": "2.1.0",
     "@lanonasis/oauth-client": "2.0.4",
     "@lanonasis/security-sdk": "1.0.5",
-    "@lanonasis/privacy-sdk": "file:../../../packages/privacy-sdk",
-    "@lanonasis/secret-prescan": "file:../../../packages/secret-prescan",
+    "@lanonasis/privacy-sdk": "^1.0.1",
+    "@lanonasis/secret-prescan": "^0.1.0",
     "@modelcontextprotocol/sdk": "^1.28.0",
     "axios": "^1.14.0",
     "chalk": "^5.6.2",
@@ -114,7 +114,6 @@
     "build": "rimraf dist && tsc -p tsconfig.json && (chmod +x dist/index.js dist/mcp-server-entry.js 2>/dev/null || true)",
     "prepublishOnly": "npm run build",
     "postinstall": "node scripts/postinstall.js",
-    "build-and-test": "bash scripts/build-and-test.sh",
     "test": "[ -f node_modules/jest/bin/jest.js ] || bun install --no-save; node --experimental-vm-modules node_modules/jest/bin/jest.js",
     "test:watch": "npm test -- --watch",
     "test:coverage": "npm test -- --coverage"
