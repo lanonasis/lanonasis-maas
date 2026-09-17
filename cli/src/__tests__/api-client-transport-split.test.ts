@@ -150,6 +150,37 @@ describe('APIClient transport-mode split (memory vs direct API)', () => {
     expect(updated.url).toBe('/api/v1/topics');
   });
 
+  // mcp.lanonasis.com serves no /api/v1/api-keys route, so anything sent there
+  // returns 404. `lanonasis api-keys create` hit exactly that under token auth,
+  // and only worked with --no-mcp.
+  it('routes api-key management to auth_base, not the MCP server', async () => {
+    const client = new APIClient();
+    stubConfig(client, { authMethod: 'jwt' });
+
+    const updated = await runInterceptor({ url: '/api/v1/api-keys', method: 'post' });
+
+    expect(updated.baseURL).toBe('https://auth.example.com');
+    expect(updated.baseURL).not.toContain('mcp.lanonasis.com');
+  });
+
+  it('routes api-key projects to auth_base', async () => {
+    const client = new APIClient();
+    stubConfig(client, { authMethod: 'jwt' });
+
+    const updated = await runInterceptor({ url: '/api/v1/api-keys/projects', method: 'get' });
+
+    expect(updated.baseURL).toBe('https://auth.example.com');
+  });
+
+  it('keeps api-key management on auth_base under forceApi too', async () => {
+    const client = new APIClient();
+    stubConfig(client, { forceApi: true, connectionTransport: 'api' });
+
+    const updated = await runInterceptor({ url: '/api/v1/api-keys', method: 'get' });
+
+    expect(updated.baseURL).toBe('https://auth.example.com');
+  });
+
   it('routes auth endpoints to auth_base regardless of forceApi', async () => {
     const client = new APIClient();
     stubConfig(client, { forceApi: true, connectionTransport: 'api' });

@@ -599,9 +599,16 @@ export class APIClient {
       
       // Use appropriate base URL based on endpoint and auth method
       const isAuthEndpoint = config.url?.includes('/auth/') || config.url?.includes('/login') || config.url?.includes('/register') || config.url?.includes('/oauth/');
+      // Key and project management lives on the auth-gateway. mcp.lanonasis.com
+      // serves no /api/v1/api-keys route, so any of these that reaches the MCP
+      // base URL comes back 404 — which is what `lanonasis api-keys create` did
+      // unless --no-mcp was passed. The api-keys commands call /api/v1/api-keys
+      // and /api/v1/api-keys/projects; both forms are matched here so the paths
+      // a command uses and the paths pinned to the gateway cannot drift apart.
       const isAuthGatewayManagementEndpoint = typeof config.url === 'string'
         && (
           config.url.startsWith('/api/v1/auth/api-keys')
+          || config.url.startsWith('/api/v1/api-keys')
           || config.url.startsWith('/api/v1/projects')
         );
       const discoveredServices = this.config.get<any>('discoveredServices');
