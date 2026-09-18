@@ -1,7 +1,8 @@
 {
   "name": "@lanonasis/ide-extension-core",
   "version": "1.0.0",
-  "description": "Shared core library for Lanonasis IDE extensions (VSCode, Cursor, Windsurf)",
+  "private": true,
+  "description": "Shared core library for Lanonasis IDE extensions (VSCode, Cursor, Windsurf) — internal use only, not published to npm.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
