@@ -2,6 +2,14 @@
 
 All notable changes to `@lanonasis/recall-forge` will be documented in this file.
 
+## [Unreleased]
+
+### Fixed
+- **Repository URL corrected (PR-A.2).** The `repository.url` no longer points
+  at the private monorepo (`thefixer3x/lan-onasis-monorepo.git`); it now uses
+  the canonical `git+https://github.com/lanonasis/lanonasis-maas.git`.
+  Homepage and bugs fields already pointed at the public repo — no change.
+
 ---
 
 ## 1.1.1 — 2026-04-04

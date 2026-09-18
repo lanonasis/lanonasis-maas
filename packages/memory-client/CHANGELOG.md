@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+- **Repository metadata corrected (PR-A.2).** The `repository` field no longer
+  points at `lanonasis/memory-client` (which does not exist on GitHub — verified
+  via `gh repo view lanonasis/memory-client` returning GraphQL 404); it now
+  points at `lanonasis/lanonasis-maas.git` with `directory: packages/memory-client`.
+  Homepage and bugs fields also re-pointed at canonical URLs. Engines raised
+  from `>=16` to `>=18` (brief minimum).
+
 ## [2.2.1] - 2026-04-09
 
 ### Fixed
