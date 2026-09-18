@@ -39,7 +39,7 @@
     "url": "git+https://github.com/lanonasis/lanonasis-maas.git",
     "directory": "packages/repl-cli"
   },
-  "homepage": "https://docs.lanonasis.com/cli/repl",
+  "homepage": "https://github.com/lanonasis/lanonasis-maas/tree/main/packages/repl-cli#readme",
   "bugs": {
     "url": "https://github.com/lanonasis/lanonasis-maas/issues"
   },
