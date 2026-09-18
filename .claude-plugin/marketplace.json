@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-marketplace.json",
+  "name": "lanonasis",
+  "version": "0.1.0",
+  "description": "LanOnasis public Claude Code plugin marketplace — memory recall, session capture, and the LanOnasis MCP server.",
+  "owner": {
+    "name": "LanOnasis",
+    "email": "support@lanonasis.com",
+    "url": "https://github.com/lanonasis"
+  },
+  "plugins": [
+    {
+      "name": "claude-memory",
+      "source": "./packages/claude-memory",
+      "description": "Persistent memory recall + session capture for Claude Code via LanOnasis",
+      "category": "productivity",
+      "tags": ["memory", "recall", "session-capture"]
+    },
+    {
+      "name": "lanonasis-mcp",
+      "source": "./plugins/lanonasis-mcp",
+      "description": "LanOnasis memory tools as an MCP server (powered by @lanonasis/cli)",
+      "category": "productivity",
+      "tags": ["mcp", "model-context-protocol", "memory"]
+    }
+  ]
+}
