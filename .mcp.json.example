@@ -1,0 +1,12 @@
+{
+  "_comment": "Example MCP server configuration. Copy to .mcp.json (which is gitignored) and substitute real credentials from your local env. NEVER commit .mcp.json with real API keys.",
+  "mcpServers": {
+    "TestSprite": {
+      "command": "npx",
+      "args": ["@testsprite/testsprite-mcp@latest"],
+      "env": {
+        "API_KEY": "${TESTSPRITE_API_KEY}"
+      }
+    }
+  }
+}
