@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "lanonasis": {
+      "command": "npx",
+      "args": ["-y", "@lanonasis/cli", "mcp", "start"],
+      "env": {
+        "LANONASIS_API_KEY": "${LANONASIS_API_KEY}"
+      }
+    }
+  }
+}
