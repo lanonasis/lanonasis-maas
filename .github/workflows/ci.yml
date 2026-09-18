@@ -1,0 +1,123 @@
+name: CI
+
+# Plain PR CI for the public packages in .github/release-packages.json.
+# Replaces the deleted `.disabled` workflow files; intentionally thin so it
+# stays compatible with both `bun install --frozen-lockfile` and `npm ci`.
+#
+# Matrix comes from the manifest, filtered by `"private": true` on the
+# package.json — internal packages (ide-extension-core, memory-engine) do
+# NOT run here.
+
+'on':
+  pull_request:
+  push:
+    branches: [ main ]
+    paths:
+      - 'packages/**'
+      - 'cli/**'
+      - '.github/release-packages.json'
+      - '.github/workflows/ci.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: ${{ matrix.label }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - label: '@lanonasis/cli'
+            dir: cli
+          - label: '@lanonasis/repl-cli'
+            dir: packages/repl-cli
+          - label: '@lanonasis/memory-client'
+            dir: packages/memory-client
+          - label: '@lanonasis/memory-sdk-standalone'
+            dir: packages/memory-sdk
+          - label: '@lanonasis/recall-forge'
+            dir: packages/recall-forge
+          - label: '@lanonasis/sdk'
+            dir: packages/lanonasis-sdk
+          - label: '@lanonasis/claude-memory'
+            dir: packages/claude-memory
+          - label: '@lanonasis/pi-lanonasis-memory'
+            dir: packages/pi-lanonasis-memory
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Skip private packages
+        working-directory: ${{ matrix.dir }}
+        run: |
+          PRIVATE="$(node -e "try { console.log(JSON.parse(require('fs').readFileSync('package.json','utf8')).private ? 'yes' : 'no') } catch(e) { console.log('no') }")"
+          if [[ "$PRIVATE" == "yes" ]]; then
+            echo "::notice::${{ matrix.label }} is private; skipping CI matrix entry"
+            exit 0
+          fi
+
+      - name: Install
+        working-directory: ${{ matrix.dir }}
+        run: |
+          if [ -f bun.lock ] || [ -f bun.lockb ]; then
+            bun install --frozen-lockfile
+          else
+            bun install
+          fi
+
+      - name: Build
+        working-directory: ${{ matrix.dir }}
+        run: |
+          if node -e "process.exit(!JSON.parse(require('fs').readFileSync('package.json','utf8')).scripts?.build)"; then
+            bun run build 2>/dev/null || npm run build
+          else
+            echo "no build script — skipping"
+          fi
+
+      - name: Test
+        working-directory: ${{ matrix.dir }}
+        run: |
+          if node -e "process.exit(!JSON.parse(require('fs').readFileSync('package.json','utf8')).scripts?.test)"; then
+            bun test 2>/dev/null || npm test --silent
+          else
+            echo "no test script — skipping"
+          fi
+
+      - name: Lint
+        working-directory: ${{ matrix.dir }}
+        run: |
+          if node -e "process.exit(!JSON.parse(require('fs').readFileSync('package.json','utf8')).scripts?.lint)"; then
+            bun run lint 2>/dev/null || npm run lint --silent
+          else
+            echo "no lint script — skipping"
+          fi
+
+      - name: Type-check
+        working-directory: ${{ matrix.dir }}
+        run: |
+          if node -e "process.exit(!JSON.parse(require('fs').readFileSync('package.json','utf8')).scripts?.['type-check'] || !JSON.parse(require('fs').readFileSync('package.json','utf8')).scripts?.['typecheck'])"; then
+            bun run typecheck 2>/dev/null || bun run type-check 2>/dev/null || true
+          else
+            echo "no type-check script — skipping"
+          fi

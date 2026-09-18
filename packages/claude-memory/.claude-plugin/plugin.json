@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-plugin.json",
+  "name": "claude-memory",
+  "version": "0.1.0",
+  "description": "Persistent memory recall and session capture for Claude Code via LanOnasis. Recalls relevant memories at prompt time, captures session-end summaries, and indexes them before compaction.",
+  "author": {
+    "name": "LanOnasis",
+    "url": "https://github.com/lanonasis"
+  },
+  "license": "MIT",
+  "homepage": "https://github.com/lanonasis/lanonasis-maas/tree/main/packages/claude-memory#readme",
+  "repository": "https://github.com/lanonasis/lanonasis-maas",
+  "keywords": [
+    "memory",
+    "recall",
+    "context",
+    "session-capture",
+    "productivity"
+  ]
+}

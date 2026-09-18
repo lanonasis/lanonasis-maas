@@ -68,6 +68,72 @@ jobs:
           cd cli
           npm publish --access public --provenance
 
+      # -----------------------------------------------------------------
+      # PR-A.3 extension: GitHub Release tarball + GitHub Packages step.
+      # Same provenance/OIDC posture as the CLI publish above; deliver auth
+      # through `--userconfig` per monorepo commit 7ea5351e.
+      # -----------------------------------------------------------------
+      - name: Pack CLI tarball (artifact)
+        working-directory: cli
+        run: |
+          CLI_TGZ="$(npm pack 2>/dev/null | tail -n1)"
+          if [[ -z "$CLI_TGZ" ]] || [[ ! -f "$CLI_TGZ" ]]; then
+            echo "::error::npm pack produced no tarball"
+            exit 1
+          fi
+          echo "CLI_TGZ=$CLI_TGZ" >> "$GITHUB_ENV"
+          echo "CLI_TGZ_SHA=${CLI_TGZ}.sha256" >> "$GITHUB_ENV"
+          (cd "$(dirname "$CLI_TGZ")" && shasum -a 256 "$(basename "$CLI_TGZ")" > "$(basename "$CLI_TGZ").sha256")
+          echo "packed: $CLI_TGZ + sha256"
+
+      - name: Upload CLI tarball as workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: lanonasis-cli-tarball
+          path: cli/${{ env.CLI_TGZ }}
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Publish CLI to GitHub Packages
+        working-directory: cli
+        run: |
+          TMP_NPMRC="$(mktemp)"
+          cat > "$TMP_NPMRC" <<NPMRC
+          //npm.pkg.github.com/:_authToken=${GITHUB_TOKEN}
+          @lanonasis:registry=https://npm.pkg.github.com
+          NPMRC
+          npm publish --registry=https://npm.pkg.github.com --userconfig "$TMP_NPMRC" \
+            || echo "::warning::GitHub Packages publish failed (often requires repo linkage; owner action)"
+          rm -f "$TMP_NPMRC"
+
+      - name: Create GitHub Release with CLI tarball + sha256 (push trigger only)
+        if: github.event_name == 'push' && success()
+        working-directory: cli
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION="$(node -e "console.log(JSON.parse(require('fs').readFileSync('package.json','utf8')).version)")"
+          TAG="cli-v${VERSION}"
+          if gh release view "$TAG" --repo lanonasis/lanonasis-maas >/dev/null 2>&1; then
+            echo "::notice::release $TAG already exists; skipping gh release create"
+            exit 0
+          fi
+          NOTES=$(cat <<NOTES
+          # @lanonasis/cli v${VERSION}
+
+          ## Install
+          \`\`\`sh
+          npm i https://github.com/lanonasis/lanonasis-maas/releases/download/${TAG}/\${{ env.CLI_TGZ }}
+          \`\`\`
+
+          Or via the npm registry: \`npm i -g @lanonasis/cli\`
+          NOTES
+          )
+          gh release create "$TAG" "$CLI_TGZ" "$CLI_TGZ_SHA" \
+            --repo lanonasis/lanonasis-maas \
+            --title "@lanonasis/cli v${VERSION}" \
+            --notes "$NOTES"
+
       - name: Create Release Tag (if manual trigger)
         if: github.event_name == 'workflow_dispatch' && success()
         run: |

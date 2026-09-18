@@ -1,7 +1,26 @@
 import { MemoryClient, createMemoryClient } from '@lanonasis/memory-client';
 import { randomUUID } from 'crypto';
+import { join } from 'path';
+import { homedir } from 'os';
 import chalk from 'chalk';
 import ora from 'ora';
+
+import { LocalMemoryBackend } from '../local-memory/local-backend.js';
+import { MemoryBackendRouter } from '../local-memory/router.js';
+import { MaaSClientAdapter } from '../local-memory/maas-adapter.js';
+import type { MemoryBackend } from '../local-memory/types.js';
+
+/**
+ * Resolve the local-memory root directory. Honors XDG-style layout:
+ *   - $LANONASIS_LOCAL_MEMORY_DIR if set
+ *   - ~/.lanonasis/repl-cli/        default
+ *
+ * Matches the openclaw-plugin convention (~/.lanonasis/...) so the
+ * two stay discoverable in `ls ~/.lanonasis/`.
+ */
+function joinLocalMemoryRoot(): string {
+  return join(homedir(), '.lanonasis', 'repl-cli');
+}
 
 // VortexAI L0 Integration - Universal Work Orchestrator
 import {
@@ -72,6 +91,12 @@ export class NaturalLanguageOrchestrator {
   private aiRouterClient?: AIRouterClient;
   private agentMemoryClient?: AgentMemoryClient;
   private sessionId?: string;
+
+  // Local-first memory hybrid (Phase 1-4 of the hybrid plan).
+  // When set, search/get/save/delete all flow through this router.
+  // Initialized in constructor when LANONASIS_LOCAL_MEMORY !== '0'.
+  private memoryRouter?: MemoryBackendRouter;
+  private localBackend?: LocalMemoryBackend;
 
   private formatError(error: unknown): string {
     if (error instanceof Error && error.message) return error.message;
@@ -149,6 +174,33 @@ export class NaturalLanguageOrchestrator {
       authToken: config.authToken,
       timeout: 30000
     });
+
+    // Initialize local-first memory hybrid. Default ON; can be disabled
+    // by setting LANONASIS_LOCAL_MEMORY=0 (useful for users who want
+    // pure-MaaS behavior, e.g. when debugging the cloud backend itself).
+    if (process.env.LANONASIS_LOCAL_MEMORY !== '0') {
+      try {
+        const rootDir = process.env.LANONASIS_LOCAL_MEMORY_DIR
+          || joinLocalMemoryRoot();
+        this.localBackend = new LocalMemoryBackend({ rootDir });
+        // Note: we don't await init() here — the router will lazy-init
+        // on first use. SQLite open is fast enough that doing it during
+        // REPL construction would block the welcome banner.
+        const remote: MemoryBackend = new MaaSClientAdapter(
+          this.client as unknown as ConstructorParameters<typeof MaaSClientAdapter>[0],
+        );
+        this.memoryRouter = new MemoryBackendRouter(this.localBackend, remote, {
+          remoteTimeoutMs: 800,
+          offlineGracePeriodMs: 30_000,
+          debug: process.env.LANONASIS_LOCAL_MEMORY_DEBUG === '1',
+        });
+      } catch (err) {
+        // Local memory init failure must not break the chat flow.
+        // Fall back to direct MaaS calls, same as before this work.
+        // eslint-disable-next-line no-console
+        console.warn(`[local-memory] init skipped: ${(err as Error).message}`);
+      }
+    }
 
     // Configure L0's memory plugin with the same credentials
     configureMemoryPlugin({
@@ -237,22 +289,33 @@ export class NaturalLanguageOrchestrator {
     }
 
     try {
-      // Search for user preferences and profile information
-      const preferencesSearch = await this.client.searchMemories({
-        query: 'user preferences settings profile configuration style',
-        status: 'active',
-        limit: 5,
-        threshold: 0.6
-      });
+      // Search for user preferences and profile information.
+      // Local-first: hit local SQLite when the router is wired.
+      let prefHits: Array<{ title: string; content: string }> = [];
+      if (this.memoryRouter) {
+        prefHits = (await this.memoryRouter.search(
+          'user preferences settings profile configuration style',
+          { limit: 5 },
+        )).map((h) => ({ title: h.title, content: h.content }));
+      } else {
+        const preferencesSearch = await this.client.searchMemories({
+          query: 'user preferences settings profile configuration style',
+          status: 'active',
+          limit: 5,
+          threshold: 0.6
+        });
+        prefHits = ((preferencesSearch.data?.results ?? []) as unknown as Array<Record<string, unknown>>)
+          .filter((r): r is { title: string; content: string } =>
+            !!(r && typeof r.title === 'string' && typeof r.content === 'string'))
+          .map((r) => ({ title: r.title, content: r.content }));
+      }
 
-      if (preferencesSearch.data?.results && preferencesSearch.data.results.length > 0) {
-        this.cachedUserPreferences = preferencesSearch.data.results
-          .filter((r: any) => r && r.title && r.content)
-          .map((r: any) => {
-            const content = r.content || '';
-            const title = r.title || 'Untitled';
-            return `[${title}]: ${content.substring(0, 200)}`;
-          });
+      if (prefHits.length > 0) {
+        this.cachedUserPreferences = prefHits.map((r) => {
+          const content = r.content || '';
+          const title = r.title || 'Untitled';
+          return `[${title}]: ${content.substring(0, 200)}`;
+        });
 
         // Update the system prompt with user context
         this.updateSystemPromptWithContext();
@@ -299,9 +362,26 @@ export class NaturalLanguageOrchestrator {
   }
 
   /**
-   * Fetch relevant context for a specific query from user's memories
+   * Fetch relevant context for a specific query from user's memories.
+   *
+   * Local-first: when the router is wired, queries hit local SQLite
+   * (sub-millisecond) and merge with MaaS semantic results within
+   * 800ms. Falls back to direct MaaS call when the router is disabled.
    */
   async fetchRelevantContext(query: string, limit: number = 3): Promise<string[]> {
+    if (this.memoryRouter) {
+      try {
+        const hits = await this.memoryRouter.search(query, { limit });
+        return hits.map((h) => {
+          const sourceBadge = h.source === 'maas' ? '☁' : h.source === 'merged' ? '⇄' : '·';
+          const content = h.content || '';
+          const title = h.title || 'Untitled';
+          return `${sourceBadge} ${title}: ${content.substring(0, 150)}${content.length > 150 ? '...' : ''}`;
+        });
+      } catch {
+        // Router failed — fall through to direct MaaS.
+      }
+    }
     try {
       const result = await this.client.searchMemories({
         query,
@@ -323,6 +403,28 @@ export class NaturalLanguageOrchestrator {
       // Silently fail - context fetching is optional
     }
     return [];
+  }
+
+  /**
+   * Expose the local-first memory router so ReplEngine can attach it
+   * to the CommandContext (MemoryCommands reads/writes through it).
+   * Returns undefined when local memory is disabled.
+   */
+  getMemoryRouter(): MemoryBackendRouter | undefined {
+    return this.memoryRouter;
+  }
+
+  /**
+   * Triggered on REPL shutdown — drain the sync queue best-effort and
+   * close the local SQLite handle. Safe to call when local memory is
+   * disabled.
+   */
+  async closeMemory(): Promise<void> {
+    if (this.localBackend) {
+      try {
+        await this.localBackend.close();
+      } catch { /* best effort */ }
+    }
   }
 
   private buildSystemPrompt(userContext?: OrchestratorConfig['userContext']): string {

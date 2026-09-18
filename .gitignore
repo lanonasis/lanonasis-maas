@@ -140,3 +140,18 @@ __pycache__/
 *.pyc
 *.egg-info/
 .pytest_cache/
+
+# PR-A.0 noise that was deleted in this PR's first commit.
+# Re-adding any of these to the repo will now fail loudly.
+taskplane.yaml     # agent scratch; was tracked on main, now removed.
+.archive/          # empty after deletion in this PR.
+.mcp.json          # replaced by .mcp.json.example (committed).
+
+# PR-A.1 noise that was deleted in this PR.
+# Re-adding any of these to the repo will now fail loudly.
+.claude/             # agent-scratch: kfc specs + base skill; was tracked, now removed.
+.kiro/               # agent-scratch: dev spec trees; was tracked, now removed.
+.pi/                 # agent-scratch: taskplane agents + flow; was tracked, now removed.
+.devops/             # internal integration notes; was tracked, now removed.
+.testsprite/         # agent-scratch config; was tracked, now removed.
+testsprite_tests/    # generated test scaffolding with hard-coded creds; was tracked, now removed.

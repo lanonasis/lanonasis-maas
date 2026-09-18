@@ -2,6 +2,13 @@
 
 All notable changes to @lanonasis/repl-cli will be documented in this file.
 
+## [Unreleased]
+
+### Changed
+- **Metadata normalization (PR-A.2).** Homepage re-pointed at the canonical
+  `tree/main/packages/repl-cli#readme` URL (was `docs.lanonasis.com/cli/repl`).
+  Repository, bugs, engines, keywords, and files allowlist already canonical.
+
 ## [1.1.0] - 2026-08-18
 
 ### Added

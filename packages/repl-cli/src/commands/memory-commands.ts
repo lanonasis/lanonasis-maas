@@ -77,10 +77,20 @@ export class MemoryCommands {
       this.client = createMemoryClient({
         apiUrl: context.config.apiUrl,
         authToken: context.config.authToken,
-        timeout: 30000
+        timeout: 30000,
       });
     }
     return this.client;
+  }
+
+  /**
+   * Return the local-first router if wired into context, otherwise null.
+   * Callers that receive null fall through to the direct MaaS client —
+   * this preserves backward compatibility with users who set
+   * LANONASIS_LOCAL_MEMORY=0.
+   */
+  private getRouter(context: CommandContext) {
+    return context.memoryRouter ?? null;
   }
   
   async create(args: string[], context: CommandContext) {
@@ -286,6 +296,29 @@ export class MemoryCommands {
     pauseReadline();
     const spinner = ora('Searching...').start();
     try {
+      const router = this.getRouter(context);
+      if (router) {
+        // Local-first search via the router (SQLite → MaaS → merge).
+        const hits = await router.search(query, {
+          limit: 20,
+          type: memoryTypeFilter,
+        });
+        if (hits.length === 0) {
+          spinner.succeed(chalk.gray('No results found'));
+        } else {
+          spinner.succeed(chalk.green(`Found ${hits.length} result(s)`));
+          hits.forEach((h, i) => {
+            const sourceBadge = h.source === 'maas' ? chalk.gray('[remote]')
+              : h.source === 'merged' ? chalk.cyan('[merged]')
+              : chalk.green('[local]');
+            console.log(sourceBadge + chalk.cyan(`[${i + 1}] ${h.title}`));
+            console.log(chalk.gray(`    ${h.content.substring(0, 80)}...`));
+          });
+        }
+        context.lastResult = hits;
+        return;
+      }
+
       const client = this.getClient(context);
       const result = await client.searchMemories({
         query,
@@ -324,6 +357,24 @@ export class MemoryCommands {
     pauseReadline();
     const spinner = ora('Fetching memories...').start();
     try {
+      const router = this.getRouter(context);
+      if (router) {
+        const items = await router.list({ limit });
+        if (items.length > 0) {
+          spinner.succeed(chalk.green(`Showing ${items.length} memories`));
+          items.forEach((r, i) => {
+            const sourceBadge = r.source === 'maas-sync' ? chalk.gray('[remote]')
+              : r.source === 'import' ? chalk.yellow('[import]')
+              : chalk.green('[local]');
+            console.log(sourceBadge + chalk.cyan(`[${i + 1}] ${r.title} (${r.id})`));
+          });
+        } else {
+          spinner.succeed(chalk.gray('No memories found'));
+        }
+        context.lastResult = items;
+        return;
+      }
+
       const client = this.getClient(context);
       const result = await client.listMemories({ limit });
 
@@ -393,6 +444,14 @@ export class MemoryCommands {
     pauseReadline();
     const spinner = ora('Deleting memory...').start();
     try {
+      const router = this.getRouter(context);
+      if (router) {
+        await router.delete(id);
+        spinner.succeed(chalk.green('Memory deleted'));
+        context.lastResult = { deleted: id };
+        return;
+      }
+
       const client = this.getClient(context);
       const result = await client.deleteMemory(id);
       if (result.error) {

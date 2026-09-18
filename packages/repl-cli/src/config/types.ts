@@ -69,4 +69,13 @@ export interface CommandContext {
   aliases: Map<string, string>;
   readline?: ReadLine | null; // For spinner coordination
   config: ReplConfig;
+  /**
+   * Local-first memory backend router. When set, MemoryCommands routes
+   * reads and writes through this router (local SQLite → MaaS). When
+   * unset, commands fall back to the direct MaaS client for backward
+   * compatibility.
+   *
+   * Wired by ReplEngine when LANONASIS_LOCAL_MEMORY != '0' (default ON).
+   */
+  memoryRouter?: import('../local-memory/index.js').MemoryBackendRouter;
 }

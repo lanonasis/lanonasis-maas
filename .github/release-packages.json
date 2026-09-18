@@ -1,0 +1,16 @@
+{
+  "packages": [
+    { "name": "@lanonasis/repl-cli",            "dir": "packages/repl-cli",                "tag": "repl-cli",            "npm": true,  "github": true },
+    { "name": "@lanonasis/memory-client",       "dir": "packages/memory-client",           "tag": "memory-client",       "npm": false, "github": true },
+    { "name": "@lanonasis/memory-sdk-standalone","dir": "packages/memory-sdk",             "tag": "memory-sdk",          "npm": true,  "github": true },
+    { "name": "@lanonasis/recall-forge",        "dir": "packages/recall-forge",            "tag": "recall-forge",        "npm": true,  "github": true },
+    { "name": "@lanonasis/sdk",                 "dir": "packages/lanonasis-sdk",           "tag": "sdk",                 "npm": false, "github": true },
+    { "name": "@lanonasis/claude-memory",       "dir": "packages/claude-memory",           "tag": "claude-memory",       "npm": false, "github": true },
+    { "name": "@lanonasis/pi-lanonasis-memory", "dir": "packages/pi-lanonasis-memory",     "tag": "pi-lanonasis-memory", "npm": false, "github": true }
+  ],
+  "python": [
+    { "name": "hermes-lanonasis-memory",         "dir": "packages/hermes-lanonasis-memory",         "tag": "hermes-lanonasis-memory" },
+    { "name": "hermes-lanonasis-context-engine", "dir": "packages/hermes-lanonasis-context-engine", "tag": "hermes-lanonasis-context-engine" },
+    { "name": "hermes-lanonasis-secret-source",  "dir": "packages/hermes-lanonasis-secret-source",  "tag": "hermes-lanonasis-secret-source" }
+  ]
+}

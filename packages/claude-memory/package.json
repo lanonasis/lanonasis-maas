@@ -20,6 +20,9 @@
   "bin": {
     "claude-memory": "./dist/cli.js"
   },
+  "engines": {
+    "node": ">=18"
+  },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit --skipLibCheck",
@@ -60,13 +63,19 @@
     "spool.ts",
     "config.ts",
     "client.ts",
-    "index.ts"
+    "index.ts",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
   ],
   "keywords": [
     "claude-code",
     "memory",
     "lanonasis",
     "semantic-search",
-    "agent-memory"
+    "agent-memory",
+    "mcp",
+    "hooks",
+    "productivity"
   ]
 }

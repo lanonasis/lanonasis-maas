@@ -14,7 +14,7 @@
     "knowledge-management",
     "enterprise"
   ],
-  "homepage": "https://docs.lanonasis.com",
+  "homepage": "https://github.com/lanonasis/lanonasis-maas/tree/main/cli#readme",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/lanonasis/lanonasis-maas.git",
@@ -27,6 +27,9 @@
   "license": "MIT",
   "private": false,
   "type": "module",
+  "engines": {
+    "node": ">=18"
+  },
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "bin": {
