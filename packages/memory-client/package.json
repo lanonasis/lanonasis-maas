@@ -97,14 +97,15 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/lanonasis/memory-client.git"
+    "url": "git+https://github.com/lanonasis/lanonasis-maas.git",
+    "directory": "packages/memory-client"
   },
-  "homepage": "https://docs.lanonasis.com/sdk",
+  "homepage": "https://github.com/lanonasis/lanonasis-maas/tree/main/packages/memory-client#readme",
   "bugs": {
-    "url": "https://github.com/lanonasis/memory-client/issues"
+    "url": "https://github.com/lanonasis/lanonasis-maas/issues"
   },
   "engines": {
-    "node": ">=16.0.0"
+    "node": ">=18"
   },
   "dependencies": {
     "zod": "^4.1.12"

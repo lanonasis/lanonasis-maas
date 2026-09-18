@@ -27,7 +27,9 @@
     "maas",
     "context",
     "semantic-search",
-    "vector-database"
+    "vector-database",
+    "mcp",
+    "multi-agent"
   ],
   "author": "Lanonasis (Seye Derick)",
   "license": "MIT",
@@ -50,19 +52,24 @@
   },
   "files": [
     "dist",
-    "README.md"
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
   ],
+  "engines": {
+    "node": ">=18"
+  },
   "publishConfig": {
     "access": "public",
     "registry": "https://registry.npmjs.org/"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/thefixer3x/lan-onasis-monorepo",
-    "directory": "apps/lanonasis-maas/packages/memory-sdk"
+    "url": "git+https://github.com/lanonasis/lanonasis-maas.git",
+    "directory": "packages/memory-sdk"
   },
-  "homepage": "https://docs.lanonasis.com/sdk",
+  "homepage": "https://github.com/lanonasis/lanonasis-maas/tree/main/packages/memory-sdk#readme",
   "bugs": {
-    "url": "https://github.com/thefixer3x/lan-onasis-monorepo/issues"
+    "url": "https://github.com/lanonasis/lanonasis-maas/issues"
   }
 }

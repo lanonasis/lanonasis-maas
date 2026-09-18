@@ -52,7 +52,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/thefixer3x/lan-onasis-monorepo.git",
+    "url": "git+https://github.com/lanonasis/lanonasis-maas.git",
     "directory": "packages/recall-forge"
   },
   "homepage": "https://github.com/lanonasis/lanonasis-maas/tree/main/packages/recall-forge#readme",

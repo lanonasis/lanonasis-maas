@@ -19,7 +19,7 @@
   "files": [
     "dist/",
     "README.md",
-    "package.json",
+    "LICENSE",
     "CHANGELOG.md"
   ],
   "keywords": [
@@ -39,9 +39,10 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/lanonasis/lanonasis-maas"
+    "url": "git+https://github.com/lanonasis/lanonasis-maas.git",
+    "directory": "packages/lanonasis-sdk"
   },
-  "homepage": "https://lanonasis.com",
+  "homepage": "https://github.com/lanonasis/lanonasis-maas/tree/main/packages/lanonasis-sdk#readme",
   "bugs": {
     "url": "https://github.com/lanonasis/lanonasis-maas/issues"
   },
@@ -72,7 +73,7 @@
     "typescript": "^5.7.2"
   },
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=18"
   },
   "exports": {
     ".": {
