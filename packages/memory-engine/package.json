@@ -1,0 +1,6 @@
+{
+  "name": "@lanonasis/memory-engine",
+  "version": "0.0.0-internal",
+  "private": true,
+  "description": "Internal memory engine helper — not published. See IDE-EXTENSIONS/ for the published editor integrations."
+}
