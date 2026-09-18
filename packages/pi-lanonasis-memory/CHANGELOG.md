@@ -5,6 +5,16 @@ All notable changes to `@lanonasis/pi-lanonasis-memory` are documented in this f
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [Unreleased] — PR-A.2 metadata normalization
+
+### Changed
+- **Repository URL canonicalised.** `repository.url` now uses
+  `git+https://github.com/lanonasis/lanonasis-maas.git` with the `.git`
+  suffix and `git+` prefix (was `https://github.com/lanonasis/lanonasis-maas.git`
+  without the `git+` prefix). Directory, homepage, bugs already canonical.
+- `engines.node` normalised to `>=18` (was `>=18.0.0`).
+- Keywords expanded (`semantic-search`, `mcp`).
+
 ## [Unreleased] — Phase 3 (SQLite FTS5 store)
 
 ### Added
