@@ -80,6 +80,9 @@ config.local.json
 **/*key*
 **/*token*
 **/*password*
+# lanonasis-sdk's api-keys client is source code, not a key file
+!packages/lanonasis-sdk/src/api-keys/
+!packages/lanonasis-sdk/src/api-keys/**
 .cache_ggshield
 *.backup
 

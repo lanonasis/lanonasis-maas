@@ -26,6 +26,14 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  metadata:
+    name: Package metadata points at lanonasis-maas
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - run: node scripts/check-package-metadata.mjs
+
   build:
     name: ${{ matrix.label }}
     runs-on: ubuntu-latest
@@ -58,26 +66,46 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Detect scripts
+        id: pkg
+        working-directory: ${{ matrix.dir }}
+        run: |
+          node -e '
+            const p = require("./package.json");
+            const s = p.scripts || {};
+            const out = [
+              `private=${p.private ? "true" : "false"}`,
+              `build=${s.build ? "true" : "false"}`,
+              `test=${s.test ? "true" : "false"}`,
+              `lint=${s.lint ? "true" : "false"}`,
+              `typecheck=${s.typecheck ? "typecheck" : s["type-check"] ? "type-check" : ""}`,
+            ];
+            require("fs").appendFileSync(process.env.GITHUB_OUTPUT, out.join("\n") + "\n");
+          '
+          if [ "$(node -p 'require("./package.json").private === true')" = "true" ]; then
+            echo "::notice::${{ matrix.label }} is private; skipping CI matrix entry"
+          fi
+
       - name: Setup Bun
+        if: steps.pkg.outputs.private != 'true'
         uses: oven-sh/setup-bun@v2
         with:
-          bun-version: latest
+          bun-version: 1.4.2
 
       - name: Setup Node.js
+        if: steps.pkg.outputs.private != 'true'
         uses: actions/setup-node@v4
         with:
           node-version: '20'
 
-      - name: Skip private packages
-        working-directory: ${{ matrix.dir }}
-        run: |
-          PRIVATE="$(node -e "try { console.log(JSON.parse(require('fs').readFileSync('package.json','utf8')).private ? 'yes' : 'no') } catch(e) { console.log('no') }")"
-          if [[ "$PRIVATE" == "yes" ]]; then
-            echo "::notice::${{ matrix.label }} is private; skipping CI matrix entry"
-            exit 0
-          fi
+      # Some packages resolve types from the root node_modules (e.g. repl-cli's
+      # typeRoots: ../../node_modules/@types), so install the root first.
+      - name: Install root deps
+        if: steps.pkg.outputs.private != 'true'
+        run: bun install --frozen-lockfile
 
       - name: Install
+        if: steps.pkg.outputs.private != 'true'
         working-directory: ${{ matrix.dir }}
         run: |
           if [ -f bun.lock ] || [ -f bun.lockb ]; then
@@ -87,37 +115,21 @@ jobs:
           fi
 
       - name: Build
+        if: steps.pkg.outputs.private != 'true' && steps.pkg.outputs.build == 'true'
         working-directory: ${{ matrix.dir }}
-        run: |
-          if node -e "process.exit(!JSON.parse(require('fs').readFileSync('package.json','utf8')).scripts?.build)"; then
-            bun run build 2>/dev/null || npm run build
-          else
-            echo "no build script — skipping"
-          fi
-
-      - name: Test
-        working-directory: ${{ matrix.dir }}
-        run: |
-          if node -e "process.exit(!JSON.parse(require('fs').readFileSync('package.json','utf8')).scripts?.test)"; then
-            bun test 2>/dev/null || npm test --silent
-          else
-            echo "no test script — skipping"
-          fi
-
-      - name: Lint
-        working-directory: ${{ matrix.dir }}
-        run: |
-          if node -e "process.exit(!JSON.parse(require('fs').readFileSync('package.json','utf8')).scripts?.lint)"; then
-            bun run lint 2>/dev/null || npm run lint --silent
-          else
-            echo "no lint script — skipping"
-          fi
+        run: bun run build
 
       - name: Type-check
+        if: steps.pkg.outputs.private != 'true' && steps.pkg.outputs.typecheck != ''
         working-directory: ${{ matrix.dir }}
-        run: |
-          if node -e "process.exit(!JSON.parse(require('fs').readFileSync('package.json','utf8')).scripts?.['type-check'] || !JSON.parse(require('fs').readFileSync('package.json','utf8')).scripts?.['typecheck'])"; then
-            bun run typecheck 2>/dev/null || bun run type-check 2>/dev/null || true
-          else
-            echo "no type-check script — skipping"
-          fi
+        run: bun run ${{ steps.pkg.outputs.typecheck }}
+
+      - name: Lint
+        if: steps.pkg.outputs.private != 'true' && steps.pkg.outputs.lint == 'true'
+        working-directory: ${{ matrix.dir }}
+        run: bun run lint
+
+      - name: Test
+        if: steps.pkg.outputs.private != 'true' && steps.pkg.outputs.test == 'true'
+        working-directory: ${{ matrix.dir }}
+        run: bun run test

@@ -7,7 +7,8 @@
   "icon": "images/icon.png",
   "repository": {
     "type": "git",
-    "url": "https://github.com/lanonasis/lanonasis-maas"
+    "url": "git+https://github.com/lanonasis/lanonasis-maas.git",
+    "directory": "IDE-EXTENSIONS/windsurf-extension"
   },
   "engines": {
     "vscode": "^1.89.0"
@@ -401,5 +402,9 @@
     "keytar": "^7.9.0"
   },
   "author": "Lanonasis Team",
-  "license": "MIT"
+  "license": "MIT",
+  "homepage": "https://github.com/lanonasis/lanonasis-maas/tree/main/IDE-EXTENSIONS/windsurf-extension#readme",
+  "bugs": {
+    "url": "https://github.com/lanonasis/lanonasis-maas/issues"
+  }
 }
