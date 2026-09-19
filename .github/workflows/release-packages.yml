@@ -74,12 +74,14 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           registry-url: 'https://registry.npmjs.org'
 
-      # npm trusted publishing (OIDC) needs npm >= 11.5.1; Node 20 ships npm 10.
-      - name: Update npm to latest version
-        run: npm install -g npm@latest
+      # OIDC trusted publishing needs npm >= 11.5.1. Pin to 11: npm 12 (now
+      # "latest") requires Node >= 22.22.2 and blocks dependency lifecycle
+      # scripts by default.
+      - name: Install npm 11
+        run: npm install -g npm@^11.5.1
 
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -177,7 +179,7 @@ jobs:
             fi
 
             local NOTES
-            NOTES="$(printf '# %s v%s\n\n## Install\n\n```sh\nnpm i %s\n```\n\nStraight from this release (no auth):\n\n```sh\nnpm i https://github.com/lanonasis/lanonasis-maas/releases/download/%s/%s\n```\n' \
+            NOTES="$(printf '# %s v%s\n\n## Install\n\n```sh\nnpm i %s\n```\n\nStraight from this release (no auth; npm 12+ needs --allow-remote=root):\n\n```sh\nnpm i --allow-remote=root https://github.com/lanonasis/lanonasis-maas/releases/download/%s/%s\n```\n' \
               "$NAME" "$VERSION" "$NAME" "$FULL_TAG" "$TGZ")"
             gh release create "$FULL_TAG" "$TGZ" "${TGZ}.sha256" \
               --repo lanonasis/lanonasis-maas \
