@@ -9,7 +9,8 @@
 # - Pure bash, no external dependencies beyond npm + gh.
 # - Uses `npm pack <name>@<version>` (NO rebuild) so the tarball is byte-for-byte
 #   what the registry ships.
-# - Marks only the newest version per package as "Latest" on GitHub.
+# - Never marks a backfilled release as "Latest": GitHub keeps one Latest per
+#   repo, and that belongs to the CLI (publish-cli-trusted.yml).
 # - Does NOT publish to npm or delete existing tags. It only attaches tarballs
 #   to GitHub Releases (Guardrail 3).
 #
@@ -132,7 +133,7 @@ while IFS=$'\t' read -r NAME TAG; do
 
     if [[ "$DRY_RUN" -eq 1 ]]; then
       if [[ -n "$IS_LATEST" ]]; then
-        printf '%s\t%s\t%s\tPLAN\tnpm pack %s@%s → gh release create %s (mark Latest)\n' "$NAME" "${TAG}" "$VERSION" "$NAME" "$VERSION" "$FULL_TAG"
+        printf '%s\t%s\t%s\tPLAN\tnpm pack %s@%s → gh release create %s (newest)\n' "$NAME" "${TAG}" "$VERSION" "$NAME" "$VERSION" "$FULL_TAG"
       else
         printf '%s\t%s\t%s\tPLAN\tnpm pack %s@%s → gh release create %s\n' "$NAME" "${TAG}" "$VERSION" "$NAME" "$VERSION" "$FULL_TAG"
       fi
@@ -162,7 +163,7 @@ Source:  npm registry ($(npm view "$NAME@$VERSION" _id --registry=https://regist
 npm i https://github.com/${REMOTE%%/*}/${REMOTE#*/}/releases/download/${FULL_TAG}/$(basename "$TGZ")
 \`\`\`
 "
-    if gh release create "$FULL_TAG" "$TGZ" "$SHA_FILE" --title "$FULL_TAG" --notes "$NOTES" $([[ -n "$IS_LATEST" ]] && echo "--latest") >/dev/null; then
+    if gh release create "$FULL_TAG" "$TGZ" "$SHA_FILE" --title "$FULL_TAG" --notes "$NOTES" --latest=false >/dev/null; then
       printf '%s\t%s\t%s\tDONE\tcreated release %s\n' "$NAME" "${TAG}" "$VERSION" "$FULL_TAG"
       DONE=$((DONE + 1))
     else
