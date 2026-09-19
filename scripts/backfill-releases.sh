@@ -129,7 +129,11 @@ while IFS=$'\t' read -r NAME TAG DIR; do
     # Legacy releases used bare `v<version>` tags (v3.10.0 = CLI, v1.0.0 =
     # memory-client); don't duplicate them. Match on the release title.
     LEGACY_TITLE="$(gh release view "v${VERSION}" --repo "$GH_REPO" --json name -q .name 2>/dev/null || true)"
-    if [[ -n "$LEGACY_TITLE" ]] && grep -qiE "(^|[^a-z-])${TAG}([^a-z-]|$)" <<< "$LEGACY_TITLE"; then
+    # Legacy CLI releases don't always say "CLI" in the title (v3.9.4 -
+    # "Authentication & UX Fixes"); any bare v<version> not naming another
+    # package is the CLI's.
+    if [[ -n "$LEGACY_TITLE" ]] && { grep -qiE "(^|[^a-z-])${TAG}([^a-z-]|$)" <<< "$LEGACY_TITLE" \
+        || { [[ "$TAG" == "cli" ]] && ! grep -qiE "memory-client|memory-sdk|repl-cli|recall-forge" <<< "$LEGACY_TITLE"; }; }; then
       printf '%s\t%s\tSKIP\tlegacy release v%s exists\n' "$NAME" "$VERSION" "$VERSION"
       SKIP=$((SKIP + 1))
       continue
@@ -172,7 +176,7 @@ while IFS=$'\t' read -r NAME TAG DIR; do
     TARGET_ARGS=(--target "$TARGET")
     [[ "$TAG_EXISTS" -eq 1 ]] && TARGET_ARGS=()
     if gh release create "$FULL_TAG" "$TGZ" "${TGZ}.sha256" \
-        --repo "$GH_REPO" "${TARGET_ARGS[@]}" \
+        --repo "$GH_REPO" ${TARGET_ARGS[@]+"${TARGET_ARGS[@]}"} \
         --title "${NAME} v${VERSION}" --notes "$NOTES" "$LATEST_FLAG" >/dev/null; then
       printf '%s\t%s\tDONE\tcreated %s\n' "$NAME" "$VERSION" "$FULL_TAG"
       DONE=$((DONE + 1))
