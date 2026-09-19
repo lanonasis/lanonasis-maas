@@ -26,6 +26,14 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  metadata:
+    name: Package metadata points at lanonasis-maas
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - run: node scripts/check-package-metadata.mjs
+
   build:
     name: ${{ matrix.label }}
     runs-on: ubuntu-latest

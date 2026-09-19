@@ -13,6 +13,12 @@ dependencies = [
   "pydantic>=2.0.0",
 ]
 
+[project.urls]
+Homepage = "https://github.com/lanonasis/lanonasis-maas/tree/main/packages/hermes-lanonasis-memory#readme"
+Repository = "https://github.com/lanonasis/lanonasis-maas"
+Source = "https://github.com/lanonasis/lanonasis-maas/tree/main/packages/hermes-lanonasis-memory"
+Issues = "https://github.com/lanonasis/lanonasis-maas/issues"
+
 [project.optional-dependencies]
 test = [
   "pytest>=8.0.0",

@@ -40,5 +40,14 @@
   },
   "peerDependencies": {
     "@lanonasis/memory-client": "^1.0.0 || ^2.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lanonasis/lanonasis-maas.git",
+    "directory": "packages/ide-extension-core"
+  },
+  "homepage": "https://github.com/lanonasis/lanonasis-maas/tree/main/packages/ide-extension-core#readme",
+  "bugs": {
+    "url": "https://github.com/lanonasis/lanonasis-maas/issues"
   }
 }
