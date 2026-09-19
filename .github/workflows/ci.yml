@@ -82,7 +82,7 @@ jobs:
         if: steps.pkg.outputs.private != 'true'
         uses: oven-sh/setup-bun@v2
         with:
-          bun-version: latest
+          bun-version: 1.4.2
 
       - name: Setup Node.js
         if: steps.pkg.outputs.private != 'true'
