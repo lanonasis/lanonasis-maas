@@ -15,7 +15,8 @@ on:
 
 permissions:
   id-token: write  # Required for OIDC
-  contents: read
+  contents: write  # gh release create
+  packages: write  # GitHub Packages publish
 
 jobs:
   publish-cli:
@@ -96,6 +97,8 @@ jobs:
 
       - name: Publish CLI to GitHub Packages
         working-directory: cli
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           TMP_NPMRC="$(mktemp)"
           cat > "$TMP_NPMRC" <<NPMRC
@@ -123,7 +126,7 @@ jobs:
 
           ## Install
           \`\`\`sh
-          npm i https://github.com/lanonasis/lanonasis-maas/releases/download/${TAG}/\${{ env.CLI_TGZ }}
+          npm i https://github.com/lanonasis/lanonasis-maas/releases/download/${TAG}/${CLI_TGZ}
           \`\`\`
 
           Or via the npm registry: \`npm i -g @lanonasis/cli\`
