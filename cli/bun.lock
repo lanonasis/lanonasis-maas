@@ -41,7 +41,7 @@
         "typescript": "^6.0.2",
       },
       "optionalDependencies": {
-        "@lanonasis/repl-cli": "^1.0.1",
+        "@lanonasis/repl-cli": "^1.1.0",
       },
     },
   },
@@ -234,7 +234,7 @@
 
     "@lanonasis/privacy-sdk": ["@lanonasis/privacy-sdk@1.0.1", "", { "peerDependencies": { "typescript": ">=5.0.0" }, "optionalPeers": ["typescript"] }, "sha512-q6A4KKBTOLSQM3uAYO38Tcrc79luJl9LTsFGWuCu+3l44pnRp9K1YuxWw4VYq2DaXXFETd3/JPDE/6IB9Cg3rg=="],
 
-    "@lanonasis/repl-cli": ["@lanonasis/repl-cli@1.0.1", "", { "dependencies": { "@lanonasis/memory-client": "^2.2.0", "@lanonasis/oauth-client": "^2.0.0", "@modelcontextprotocol/sdk": "^1.27.1", "chalk": "^5.6.2", "commander": "^14.0.3", "dotenv": "^17.3.1", "ink": "^6.8.0", "inquirer": "^13.3.2", "open": "^11.0.0", "ora": "^9.3.0", "react": "^19.2.4", "react-dom": "^19.2.4", "uuid": "^13.0.0", "vortexai-l0": "^1.2.2", "zod": "^4.3.6" }, "bin": { "onasis-repl": "dist/index.js", "lrepl": "dist/index.js" } }, "sha512-lWk00F7jmmHuJhROX6vINzePK87VKqIEdLXIBwtI0Z/UmM90lAK0U0sR1PW8y44qAqcuEB3z6HL7B4FrS+0xaA=="],
+    "@lanonasis/repl-cli": ["@lanonasis/repl-cli@1.1.0", "", { "dependencies": { "@lanonasis/memory-client": "^2.2.0", "@lanonasis/oauth-client": "^2.0.0", "@modelcontextprotocol/sdk": "^1.27.1", "chalk": "^5.6.2", "commander": "^14.0.3", "dotenv": "^17.3.1", "ink": "^6.8.0", "inquirer": "^13.3.2", "open": "^11.0.0", "ora": "^9.3.0", "react": "^19.2.4", "react-dom": "^19.2.4", "uuid": "^13.0.0", "vortexai-l0": "^1.2.2", "zod": "^4.3.6" }, "bin": { "onasis-repl": "dist/index.js", "lrepl": "dist/index.js" } }, "sha512-lDzEBYnzoXNkEDsu31QG6XkjFihCtJQkzKmXdueUgIDjEY+P8nHH+SDl5BDigKLM6Q6qZ3b0ed7sM9DFr0YQIw=="],
 
     "@lanonasis/secret-prescan": ["@lanonasis/secret-prescan@0.1.0", "", { "peerDependencies": { "@lanonasis/privacy-sdk": ">=1.0.0" } }, "sha512-6gl4W2GjkkkuZr1l+SKdSlnSPbPIsGWmF+sdRKyT7d0xs9y+HwZMpfgS3hTXHVcDtj9l+N50dF0/3A/AzLLJeA=="],
 
