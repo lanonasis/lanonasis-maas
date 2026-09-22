@@ -80,6 +80,11 @@ class TestIsAvailable:
 class TestToolCallDispatch:
     def test_memory_search_returns_json_string(self, provider):
         provider._client.post.return_value.json.return_value = {"memories": []}
+        # Clear local store so we can assert remote-only results are empty.
+        if provider._local_store is not None:
+            provider._local_store._conn.execute("DELETE FROM memories")
+            provider._local_store._conn.execute("DELETE FROM memories_fts")
+            provider._local_store._conn.commit()
         result = provider.handle_tool_call(
             "memory_search", {"query": "test", "limit": 5}
         )
@@ -100,10 +105,23 @@ class TestToolCallDispatch:
         result = provider.handle_tool_call("memory_store", {
             "title": "Test", "content": "Test content", "memory_type": "context",
         })
-        call_args = provider._client.post.call_args
-        assert "/api/v1/memories" in str(call_args)
+        # Local-first: local write always succeeds; remote sync is fire-and-forget.
+        # The client.post may or may not have been called (it runs in bg).
         data = json.loads(result)
-        assert data["id"] == "mem-123"
+        assert data["stored"] is True
+        assert data["local"] is True
+
+    def test_memory_store_falls_back_to_local_when_remote_fails(self, provider):
+        """When remote is down, local write still succeeds."""
+        provider._config.tool_policy = "write"
+        provider._client.post.side_effect = Exception("API down")
+        result = provider.handle_tool_call("memory_store", {
+            "title": "Test", "content": "Test content", "memory_type": "context",
+        })
+        data = json.loads(result)
+        assert data["stored"] is True
+        assert data["local"] is True
+        assert data["remote_synced"] is False
 
     def test_memory_get_calls_get_memories_id(self, provider):
         mem_id = "11111111-2222-3333-4444-555555555555"
@@ -168,12 +186,24 @@ class TestSyncTurnNonBlocking:
             f"sync_turn took {elapsed_ms:.1f}ms — must be < 50ms (non-blocking)"
         )
 
-    def test_sync_turn_writes_to_fallback_when_api_fails(self, provider):
-        provider._client.post.side_effect = Exception("connection refused")
+    def test_sync_turn_filters_short_turns(self, provider):
+        """Short chatty turns like 'user says hello' are classified as no-signal and skipped."""
+        provider._client.post.return_value.json.return_value = {"id": "mem-1"}
         provider.sync_turn(user_content="user says hello", assistant_content="assistant responds")
-        # Drain so the worker completes before assertion.
         provider.shutdown()
-        assert provider._fallback.write.called
+        # Both are short → classified as no-signal → zero API calls.
+        assert provider._client.post.call_count == 0
+
+    def test_sync_turn_stores_when_signal_present(self, provider):
+        """Turns with 'remember' signals are stored."""
+        provider._client.post.return_value.json.return_value = {"id": "mem-1"}
+        provider.sync_turn(
+            user_content="Remember that the API key is abc123",
+            assistant_content="I've noted that.",
+        )
+        provider.shutdown()
+        # At least the user content matches a store signal.
+        assert provider._client.post.call_count >= 1
 
     def test_sync_turn_accepts_kw_only_session_id_and_messages(self, provider):
         """Per the contract: ``sync_turn(user, assistant, *, session_id=\"\", messages=None)``."""
@@ -263,7 +293,7 @@ class TestOutboundPrivacy:
         provider.handle_tool_call(
             "memory_store",
             {
-                "title": "Contact",
+                "title": "Contact Credentials",
                 "content": (
                     "Email person@example.com; "
                     "api_key=supersecretapikey12345678"
@@ -271,11 +301,15 @@ class TestOutboundPrivacy:
                 "memory_type": "context",
             },
         )
-
-        payload = provider._client.post.call_args.kwargs["json"]
-        assert "person@example.com" in payload["content"]
-        assert "supersecretapikey12345678" not in payload["content"]
-        assert "[REDACTED:credential]" in payload["content"]
+        # Local-first: credentials are redacted before local write.
+        assert provider._local_store is not None
+        records = provider._local_store.list_memories(limit=10)
+        # Filter to the record we just stored (title-based).
+        target = [r for r in records if r.title == "Contact Credentials"]
+        assert len(target) == 1, f"Expected 1 'Contact Credentials' record, found {len(target)}: {[r.title for r in records]}"
+        r = target[0]
+        assert "supersecretapikey12345678" not in r.content, "Credential not redacted"
+        assert "[REDACTED:credential]" in r.content, f"Expected [REDACTED:credential], got: {r.content[:200]}"
 
     def test_privacy_mode_masks_pii_before_store(self, provider):
         from hermes_lanonasis_memory.security import PrivacyConfig, PrivacyGuard
@@ -285,15 +319,19 @@ class TestOutboundPrivacy:
         provider.handle_tool_call(
             "memory_store",
             {
-                "title": "Contact",
+                "title": "Contact PII Mask",
                 "content": "Email person@example.com",
                 "memory_type": "context",
             },
         )
-
-        payload = provider._client.post.call_args.kwargs["json"]
-        assert "person@example.com" not in payload["content"]
-        assert "[REDACTED:pii]" in payload["content"]
+        # Local-first: verify PII was masked in local store.
+        assert provider._local_store is not None
+        records = provider._local_store.list_memories(limit=10)
+        target = [r for r in records if r.title == "Contact PII Mask"]
+        assert len(target) == 1, f"Expected 1 'Contact PII Mask' record, found {len(target)}: {[r.title for r in records]}"
+        r = target[0]
+        assert "person@example.com" not in r.content, f"PII not masked: {r.content[:200]}"
+        assert "[REDACTED:pii]" in r.content, f"Expected [REDACTED:pii], got: {r.content[:200]}"
 
 
 # ---------------------------------------------------------------------------
@@ -482,11 +520,11 @@ class TestReadPathHardening:
     def test_tool_search_returns_empty_on_outage_no_raise(self, provider):
         provider._client.post.side_effect = Exception("connection refused")
         result = provider.handle_tool_call("memory_search", {"query": "x", "limit": 5})
-        # Returns a JSON string, not a dict.
         assert isinstance(result, str)
         data = json.loads(result)
         assert data["memories"] == []
-        assert "_error" in data
+        # Local-first: even on remote outage, _searched_tiers shows we tried local.
+        assert "_searched_tiers" in data
 
     def test_tool_get_returns_empty_object_on_outage_no_raise(self, provider):
         mem_id = "11111111-2222-3333-4444-555555555555"
