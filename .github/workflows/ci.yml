@@ -96,7 +96,7 @@ jobs:
         if: steps.pkg.outputs.private != 'true'
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
 
       # Some packages resolve types from the root node_modules (e.g. repl-cli's
       # typeRoots: ../../node_modules/@types), so install the root first.
