@@ -12,7 +12,7 @@ const SECRET_PATTERNS: SecretPattern[] = [
   },
   {
     type: "openai-api-key",
-    pattern: /\bsk-(?:proj-)?[A-Za-z0-9_-]{32,}\b/g,
+    pattern: /\bsk-(?:proj-)?[A-Za-z0-9_-]{20,}\b/g,
   },
   {
     type: "github-token",
@@ -80,10 +80,58 @@ const SECRET_PATTERNS: SecretPattern[] = [
   },
 ];
 
+// Lowercase / `key: value` credential assignments that ASSIGNMENT_PATTERN
+// (UPPER_CASE env style only) misses. Carried over from the 1.1.1 redactor.
+const KEYED_SECRET_PATTERNS: SecretPattern[] = [
+  {
+    type: "aws-secret-key",
+    pattern: /\baws[_-]?secret[_-]?access[_-]?key\s*[:=]\s*["']?[A-Za-z0-9/+=]{40}["']?/gi,
+  },
+  {
+    type: "generic-api-key",
+    pattern: /\b(?:api[_-]?key|apikey)\s*[:=]\s*["']?[A-Za-z0-9_-]{16,}["']?/gi,
+  },
+  {
+    type: "secret-key",
+    pattern: /\b(?:secret[_-]?key|private[_-]?key)\s*[:=]\s*["']?[A-Za-z0-9_-]{16,}["']?/gi,
+  },
+  {
+    type: "password",
+    pattern: /\b(?:password|passwd|pwd)\s*[:=]\s*["']?[^\s"']{8,}["']?/gi,
+  },
+];
+
+// PII, on by default (1.1.1 behaviour). Callers that run their own PII stage
+// can pass { redactPII: false }.
+const PII_PATTERNS: SecretPattern[] = [
+  {
+    type: "email",
+    pattern: /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/g,
+  },
+  {
+    type: "credit-card",
+    pattern: /\b\d{4}[\s-]?\d{4}[\s-]?\d{4}[\s-]?\d{4}\b/g,
+  },
+  {
+    type: "ssn",
+    pattern: /\b\d{3}[\s-]?\d{2}[\s-]?\d{4}\b/g,
+  },
+  {
+    type: "phone",
+    pattern: /\+?[\d\s()-]{10,}\b/g,
+  },
+];
+
+export interface RedactOptions {
+  /** Also redact PII (email, credit card, SSN, phone). Default: true. */
+  redactPII?: boolean;
+}
+
 const ASSIGNMENT_PATTERN =
   /\b((?:export\s+)?[A-Z][A-Z0-9_]*(?:API[_-]?KEY|TOKEN|SECRET|PASSWORD|PRIVATE[_-]?KEY|ACCESS[_-]?TOKEN|REFRESH[_-]?TOKEN)[A-Z0-9_]*\s*=\s*)(["']?)([^\s"'`]+)(\2)/gi;
 
-export function redactSecrets(input: string): RedactionResult {
+export function redactSecrets(input: string, options: RedactOptions = {}): RedactionResult {
+  const { redactPII = true } = options;
   let text = input;
   const types: string[] = [];
   let secretsFound = 0;
@@ -106,6 +154,16 @@ export function redactSecrets(input: string): RedactionResult {
     },
   );
 
+  for (const { type, pattern } of KEYED_SECRET_PATTERNS) {
+    text = text.replace(pattern, (match) => (match.includes("[REDACTED:") ? match : mark(type)));
+  }
+
+  if (redactPII) {
+    for (const { type, pattern } of PII_PATTERNS) {
+      text = text.replace(pattern, () => mark(type));
+    }
+  }
+
   return {
     text,
     secretsFound,
@@ -113,6 +171,6 @@ export function redactSecrets(input: string): RedactionResult {
   };
 }
 
-export function containsSecrets(input: string): boolean {
-  return redactSecrets(input).secretsFound > 0;
+export function containsSecrets(input: string, options: RedactOptions = {}): boolean {
+  return redactSecrets(input, options).secretsFound > 0;
 }

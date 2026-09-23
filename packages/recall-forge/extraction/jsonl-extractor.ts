@@ -136,7 +136,7 @@ export async function extractJsonl(
       if (roles.length > 0 && !roles.includes(record.role)) continue;
 
       // Step 1: Redact secrets FIRST — before any other processing
-      const redaction = redactSecrets(record.text);
+      const redaction = redactSecrets(record.text, { redactPII: options.redactPII });
       stats.secretsRedacted += redaction.secretsFound;
       const cleanText = redaction.text;
 

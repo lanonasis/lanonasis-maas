@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.1] - 2026-09-23
+
 ### Changed
 - **Repository metadata corrected (PR-A.2).** The `repository`, `homepage`,
   and `bugs` fields no longer point at the private monorepo

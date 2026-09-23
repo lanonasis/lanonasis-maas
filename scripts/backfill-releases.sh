@@ -20,6 +20,7 @@
 #   --only <tag>            Restrict to one manifest tag (e.g. repl-cli, cli).
 #   --gh-packages           Also publish each package's newest registry tarball
 #                           to npm.pkg.github.com (needs write:packages).
+#   --newest-only           Only consider each package's newest npm version.
 #   --manifest <path>       Path to release-packages.json.
 #                           (default: ./.github/release-packages.json)
 #   --remote <name>         Git remote holding main (default: origin).
@@ -29,6 +30,7 @@ set -euo pipefail
 DRY_RUN=1
 ONLY=""
 GH_PACKAGES=0
+NEWEST_ONLY=0
 MANIFEST="./.github/release-packages.json"
 REMOTE="origin"
 GH_REPO="lanonasis/lanonasis-maas"
@@ -40,10 +42,11 @@ while [[ $# -gt 0 ]]; do
     --run)     DRY_RUN=0 ;;
     --only)    ONLY="$2"; shift ;;
     --gh-packages) GH_PACKAGES=1 ;;
+    --newest-only) NEWEST_ONLY=1 ;;
     --manifest) MANIFEST="$2"; shift ;;
     --remote)   REMOTE="$2"; shift ;;
     -h|--help)
-      sed -n '2,26p' "$0"
+      sed -n '2,27p' "$0"
       exit 0
       ;;
     *)
@@ -74,6 +77,7 @@ echo "manifest:    $MANIFEST"
 echo "dry-run:     $DRY_RUN"
 echo "only:        ${ONLY:-(all)}"
 echo "gh-packages: $GH_PACKAGES"
+echo "newest-only: $NEWEST_ONLY"
 echo "main:        $MAIN_REF @ ${MAIN_SHA:0:8}"
 echo
 
@@ -116,6 +120,7 @@ while IFS=$'\t' read -r NAME TAG DIR; do
   fi
   VERSIONS="$(printf '%s' "$VERSIONS_JSON" | python3 -c 'import json,sys; v=json.load(sys.stdin); v=[v] if isinstance(v,str) else v; print("\n".join(v))')"
   LATEST="$(printf '%s\n' "$VERSIONS" | sort -V | tail -n1)"
+  [[ "$NEWEST_ONLY" -eq 1 ]] && VERSIONS="$LATEST"
 
   while IFS= read -r VERSION; do
     [[ -z "$VERSION" ]] && continue
