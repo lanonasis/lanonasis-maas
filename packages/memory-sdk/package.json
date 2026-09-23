@@ -1,6 +1,6 @@
 {
   "name": "@lanonasis/memory-sdk-standalone",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Standalone Memory SDK - drop into any project for multi-agent orchestration with persistent memory",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

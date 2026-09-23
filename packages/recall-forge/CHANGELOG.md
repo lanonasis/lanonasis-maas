@@ -4,11 +4,18 @@ All notable changes to `@lanonasis/recall-forge` will be documented in this file
 
 ## [Unreleased]
 
+---
+
+## 1.1.2 — 2026-09-23
+
 ### Fixed
-- **Repository URL corrected (PR-A.2).** The `repository.url` no longer points
-  at the private monorepo (`thefixer3x/lan-onasis-monorepo.git`); it now uses
-  the canonical `git+https://github.com/lanonasis/lanonasis-maas.git`.
-  Homepage and bugs fields already pointed at the public repo — no change.
+
+- **Repository URL corrected.** `repository.url` no longer points at the private monorepo (`thefixer3x/lan-onasis-monorepo.git`); it is now `git+https://github.com/lanonasis/lanonasis-maas.git` with `directory: packages/recall-forge`, so npm and GitHub Packages link to the public source.
+- **Secret redactor realigned with 1.1.1.** The source copy of `extraction/secret-redactor.ts` had been hidden by a `.gitignore` `*key*` rule, and the restored file dropped rules that shipped in 1.1.1. It now keeps the newer provider rules (GitHub, Stripe, Google, Notion, ElevenLabs, Telegram, `sb_` tokens, PEM private keys, 64+ hex secrets) and restores the 1.1.1 ones: lowercase / `key: value` assignments for `api_key`, `password`, `secret_key`/`private_key` and `aws_secret_access_key`, plus PII (email, credit card, SSN, phone).
+- `redactSecrets(text, { redactPII })` and `containsSecrets(text, { redactPII })` accept options again (PII on by default, as in 1.1.1), and the JSONL, Markdown and SQLite extractors now honour `ExtractionOptions.redactPII`.
+- OpenAI key detection matches 20+ character keys again (was 32+).
+- `containsSecrets()` no longer depends on global-regex `lastIndex` state, so repeated calls give the same answer.
+- The 1.1.1 catch-all `supabase-key` rule (any 40+ character token) is not restored: it redacted git SHAs and ids. Supabase JWTs and `sb_` keys are covered by `jwt-token` and `supabase-token`.
 
 ---
 
