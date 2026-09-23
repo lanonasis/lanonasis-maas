@@ -194,7 +194,8 @@ describe('CLI Integration - Command Execution', () => {
     });
 
     it('config reset executes', async () => {
-      const result = await runCli('config reset', {
+      // --force: without it inquirer waits on stdin until the 30s timeout
+      const result = await runCli('config reset --force', {
         env: { HOME: testConfigDir },
       });
       // Reset may require confirmation
