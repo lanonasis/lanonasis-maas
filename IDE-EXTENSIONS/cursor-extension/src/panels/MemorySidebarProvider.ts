@@ -23,8 +23,8 @@ export class MemorySidebarProvider implements vscode.WebviewViewProvider {
 
     constructor(
         private readonly _extensionUri: vscode.Uri,
-        private readonly memoryService: IMemoryService
-    ) { }
+        private readonly memoryService: IMemoryService,
+    ) {}
 
     /**
      * Expose the secure credential service so chat queries can resolve
@@ -40,14 +40,14 @@ export class MemorySidebarProvider implements vscode.WebviewViewProvider {
 
     public resolveWebviewView(
         webviewView: vscode.WebviewView,
-        context: vscode.WebviewViewResolveContext,
+        _context: vscode.WebviewViewResolveContext,
         _token: vscode.CancellationToken,
     ) {
         this._view = webviewView;
 
         webviewView.webview.options = {
             enableScripts: true,
-            localResourceRoots: [this._extensionUri]
+            localResourceRoots: [this._extensionUri],
         };
 
         webviewView.webview.html = this._getHtmlForWebview(webviewView.webview);
@@ -91,6 +91,10 @@ export class MemorySidebarProvider implements vscode.WebviewViewProvider {
                 case 'getApiKey':
                     await vscode.env.openExternal(vscode.Uri.parse('https://api.lanonasis.com'));
                     break;
+                // ── AI Router chat ──────────────────────────
+                case 'aiChatQuery':
+                    await this.handleChatQuery(data.query);
+                    break;
             }
         });
 
@@ -99,77 +103,62 @@ export class MemorySidebarProvider implements vscode.WebviewViewProvider {
     }
 
     public async refresh() {
-        if (this._view) {
-            const authenticated = await this.isAuthenticated();
+        if (!this._view) return;
 
-            if (!authenticated) {
-                this._view.webview.postMessage({
-                    type: 'updateState',
-                    state: {
-                        authenticated: false,
-                        memories: [],
-                        loading: false
-                    }
-                });
-                return;
-            }
+        const authenticated = await this.isAuthenticated();
 
-            try {
-                this._view.webview.postMessage({
-                    type: 'updateState',
-                    state: { loading: true }
-                });
+        if (!authenticated) {
+            this._view.webview.postMessage({
+                type: 'updateState',
+                state: { authenticated: false, memories: [], loading: false },
+            });
+            return;
+        }
 
-                const memories = await this.memoryService.listMemories(50);
-                const enhancedInfo = this.memoryService instanceof EnhancedMemoryService
-                    ? this.memoryService.getCapabilities()
-                    : null;
+        try {
+            this._view.webview.postMessage({ type: 'updateState', state: { loading: true } });
 
-                this._view.webview.postMessage({
-                    type: 'updateState',
-                    state: {
-                        authenticated: true,
-                        memories,
-                        loading: false,
-                        enhancedMode: enhancedInfo?.cliAvailable || false,
-                        cliVersion: enhancedInfo?.version || null
-                    }
-                });
-            } catch (error) {
-                this._view.webview.postMessage({
-                    type: 'error',
-                    message: error instanceof Error ? error.message : 'Failed to load memories'
-                });
-            }
+            const memories = await this.memoryService.listMemories(50);
+            const enhancedInfo = this.memoryService instanceof EnhancedMemoryService
+                ? this.memoryService.getCapabilities()
+                : null;
+
+            this._view.webview.postMessage({
+                type: 'updateState',
+                state: {
+                    authenticated: true,
+                    memories,
+                    loading: false,
+                    enhancedMode: enhancedInfo?.cliAvailable || false,
+                    cliVersion: enhancedInfo?.version || null,
+                },
+            });
+        } catch (error) {
+            this._view.webview.postMessage({
+                type: 'error',
+                message: error instanceof Error ? error.message : 'Failed to load memories',
+            });
         }
     }
+
+    // ──────────────────────────────────────────────────
+    // Search / CRUD handlers (unchanged)
+    // ──────────────────────────────────────────────────
 
     private async handleSearch(query: string) {
         if (!this._view) return;
 
         try {
-            this._view.webview.postMessage({
-                type: 'updateState',
-                state: { loading: true }
-            });
-
+            this._view.webview.postMessage({ type: 'updateState', state: { loading: true } });
             const results = await this.memoryService.searchMemories(query);
-
-            this._view.webview.postMessage({
-                type: 'searchResults',
-                results,
-                query
-            });
+            this._view.webview.postMessage({ type: 'searchResults', results, query });
         } catch (error) {
             this._view.webview.postMessage({
                 type: 'error',
-                message: error instanceof Error ? error.message : 'Search failed'
+                message: error instanceof Error ? error.message : 'Search failed',
             });
         } finally {
-            this._view.webview.postMessage({
-                type: 'updateState',
-                state: { loading: false }
-            });
+            this._view.webview.postMessage({ type: 'updateState', state: { loading: false } });
         }
     }
 
@@ -180,7 +169,7 @@ export class MemorySidebarProvider implements vscode.WebviewViewProvider {
     private async handleCreateFromWebview(payload: any) {
         const parsed = createMemorySchema.safeParse(payload);
         if (!parsed.success) {
-            const msg = parsed.error.issues.map(i => i.message).join('; ');
+            const msg = parsed.error.issues.map((i) => i.message).join('; ');
             vscode.window.showErrorMessage(`Memory not created: ${msg}`);
             return;
         }
@@ -191,7 +180,7 @@ export class MemorySidebarProvider implements vscode.WebviewViewProvider {
     private async handleUpdateFromWebview(id: string, payload: any) {
         const parsed = updateMemorySchema.safeParse(payload);
         if (!parsed.success) {
-            const msg = parsed.error.issues.map(i => i.message).join('; ');
+            const msg = parsed.error.issues.map((i) => i.message).join('; ');
             vscode.window.showErrorMessage(`Memory not updated: ${msg}`);
             return;
         }
@@ -206,7 +195,7 @@ export class MemorySidebarProvider implements vscode.WebviewViewProvider {
 
     private async handleBulkDeleteFromWebview(ids: string[]) {
         if (!ids?.length) return;
-        await Promise.all(ids.map(id => this.memoryService.deleteMemory(id)));
+        await Promise.all(ids.map((id) => this.memoryService.deleteMemory(id)));
         await this.refresh();
     }
 
@@ -214,11 +203,10 @@ export class MemorySidebarProvider implements vscode.WebviewViewProvider {
         if (!ids?.length || !tags?.length) return;
         await Promise.all(
             ids.map(async (id) => {
-                // fetch then update tags
                 const mem = await this.memoryService.getMemory(id);
                 const nextTags = Array.from(new Set([...(mem.tags || []), ...tags]));
                 await this.memoryService.updateMemory(id, { tags: nextTags });
-            })
+            }),
         );
         await this.refresh();
     }
@@ -428,8 +416,6 @@ export class MemorySidebarProvider implements vscode.WebviewViewProvider {
     private _getHtmlForWebview(webview: vscode.Webview) {
         const styleUri = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'media', 'sidebar.css'));
         const scriptUri = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'media', 'sidebar.js'));
-
-        // Get CSP
         const nonce = getNonce();
 
         return `<!DOCTYPE html>
@@ -462,4 +448,3 @@ function getNonce() {
     }
     return text;
 }
-
