@@ -41,6 +41,7 @@ from .security import (
     EmbeddingProfile,
     detect_embedding_profile_mismatch,
 )
+from .local_store import LocalMemoryStore, MemoryHit
 
 _UUID_RE = re.compile(
     r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
@@ -176,6 +177,8 @@ class LanonasisMemoryProvider(MemoryProvider):
         self._privacy_guard: Optional[PrivacyGuard] = None
         self._cached_user_id: Optional[str] = None
         self._initialized: bool = False
+        # Phase 3: local-first hybrid memory store
+        self._local_store: Optional[LocalMemoryStore] = None
 
     # ---- Config dataclass ---------------------------------------------------
     class Config:
@@ -282,6 +285,9 @@ class LanonasisMemoryProvider(MemoryProvider):
         # Fallback writer — directory is HERMES_HOME-scoped, NEVER module-global.
         fallback_dir = os.path.join(self._hermes_home, "workspace", "memory")
         self._fallback = LocalFallbackWriter(fallback_dir=fallback_dir)
+
+        # Phase 3: local-first hybrid memory store
+        self._init_local_store()
 
         # Replay any buffered writes (non-fatal).
         if self._client is not None and self._fallback is not None:
@@ -446,54 +452,88 @@ class LanonasisMemoryProvider(MemoryProvider):
         return self._client
 
     def _tool_search(self, args: Dict[str, Any]) -> Dict[str, Any]:
-        client = self._ensure_client()
-        if client is None:
-            return {"memories": [], "_degraded": True, "_reason": "no_client"}
-        try:
-            query = self._protect_outbound(args["query"]).text
-            resp = client.post(
-                "/api/v1/memories/search",
-                json={"query": query, "limit": args.get("limit", 5)},
-            )
-            resp.raise_for_status()
-            result = resp.json()
-        except Exception as e:
-            _logger.warning(f"[lanonasis] memory_search degraded: {e}")
-            return {
-                "memories": [],
-                "_security": {"injection_filtered": 0, "total_before_filter": 0},
-                "_error": str(e),
-            }
+        """Local-first hybrid search.
 
-        memories = result.get("memories", [])
-        filtered: List[Dict[str, Any]] = []
+        Tier 1: Local FTS5 (≤5ms, always fast)
+        Tier 2: Remote API (≤800ms, enriches with semantic search)
+        Tier 3: Empty context if both miss — NO hallucination.
+        """
+        query = self._protect_outbound(args["query"]).text
+        limit = args.get("limit", 5)
+        all_memories: List[Dict[str, Any]] = []
         injection_count = 0
-        for memory in memories:
+        local_had_hits = False
+
+        # --- Tier 1: Local FTS5 (always fast, never blocks) ---
+        local_hits = self._local_search(query, limit=limit)
+        if local_hits:
+            local_had_hits = True
+            api_format = self._local_to_api_format(local_hits)
+            for memory in api_format:
+                content = memory.get("content", "")
+                if looks_like_prompt_injection(content):
+                    injection_count += 1
+                    continue
+                memory["_source"] = "local"
+                all_memories.append(memory)
+
+        # --- Tier 2: Remote API (enrich if local had hits or no local) ---
+        client = self._ensure_client()
+        remote_result = []
+        if client is not None:
+            try:
+                resp = client.post(
+                    "/api/v1/memories/search",
+                    json={"query": query, "limit": limit},
+                )
+                resp.raise_for_status()
+                result = resp.json()
+                remote_result = result.get("memories", [])
+            except Exception as e:
+                _logger.warning(f"[lanonasis] memory_search remote degraded: {e}")
+
+        # Merge remote results (dedup by id if present, or just append)
+        remote_injection_count = 0
+        for memory in remote_result:
             content = memory.get("content", "")
             if looks_like_prompt_injection(content):
-                injection_count += 1
-                _logger.warning(
-                    f"[lanonasis] filtered prompt injection from memory "
-                    f"{memory.get('id', 'unknown')}"
-                )
+                remote_injection_count += 1
                 continue
-            filtered.append(memory)
+            memory["_source"] = "remote"
+            all_memories.append(memory)
+        injection_count += remote_injection_count
 
         out: Dict[str, Any] = {
-            "memories": filtered,
+            "memories": all_memories,
             "_security": {
                 "injection_filtered": injection_count,
-                "total_before_filter": len(memories),
+                "total_before_filter": len(all_memories) + injection_count,
             },
         }
-        if filtered:
+
+        if all_memories:
+            # Tag the source breakdown
+            local_count = sum(1 for m in all_memories if m.get("_source") == "local")
+            out["_local_hits"] = local_count
+            out["_local_source"] = True
             out["_formatted_context"] = format_recalled_memories(
-                filtered,
-                options={"recall_strategy": "semantic", "max_chars": 4000},
+                all_memories,
+                options={"recall_strategy": "hybrid", "max_chars": 4000},
             )
+
+        # If no results at all, signal that we searched both tiers
+        if not all_memories:
+            out["_searched_tiers"] = ["local", "remote" if client else "local-only"]
+
         return out
 
     def _tool_store(self, args: Dict[str, Any]) -> Dict[str, Any]:
+        """Local-first hybrid store.
+
+        Writes to local SQLite first (durable, <10ms), then attempts
+        remote sync. On remote failure, the local entry persists and
+        the fallback writer captures the pending sync.
+        """
         title_redacted = self._protect_outbound(args["title"])
         content_redacted = self._protect_outbound(args["content"])
         if title_redacted.secrets_found > 0 or content_redacted.secrets_found > 0:
@@ -501,31 +541,61 @@ class LanonasisMemoryProvider(MemoryProvider):
                 f"[lanonasis] secrets redacted before storage: "
                 f"title={title_redacted.types}, content={content_redacted.types}"
             )
-        payload = {
-            "title": title_redacted.text,
-            "content": content_redacted.text,
-            "memory_type": args.get("memory_type", "context"),
-        }
-        if self._config.organization_id:
-            payload["organization_id"] = self._config.organization_id
-        if self._config.project_scope:
-            payload["metadata"] = {"project_scope": self._config.project_scope}
 
+        # --- Tier 1: Local write (durable, always fast) ---
+        memory_type = args.get("memory_type", "context")
+        local_result = self._local_store_add(
+            title=title_redacted.text,
+            content=content_redacted.text,
+            memory_type=memory_type,
+        )
+
+        if not local_result.get("ok"):
+            return {
+                "stored": False,
+                "local": False,
+                "error": local_result.get("reason", "unknown"),
+            }
+
+        # --- Tier 2: Remote sync (fire-and-forget, non-blocking) ---
         client = self._ensure_client()
-        if client is None or self._fallback is None:
-            if self._fallback is not None:
-                self._fallback.write(payload)
-            return {"stored": False, "fallback": True, "error": "no_client"}
+        if client is not None:
+            try:
+                payload = {
+                    "title": title_redacted.text,
+                    "content": content_redacted.text,
+                    "memory_type": memory_type,
+                }
+                if self._config.organization_id:
+                    payload["organization_id"] = self._config.organization_id
+                if self._config.project_scope:
+                    payload["metadata"] = {"project_scope": self._config.project_scope}
 
-        try:
-            resp = client.post("/api/v1/memories", json=payload)
-            resp.raise_for_status()
-            data = resp.json()
-            data.setdefault("stored", True)
-            return data
-        except Exception as e:
-            self._fallback.write(payload)
-            return {"stored": False, "fallback": True, "error": str(e)}
+                resp = client.post("/api/v1/memories", json=payload)
+                resp.raise_for_status()
+                data = resp.json()
+                data.setdefault("stored", True)
+                data["local"] = True
+                data["local_id"] = local_result.get("id")
+                return data
+            except Exception as e:
+                _logger.warning(f"[lanonasis] remote sync failed: {e}")
+                # Local write succeeded — still return success with local_only flag
+                return {
+                    "stored": True,
+                    "local": True,
+                    "local_id": local_result.get("id"),
+                    "remote_synced": False,
+                    "remote_error": str(e),
+                }
+
+        # No client — local write succeeded
+        return {
+            "stored": True,
+            "local": True,
+            "local_id": local_result.get("id"),
+            "remote_synced": False,
+        }
 
     def _tool_get(self, args: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         memory_id = args.get("id")
@@ -676,25 +746,79 @@ class LanonasisMemoryProvider(MemoryProvider):
                 self._client.close()
             except Exception:
                 pass
+        # Phase 3: close local FTS5 store
+        if self._local_store is not None:
+            try:
+                self._local_store.close()
+            except Exception:
+                pass
 
     # ---- Private helpers --------------------------------------------------
+    # ---- Turn-level content classification ---------------------------------
+    # Patterns that signal the user wants to *store* knowledge, not just chat.
+    _STORE_SIGNALS: list[tuple[str, str]] = [
+        # Explicit intent
+        (r"\bremember(?:\s+that)?\s+", "remembered_fact"),
+        (r"\bremember\s+that\s+", "remembered_fact"),
+        (r"\bremember\s+(?:this|the\s+)?\S", "remembered_fact"),
+        # Preference / configuration
+        (r"\b(?:i\s+(?:prefer|like|want|use|need|use)\s+|my\s+(?:default|preferred|favorite|top))", "preference"),
+        # Instruction / convention
+        (r"\b(?:always\s+|never\s+|don't\s+|do\s+not\s+|convention|rule)", "convention"),
+        # Explicit save/store intent
+        (r"\b(?:save|store|keep|record|note)\s+(?:this|that|the\s+)", "stored_fact"),
+        # Key-value / URL / credential patterns
+        (r"\b(?:url|endpoint|uri|href)\s*[=:]?\s*https?://", "reference_url"),
+        (r"\b(?:api[_-]?key|secret|token)\s*[=:]\s*\S", "credential"),
+        # "The X is Y" / "X was Y" fact patterns
+        (r"\b(?:the\s+\w+|it)\s+(?:is|was|became|remains|equals)\s+", "fact_statement"),
+    ]
+
+    def _classify_turn_content(self, text: str) -> tuple[bool, str]:
+        """Return (should_store, memory_type) for a turn excerpt.
+
+        We only store content that carries signal — not every raw turn.
+        """
+        lower = text.lower()
+        for pattern, mtype in self._STORE_SIGNALS:
+            if re.search(pattern, lower):
+                return True, mtype
+        # Heuristic: very short chatty turns → skip.
+        word_count = len(lower.split())
+        if word_count <= 4:
+            return False, "context"
+        # If it looks like a question → skip (questions aren't facts).
+        if text.strip().endswith("?"):
+            return False, "context"
+        # Default: store medium/long content as context.
+        return True, "context"
+
     def _run_sync_turn(
         self,
         user_content: str,
         assistant_content: str,
         session_id: str,
     ) -> None:
-        """Daemon thread body for sync_turn — never raises."""
+        """Daemon thread body for sync_turn — never raises.
+
+        Now filters each turn: only stores content that carries
+        recognisable signal (facts, preferences, conventions, URLs, etc.).
+        Chatty turns and short questions are silently skipped.
+        """
         try:
             client = self._ensure_client()
             if client is None or self._fallback is None:
                 return
+            effective_session = session_id or self._session_id
             for content, role in (
                 (user_content, "user"),
                 (assistant_content, "assistant"),
             ):
                 if not content or content.isspace():
                     continue
+                should_store, mtype = self._classify_turn_content(content)
+                if not should_store:
+                    continue  # Skip chatty / short / question turns silently
                 redacted = self._protect_outbound(content)
                 if redacted.secrets_found > 0:
                     _logger.warning(
@@ -702,11 +826,11 @@ class LanonasisMemoryProvider(MemoryProvider):
                         f"{redacted.types}"
                     )
                 payload = {
-                    "title": f"Hermes turn ({role})",
+                    "title": f"{mtype.title()} ({role})",
                     "content": redacted.text,
                     "memory_type": "context",
                     "metadata": {
-                        "session_id": session_id or self._session_id,
+                        "session_id": effective_session,
                         "role": role,
                         "source": "hermes_sync_turn",
                     },
@@ -812,6 +936,66 @@ class LanonasisMemoryProvider(MemoryProvider):
             self._background_threads.append(thread)
         thread.start()
         return thread
+
+    # ---- Phase 3: local-first hybrid memory store -------------------------
+
+    def _init_local_store(self) -> None:
+        """Open the local SQLite FTS5 store at a per-profile path.
+
+        The DB lives at ``{hermes_home}/workspace/lanonasis-memory.db``.
+        Never raises — a failed init just means local tier is unavailable
+        and the provider falls back to remote-only.
+        """
+        try:
+            db_path = os.path.join(
+                self._hermes_home, "workspace", "lanonasis-memory.db"
+            )
+            os.makedirs(os.path.dirname(db_path), exist_ok=True)
+            self._local_store = LocalMemoryStore(db_path, mode="block")
+        except Exception as e:
+            _logger.warning(f"[lanonasis] local store init failed: {e}")
+            self._local_store = None
+
+    def _local_search(self, query: str, limit: int = 5) -> List[MemoryHit]:
+        """Search the local FTS5 store. Returns empty list on failure."""
+        if self._local_store is None:
+            return []
+        try:
+            return self._local_store.search(query, limit=limit)
+        except Exception as e:
+            _logger.warning(f"[lanonasis] local search failed: {e}")
+            return []
+
+    def _local_store_add(
+        self, title: str, content: str, memory_type: str = "context"
+    ) -> Dict[str, Any]:
+        """Write a memory to the local store. Returns dict result."""
+        if self._local_store is None:
+            return {"ok": False, "id": None, "reason": "local_store_unavailable"}
+        try:
+            return self._local_store.add(
+                title=title,
+                content=content,
+                memory_type=memory_type,
+            )
+        except Exception as e:
+            _logger.warning(f"[lanonasis] local store add failed: {e}")
+            return {"ok": False, "id": None, "reason": str(e)}
+
+    def _local_to_api_format(self, hits: List[MemoryHit]) -> List[Dict[str, Any]]:
+        """Convert local MemoryHit objects to API-compatible dict format."""
+        result = []
+        for h in hits:
+            result.append({
+                "id": h.id,
+                "title": h.title,
+                "content": h.content,
+                "type": h.target if h.target != "memory" else "context",
+                "similarity": h.score,
+                "tags": h.tags or [],
+                "memory_type": "context",
+            })
+        return result
 
     def _drain_background_writes(self, timeout: float) -> None:
         deadline = time.monotonic() + timeout

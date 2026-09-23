@@ -366,8 +366,10 @@ class TestProviderUsesHermesHomeForFallback:
             p.initialize(session_id="s-1", hermes_home=str(hermes_home))
 
             # Force the next API call to fail so a fallback write fires.
+            # Use content with a store signal so it passes classification
+            # (short chatty turns are filtered before any API call).
             p._client.post.side_effect = Exception("API down")
-            p.sync_turn("u", "a")
+            p.sync_turn("Remember that the project deadline is tomorrow", "Got it.")
             p.shutdown()
 
             expected_dir = hermes_home / "workspace" / "memory"

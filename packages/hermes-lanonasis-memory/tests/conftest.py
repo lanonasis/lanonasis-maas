@@ -37,9 +37,6 @@ def mock_config():
 @pytest.fixture
 def provider(mock_config):  # mock_httpx_client removed — provider fixture injects _client directly
     """Return an initialized LanonasisMemoryProvider with mocked deps."""
-    # Patch where the symbol is looked up at runtime — the
-    # ``provider`` module did ``from .client import LanOnasisClient``,
-    # so it consults its own module attribute, not the client module's.
     with patch("hermes_lanonasis_memory.provider.LanOnasisClient") as MockClient:
         mock_instance = MagicMock()
         mock_instance.health_check.return_value = True
@@ -53,10 +50,12 @@ def provider(mock_config):  # mock_httpx_client removed — provider fixture inj
 
         from hermes_lanonasis_memory import LanonasisMemoryProvider
         p = LanonasisMemoryProvider()
+        p.initialize(session_id="test-session-001", hermes_home="/tmp/hermes-test")
+        # Overwrite the live config with our mock
         p._config = mock_config
         p._client = mock_instance
         p._fallback = MagicMock()
         p._session_id = "test-session-001"
         p._cached_user_id = "user-123"
-        p._hermes_home = "/tmp/hermes-test"
+        # _local_store is now initialised by initialize() above.
         return p

@@ -15,7 +15,50 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - `engines.node` normalised to `>=18` (was `>=18.0.0`).
 - Keywords expanded (`semantic-search`, `mcp`).
 
-## [Unreleased] — Phase 3 (SQLite FTS5 store)
+## [Unreleased] — Phase 6 (Hook Ingestion)
+
+### Added
+
+- `src/hooks/ingest.ts` — Phase 6 hook ingestion layer.
+  - `buildIngestPipeline(getStore, config)` — composable builder that returns
+    `onSessionStart`, `onTurnEnd`, `onSessionShutdown` handlers wired to a
+    `MemoryStore`.
+  - `SIGNALS` constant — 7 signal categories with regex patterns for classifying
+    assistant responses: `explicit` (8 patterns), `preference` (7), `config` (5),
+    `errorDiag` (6), `insight` (4), `correction` (3), `convention` (5).
+  - `classifyMessage(content, toolResults)` — returns `{ category, title }` or
+    `null` when no signal fires.
+  - `extractText(message)` — handles `string | TextContent[] | ToolResultMessage`
+    variants from Pi's AgentMessage union.
+  - `buildTitle(category, content)` — first sentence, capped at 80 chars,
+    prefixed with `[category]`.
+- Wired `session_start` → open store → register `session:<dirname>` tag.
+- Wired `turn_end` → classify assistant message → store if signal fires.
+  - Only `role === "assistant"` messages are considered.
+  - Responses shorter than `minContentLength` (default: 20) are skipped.
+  - Any `isError: true` tool result blocks storage.
+  - Every write is scanner-gated (Phase 2 contract).
+- Wired `session_shutdown` → WAL checkpoint → close store.
+- `tests/hooks/ingest.test.ts` (25 cases) — covers all 7 signal categories,
+  short-content skip, tool-error gating, session_shutdown lifecycle.
+- `sessionTag` derived from `ctx.cwd` (last path segment) — per-project scoping
+  without extra config.
+
+### Test results
+
+- 133 / 133 vitest cases pass (4 Phase 1 + 78 Phase 2 + 26 Phase 3 + 25 Phase 6).
+- `npm run typecheck` exits 0.
+- `npm run build` emits `dist/hooks/ingest.{js,d.ts}`.
+
+### Deferred
+
+- Phase 5: MaaS background sync (drain `maas_synced_at` / `maas_id` columns).
+- Phase 7: Real slash commands (`/memory search`, `/memory save`).
+- Phase 8: Trigram FTS5 tokenizer optimization.
+
+---
+
+## [0.2.0] — Phase 3 (SQLite FTS5 store)
 
 ### Added
 
@@ -64,11 +107,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   - Prepared statements cached at `prepareAll()` time (after schema
     apply, so bind-to-schema correctness holds).
 - Wired into `src/index.ts` — re-exports `MemoryStore` and `SCHEMA_VERSION`
-  so Phase 4 (markdown mirror) and Phase 5 (MaaS sync) can compose with
-  it.
+  so Phase 4 (markdown mirror) and Phase 5 (MaaS sync) can compose with it.
 - `tests/store/memory.test.ts` (26 tests) — covers schema, validation,
   round-trip (add → get → list → search → replace → remove), scanner
   gating (block + redact), FTS5 trigger sync, cursor pagination.
+
+### Test results
+
+- 108 / 108 vitest cases pass (4 Phase 1 + 78 Phase 2 + 26 Phase 3).
+- `npm run typecheck` exits 0.
+- `npm run build` emits `dist/store/{sqlite,memory,schema}.{js,d.ts}`.
+- All 26 Phase 3 store tests run against a real SQLite database
+  (`node:sqlite` under vitest on Node 22.5+) — not mocked.
 
 ### Scope guard
 
@@ -78,14 +128,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   are reserved but always NULL.
 - ✗ No markdown mirror yet (Phase 4) — writes hit SQLite only.
 - ✗ No per-project scoping yet — single-user storage root.
-
-### Test results
-
-- 108 / 108 vitest cases pass (4 Phase 1 + 78 Phase 2 + 26 Phase 3).
-- `npm run typecheck` exits 0.
-- `npm run build` emits `dist/store/{sqlite,memory,schema}.{js,d.ts}`.
-- All 26 Phase 3 store tests run against a real SQLite database
-  (`node:sqlite` under vitest on Node 22.5+) — not mocked.
 
 ### Deferred (per Phase 3 scope guard)
 
@@ -100,6 +142,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Phase 8 — `@lanonasis/privacy-sdk` integration for Stage 2 PII
   detection (currently scoped to a follow-up; the SDK is a dependency
   candidate but not wired into this phase).
+
+---
 
 ## [Unreleased] — Phase 2 (pre-write scanner)
 
@@ -183,6 +227,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Phase 8 — `@lanonasis/privacy-sdk` integration for Stage 2 PII
   detection (currently scoped to a follow-up; the SDK is a
   dependency candidate but not wired into this phase).
+
+---
 
 ## [0.1.0] - 2026-09-06
 
