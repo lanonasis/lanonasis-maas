@@ -2,5 +2,14 @@
   "name": "@lanonasis/memory-engine",
   "version": "0.0.0-internal",
   "private": true,
-  "description": "Internal memory engine helper — not published. See IDE-EXTENSIONS/ for the published editor integrations."
+  "description": "Internal memory engine helper — not published. See IDE-EXTENSIONS/ for the published editor integrations.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lanonasis/lanonasis-maas.git",
+    "directory": "packages/memory-engine"
+  },
+  "homepage": "https://github.com/lanonasis/lanonasis-maas/tree/main/packages/memory-engine#readme",
+  "bugs": {
+    "url": "https://github.com/lanonasis/lanonasis-maas/issues"
+  }
 }

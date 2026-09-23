@@ -10,6 +10,12 @@ dependencies = [
     "pyyaml>=6.0",
 ]
 
+[project.urls]
+Homepage = "https://github.com/lanonasis/lanonasis-maas/tree/main/packages/hermes-lanonasis-secret-source#readme"
+Repository = "https://github.com/lanonasis/lanonasis-maas"
+Source = "https://github.com/lanonasis/lanonasis-maas/tree/main/packages/hermes-lanonasis-secret-source"
+Issues = "https://github.com/lanonasis/lanonasis-maas/issues"
+
 [project.optional-dependencies]
 test = [
     "pytest>=8.0",

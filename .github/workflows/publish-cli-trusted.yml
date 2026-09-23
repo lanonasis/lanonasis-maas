@@ -15,11 +15,40 @@ on:
 
 permissions:
   id-token: write  # Required for OIDC
-  contents: read
+  contents: write  # gh release create
+  packages: write  # GitHub Packages publish
 
 jobs:
+  # Most cli/** pushes don't bump the version. Skip the whole publish job when
+  # this version is already on npm instead of failing on "cannot publish over".
+  check:
+    name: Check whether this version is new
+    runs-on: ubuntu-latest
+    outputs:
+      publish: ${{ steps.ver.outputs.publish }}
+      version: ${{ steps.ver.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: cli/package.json
+          sparse-checkout-cone-mode: false
+      - id: ver
+        env:
+          INPUT_VERSION: ${{ github.event.inputs.version }}
+        run: |
+          VERSION="${INPUT_VERSION:-$(node -p "require('./cli/package.json').version")}"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          if npm view "@lanonasis/cli@${VERSION}" version --registry=https://registry.npmjs.org >/dev/null 2>&1; then
+            echo "::notice::@lanonasis/cli@${VERSION} is already on npm; nothing to publish"
+            echo "publish=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "publish=true" >> "$GITHUB_OUTPUT"
+          fi
+
   publish-cli:
     name: Publish @lanonasis/cli to NPM (Trusted Publishing)
+    needs: check
+    if: needs.check.outputs.publish == 'true'
     runs-on: ubuntu-latest
     
     steps:
@@ -29,7 +58,7 @@ jobs:
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
-          bun-version: latest
+          bun-version: 1.4.2
 
       - name: Update version (if manual trigger)
         if: github.event_name == 'workflow_dispatch'
@@ -57,11 +86,14 @@ jobs:
       - name: Setup Node.js for npm
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           registry-url: 'https://registry.npmjs.org'
 
-      - name: Update npm to latest version
-        run: npm install -g npm@latest
+      # OIDC trusted publishing needs npm >= 11.5.1. Pin to 11: npm 12 (now
+      # "latest") requires Node >= 22.22.2 and blocks dependency lifecycle
+      # scripts by default.
+      - name: Install npm 11
+        run: npm install -g npm@^11.5.1
 
       - name: Publish to NPM (Trusted Publishing)
         run: |
@@ -96,6 +128,8 @@ jobs:
 
       - name: Publish CLI to GitHub Packages
         working-directory: cli
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           TMP_NPMRC="$(mktemp)"
           cat > "$TMP_NPMRC" <<NPMRC
@@ -123,7 +157,7 @@ jobs:
 
           ## Install
           \`\`\`sh
-          npm i https://github.com/lanonasis/lanonasis-maas/releases/download/${TAG}/\${{ env.CLI_TGZ }}
+          npm i -g --allow-remote=root https://github.com/lanonasis/lanonasis-maas/releases/download/${TAG}/${CLI_TGZ}
           \`\`\`
 
           Or via the npm registry: \`npm i -g @lanonasis/cli\`

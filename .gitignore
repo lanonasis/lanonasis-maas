@@ -77,9 +77,13 @@ config.local.json
 !packages/hermes-lanonasis-secret-source/**
 # recall-forge's secret redactor is source code, not a secret file
 !packages/recall-forge/extraction/secret-redactor.ts
+!packages/recall-forge/extraction/secret-redactor.test.ts
 **/*key*
 **/*token*
 **/*password*
+# lanonasis-sdk's api-keys client is source code, not a key file
+!packages/lanonasis-sdk/src/api-keys/
+!packages/lanonasis-sdk/src/api-keys/**
 .cache_ggshield
 *.backup
 
@@ -155,3 +159,6 @@ taskplane.yaml     # agent scratch; was tracked on main, now removed.
 .devops/             # internal integration notes; was tracked, now removed.
 .testsprite/         # agent-scratch config; was tracked, now removed.
 testsprite_tests/    # generated test scaffolding with hard-coded creds; was tracked, now removed.
+
+# vitest JSON reports
+**/.vitest/

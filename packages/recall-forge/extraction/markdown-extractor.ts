@@ -188,7 +188,7 @@ export async function extractMarkdown(
     if (roles.length > 0 && !roles.includes(record.role)) continue;
 
     // Step 1: Redact secrets
-    const redaction = redactSecrets(record.text);
+    const redaction = redactSecrets(record.text, { redactPII: options.redactPII });
     stats.secretsRedacted += redaction.secretsFound;
     const cleanText = redaction.text;
 

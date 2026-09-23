@@ -1,6 +1,6 @@
 {
   "name": "@lanonasis/memory-sdk-standalone",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Standalone Memory SDK - drop into any project for multi-agent orchestration with persistent memory",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -38,17 +38,20 @@
     "eventsource": "^4.0.0"
   },
   "devDependencies": {
+    "@eslint/js": "^9",
     "@types/jest": "^30.0.0",
     "@types/node": "^22.10.2",
     "@typescript-eslint/eslint-plugin": "^8.18.1",
     "@typescript-eslint/parser": "^8.18.1",
     "esbuild": "^0.25.8",
     "eslint": "^9.17.0",
+    "globals": "^17.12.0",
     "jest": "^30.2.0",
     "ts-jest": "^29.4.5",
     "tsc-alias": "^1.8.10",
     "tsx": "^4.19.2",
-    "typescript": "^5.7.2"
+    "typescript": "^5.7.2",
+    "typescript-eslint": "^8"
   },
   "files": [
     "dist",
