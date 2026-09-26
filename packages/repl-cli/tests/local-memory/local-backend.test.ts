@@ -107,6 +107,54 @@ describe('LocalMemoryBackend', () => {
     expect(fetched!.content).not.toContain('plain-string-no-secret-pattern');
   });
 
+  it('redacts nested metadata in SQLite and the queued payload without mutating input', async () => {
+    const secret = ['ghp', 'abcdefghijklmnopqrstuvwxyz0123456789'].join('_');
+    const metadata = { nested: { token: secret }, values: [secret, 'ordinary'], count: 2, empty: null };
+    const expected = {
+      nested: { token: '[REDACTED:github-token]' },
+      values: ['[REDACTED:github-token]', 'ordinary'], count: 2, empty: null,
+    };
+    await backend.save({
+      id: 'metadata', title: 'Metadata', content: 'safe',
+      memory_type: 'context', status: 'active', tags: [], metadata,
+    });
+    expect((await backend.get('metadata'))!.metadata).toEqual(expected);
+    const [row] = backend.getSyncQueueDeps().readReady(10);
+    expect(JSON.parse(row.payload).metadata).toEqual(expected);
+    expect(metadata.nested.token).toBe(secret);
+  });
+
+  it.each([undefined, null])('preserves %s metadata in the queue', async (metadata) => {
+    await backend.save({
+      id: 'empty-metadata', title: 'Metadata', content: 'safe',
+      memory_type: 'context', status: 'active', tags: [],
+      // Null is accepted by runtime callers even though the TS contract is optional.
+      metadata: metadata as unknown as Record<string, unknown> | undefined,
+    });
+    const [row] = backend.getSyncQueueDeps().readReady(10);
+    expect(JSON.parse(row.payload).metadata).toBe(metadata);
+    expect((await backend.get('empty-metadata'))!.metadata).toBeUndefined();
+  });
+
+  it('excludes dropped rows while counting ready and delayed rows after reopening', async () => {
+    for (const id of ['dropped', 'delayed', 'ready']) {
+      await backend.save({ id, title: id, content: 'safe', memory_type: 'context', status: 'active', tags: [] });
+    }
+    const deps = backend.getSyncQueueDeps();
+    const [dropped, delayed] = deps.readReady(10);
+    deps.reschedule(delayed.id, 1, 'retry', 60);
+    deps.drop(dropped.id, 'schema mismatch');
+    expect(deps.count()).toBe(2);
+    expect((await backend.health()).pendingSync).toBe(2);
+    await backend.close();
+    await backend.init();
+    expect((await backend.health()).pendingSync).toBe(2);
+    const result = await backend.save({
+      id: 'another', title: 'Another', content: 'safe', memory_type: 'context', status: 'active', tags: [],
+    });
+    expect(result.pendingSync).toBe(3);
+  });
+
   it('searches via FTS5 and ranks by relevance', async () => {
     await backend.save({
       id: 'a',

@@ -300,7 +300,7 @@ export class LocalMemoryBackend implements MemoryBackend {
   private readPendingSyncCount(): number {
     try {
       const row = this.requireDb()
-        .prepare('SELECT COUNT(*) AS n FROM sync_queue')
+        .prepare("SELECT COUNT(*) AS n FROM sync_queue WHERE next_retry_at != '9999-12-31 23:59:59'")
         .get() as { n: number } | undefined;
       return row?.n ?? 0;
     } catch {
@@ -444,6 +444,9 @@ export class LocalMemoryBackend implements MemoryBackend {
     const redactedTitle = redactSecrets(record.title).text;
     const redactedContent = redactSecrets(record.content).text;
     const redactedTags = record.tags.map((t) => redactSecrets(t).text);
+    const redactedMetadata = record.metadata == null
+      ? record.metadata
+      : JSON.parse(redactSecrets(JSON.stringify(record.metadata)).text);
 
     const now = new Date().toISOString();
     const id = record.id || randomUUID();
@@ -471,7 +474,7 @@ export class LocalMemoryBackend implements MemoryBackend {
       JSON.stringify(redactedTags),
       record.subject_id ?? null,
       source,
-      record.metadata ? JSON.stringify(record.metadata) : null,
+      redactedMetadata == null ? null : JSON.stringify(redactedMetadata),
       now,
       now,
     );
@@ -506,7 +509,7 @@ export class LocalMemoryBackend implements MemoryBackend {
         status: record.status ?? 'active',
         tags: redactedTags,
         subject_id: record.subject_id,
-        metadata: record.metadata,
+        metadata: redactedMetadata,
         created_at: now,
       }));
       this.pendingSync = this.readPendingSyncCount();

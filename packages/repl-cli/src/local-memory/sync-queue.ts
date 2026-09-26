@@ -9,7 +9,8 @@
  *   - Each tick processes up to `batchSize` ready rows.
  *   - On 2xx: row is deleted; the caller (router) is responsible for
  *     updating maas_synced_at / maas_id on the source record.
- *   - On 4xx (non-retryable): row is dropped and the error is logged.
+ *   - On fatal errors: row is dropped and the error is logged.
+ *   - On auth errors: row is rescheduled for retry after re-authentication.
  *   - On 5xx / network: attempts++ and next_retry_at = now + min(2^attempts, 300s).
  *   - On timeout: same as 5xx.
  */
@@ -87,6 +88,8 @@ const DEFAULT_OPTIONS: Required<Omit<SyncRunnerOptions, 'classifyError'>> & {
   },
 };
 
+class FatalSyncError extends Error {}
+
 function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
   return new Promise((resolve, reject) => {
     const timer = setTimeout(() => reject(new Error(`sync submit timeout after ${ms}ms`)), ms);
@@ -139,6 +142,9 @@ export class AsyncSyncQueueRunner {
       attempted = ready.length;
       for (const row of ready) {
         try {
+          if (row.op !== 'save' && row.op !== 'delete') {
+            throw new FatalSyncError(`Unknown sync operation: ${row.op}`);
+          }
           const payload = JSON.parse(row.payload);
           if (row.op === 'save') {
             await withTimeout(
@@ -154,8 +160,8 @@ export class AsyncSyncQueueRunner {
           this.deps.deleteById(row.id);
           succeeded++;
         } catch (err) {
-          const kind = this.options.classifyError(err);
-          if (kind === 'fatal' || kind === 'auth') {
+          const kind = err instanceof FatalSyncError ? 'fatal' : this.options.classifyError(err);
+          if (kind === 'fatal') {
             this.deps.drop(row.id, String(err instanceof Error ? err.message : err));
             dropped++;
           } else {

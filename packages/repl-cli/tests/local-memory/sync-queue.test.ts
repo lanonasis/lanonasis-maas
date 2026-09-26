@@ -10,7 +10,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 import { LocalMemoryBackend } from '../../src/local-memory/local-backend.js';
-import { AsyncSyncQueueRunner, type SyncSubmitter } from '../../src/local-memory/sync-queue.js';
+import { AsyncSyncQueueRunner, type SyncSubmitter, type SyncQueueRow } from '../../src/local-memory/sync-queue.js';
 import { redactSecrets } from '../../src/local-memory/privacy.js';
 
 const tempDirs: string[] = [];
@@ -118,17 +118,41 @@ describe('AsyncSyncQueueRunner', () => {
     expect(ready.length).toBe(0);
   });
 
-  it('drops rows on auth errors', async () => {
+  it.each(['401 Unauthorized', '403 Forbidden'])('retries %s rows after re-authentication', async (message) => {
     await backend.save({
       id: 'q4', title: 'q', content: 'auth fail',
       memory_type: 'context', status: 'active', tags: [],
     });
     const submitter: SyncSubmitter = {
-      submitSave: async () => { throw new Error('401 Unauthorized'); },
+      submitSave: vi.fn().mockRejectedValueOnce(new Error(message)).mockResolvedValue({ maas_id: 'm_q4' }),
       submitDelete: async () => { /* unused */ },
     };
     const r = await runner.tick(submitter);
-    expect(r.dropped).toBe(1);
+    expect(r).toMatchObject({ dropped: 0, succeeded: 0, failed: 1 });
+    const deps = backend.getSyncQueueDeps();
+    expect(runner.pending()).toBe(1);
+    expect(deps.readReady(10)).toEqual([]);
+    // Make the delayed row due without waiting on wall-clock time.
+    deps.reschedule(1, 1, message, 0);
+    const retried = await runner.tick(submitter);
+    expect(retried).toMatchObject({ succeeded: 1, dropped: 0, failed: 0 });
+    expect(runner.pending()).toBe(0);
+  });
+
+  it('drops unknown operations without submitting or deleting them', async () => {
+    const deps = {
+      readReady: () => [{ id: 42, op: 'unknown', payload: '{}', attempts: 0 }] as unknown as SyncQueueRow[],
+      deleteById: vi.fn(), reschedule: vi.fn(), drop: vi.fn(), count: () => 1,
+    };
+    const submitter = { submitSave: vi.fn(), submitDelete: vi.fn() };
+    // Invalid local operations are terminal even with a permissive transport classifier.
+    const invalidRunner = new AsyncSyncQueueRunner(deps, { classifyError: () => 'retryable' });
+    expect(await invalidRunner.tick(submitter)).toMatchObject({ attempted: 1, succeeded: 0, dropped: 1, failed: 0 });
+    expect(deps.drop).toHaveBeenCalledWith(42, expect.stringContaining('Unknown sync operation'));
+    expect(deps.deleteById).not.toHaveBeenCalled();
+    expect(deps.reschedule).not.toHaveBeenCalled();
+    expect(submitter.submitSave).not.toHaveBeenCalled();
+    expect(submitter.submitDelete).not.toHaveBeenCalled();
   });
 
   it('processes deletes separately from saves', async () => {

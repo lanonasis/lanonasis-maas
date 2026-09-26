@@ -33,6 +33,7 @@ import type {
   SearchOptions,
 } from './types.js';
 import { MemoryBackendError } from './types.js';
+import { redactSecrets } from './privacy.js';
 
 export interface RouterOptions {
   preferRemote?: boolean;        // default: false (local wins on tie)
@@ -209,13 +210,20 @@ export class MemoryBackendRouter implements MemoryBackend {
   ): Promise<SaveResult> {
     // Local-first, durable immediately.
     const result = await this.local.save({ ...record, source: record.source ?? 'local' });
+    this.invalidateCache();
 
     // Best-effort direct sync. If it fails, the sync_queue (populated by
     // local.save()) will retry on the next tick.
     if (this.remote) {
       try {
         const remoteResult = await withTimeout(
-          this.remote.save({ ...record, source: 'maas-sync' }),
+          this.remote.save({
+            ...record,
+            title: redactSecrets(record.title).text,
+            content: redactSecrets(record.content).text,
+            tags: record.tags.map((tag) => redactSecrets(tag).text),
+            source: 'maas-sync',
+          }),
           this.options.remoteTimeoutMs,
         );
         // Persist the mapping from local ID to remote ID so delete() can locate the remote record.

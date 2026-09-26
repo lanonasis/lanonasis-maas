@@ -142,6 +142,7 @@ export class MaaSClientAdapter implements MemoryBackend {
   async list(opts: ListOptions = {}): Promise<MemoryRecord[]> {
     const res = await this.client.listMemories({
       limit: opts.limit ?? 50,
+      cursor: opts.cursor,
       type: opts.type,
     });
     if (res.error) throw new MemoryBackendError(res.error, 'transport');

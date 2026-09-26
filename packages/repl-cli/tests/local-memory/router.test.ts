@@ -233,6 +233,42 @@ describe('MemoryBackendRouter', () => {
     expect(fetched).not.toBeNull();
   });
 
+  it('redacts direct remote writes while leaving the local input and caller record intact', async () => {
+    const secret = ['ghp', 'abcdefghijklmnopqrstuvwxyz0123456789'].join('_');
+    const record = {
+      id: 'redacted', title: secret, content: secret, tags: [secret, 'safe'],
+      memory_type: 'context' as const, status: 'active' as const,
+    };
+    const localSave = vi.spyOn(local, 'save');
+    const remoteSave = vi.spyOn(remote, 'save');
+    remote.failNext = true; // Keep the queue available for inspection.
+    await router.save(record);
+    expect(remoteSave).toHaveBeenCalledWith({
+      ...record, title: '[REDACTED:github-token]', content: '[REDACTED:github-token]',
+      tags: ['[REDACTED:github-token]', 'safe'], source: 'maas-sync',
+    });
+    expect(localSave).toHaveBeenCalledWith({ ...record, source: 'local' });
+    expect(record.title).toBe(secret);
+    expect(record.content).toBe(secret);
+    expect(record.tags).toEqual([secret, 'safe']);
+    const [row] = local.getSyncQueueDeps().readReady(10);
+    expect(JSON.parse(row.payload)).toMatchObject({
+      title: '[REDACTED:github-token]', content: '[REDACTED:github-token]',
+      tags: ['[REDACTED:github-token]', 'safe'],
+    });
+  });
+
+  it.each(['offline', 'queued', 'synced'])('invalidates cached searches after a %s save', async (mode) => {
+    if (mode === 'offline') router = new MemoryBackendRouter(local, null);
+    expect(await router.search('fresh')).toEqual([]);
+    remote.failNext = mode === 'queued';
+    await router.save({
+      id: 'fresh', title: 'Fresh memory', content: 'new content',
+      memory_type: 'context', status: 'active', tags: [],
+    });
+    expect((await router.search('fresh')).map((hit) => hit.id)).toContain('fresh');
+  });
+
   it('delete removes from both backends', async () => {
     await local.save({
       id: 'to-delete',
