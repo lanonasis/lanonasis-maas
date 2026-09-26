@@ -1,0 +1,264 @@
+name: Release Packages (npm + GitHub Packages + GitHub Release)
+
+# Drives scripts/release-packages.mjs. Every package in
+# .github/release-packages.json gets:
+#   1) npm pack + sha256
+#   2) optional npm publish (trusted publishing, OIDC)  — gated by manifest `npm: true`
+#   3) GitHub Packages publish (--userconfig + GITHUB_TOKEN) — gated by `github: true`
+#   4) gh release create <tag>-v<version> with .tgz + .sha256 attached
+#
+# FIRST RUN MUST BE DRY-RUN. workflow_dispatch defaults dry_run to true, and
+# push-to-main runs are dry-run until RELEASE_ON_PUSH is flipped to 'true'
+# below (owner action, after the first dispatch run has been reviewed).
+
+'on':
+  push:
+    branches: [ main ]
+    paths:
+      - 'packages/**'
+      - 'packages/*/package.json'
+      - '.github/release-packages.json'
+      - '.github/workflows/release-packages.yml'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Print the plan only, do not publish or create releases.'
+        required: true
+        default: 'true'
+        type: choice
+        options:
+          - 'true'
+          - 'false'
+      only:
+        description: 'Optional manifest tag to restrict (e.g. repl-cli).'
+        required: false
+        type: string
+
+permissions:
+  contents: write
+  packages: write
+  id-token: write
+
+concurrency:
+  group: release-packages-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Release packages
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      # Owner flips to 'true' once the first dispatch run has been reviewed.
+      RELEASE_ON_PUSH: 'false'
+      DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.dry_run || 'true' }}
+      ONLY: ${{ github.event.inputs.only || '' }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Resolve dry-run mode
+        run: |
+          if [ "${{ github.event_name }}" = "push" ] && [ "${RELEASE_ON_PUSH}" = "true" ]; then
+            echo "DRY_RUN=false" >> "$GITHUB_ENV"
+          fi
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.2
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          registry-url: 'https://registry.npmjs.org'
+
+      # OIDC trusted publishing needs npm >= 11.5.1. Pin to 11: npm 12 (now
+      # "latest") requires Node >= 22.22.2 and blocks dependency lifecycle
+      # scripts by default.
+      - name: Install npm 11
+        run: npm install -g npm@^11.5.1
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Validate manifest JSON
+        run: |
+          python3 -m json.tool < .github/release-packages.json > /dev/null
+          echo "manifest is valid JSON"
+
+      - name: Print dry-run plan (mandatory first step)
+        run: |
+          node scripts/release-packages.mjs --dry-run ${ONLY:+--only "$ONLY"}
+
+      - name: Dry-run notice
+        if: env.DRY_RUN == 'true'
+        run: echo "::notice::dry-run — plan printed above; no packages published, no releases created."
+
+      # Some packages resolve types from the root node_modules (e.g. repl-cli's
+      # typeRoots: ../../node_modules/@types), so the root install must run first.
+      - name: Install root deps (workspace)
+        if: env.DRY_RUN != 'true'
+        run: bun install --frozen-lockfile
+
+      # ---- Owner pre-requisite: configure npm trusted publishers on npmjs.com ----
+      # Without that, `npm publish --provenance` fails for that package; the loop
+      # records the failure, carries on with the rest, and fails the job at the end.
+      - name: Publish each npm package
+        if: env.DRY_RUN != 'true'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TARGET_SHA: ${{ github.sha }}
+        run: |
+          set -uo pipefail
+          python3 - <<'PY' > "$RUNNER_TEMP/plan.tsv"
+          import json, os, pathlib
+          only = os.environ.get("ONLY", "")
+          manifest = json.loads(pathlib.Path(".github/release-packages.json").read_text())
+          for entry in manifest.get("packages", []):
+              if only and entry["tag"] != only:
+                  continue
+              if not (entry.get("npm") or entry.get("github")):
+                  continue
+              pkg = json.loads(pathlib.Path(entry["dir"], "package.json").read_text())
+              print(f"{entry['tag']}\t{entry['name']}\t{entry['dir']}\t{pkg['version']}\t{str(bool(entry.get('npm'))).lower()}\t{str(bool(entry.get('github'))).lower()}")
+          PY
+
+          GH_NPMRC="$RUNNER_TEMP/gh-packages.npmrc"
+          printf '%s\n' \
+            '//npm.pkg.github.com/:_authToken=${GITHUB_TOKEN}' \
+            '@lanonasis:registry=https://npm.pkg.github.com' > "$GH_NPMRC"
+
+          FAILED=()
+          release_one() {
+            local TAG="$1" NAME="$2" DIR="$3" VERSION="$4" NPM="$5" GH="$6"
+            local FULL_TAG="${TAG}-v${VERSION}"
+
+            # Idempotency: skip if the release tag already exists.
+            if git ls-remote --tags --quiet origin "refs/tags/${FULL_TAG}" | grep -q .; then
+              echo "::notice::${NAME}: tag ${FULL_TAG} already exists, skipping"
+              return 0
+            fi
+
+            echo "::group::${NAME} ${VERSION} (${FULL_TAG})"
+            cd "$GITHUB_WORKSPACE/${DIR}" || return 1
+
+            if [ -f bun.lock ] || [ -f bun.lockb ]; then
+              bun install --frozen-lockfile || return 1
+            else
+              bun install || return 1
+            fi
+            if node -e "process.exit(require('./package.json').scripts?.build ? 0 : 1)"; then
+              bun run build || return 1
+            fi
+
+            local TGZ
+            TGZ="$(npm pack --silent | tail -n1)"
+            [ -n "$TGZ" ] && [ -f "$TGZ" ] || { echo "::error::npm pack failed for ${NAME}"; return 1; }
+            sha256sum "$TGZ" > "${TGZ}.sha256"
+            echo "packed: ${DIR}/${TGZ}"
+
+            if [ "$NPM" = "true" ]; then
+              if npm view "${NAME}@${VERSION}" version --registry=https://registry.npmjs.org >/dev/null 2>&1; then
+                echo "::notice::${NAME}@${VERSION} already on npmjs.org; skipping npm publish"
+              else
+                npm publish --provenance --access public || return 1
+              fi
+            fi
+
+            if [ "$GH" = "true" ]; then
+              npm publish --registry=https://npm.pkg.github.com --userconfig "$GH_NPMRC" \
+                || echo "::warning::GitHub Packages publish failed for ${NAME} (check package repository linkage)"
+            fi
+
+            local NOTES
+            NOTES="$(printf '# %s v%s\n\n## Install\n\n```sh\nnpm i %s\n```\n\nStraight from this release (no auth; npm 12+ needs --allow-remote=root):\n\n```sh\nnpm i --allow-remote=root https://github.com/lanonasis/lanonasis-maas/releases/download/%s/%s\n```\n' \
+              "$NAME" "$VERSION" "$NAME" "$FULL_TAG" "$TGZ")"
+            gh release create "$FULL_TAG" "$TGZ" "${TGZ}.sha256" \
+              --repo lanonasis/lanonasis-maas \
+              --target "$TARGET_SHA" \
+              --title "${NAME} v${VERSION}" \
+              --notes "$NOTES" \
+              --latest=false || return 1
+            echo "::endgroup::"
+          }
+
+          while IFS=$'\t' read -r TAG NAME DIR VERSION NPM GH; do
+            [ -z "$TAG" ] && continue
+            if ! ( release_one "$TAG" "$NAME" "$DIR" "$VERSION" "$NPM" "$GH" ); then
+              echo "::endgroup::"
+              echo "::error::release failed for ${NAME}@${VERSION}"
+              FAILED+=("${NAME}@${VERSION}")
+            fi
+          done < "$RUNNER_TEMP/plan.tsv"
+
+          if [ "${#FAILED[@]}" -gt 0 ]; then
+            echo "::error::failed: ${FAILED[*]}"
+            exit 1
+          fi
+
+      - name: Build Python packages and attach to releases
+        if: env.DRY_RUN != 'true' && (success() || failure())
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TARGET_SHA: ${{ github.sha }}
+        run: |
+          set -uo pipefail
+          python3 -m pip install --quiet build
+          python3 - <<'PY' > "$RUNNER_TEMP/py_plan.tsv"
+          import json, os, pathlib, re
+          only = os.environ.get("ONLY", "")
+          manifest = json.loads(pathlib.Path(".github/release-packages.json").read_text())
+          for entry in manifest.get("python", []):
+              if only and entry["tag"] != only:
+                  continue
+              text = pathlib.Path(entry["dir"], "pyproject.toml").read_text()
+              m = re.search(r'^\s*version\s*=\s*"([^"]+)"', text, re.M)
+              if m:
+                  print(f"{entry['tag']}\t{entry['name']}\t{entry['dir']}\t{m.group(1)}")
+          PY
+
+          FAILED=()
+          while IFS=$'\t' read -r TAG NAME DIR VERSION; do
+            [ -z "$TAG" ] && continue
+            FULL_TAG="${TAG}-v${VERSION}"
+            if git ls-remote --tags --quiet origin "refs/tags/${FULL_TAG}" | grep -q .; then
+              echo "::notice::${NAME}: tag ${FULL_TAG} already exists, skipping"
+              continue
+            fi
+            OUT="$RUNNER_TEMP/dist-${TAG}"
+            if ! python3 -m build --outdir "$OUT" "$DIR"; then
+              FAILED+=("${NAME}@${VERSION}"); continue
+            fi
+            SDIST="$(ls "$OUT"/*.tar.gz 2>/dev/null | head -n1)"
+            WHEEL="$(ls "$OUT"/*.whl 2>/dev/null | head -n1)"
+            if [ -z "$SDIST" ] || [ -z "$WHEEL" ]; then
+              echo "::error::python -m build produced no sdist/wheel for ${NAME}"
+              FAILED+=("${NAME}@${VERSION}"); continue
+            fi
+            NOTES="$(printf '# %s v%s\n\n```sh\npip install https://github.com/lanonasis/lanonasis-maas/releases/download/%s/%s\n```\n' \
+              "$NAME" "$VERSION" "$FULL_TAG" "${WHEEL##*/}")"
+            gh release create "$FULL_TAG" "$SDIST" "$WHEEL" \
+              --repo lanonasis/lanonasis-maas \
+              --target "$TARGET_SHA" \
+              --title "${NAME} v${VERSION}" \
+              --notes "$NOTES" \
+              --latest=false || FAILED+=("${NAME}@${VERSION}")
+          done < "$RUNNER_TEMP/py_plan.tsv"
+
+          if [ "${#FAILED[@]}" -gt 0 ]; then
+            echo "::error::failed: ${FAILED[*]}"
+            exit 1
+          fi
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "::notice::release-packages job finished. dry_run=${DRY_RUN}"

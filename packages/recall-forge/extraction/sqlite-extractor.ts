@@ -197,7 +197,7 @@ export async function extractSqlite(
     }
 
     // Step 1: Redact secrets
-    const redaction = redactSecrets(chunk.text);
+    const redaction = redactSecrets(chunk.text, { redactPII: options.redactPII });
     stats.secretsRedacted += redaction.secretsFound;
     const cleanText = redaction.text;
 

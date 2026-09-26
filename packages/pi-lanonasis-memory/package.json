@@ -57,7 +57,9 @@
     "lanonasis",
     "maas",
     "memory-as-a-service",
-    "agent-memory"
+    "agent-memory",
+    "semantic-search",
+    "mcp"
   ],
   "author": {
     "name": "Lanonasis Team",
@@ -66,7 +68,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/lanonasis/lanonasis-maas.git",
+    "url": "git+https://github.com/lanonasis/lanonasis-maas.git",
     "directory": "packages/pi-lanonasis-memory"
   },
   "homepage": "https://github.com/lanonasis/lanonasis-maas/tree/main/packages/pi-lanonasis-memory#readme",
@@ -74,6 +76,6 @@
     "url": "https://github.com/lanonasis/lanonasis-maas/issues"
   },
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=18"
   }
 }

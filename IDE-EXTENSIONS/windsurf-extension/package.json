@@ -7,7 +7,8 @@
   "icon": "images/icon.png",
   "repository": {
     "type": "git",
-    "url": "https://github.com/lanonasis/lanonasis-maas"
+    "url": "git+https://github.com/lanonasis/lanonasis-maas.git",
+    "directory": "IDE-EXTENSIONS/windsurf-extension"
   },
   "engines": {
     "vscode": "^1.89.0"
@@ -262,11 +263,6 @@
           "default": true,
           "markdownDescription": "Enable automatic OAuth2 authentication with browser redirect"
         },
-        "lanonasis.aiRouterUrl": {
-          "type": "string",
-          "default": "https://ai.vortexcore.app",
-          "markdownDescription": "Onasis AI Router base URL used by the sidebar chat (\"Ask me anything\") for synthesized answers. Defaults to the hosted router; change only if using a custom router deployment."
-        },
         "lanonasis.defaultMemoryType": {
           "type": "string",
           "enum": [
@@ -401,5 +397,9 @@
     "keytar": "^7.9.0"
   },
   "author": "Lanonasis Team",
-  "license": "MIT"
+  "license": "MIT",
+  "homepage": "https://github.com/lanonasis/lanonasis-maas/tree/main/IDE-EXTENSIONS/windsurf-extension#readme",
+  "bugs": {
+    "url": "https://github.com/lanonasis/lanonasis-maas/issues"
+  }
 }

@@ -1,7 +1,26 @@
 import { MemoryClient, createMemoryClient } from '@lanonasis/memory-client';
-import { randomUUID } from 'crypto';
+import { join } from 'path';
+import { homedir } from 'os';
 import chalk from 'chalk';
 import ora from 'ora';
+
+import { LocalMemoryBackend } from '../local-memory/local-backend.js';
+import { MemoryBackendRouter } from '../local-memory/router.js';
+import { MaaSClientAdapter } from '../local-memory/maas-adapter.js';
+import { AsyncSyncQueueRunner, type SyncSubmitter } from '../local-memory/sync-queue.js';
+import type { MemoryBackend } from '../local-memory/types.js';
+
+/**
+ * Resolve the local-memory root directory. Honors XDG-style layout:
+ *   - $LANONASIS_LOCAL_MEMORY_DIR if set
+ *   - ~/.lanonasis/repl-cli/        default
+ *
+ * Matches the openclaw-plugin convention (~/.lanonasis/...) so the
+ * two stay discoverable in `ls ~/.lanonasis/`.
+ */
+function joinLocalMemoryRoot(): string {
+  return join(homedir(), '.lanonasis', 'repl-cli');
+}
 
 // VortexAI L0 Integration - Universal Work Orchestrator
 import {
@@ -13,7 +32,6 @@ import {
 
 // Onasis AI Router client
 import { AIRouterClient } from './ai-router-client';
-import { AgentMemoryClient } from './agent-memory-client';
 import type { L0Config } from '../config/types.js';
 import { DEFAULT_OPENAI_MODEL } from '../config/constants.js';
 import type { Persona } from '../personas/types.js';
@@ -27,9 +45,6 @@ export interface OrchestratorConfig {
   aiRouterAuthToken?: string;
   aiRouterApiKey?: string; // Dedicated API key for AI Router (lano_...)
   l0?: L0Config;
-  // Stable session id for the session-memory proxy (see agent-memory-client.ts).
-  // When absent, conversation history stays in-process-only, as before.
-  agentMemorySessionId?: string;
   userContext?: {
     name?: string;
     projects?: string[];
@@ -70,8 +85,16 @@ export class NaturalLanguageOrchestrator {
   private l0Orchestrator?: L0Orchestrator;
   private l0Config: Required<Pick<L0Config, 'enabled' | 'enableCampaigns' | 'enableTrends' | 'enableContentCreation'>>;
   private aiRouterClient?: AIRouterClient;
-  private agentMemoryClient?: AgentMemoryClient;
-  private sessionId?: string;
+
+  /** Local-first memory hybrid (Phase 1-4 of the hybrid plan).
+   *  When set, search/get/save/delete all flow through this router.
+   *  Initialized in constructor when LANONASIS_LOCAL_MEMORY !== '0'. */
+  private memoryRouter?: MemoryBackendRouter;
+  private localBackend?: LocalMemoryBackend;
+  /** Drains sync_queue rows on a periodic interval. */
+  private syncRunner?: AsyncSyncQueueRunner;
+  /** Handle for the periodic sync-tick schedule (cleared on close). */
+  private syncTickTimer?: ReturnType<typeof setInterval>;
 
   private formatError(error: unknown): string {
     if (error instanceof Error && error.message) return error.message;
@@ -81,37 +104,6 @@ export class NaturalLanguageOrchestrator {
     } catch {
       return String(error);
     }
-  }
-
-  /**
-   * Fire-and-forget write to session memory. Never throws — a memory-write
-   * failure must not break the chat flow, same fail-soft contract as every
-   * other optional-enrichment call in this class.
-   */
-  private async persistTurn(role: 'USER' | 'ASSISTANT', text: string): Promise<void> {
-    if (!this.agentMemoryClient || !this.sessionId || !text) return;
-    try {
-      await this.agentMemoryClient.addEvent(this.sessionId, role, text);
-    } catch {
-      // Silently fail — session memory is durability/continuity, not
-      // correctness. The turn already happened locally either way.
-    }
-  }
-
-  /**
-   * Start a new session: local history resets to just the system prompt,
-   * and (when session memory is configured) a fresh sessionId is adopted so
-   * the abandoned session's events are never mixed with the new one.
-   * Returns the new sessionId so the caller (ReplEngine) can persist it via
-   * saveConfig — this class does no config file I/O itself.
-   */
-  regenerateSession(): string | undefined {
-    this.conversationHistory = this.conversationHistory.slice(0, 1);
-    if (this.agentMemoryClient) {
-      this.sessionId = randomUUID();
-      return this.sessionId;
-    }
-    return undefined;
   }
 
   private resolveOpenAIModel(): string {
@@ -157,6 +149,80 @@ export class NaturalLanguageOrchestrator {
       timeout: 30000
     });
 
+    // Local-first memory hybrid. When LANONASIS_LOCAL_MEMORY !== '0' (default
+    // ON), open a SQLite-backed LocalMemoryBackend, wrap it with the MaaS
+    // adapter through MemoryBackendRouter, and schedule a periodic sync
+    // queue drain so saves that fall back to local persistence are eventually
+    // pushed to MaaS. Without this wiring every search hits MaaS over the
+    // network and every save that fails the direct remote write sits in the
+    // sync_queue table forever.
+    if (process.env.LANONASIS_LOCAL_MEMORY !== '0') {
+      try {
+        const rootDir = process.env.LANONASIS_LOCAL_MEMORY_DIR
+          || joinLocalMemoryRoot();
+        this.localBackend = new LocalMemoryBackend({ rootDir });
+        // Note: we don't await init() here — the router will lazy-init
+        // on first use. SQLite open is fast enough that doing it during
+        // REPL construction would block the welcome banner.
+        const remote: MemoryBackend = new MaaSClientAdapter(
+          this.client as unknown as ConstructorParameters<typeof MaaSClientAdapter>[0],
+        );
+        this.memoryRouter = new MemoryBackendRouter(this.localBackend, remote, {
+          remoteTimeoutMs: 800,
+          offlineGracePeriodMs: 30_000,
+          debug: process.env.LANONASIS_LOCAL_MEMORY_DEBUG === '1',
+        });
+
+        const submitter: SyncSubmitter = {
+          submitSave: async (payload) => {
+            const res = await this.client.createMemory({
+              title: String(payload.title ?? ''),
+              content: String(payload.content ?? ''),
+              type: payload.memory_type as string | undefined,
+              tags: Array.isArray(payload.tags) ? (payload.tags as string[]) : undefined,
+              metadata: (payload.metadata ?? undefined) as Record<string, unknown> | undefined,
+            });
+            if (res.error) {
+              const msg = typeof (res.error as { message?: unknown }).message === 'string'
+                ? (res.error as { message: string }).message
+                : JSON.stringify(res.error);
+              throw new Error(msg);
+            }
+            return { maas_id: res.data?.id ?? '' };
+          },
+          submitDelete: async (payload) => {
+            const res = await this.client.deleteMemory(String(payload.id));
+            if (res.error) {
+              const errMsg = typeof (res.error as { message?: unknown }).message === 'string'
+                ? (res.error as { message: string }).message
+                : JSON.stringify(res.error);
+              if (!/not found|404/i.test(errMsg)) throw new Error(errMsg);
+            }
+          },
+        };
+        this.syncRunner = new AsyncSyncQueueRunner(this.localBackend.getSyncQueueDeps(), {
+          batchSize: 5,
+          submitTimeoutMs: 8000,
+          baseBackoffSeconds: 2,
+          maxBackoffSeconds: 300,
+        });
+        // Drain every 30s; AsyncSyncQueueRunner.tick() is a no-op when no
+        // rows are ready. The timer is unref'd (runtime-only) so it never
+        // holds the event loop.
+        const intervalMs = Number(process.env.LANONASIS_SYNC_TICK_MS) || 30_000;
+        this.syncTickTimer = setInterval(() => {
+          this.syncRunner?.tick(submitter).catch(() => { /* best effort */ });
+        }, intervalMs);
+        const timer = this.syncTickTimer as unknown as { unref?: () => void };
+        if (typeof timer.unref === 'function') timer.unref();
+      } catch (err) {
+        // Local memory init failure must not break the chat flow.
+        // Fall back to direct MaaS calls, same as before this work.
+        // eslint-disable-next-line no-console
+        console.warn(`[local-memory] init skipped: ${(err as Error).message}`);
+      }
+    }
+
     this.l0Config = {
       enabled: config.l0?.enabled !== false,
       enableCampaigns: config.l0?.enableCampaigns !== false,
@@ -184,15 +250,6 @@ export class NaturalLanguageOrchestrator {
         authToken: routerKey,
         defaultUseCase: 'repl-nlp',
       });
-
-      // Session memory rides the same router connection + credential — it's
-      // a proxy to Redis Agent Memory, not a separate direct client (see
-      // agent-memory-client.ts for why). Only active once a sessionId has
-      // been generated (config/loader.ts does this once aiRouterUrl is set).
-      if (config.agentMemorySessionId) {
-        this.agentMemoryClient = new AgentMemoryClient({ baseUrl: config.aiRouterUrl, authToken: routerKey });
-        this.sessionId = config.agentMemorySessionId;
-      }
     }
 
     // Initialize conversation with enhanced system prompt
@@ -208,33 +265,6 @@ export class NaturalLanguageOrchestrator {
    */
   async initializeContext(): Promise<void> {
     if (this.contextInitialized) return;
-
-    // Resume prior session-memory turns, if any, before anything else touches
-    // conversationHistory — cross-restart continuity for a resumed REPL.
-    if (this.agentMemoryClient && this.sessionId) {
-      try {
-        const session = await this.agentMemoryClient.getSession(this.sessionId);
-
-        if (session.summary) {
-          this.conversationHistory.push({
-            role: 'system',
-            content: `[Summary of earlier conversation]: ${session.summary.text}`
-          });
-        }
-
-        for (const event of session.events) {
-          const text = event.content.map((c) => c.text).join('\n');
-          if (!text) continue;
-          this.conversationHistory.push({
-            role: event.role === 'ASSISTANT' ? 'assistant' : 'user',
-            content: text
-          });
-        }
-      } catch (error) {
-        // Silently fail — session memory is optional enrichment, same as
-        // the preferences/context search below.
-      }
-    }
 
     try {
       // Search for user preferences and profile information
@@ -331,6 +361,31 @@ export class NaturalLanguageOrchestrator {
     return [];
   }
 
+  /**
+   * Expose the local-first memory router so ReplEngine can attach it
+   * to the CommandContext (MemoryCommands reads/writes through it).
+   * Returns undefined when local memory is disabled.
+   */
+  getMemoryRouter(): MemoryBackendRouter | undefined {
+    return this.memoryRouter;
+  }
+
+  /**
+   * Triggered on REPL shutdown — stop the sync-tick timer and close
+   * the local SQLite handle. Safe to call when local memory is disabled.
+   */
+  async closeMemory(): Promise<void> {
+    if (this.syncTickTimer) {
+      clearInterval(this.syncTickTimer);
+      this.syncTickTimer = undefined;
+    }
+    if (this.localBackend) {
+      try {
+        await this.localBackend.close();
+      } catch { /* best effort */ }
+    }
+  }
+
   private buildSystemPrompt(userContext?: OrchestratorConfig['userContext']): string {
     const userName = userContext?.name ? `, ${userContext.name}` : '';
     const projects = userContext?.projects && userContext.projects.length > 0
@@ -410,10 +465,6 @@ Remember: You are LZero - be helpful, conversational, and make the experience fe
       role: 'user',
       content: userMessage
     });
-    // Persist the raw input, not the memory-context-augmented userMessage —
-    // the injected context is prompt engineering, not part of the actual
-    // conversation transcript.
-    await this.persistTurn('USER', input);
 
     // If no AI backend is available, fall back to pattern matching.
     if (!this.aiRouterClient && !this.openaiApiKey) {
@@ -423,7 +474,6 @@ Remember: You are LZero - be helpful, conversational, and make the experience fe
         role: 'assistant',
         content: response.response
       });
-      await this.persistTurn('ASSISTANT', response.response);
       return response;
     }
 
@@ -452,7 +502,6 @@ Remember: You are LZero - be helpful, conversational, and make the experience fe
         role: 'assistant',
         content: response.response
       });
-      await this.persistTurn('ASSISTANT', response.response);
 
       // Include fetched context in the response for display
       if (relevantContext.length > 0 && !response.action) {
@@ -501,7 +550,6 @@ Remember: You are LZero - be helpful, conversational, and make the experience fe
         role: 'assistant',
         content: response.response
       });
-      await this.persistTurn('ASSISTANT', response.response);
       return response;
     }
   }

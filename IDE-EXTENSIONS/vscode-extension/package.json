@@ -7,7 +7,8 @@
   "icon": "images/icon.png",
   "repository": {
     "type": "git",
-    "url": "https://github.com/lanonasis/lanonasis-maas"
+    "url": "git+https://github.com/lanonasis/lanonasis-maas.git",
+    "directory": "IDE-EXTENSIONS/vscode-extension"
   },
   "engines": {
     "vscode": "^1.74.0"
@@ -469,11 +470,6 @@
           "default": false,
           "markdownDescription": "Use Onasis Gateway for centralized API management. Default is direct REST API connection."
         },
-        "lanonasis.aiRouterUrl": {
-          "type": "string",
-          "default": "https://ai.vortexcore.app",
-          "markdownDescription": "Onasis AI Router base URL used by the sidebar chat (\"Ask me anything\") for synthesized answers. Defaults to the hosted router; change only if using a custom router deployment."
-        },
         "lanonasis.authUrl": {
           "type": "string",
           "default": "https://auth.lanonasis.com",
@@ -751,5 +747,9 @@
     "tar-fs": "^2.1.4",
     "tmp": "^0.2.4",
     "undici": "^7.18.2"
+  },
+  "homepage": "https://github.com/lanonasis/lanonasis-maas/tree/main/IDE-EXTENSIONS/vscode-extension#readme",
+  "bugs": {
+    "url": "https://github.com/lanonasis/lanonasis-maas/issues"
   }
 }

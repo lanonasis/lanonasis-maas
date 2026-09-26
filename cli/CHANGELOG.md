@@ -1,5 +1,12 @@
 # Changelog - @lanonasis/cli
 
+## [Unreleased]
+
+### Changed
+- **Metadata normalization (PR-A.2).** Homepage re-pointed at the canonical
+  `tree/main/cli#readme` URL; `engines.node >= 18` added. Repository, bugs,
+  keywords, files allowlist, and dependencies unchanged.
+
 ## [3.11.2] - 2026-07-21
 
 ### 🐛 Bug Fixes

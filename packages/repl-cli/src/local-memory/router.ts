@@ -110,7 +110,9 @@ export class MemoryBackendRouter implements MemoryBackend {
       return false;
     }
     try {
-      const h = await this.remote.health();
+      // Bound the health probe by the remote timeout so a stalled MaaS
+      // endpoint can't defeat the router's offline-degrade target.
+      const h = await withTimeout(this.remote.health(), this.options.remoteTimeoutMs);
       this.lastHealthProbeResult = h.maas;
       this.consecutiveProbeFailures = h.maas ? 0 : this.consecutiveProbeFailures + 1;
       if (!h.maas) {

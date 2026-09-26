@@ -7,7 +7,8 @@
   "icon": "images/icon.png",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/lanonasis/lanonasis-maas.git"
+    "url": "git+https://github.com/lanonasis/lanonasis-maas.git",
+    "directory": "IDE-EXTENSIONS/cursor-extension"
   },
   "engines": {
     "vscode": "^1.89.0"
@@ -230,11 +231,6 @@
           "default": true,
           "markdownDescription": "Enable automatic OAuth2 authentication with browser redirect"
         },
-        "lanonasis.aiRouterUrl": {
-          "type": "string",
-          "default": "https://ai.vortexcore.app",
-          "markdownDescription": "Onasis AI Router base URL used by the sidebar chat (\"Ask me anything\") for synthesized answers. Defaults to the hosted router; change only if using a custom router deployment."
-        },
         "lanonasis.defaultMemoryType": {
           "type": "string",
           "enum": [
@@ -361,5 +357,5 @@
   "bugs": {
     "url": "https://github.com/lanonasis/lanonasis-maas/issues"
   },
-  "homepage": "https://github.com/lanonasis/lanonasis-maas#readme"
+  "homepage": "https://github.com/lanonasis/lanonasis-maas/tree/main/IDE-EXTENSIONS/cursor-extension#readme"
 }
