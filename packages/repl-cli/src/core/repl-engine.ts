@@ -389,8 +389,9 @@ export class ReplEngine {
     // Install global error handlers to prevent crashes (only once)
     this.installGlobalErrorHandlers();
 
-    // Fetch user context if available
-    await this.fetchUserContext();
+    // Fetch user context in the background — do NOT block the welcome banner
+    // on a network call. The REPL is fully functional without user preferences.
+    this.fetchUserContext().catch(() => {});
 
     // Personalized welcome
     const welcomeMessage = this.buildWelcomeMessage();

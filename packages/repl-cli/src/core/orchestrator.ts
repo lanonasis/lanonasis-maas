@@ -238,12 +238,18 @@ export class NaturalLanguageOrchestrator {
 
     try {
       // Search for user preferences and profile information
-      const preferencesSearch = await this.client.searchMemories({
-        query: 'user preferences settings profile configuration style',
-        status: 'active',
-        limit: 5,
-        threshold: 0.6
-      });
+      // Hard-timeout the search so it can't block startup indefinitely.
+      const preferencesSearch = await Promise.race([
+        this.client.searchMemories({
+          query: 'user preferences settings profile configuration style',
+          status: 'active',
+          limit: 5,
+          threshold: 0.6
+        }),
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error('searchMemories timeout')), 3000)
+        )
+      ]);
 
       if (preferencesSearch.data?.results && preferencesSearch.data.results.length > 0) {
         this.cachedUserPreferences = preferencesSearch.data.results
