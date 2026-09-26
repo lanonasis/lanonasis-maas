@@ -654,9 +654,10 @@ export class LocalMemoryBackend implements MemoryBackend {
            )`,
         )
         .run(`%"id":"${recordId}"%`);
-      const removed = Number(result as unknown === 'object' && result && 'changes' in (result as object)
-        ? (result as { changes?: number }).changes ?? 0
-        : 0);
+      const removed =
+        typeof result === 'object' && result !== null && 'changes' in result
+          ? Number((result as { changes?: number | bigint }).changes ?? 0)
+          : 0;
       this.pendingSync = this.readPendingSyncCount();
       return removed;
     } catch {
