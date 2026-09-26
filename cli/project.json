@@ -1,3 +1,26 @@
 {
-  "name": "@lanonasis/cli-app"
+  "name": "@lanonasis/cli-app",
+  "targets": {
+    "build:cli-local": {
+      "executor": "nx:run-commands",
+      "options": {
+        "cwd": "apps/lanonasis-maas/cli",
+        "command": "npm run build"
+      },
+      "outputs": [
+        "{projectRoot}/dist/**"
+      ],
+      "cache": true
+    },
+    "test": {
+      "dependsOn": [
+        "build:cli-local"
+      ],
+      "executor": "nx:run-script",
+      "options": {
+        "script": "test"
+      },
+      "cache": true
+    }
+  }
 }
