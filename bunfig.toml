@@ -1,0 +1,28 @@
+# Bun configuration for the lanonasis-maas monorepo.
+#
+# IMPORTANT: `bun test` invokes bun's built-in test runner, which does NOT
+# understand the project's vitest/jest test globals (`vi`, `vi.mocked`,
+# `vi.stubGlobal`, `jest.resetModules`, `@testing-library/react`, DOM env, etc.).
+# Always run the project's intended test command instead:
+#
+#   bun run test           # vitest (root unit + conformance)
+#   bun run test:cli       # jest (cli/test)
+#   bun run test:mcp-core  # jest (apps/mcp-core)
+#
+# To make `bun test` fail loudly when invoked in this repo instead of silently
+# producing thousands of bogus failures, we redirect it to `bun run test`.
+# If you specifically want bun's built-in runner, run `bun test --bail` from a
+# single leaf package — or `bun test --help` to see the raw runner options.
+
+[test]
+preload = []
+
+# Tell bun's package manager to honour the root `overrides` block.
+[install]
+auto = "auto"
+exact = false
+frozenLockfile = false
+production = false
+
+# Surface dependency audit on every install as a CI guardrail.
+audit = true
