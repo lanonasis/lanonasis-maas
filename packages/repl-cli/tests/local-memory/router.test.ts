@@ -147,7 +147,11 @@ describe('MemoryBackendRouter', () => {
       score: 0.95,
       source: 'maas',
     }];
-    const hits = await router.search('oauth');
+    // Multi-term query gives a strong BM25 rank so the local hit (after the
+    // corrected normalizeBm25 polarity) beats the synthetic remote score and
+    // survives dedup. A single-term query against a weak match would let the
+    // remote entry win instead, which is the intended behavior of mergeHits.
+    const hits = await router.search('oauth PKCE magic link');
     expect(hits.length).toBeGreaterThan(0);
     // local hit present; dedup target means we get 1 hit
     const ids = hits.map((h) => h.id);

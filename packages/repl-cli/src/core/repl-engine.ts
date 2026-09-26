@@ -93,6 +93,13 @@ export class ReplEngine {
 
     this.personaCommands = new PersonaCommands(this.orchestrator);
 
+    // Wire the local-memory router into the command context so the
+    // MemoryCommands.getRouter() accessor (used by `search`, `list`, `get`,
+    // `delete`) reaches the local-first path instead of silently falling
+    // back to the direct MaaS client. The orchestrator owns the router
+    // lifecycle, so we just expose what it already built.
+    this.context.memoryRouter = this.orchestrator.getMemoryRouter();
+
     // Apply defaultPersona from config (if set and known) before any input.
     // Silent on success; warn if the configured slug is unknown.
     if (config.defaultPersona) {

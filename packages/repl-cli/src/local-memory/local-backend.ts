@@ -836,6 +836,12 @@ function sanitizeFtsQuery(query: string): string {
 function normalizeBm25(rank: number): number {
   if (!Number.isFinite(rank)) return 0;
   // Empirical: bm25 in this corpus ranges from ~ -10 (excellent) to 0 (no match).
+  // bm25 is NEGATIVE for matches; lower (more negative) is better. We negate
+  // the clamped rank and divide by the expected max distance (15) so an
+  // excellent -15 match lands at 1.0 and a non-match at 0 lands at 0.0.
+  // The earlier form `1 + clamped / 15` was inverted: -10 scored ~0.33
+  // while 0 scored 1.0, so weaker local results beat stronger ones in
+  // mergeHits dedup conflicts.
   const clamped = Math.max(-15, Math.min(0, rank));
-  return Math.min(1, Math.max(0, 1 + clamped / 15));
+  return Math.min(1, Math.max(0, -clamped / 15));
 }
