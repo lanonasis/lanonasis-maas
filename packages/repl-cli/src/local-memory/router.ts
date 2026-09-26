@@ -214,10 +214,16 @@ export class MemoryBackendRouter implements MemoryBackend {
     // local.save()) will retry on the next tick.
     if (this.remote) {
       try {
-        await withTimeout(
+        const remoteResult = await withTimeout(
           this.remote.save({ ...record, source: 'maas-sync' }),
           this.options.remoteTimeoutMs,
         );
+        // Persist the mapping from local ID to remote ID so delete() can locate the remote record.
+        if (this.local && 'markSynced' in this.local) {
+          (this.local as unknown as {
+            markSynced(id: string, maasId: string | null): void;
+          }).markSynced(result.id, remoteResult.id);
+        }
         // Remote succeeded — drain the queue row we just enqueued so
         // AsyncSyncQueueRunner doesn't redundantly re-submit later.
         // The LocalMemoryBackend.removeQueuedForRecord() call is best-effort;
