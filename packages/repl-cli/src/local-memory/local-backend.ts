@@ -520,11 +520,12 @@ export class LocalMemoryBackend implements MemoryBackend {
   async delete(id: string): Promise<void> {
     if (!this.initialized) await this.init();
     const db = this.requireDb();
+    const record = db.prepare('SELECT maas_id FROM memory_entries WHERE id = ?').get(id) as { maas_id?: string | null } | undefined;
     db.prepare('DELETE FROM memory_entries WHERE id = ?').run(id);
     try {
       db.prepare(
         `INSERT INTO sync_queue (op, payload) VALUES (?, ?)`,
-      ).run('delete', JSON.stringify({ id }));
+      ).run('delete', JSON.stringify({ id: record?.maas_id ?? id }));
     } catch { /* best effort */ }
   }
 
