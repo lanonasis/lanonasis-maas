@@ -171,6 +171,21 @@ CREATE TABLE IF NOT EXISTS sync_queue (
 );
 
 CREATE INDEX IF NOT EXISTS idx_sync_queue_ready ON sync_queue(next_retry_at);
+
+-- Tombstones for IDs that were imported from the markdown mirror and then
+-- deleted locally. Used by importLegacyMarkdownIfAny so subsequent scans
+-- cannot resurrect a record the user explicitly removed.
+CREATE TABLE IF NOT EXISTS imported_tombstones (
+  id TEXT PRIMARY KEY,
+  deleted_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+-- Generic key/value metadata for one-shot migrations (e.g. legacy markdown
+-- import completion flag) so we don't re-run them on every init.
+CREATE TABLE IF NOT EXISTS app_meta (
+  key TEXT PRIMARY KEY,
+  value TEXT NOT NULL
+);
 `;
 
 interface RawRow {
@@ -525,6 +540,11 @@ export class LocalMemoryBackend implements MemoryBackend {
     const db = this.requireDb();
     const record = db.prepare('SELECT maas_id FROM memory_entries WHERE id = ?').get(id) as { maas_id?: string | null } | undefined;
     db.prepare('DELETE FROM memory_entries WHERE id = ?').run(id);
+    // Persist a tombstone so importLegacyMarkdownIfAny cannot recreate this
+    // id from a later mirror scan.
+    try {
+      db.prepare('INSERT OR IGNORE INTO imported_tombstones (id) VALUES (?)').run(id);
+    } catch { /* best effort */ }
     try {
       db.prepare(
         `INSERT INTO sync_queue (op, payload) VALUES (?, ?)`,
@@ -670,20 +690,39 @@ export class LocalMemoryBackend implements MemoryBackend {
 
   /**
    * One-shot import of any pre-existing openclaw-format markdown files at
-   * <rootDir>/memory/*.md. Idempotent — files imported previously are
-   * skipped via a content-hash comparison against existing records.
+   * <rootDir>/memory/*.md. Preserves legacy record identity (uses the id
+   * embedded in the mirror's HTML comment when present), replaces title-only
+   * dedup with id-based checks, honors deletion tombstones, and marks the
+   * migration complete so subsequent mirror writes are not re-imported.
    */
   private async importLegacyMarkdownIfAny(): Promise<void> {
     const memoryDir = join(this.options.rootDir, 'memory');
     if (!existsSync(memoryDir)) return;
+    const db = this.requireDb();
+
+    // Skip if a prior init already finished the migration.
+    const metaRow = db
+      .prepare("SELECT value FROM app_meta WHERE key = 'legacy_migration_completed'")
+      .get() as { value: string } | undefined;
+    if (metaRow?.value === '1') return;
+
     let entries: string[];
     try {
       entries = await readdir(memoryDir);
     } catch {
       return;
     }
-    const db = this.requireDb();
-    const existing = new Set(
+    const tombstones = new Set(
+      (db.prepare('SELECT id FROM imported_tombstones').all() as Array<{ id: string }>).map(
+        (r) => r.id,
+      ),
+    );
+    const existingIds = new Set(
+      (db.prepare('SELECT id FROM memory_entries').all() as Array<{ id: string }>).map(
+        (r) => r.id,
+      ),
+    );
+    const existingTitles = new Set(
       (db.prepare('SELECT title FROM memory_entries').all() as Array<{ title: string }>).map(
         (r) => r.title,
       ),
@@ -699,40 +738,86 @@ export class LocalMemoryBackend implements MemoryBackend {
       }
       const sections = parseOpenclawMarkdown(text);
       for (const sec of sections) {
-        if (existing.has(sec.title)) continue;
-        try {
-          db.prepare(
-            `INSERT OR IGNORE INTO memory_entries (id, title, content, memory_type, status, tags, source, created_at, updated_at)
-             VALUES (?, ?, ?, ?, 'active', ?, 'import', datetime('now'), datetime('now'))`,
-          ).run(
-            randomUUID(),
-            sec.title,
-            sec.content,
-            'context',
-            JSON.stringify(['legacy-import']),
-          );
-        } catch {
-          // best effort
+        // Tombstoned ids must never be recreated.
+        if (sec.id && tombstones.has(sec.id)) continue;
+        if (sec.id) {
+          if (existingIds.has(sec.id)) continue;
+          try {
+            db.prepare(
+              `INSERT OR IGNORE INTO memory_entries (id, title, content, memory_type, status, tags, source, created_at, updated_at)
+               VALUES (?, ?, ?, ?, 'active', ?, 'import', datetime('now'), datetime('now'))`,
+            ).run(
+              sec.id,
+              sec.title,
+              sec.content,
+              'context',
+              JSON.stringify(['legacy-import']),
+            );
+            existingIds.add(sec.id);
+            existingTitles.add(sec.title);
+          } catch {
+            // best effort
+          }
+        } else {
+          // Legacy openclaw format has no embedded id — fall back to a title
+          // check and mint a fresh UUID.
+          if (existingTitles.has(sec.title)) continue;
+          const recordId = randomUUID();
+          try {
+            db.prepare(
+              `INSERT OR IGNORE INTO memory_entries (id, title, content, memory_type, status, tags, source, created_at, updated_at)
+               VALUES (?, ?, ?, ?, 'active', ?, 'import', datetime('now'), datetime('now'))`,
+            ).run(
+              recordId,
+              sec.title,
+              sec.content,
+              'context',
+              JSON.stringify(['legacy-import']),
+            );
+            existingIds.add(recordId);
+            existingTitles.add(sec.title);
+          } catch {
+            // best effort
+          }
         }
       }
     }
+
+    // Mark migration complete so subsequent inits do not re-import mirror writes.
+    db.prepare(
+      "INSERT OR REPLACE INTO app_meta (key, value) VALUES ('legacy_migration_completed', '1')",
+    ).run();
   }
 }
 
 interface ParsedSection {
+  id: string | null;
   title: string;
   content: string;
 }
 
-/** Parse the openclaw-plugin LocalFallbackWriter markdown format:
- *  `## <title>\n\n<content>\n\n---\n`  */
+/**
+ * Parse the openclaw-plugin LocalFallbackWriter markdown format and the
+ * MarkdownMemoryMirror superset:
+ *   `## <title>\n\n<content>\n\n---\n`
+ * Mirror-written blocks also include `<!-- id: <uuid> | ... -->`; we extract
+ * the id separately so it can be reused as the SQLite primary key.
+ */
 function parseOpenclawMarkdown(text: string): ParsedSection[] {
   const sections: ParsedSection[] = [];
   const blocks = text.split(/\n---\n/).map((b) => b.trim()).filter(Boolean);
   for (const block of blocks) {
     const m = block.match(/^##\s+(.+)\n\n([\s\S]+)$/);
     if (!m) continue;
-    sections.push({ title: m[1].trim(), content: m[2].trim() });
+    const title = m[1].trim();
+    let content = m[2].trim();
+    let id: string | null = null;
+    const commentMatch = content.match(/<!--\s*id:\s*([A-Za-z0-9-]+)\s*\|/);
+    if (commentMatch) {
+      id = commentMatch[1];
+      content = content.replace(/\n*<!--\s*id:[^]*?-->\s*$/, '').trim();
+    }
+    sections.push({ id, title, content });
   }
   return sections;
 }

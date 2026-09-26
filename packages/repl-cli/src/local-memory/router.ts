@@ -260,10 +260,15 @@ export class MemoryBackendRouter implements MemoryBackend {
   }
 
   async delete(id: string): Promise<void> {
+    // Look up the local record so we can forward the remote maas_id to the
+    // remote delete. Fall back to the local id when no mapping exists (e.g.
+    // the record was never synced to MaaS).
+    const localRecord = await this.local.get(id).catch(() => null);
+    const remoteId = localRecord?.maas_id ?? id;
     await this.local.delete(id).catch(() => { /* best effort */ });
     if (this.remote) {
       try {
-        await withTimeout(this.remote.delete(id), this.options.remoteTimeoutMs);
+        await withTimeout(this.remote.delete(remoteId), this.options.remoteTimeoutMs);
       } catch (err) {
         this.debugLog('remote.delete failed; will retry via queue', err);
         this.consecutiveProbeFailures++;
