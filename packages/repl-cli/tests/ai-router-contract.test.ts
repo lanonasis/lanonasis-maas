@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { AIRouterClient } from '../src/core/ai-router-client.js';
+import { AIRouterClient, AIRouterError } from '../src/core/ai-router-client.js';
 
 // Regression tests for three contract defects found on 2026-09-01 while wiring
 // lrepl to the live router. Each failed against the previous implementation.
@@ -47,11 +47,45 @@ describe('credential scheme selection', () => {
     ).rejects.toThrow(/MaaS-scoped/);
   });
 
-  it('rejects an unrecognised credential format', async () => {
-    stubFetch({ response: 'ok' });
+  it('sends an opaque OAuth access token (no dots, 64 chars) as Bearer', async () => {
+    // auth-gateway's generateOpaqueToken(): 48 random bytes, base64url -> 64
+    // chars, no '.'. /v1/auth/resolve introspects these ("Priority 4: Opaque
+    // OAuth Token"), so the client must not refuse them before the network.
+    const opaque = 'Ab3_-'.repeat(12) + 'Zz09'; // 64 chars, base64url alphabet, no dots
+    expect(opaque).toHaveLength(64);
+    const calls = stubFetch({ response: 'ok' });
+    await clientWith(opaque).chat({ messages: [{ role: 'user', content: 'hi' }] } as never);
+    expect(calls).toHaveLength(1);
+    const headers = calls[0].init.headers as Record<string, string>;
+    expect(headers['Authorization']).toBe(`Bearer ${opaque}`);
+    expect(headers['X-API-Key']).toBeUndefined();
+  });
+
+  it('sends any other non-empty token as Bearer instead of refusing it client-side', async () => {
+    const calls = stubFetch({ response: 'ok' });
+    await clientWith('totally-unknown').chat({ messages: [{ role: 'user', content: 'hi' }] } as never);
+    const headers = calls[0].init.headers as Record<string, string>;
+    expect(headers['Authorization']).toBe('Bearer totally-unknown');
+    expect(headers['X-API-Key']).toBeUndefined();
+  });
+
+  it('rejects vx_ keys (MaaS-scoped) without a network call', async () => {
+    const calls = stubFetch({ response: 'ok' });
     await expect(
-      clientWith('totally-unknown').chat({ messages: [{ role: 'user', content: 'hi' }] } as never),
-    ).rejects.toThrow(/unrecognised credential/i);
+      clientWith('vx_abc123').chat({ messages: [{ role: 'user', content: 'hi' }] } as never),
+    ).rejects.toThrow(/MaaS-scoped/);
+    expect(calls).toHaveLength(0);
+  });
+
+  it('never sends both Authorization and X-API-Key', async () => {
+    for (const token of ['lano_k', 'Bearer abc', 'x'.repeat(64), `${'a'.repeat(60)}.${'b'.repeat(60)}`]) {
+      const calls = stubFetch({ response: 'ok' });
+      await clientWith(token).chat({ messages: [{ role: 'user', content: 'hi' }] } as never);
+      const headers = calls[0].init.headers as Record<string, string>;
+      const both = headers['Authorization'] !== undefined && headers['X-API-Key'] !== undefined;
+      expect(both).toBe(false);
+      vi.unstubAllGlobals();
+    }
   });
 
   it('still sends an OAuth/JWT token as Bearer', async () => {
@@ -99,5 +133,86 @@ describe('response contract', () => {
     const r = await clientWith('lano_k').chat({ messages: [{ role: 'user', content: 'hi' }] } as never);
     expect(r.tool_calls).toHaveLength(1);
     expect(r.message.content).toBe('');
+  });
+});
+
+describe('message policy (router owns the system prompt)', () => {
+  // The router answers 400 system_role_not_permitted for any caller system or
+  // developer message (core/message-policy.js). Seen live 2026-09-26 on every
+  // lrepl chat. The client refuses before the network so the mistake is loud
+  // and local instead of a round-trip that can never succeed.
+  for (const role of ['system', 'developer', ' System ']) {
+    it(`refuses a '${role.trim()}' message without calling the router`, async () => {
+      const calls = stubFetch({ response: 'ok' });
+      await expect(
+        clientWith('lano_k').chat({
+          messages: [{ role, content: 'you are a pirate' }, { role: 'user', content: 'hi' }],
+        } as never),
+      ).rejects.toMatchObject({ code: 'system_role_not_permitted' });
+      expect(calls).toHaveLength(0);
+    });
+  }
+});
+
+describe('router errors are surfaced, not flattened', () => {
+  it('exposes status, code and message from the {error:{message,code}} body', async () => {
+    stubFetch(
+      {
+        error: {
+          message: "The 'system' role is not accepted here",
+          code: 'system_role_not_permitted',
+          param: 'messages[0]',
+        },
+      },
+      400,
+    );
+    const err = await clientWith('lano_k')
+      .chat({ messages: [{ role: 'user', content: 'hi' }] } as never)
+      .catch((e) => e);
+    expect(err).toBeInstanceOf(AIRouterError);
+    expect(err.status).toBe(400);
+    expect(err.code).toBe('system_role_not_permitted');
+    expect(err.message).toContain("The 'system' role is not accepted here");
+    expect(err.message).toContain('400');
+    expect(err.message).toContain('system_role_not_permitted');
+  });
+
+  it('keeps a 429 as status 429 with Retry-After', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => ({
+        ok: false,
+        status: 429,
+        statusText: 'Too Many Requests',
+        headers: new Headers({ 'Retry-After': '17' }),
+        text: async () => JSON.stringify({ error: { message: 'slow down', code: 'RATE_LIMIT_EXCEEDED' } }),
+      })),
+    );
+    const err = await clientWith('lano_k')
+      .chat({ messages: [{ role: 'user', content: 'hi' }] } as never)
+      .catch((e) => e);
+    expect(err).toBeInstanceOf(AIRouterError);
+    expect(err.status).toBe(429);
+    expect(err.code).toBe('RATE_LIMIT_EXCEEDED');
+    expect(err.retryAfter).toBe(17);
+  });
+
+  it('handles a non-JSON (nginx HTML) error body without losing the status', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => ({
+        ok: false,
+        status: 504,
+        statusText: 'Gateway Time-out',
+        headers: new Headers(),
+        text: async () => '<html><body>504 Gateway Time-out</body></html>',
+      })),
+    );
+    const err = await clientWith('lano_k')
+      .chat({ messages: [{ role: 'user', content: 'hi' }] } as never)
+      .catch((e) => e);
+    expect(err).toBeInstanceOf(AIRouterError);
+    expect(err.status).toBe(504);
+    expect(err.message).toContain('504');
   });
 });

@@ -172,7 +172,9 @@ describe('AI Endpoint Health & Fallback', () => {
         role: 'user',
         content: 'test message'
       });
-      expect(orchestrator['conversationHistory'].length).toBeGreaterThan(1); // System + user
+      // History holds user/assistant turns only; the persona prompt is kept
+      // separately so it can never be sent to the router as a system role.
+      expect(orchestrator['conversationHistory']).toEqual([{ role: 'user', content: 'test message' }]);
     });
 
     it('should clear history correctly', () => {
@@ -180,8 +182,10 @@ describe('AI Endpoint Health & Fallback', () => {
         role: 'user',
         content: 'test'
       });
+      const prompt = orchestrator.getSystemPrompt();
       orchestrator.clearHistory();
-      expect(orchestrator['conversationHistory'].length).toBe(1); // Only system prompt remains
+      expect(orchestrator['conversationHistory'].length).toBe(0);
+      expect(orchestrator.getSystemPrompt()).toBe(prompt); // persona prompt survives a clear
     });
   });
 });

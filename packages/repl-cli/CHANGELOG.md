@@ -9,6 +9,53 @@ All notable changes to @lanonasis/repl-cli will be documented in this file.
   `tree/main/packages/repl-cli#readme` URL (was `docs.lanonasis.com/cli/repl`).
   Repository, bugs, engines, keywords, and files allowlist already canonical.
 
+## [1.1.1] - 2026-09-27
+
+Makes `lrepl` / `onasis-repl` work against the Onasis AI router
+(`https://ai.vortexcore.app/api/v1/ai-chat`). Before this release every chat
+turn got a 400, and the REPL hid the reason.
+
+### Fixed
+- **No `system` or `developer` messages go to the router.** The router rejects
+  them with `400 system_role_not_permitted`, so every chat failed. The persona
+  prompt now stays local: it is only used when calling OpenAI directly. The
+  router's `repl-nlp` use case supplies the prompt. The prompt optimiser no
+  longer sends a system message either. As a backstop, `AIRouterClient.chat()`
+  refuses these roles before making any network call.
+- **Opaque OAuth access tokens are accepted.** The auth-gateway issues 64-char
+  base64url access tokens with no dots, and the client used to reject them with
+  "unrecognised credential format". It now sends any non-empty token other than
+  `lano_*` as `Authorization: Bearer`. `lano_*` goes in `X-API-Key`, never both.
+  `lms_*` and `vx_*` keys are still refused because they only work for MaaS.
+- **Token expiry is computed properly.** Every login and refresh saved
+  `expires_at: 0`, and `??` does not replace 0, so each stored token looked
+  expired, triggered a refresh on every start, and a failed refresh logged the
+  user out without saying so. The expiry now comes from `expires_in`. If the
+  server gives no expiry it is recorded as unknown (0), and the token is used
+  until the server rejects it. Credential files written by older versions work
+  as they are. A failed refresh now prints the reason.
+- **Router errors are shown to the user.** A new `AIRouterError` keeps the HTTP
+  status, `error.code`, `error.message` and `Retry-After`. The REPL prints
+  these instead of a generic message. Requests time out after 45s, which is
+  under the router's 60s proxy limit.
+- **Errors are classified by HTTP status.** Before, a 429 reported as "Too
+  Many Requests" did not match the text check and showed "Something went wrong".
+
+### Changed
+- **Direct OpenAI fallback is off by default.** If the router is configured
+  and fails, the REPL no longer quietly retries against api.openai.com. To opt
+  in, set `openaiFallback: true` in `repl-config.json` or
+  `LANONASIS_OPENAI_FALLBACK=1`. When both backends fail, both errors are
+  shown. With no router configured, OpenAI is still called directly.
+- **`health` now checks that chat works.** It sends a small authenticated
+  `/api/v1/ai-chat` request (`use_case: repl-nlp`) with the same credential a
+  session would use. Each check says what it proves: reachability,
+  authenticated chat, or OpenAI key only. If chat fails, `health` prints
+  "AI chat is NOT working" even when the reachability checks pass. The OpenAI
+  check no longer counts a 401 as healthy.
+- `config` now masks `aiRouterApiKey`.
+- `auth-status` shows "unknown" when the expiry is unknown.
+
 ## [1.1.0] - 2026-08-18
 
 ### Added

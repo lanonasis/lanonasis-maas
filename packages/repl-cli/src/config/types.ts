@@ -35,6 +35,11 @@ export interface ReplConfig {
   aiRouterUrl?: string;
   aiRouterAuthToken?: string;
   aiRouterApiKey?: string; // Dedicated API key for AI Router (lano_...)
+  /**
+   * Opt-in direct api.openai.com fallback when the AI Router fails (default
+   * false). Requires openaiApiKey. Also LANONASIS_OPENAI_FALLBACK=1.
+   */
+  openaiFallback?: boolean;
   historyFile: string;
   maxHistorySize: number;
   nlMode?: boolean;

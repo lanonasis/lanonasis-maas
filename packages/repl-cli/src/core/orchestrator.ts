@@ -31,7 +31,7 @@ import {
 } from 'vortexai-l0';
 
 // Onasis AI Router client
-import { AIRouterClient } from './ai-router-client';
+import { AIRouterClient, AIRouterError } from './ai-router-client';
 import type { L0Config } from '../config/types.js';
 import { DEFAULT_OPENAI_MODEL } from '../config/constants.js';
 import type { Persona } from '../personas/types.js';
@@ -44,6 +44,14 @@ export interface OrchestratorConfig {
   aiRouterUrl?: string;
   aiRouterAuthToken?: string;
   aiRouterApiKey?: string; // Dedicated API key for AI Router (lano_...)
+  /**
+   * Opt-in: when the AI Router is configured and fails, retry the turn
+   * directly against api.openai.com with `openaiApiKey`. Off by default — the
+   * router owns vendor choice and failover, and a silent direct fallback hid
+   * every router error behind an unrelated OpenAI one. Also enabled by
+   * LANONASIS_OPENAI_FALLBACK=1.
+   */
+  openaiFallback?: boolean;
   l0?: L0Config;
   userContext?: {
     name?: string;
@@ -52,9 +60,71 @@ export interface OrchestratorConfig {
   };
 }
 
+/**
+ * A conversation turn. Deliberately no 'system' role: the AI Router rejects
+ * caller system/developer messages (400 system_role_not_permitted), so the
+ * persona prompt is held separately (see `systemPrompt`) and only ever sent on
+ * the direct-OpenAI path.
+ */
 export interface ConversationMessage {
-  role: 'system' | 'user' | 'assistant';
+  role: 'user' | 'assistant';
   content: string;
+}
+
+export type AIErrorKind = 'auth' | 'rate_limit' | 'rejected' | 'service' | 'network' | 'other';
+
+/** A failed direct call to api.openai.com, with status preserved for classification. */
+export class OpenAIRequestError extends Error {
+  readonly status: number;
+  readonly code?: string;
+
+  constructor(message: string, opts: { status: number; code?: string }) {
+    super(message);
+    this.name = 'OpenAIRequestError';
+    this.status = opts.status;
+    this.code = opts.code;
+  }
+}
+
+/** Every AI backend tried for a turn failed. `failures[0]` is the primary. */
+export class AIBackendsFailedError extends Error {
+  readonly failures: Array<{ backend: string; error: unknown }>;
+
+  constructor(failures: Array<{ backend: string; error: unknown }>) {
+    super(
+      failures
+        .map((f) => `${f.backend}: ${f.error instanceof Error ? f.error.message : String(f.error)}`)
+        .join(' | ')
+    );
+    this.name = 'AIBackendsFailedError';
+    this.failures = failures;
+  }
+}
+
+/**
+ * Classify an AI backend failure by HTTP status, not by message text. The old
+ * string match looked for "429"/"rate limit", but OpenAI's statusText is "Too
+ * Many Requests", so a 429 fell through to "Something went wrong".
+ */
+export function classifyAIError(error: unknown): AIErrorKind {
+  const primary = error instanceof AIBackendsFailedError ? error.failures[0]?.error : error;
+  const status = typeof (primary as { status?: unknown })?.status === 'number'
+    ? (primary as { status: number }).status
+    : undefined;
+  const code = (primary as { code?: unknown })?.code;
+
+  if (status === 401 || status === 403) return 'auth';
+  if (status === 429) return 'rate_limit';
+  if (status !== undefined && status >= 500) return 'service';
+  if (status !== undefined && status >= 400) return 'rejected';
+  if (status === 0) {
+    if (code === 'TIMEOUT' || code === 'NETWORK_ERROR') return 'network';
+    if (code === 'credential_not_supported') return 'auth';
+    return 'rejected';
+  }
+  const message = primary instanceof Error ? primary.message : String(primary ?? '');
+  if (/ECONNREFUSED|ENOTFOUND|ETIMEDOUT|fetch failed|network/i.test(message)) return 'network';
+  return 'other';
 }
 
 export interface OrchestratorResponse {
@@ -75,6 +145,9 @@ export interface OrchestratorResponse {
 export class NaturalLanguageOrchestrator {
   private client: MemoryClient;
   private conversationHistory: ConversationMessage[] = [];
+  /** Persona/system prompt. Only sent on the direct-OpenAI path, never to the router. */
+  private systemPrompt: string = '';
+  private openaiFallback: boolean = false;
   private openaiApiKey?: string;
   private model: string;
   private userContext?: OrchestratorConfig['userContext'];
@@ -252,11 +325,12 @@ export class NaturalLanguageOrchestrator {
       });
     }
 
-    // Initialize conversation with enhanced system prompt
-    this.conversationHistory.push({
-      role: 'system',
-      content: this.buildSystemPrompt(config.userContext)
-    });
+    const envFallback = String(process.env.LANONASIS_OPENAI_FALLBACK || '').toLowerCase();
+    this.openaiFallback = config.openaiFallback === true || envFallback === '1' || envFallback === 'true';
+
+    // The persona prompt is kept locally. The router owns the system prompt for
+    // the repl-nlp use case; this one is only used on the direct-OpenAI path.
+    this.systemPrompt = this.buildSystemPrompt(config.userContext);
   }
 
   /**
@@ -308,11 +382,10 @@ export class NaturalLanguageOrchestrator {
    * context, if any, is re-applied on top of the new system prompt.
    */
   setPersona(persona: Persona): void {
-    if (!this.conversationHistory.length || this.conversationHistory[0].role !== 'system') {
-      this.conversationHistory.unshift({ role: 'system', content: persona.systemPrompt });
-    } else {
-      this.conversationHistory[0].content = persona.systemPrompt;
-    }
+    // Held locally, never injected into router-bound history (the router
+    // rejects system roles). With the router, persona selection affects the
+    // local UX only; the router's use case owns the prompt.
+    this.systemPrompt = persona.systemPrompt;
     this.model = persona.model;
     // Re-append cached user context to the fresh system prompt, if loaded.
     if (this.cachedUserPreferences.length > 0) {
@@ -328,10 +401,8 @@ export class NaturalLanguageOrchestrator {
 
     const contextBlock = `\n\n--- USER CONTEXT (from their memories) ---\n${this.cachedUserPreferences.join('\n')}\n---\n\nUse this context to personalize your responses. Reference the user's stored preferences, projects, and knowledge when relevant.`;
 
-    // Append context to the system prompt
-    if (this.conversationHistory.length > 0 && this.conversationHistory[0].role === 'system') {
-      this.conversationHistory[0].content += contextBlock;
-    }
+    // Append context to the (locally held) system prompt
+    this.systemPrompt += contextBlock;
   }
 
   /**
@@ -523,25 +594,9 @@ Remember: You are LZero - be helpful, conversational, and make the experience fe
         rlInterface.resume();
       }
 
-      // Log the actual error for debugging
-      const errorMessage = this.formatError(error);
-
-      // P2 + P6: Softer, more conversational error messages that match
-      // the "concierge" persona — never expose technical jargon to the user.
-      if (errorMessage.includes('401') || errorMessage.includes('Unauthorized') || errorMessage.includes('AUTH_REQUIRED')) {
-        console.log(chalk.yellow('\n⚠️  My AI brain is having trouble authenticating.'));
-        console.log(chalk.gray('  It might be a token issue. Run "health" to check services, or try again in a moment.'));
-        console.log(chalk.gray('  Falling back to local mode…\n'));
-      } else if (errorMessage.includes('429') || errorMessage.includes('rate limit')) {
-        console.log(chalk.yellow('\n⚠️  AI service is busy right now — please wait about 30 seconds and try again.'));
-      } else if (errorMessage.includes('timeout') || errorMessage.includes('ECONNREFUSED') || errorMessage.includes('network')) {
-        console.log(chalk.yellow('\n⚠️  I can\'t reach my AI service right now.'));
-        console.log(chalk.gray('  Check your internet connection, or run "health" to see which services are available.'));
-        console.log(chalk.gray('  Falling back to local mode…\n'));
-      } else {
-        console.log(chalk.yellow('\n⚠️  Something went wrong while processing your request.'));
-        console.log(chalk.gray('  The REPL is still running — try again or type "help" for help.\n'));
-      }
+      // Tell the user what actually failed: backend, HTTP status, error code
+      // and message. Classification is by status (see classifyAIError).
+      this.reportAIFailure(error);
 
       // Fall back to basic processing with personality and context
       console.log(chalk.gray('Falling back to local mode…\n'));
@@ -686,11 +741,12 @@ Remember: You are LZero - be helpful, conversational, and make the experience fe
 
     let message: any;
     let toolCalls: any[] | undefined;
+    const failures: Array<{ backend: string; error: unknown }> = [];
 
     if (this.aiRouterClient) {
       try {
         const response = await this.aiRouterClient.chat({
-          messages: this.conversationHistory,
+          messages: this.routerMessages(),
           tools,
           use_case: useCase,
           temperature,
@@ -699,40 +755,37 @@ Remember: You are LZero - be helpful, conversational, and make the experience fe
         });
         message = response.message;
         toolCalls = message.tool_calls;
-      } catch {
-        // AI Router failed — fall through to OpenAI fallback silently.
-        // The user sees the spinner, not internal routing details.
+      } catch (error) {
+        // Recorded and surfaced to the user — never swallowed.
+        failures.push({ backend: 'AI Router', error });
       }
     }
 
-    // Fallback to OpenAI if AI Router not configured or failed
-    if (!message && this.openaiApiKey) {
-      const response = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.openaiApiKey}`
-        },
-        body: JSON.stringify({
-          model: this.resolveOpenAIModel(),
-          messages: this.conversationHistory,
+    // Direct OpenAI: the primary path only when no router is configured, and
+    // otherwise only when the user opted in to it as a fallback.
+    const useDirectOpenAI = !!this.openaiApiKey && (!this.aiRouterClient || this.openaiFallback);
+    if (!message && useDirectOpenAI) {
+      try {
+        const data = await this.directOpenAIChat({
+          messages: [{ role: 'system', content: this.systemPrompt }, ...this.conversationHistory],
           tools,
           tool_choice: toolChoice,
           temperature,
-          max_tokens: maxTokens
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error(`OpenAI API error: ${response.statusText}`);
+          max_tokens: maxTokens,
+        });
+        message = data.choices?.[0]?.message;
+        toolCalls = message?.tool_calls;
+      } catch (error) {
+        failures.push({
+          backend: this.aiRouterClient ? 'OpenAI (direct fallback)' : 'OpenAI (direct)',
+          error,
+        });
       }
-
-      const data: any = await response.json();
-      message = data.choices[0].message;
-      toolCalls = message.tool_calls;
     }
 
     if (!message) {
+      if (failures.length === 1) throw failures[0].error;
+      if (failures.length > 1) throw new AIBackendsFailedError(failures);
       throw new Error('No AI service available. Please configure either AI Router URL or OpenAI API key.');
     }
 
@@ -1149,40 +1202,25 @@ Format your response as JSON with:
 
       // Try AI Router first if available
       if (this.aiRouterClient) {
+        // No system message: the router rejects it. The JSON-format request is
+        // already part of the user prompt above.
         const response = await this.aiRouterClient.chat({
-          messages: [
-            { role: 'system', content: 'You are an expert at optimizing AI prompts. Always respond with valid JSON.' },
-            { role: 'user', content: optimizationPrompt }
-          ],
+          messages: [{ role: 'user', content: optimizationPrompt }],
           use_case: 'content-generation',
           temperature: 0.7,
           max_tokens: 1000
         });
         content = response.message.content;
       } else {
-        // Fallback to OpenAI
-        const response = await fetch('https://api.openai.com/v1/chat/completions', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${this.openaiApiKey}`
-          },
-          body: JSON.stringify({
-            model: this.resolveOpenAIModel(),
-            messages: [
-              { role: 'system', content: 'You are an expert at optimizing AI prompts. Always respond with valid JSON.' },
-              { role: 'user', content: optimizationPrompt }
-            ],
-            temperature: 0.7,
-            max_tokens: 1000
-          })
+        // Direct OpenAI (only reached when no router is configured)
+        const data = await this.directOpenAIChat({
+          messages: [
+            { role: 'system', content: 'You are an expert at optimizing AI prompts. Always respond with valid JSON.' },
+            { role: 'user', content: optimizationPrompt }
+          ],
+          temperature: 0.7,
+          max_tokens: 1000
         });
-
-        if (!response.ok) {
-          throw new Error(`OpenAI API error: ${response.statusText}`);
-        }
-
-        const data: any = await response.json();
         content = data.choices[0].message.content;
       }
 
@@ -1216,10 +1254,91 @@ Format your response as JSON with:
   }
 
   clearHistory() {
-    this.conversationHistory = this.conversationHistory.slice(0, 1); // Keep only system prompt
+    // The persona prompt lives in `systemPrompt`, so clearing history is total.
+    this.conversationHistory = [];
   }
 
   getHistory(): ConversationMessage[] {
     return [...this.conversationHistory];
+  }
+
+  /** The active persona prompt (used only on the direct-OpenAI path). */
+  getSystemPrompt(): string {
+    return this.systemPrompt;
+  }
+
+  /**
+   * History as sent to the router: user/assistant turns only. The filter is
+   * defence in depth — `conversationHistory` is typed without 'system', but
+   * tests and older callers reach into it directly.
+   */
+  private routerMessages(): Array<{ role: 'user' | 'assistant'; content: string }> {
+    return this.conversationHistory
+      .filter((m) => m.role === 'user' || m.role === 'assistant')
+      .map((m) => ({ role: m.role, content: m.content }));
+  }
+
+  /** POST to api.openai.com; failures keep their HTTP status and error code. */
+  private async directOpenAIChat(body: Record<string, unknown>): Promise<any> {
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${this.openaiApiKey}`
+      },
+      body: JSON.stringify({ model: this.resolveOpenAIModel(), ...body })
+    });
+
+    if (!response.ok) {
+      let code: string | undefined;
+      let detail: string | undefined;
+      try {
+        const parsed: any = JSON.parse(await response.text());
+        code = parsed?.error?.code || parsed?.error?.type || undefined;
+        detail = parsed?.error?.message;
+      } catch {
+        /* non-JSON body */
+      }
+      throw new OpenAIRequestError(
+        `OpenAI HTTP ${response.status}${code ? ` ${code}` : response.statusText ? ` ${response.statusText}` : ''}` +
+        (detail ? `: ${detail}` : ''),
+        { status: response.status, code }
+      );
+    }
+
+    return response.json();
+  }
+
+  /** Print an honest, classified description of an AI backend failure. */
+  private reportAIFailure(error: unknown): void {
+    const failures = error instanceof AIBackendsFailedError
+      ? error.failures
+      : [{ backend: error instanceof OpenAIRequestError ? 'OpenAI' : 'AI Router', error }];
+    const kind = classifyAIError(error);
+
+    const headline: Record<AIErrorKind, string> = {
+      auth: 'The AI service rejected my credentials.',
+      rate_limit: 'The AI service is rate-limiting requests (busy) — wait a little and try again.',
+      rejected: 'The AI service rejected the request.',
+      service: 'The AI service failed on its side.',
+      network: 'I can\'t reach the AI service right now.',
+      other: 'The AI request failed.',
+    };
+    console.log(chalk.yellow(`\n⚠️  ${headline[kind]}`));
+    for (const f of failures) {
+      console.log(chalk.gray(`  ${f.backend}: ${this.formatError(f.error)}`));
+      const retryAfter = (f.error as { retryAfter?: unknown })?.retryAfter;
+      if (typeof retryAfter === 'number') {
+        console.log(chalk.gray(`  Retry after ${retryAfter}s.`));
+      }
+    }
+    if (kind === 'auth') {
+      console.log(chalk.gray('  Check aiRouterApiKey in ~/.lanonasis/repl-config.json or run `onasis-repl login`.'));
+    } else if (kind === 'network') {
+      console.log(chalk.gray('  Check your connection, or run "health" to see which checks pass.'));
+    }
+    if (this.aiRouterClient && this.openaiApiKey && !this.openaiFallback) {
+      console.log(chalk.gray('  (Direct OpenAI fallback is off; set openaiFallback: true to enable it.)'));
+    }
   }
 }

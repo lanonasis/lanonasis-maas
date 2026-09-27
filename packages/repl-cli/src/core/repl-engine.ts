@@ -86,6 +86,7 @@ export class ReplEngine {
       aiRouterUrl: config.aiRouterUrl,
       aiRouterAuthToken: config.aiRouterAuthToken || config.authToken,
       aiRouterApiKey: config.aiRouterApiKey,
+      openaiFallback: config.openaiFallback,
       l0: config.l0,
       agentMemorySessionId: config.agentMemorySessionId,
       userContext: config.userContext
@@ -383,6 +384,8 @@ export class ReplEngine {
   private async runHealthCheck() {
     const results = await quickHealthCheck({
       aiRouterUrl: this.config.aiRouterUrl,
+      // Same credential priority the REPL uses for chat.
+      aiRouterAuthToken: this.config.aiRouterApiKey || this.config.aiRouterAuthToken || this.config.authToken,
       openaiApiKey: this.config.openaiApiKey,
       apiUrl: this.config.apiUrl
     });

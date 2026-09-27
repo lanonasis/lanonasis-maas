@@ -1,5 +1,11 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
-import { AIEndpointHealthCheck, quickHealthCheck } from '../src/core/health-check';
+import {
+  AIEndpointHealthCheck,
+  quickHealthCheck,
+  ROUTER_REACHABILITY,
+  ROUTER_CHAT,
+  MEMORY_API_REACHABILITY,
+} from '../src/core/health-check';
 
 describe('AIEndpointHealthCheck', () => {
   let checker: AIEndpointHealthCheck;
@@ -334,8 +340,8 @@ describe('quickHealthCheck', () => {
     });
 
     expect(results.length).toBeGreaterThanOrEqual(2);
-    expect(results.some(r => r.endpoint === 'AI Router')).toBe(true);
-    expect(results.some(r => r.endpoint === 'Local Fallback')).toBe(true);
+    expect(results.some(r => r.endpoint === ROUTER_REACHABILITY)).toBe(true);
+    expect(results.some(r => r.endpoint === MEMORY_API_REACHABILITY)).toBe(true);
   });
 
   it('should work with minimal config', async () => {
@@ -347,6 +353,92 @@ describe('quickHealthCheck', () => {
     const results = await quickHealthCheck({});
 
     expect(results.length).toBeGreaterThanOrEqual(1);
-    expect(results.some(r => r.endpoint === 'Local Fallback')).toBe(true);
+    expect(results.some(r => r.endpoint === MEMORY_API_REACHABILITY)).toBe(true);
+  });
+});
+
+// 2026-09-26: `lrepl health` said "2/2 healthy" (GET /health + HEAD on the
+// memory API, neither authenticated) while every chat got a 400. The chat
+// check sends a real, minimal, authenticated /api/v1/ai-chat request.
+describe('authenticated router chat check', () => {
+  let _origFetch: typeof global.fetch;
+  const calls: Array<{ url: string; init: RequestInit }> = [];
+
+  function respond(status: number, body: unknown) {
+    return {
+      ok: status >= 200 && status < 300,
+      status,
+      statusText: '',
+      headers: new Headers(),
+      json: async () => body,
+      text: async () => JSON.stringify(body),
+    } as unknown as Response;
+  }
+
+  function install(chat: () => Response) {
+    calls.length = 0;
+    global.fetch = vi.fn(async (url: unknown, init?: unknown) => {
+      const u = String(url);
+      calls.push({ url: u, init: (init ?? {}) as RequestInit });
+      if (u.endsWith('/api/v1/ai-chat')) return chat();
+      return respond(200, { status: 'ok' });
+    }) as unknown as typeof fetch;
+  }
+
+  beforeEach(() => {
+    _origFetch = global.fetch;
+  });
+
+  afterEach(() => {
+    global.fetch = _origFetch;
+    vi.restoreAllMocks();
+  });
+
+  it('posts a minimal repl-nlp chat with the router credential and reports success', async () => {
+    install(() => respond(200, { response: 'OK' }));
+    const results = await quickHealthCheck({
+      aiRouterUrl: 'https://ai.example.com',
+      aiRouterAuthToken: 'lano_health',
+      apiUrl: 'https://memory.example.com',
+    });
+    const chat = results.find(r => r.endpoint === ROUTER_CHAT)!;
+    expect(chat).toBeDefined();
+    expect(chat.status).toBe('healthy');
+    expect(chat.authenticated).toBe(true);
+
+    const post = calls.find(c => c.url === 'https://ai.example.com/api/v1/ai-chat')!;
+    expect(post.init.method).toBe('POST');
+    const headers = post.init.headers as Record<string, string>;
+    expect(headers['X-API-Key']).toBe('lano_health');
+    const body = JSON.parse(post.init.body as string);
+    expect(body.use_case).toBe('repl-nlp');
+    expect(body.messages).toEqual([{ role: 'user', content: expect.any(String) }]);
+  });
+
+  it('reports the router error when /health is fine but chat is rejected', async () => {
+    install(() => respond(400, { error: { message: 'no system role', code: 'system_role_not_permitted' } }));
+    const results = await quickHealthCheck({
+      aiRouterUrl: 'https://ai.example.com',
+      aiRouterAuthToken: 'lano_health',
+      apiUrl: 'https://memory.example.com',
+    });
+    expect(results.find(r => r.endpoint === ROUTER_REACHABILITY)!.status).not.toBe('unhealthy');
+    const chat = results.find(r => r.endpoint === ROUTER_CHAT)!;
+    expect(chat.status).toBe('unhealthy');
+    expect(chat.message).toContain('400');
+    expect(chat.message).toContain('system_role_not_permitted');
+
+    const text = new AIEndpointHealthCheck([]).formatResults(results);
+    expect(text).not.toMatch(/All endpoints healthy/);
+    expect(text).toMatch(/chat is NOT working/i);
+  });
+
+  it('says chat cannot work when no router credential is configured', async () => {
+    install(() => respond(200, { response: 'OK' }));
+    const results = await quickHealthCheck({ aiRouterUrl: 'https://ai.example.com' });
+    const chat = results.find(r => r.endpoint === ROUTER_CHAT)!;
+    expect(chat.status).toBe('unhealthy');
+    expect(chat.message).toMatch(/no .*credential/i);
+    expect(calls.some(c => c.url.endsWith('/api/v1/ai-chat'))).toBe(false);
   });
 });
