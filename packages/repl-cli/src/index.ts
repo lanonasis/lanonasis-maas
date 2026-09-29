@@ -85,9 +85,14 @@ program
   .description('Check AI endpoint health')
   .option('--config <path>', 'Path to a custom repl-config.json')
   .action(async (options) => {
-    const config = await loadConfig({}, { configPath: options.config });
+    // Same credential resolution as `start`, so the authenticated chat check
+    // uses what a real session would use.
+    const storedToken = await getValidToken(refreshAccessToken);
+    const config = await loadConfig({ authToken: storedToken || undefined }, { configPath: options.config });
     const results = await quickHealthCheck({
       aiRouterUrl: config.aiRouterUrl,
+      // Same credential priority the REPL uses for chat.
+      aiRouterAuthToken: config.aiRouterApiKey || config.aiRouterAuthToken || config.authToken,
       openaiApiKey: config.openaiApiKey,
       apiUrl: config.apiUrl
     });
@@ -166,7 +171,6 @@ program
           expires_in: tokens.expires_in || 3600,
           scope: tokens.scope || 'default',
           auth_method: 'magic_link',
-          expires_at: 0,
         });
 
         console.log(chalk.green('\n✓ Logged in successfully with OTP!'));
@@ -214,7 +218,6 @@ program
         expires_in: tokens.expires_in,
         scope: tokens.scope,
         auth_method: 'oauth',
-        expires_at: 0, // Will be calculated
       });
 
       console.log(chalk.green('✓ Logged in successfully!'));
@@ -278,7 +281,7 @@ program
 
     console.log(chalk.green('✓ Authenticated'));
     console.log(chalk.gray(`Method: ${status.method}`));
-    console.log(chalk.gray(`Expires: ${status.expiresAt?.toLocaleString()}`));
+    console.log(chalk.gray(`Expires: ${status.expiresAt ? status.expiresAt.toLocaleString() : 'unknown (server did not say)'}`));
     console.log(chalk.gray(`Scope: ${status.scope || 'default'}`));
 
     if (status.needsRefresh) {
@@ -315,6 +318,7 @@ program
       vendorKey: config.vendorKey ? '***' + config.vendorKey.slice(-4) : undefined,
       openaiApiKey: config.openaiApiKey ? '***' + config.openaiApiKey.slice(-4) : undefined,
       aiRouterAuthToken: config.aiRouterAuthToken ? '***' + config.aiRouterAuthToken.slice(-4) : undefined,
+      aiRouterApiKey: config.aiRouterApiKey ? '***' + config.aiRouterApiKey.slice(-4) : undefined,
     };
     console.log(JSON.stringify(safeConfig, null, 2));
   });

@@ -11,7 +11,11 @@ export interface StoredCredentials {
   access_token: string;
   refresh_token?: string;
   token_type: string;
-  expires_at: number; // Unix timestamp
+  /**
+   * Expiry in epoch milliseconds. 0 means "unknown": the server did not say,
+   * so the token is used as-is and the server decides whether it is valid.
+   */
+  expires_at: number;
   scope?: string;
   auth_method: 'oauth' | 'api_key' | 'magic_link';
   created_at: number;
@@ -28,15 +32,43 @@ function ensureConfigDir(): void {
 }
 
 /**
+ * Resolve the expiry to store.
+ *
+ * Every login/refresh call site passes `expires_at: 0` as a placeholder next to
+ * the server's real `expires_in`. The previous `expires_at ?? fromExpiresIn`
+ * kept that 0 (`??` only replaces null/undefined), so every stored token looked
+ * expired and a refresh ran on every start. Precedence now:
+ *   1. a positive explicit expires_at
+ *   2. now + expires_in, when the server supplied a positive expires_in
+ *   3. 0 = unknown (never invented; see isExpired)
+ */
+export function resolveExpiresAt(
+  expiresAt: number | undefined,
+  expiresIn: number | undefined,
+  now: number = Date.now()
+): number {
+  if (typeof expiresAt === 'number' && Number.isFinite(expiresAt) && expiresAt > 0) {
+    return expiresAt;
+  }
+  if (typeof expiresIn === 'number' && Number.isFinite(expiresIn) && expiresIn > 0) {
+    return now + expiresIn * 1000;
+  }
+  return 0;
+}
+
+/**
  * Save credentials to file
  */
-export function saveCredentials(credentials: Omit<StoredCredentials, 'created_at' | 'updated_at'> & { expires_in?: number }): void {
+export function saveCredentials(
+  credentials: Omit<StoredCredentials, 'created_at' | 'updated_at' | 'expires_at'> & {
+    expires_at?: number;
+    expires_in?: number;
+  }
+): void {
   ensureConfigDir();
 
   const now = Date.now();
-  const expiresAt = credentials.expires_at ?? (credentials.expires_in
-    ? now + (credentials.expires_in * 1000)
-    : now + (3600 * 1000)); // Default 1 hour
+  const expiresAt = resolveExpiresAt(credentials.expires_at, credentials.expires_in, now);
 
   const stored: StoredCredentials = {
     access_token: credentials.access_token,
@@ -87,8 +119,16 @@ export function clearCredentials(): boolean {
  * Check if credentials are expired
  */
 export function isExpired(credentials: StoredCredentials): boolean {
-  // Add 60 second buffer
-  return Date.now() > (credentials.expires_at - 60000);
+  const expiresAt = Number(credentials.expires_at);
+  // Unknown expiry (0, missing, garbage) is not "expired forever". Credential
+  // files written by <=1.1.0 all carry expires_at: 0; treating that as expired
+  // forced a refresh on every start and, when the refresh failed, silently
+  // dropped the user to unauthenticated. Use the token; the server decides.
+  if (!Number.isFinite(expiresAt) || expiresAt <= 0) {
+    return false;
+  }
+  // 60 second buffer
+  return Date.now() > (expiresAt - 60000);
 }
 
 /**
@@ -121,17 +161,21 @@ export async function getValidToken(
         expires_in: newTokens.expires_in,
         scope: credentials.scope,
         auth_method: credentials.auth_method,
-        expires_at: 0, // Will be calculated from expires_in
       });
 
       return newTokens.access_token;
-    } catch {
-      // Refresh failed, credentials are invalid
+    } catch (error) {
+      // Not silent: the caller continues unauthenticated, so say why.
+      const reason = error instanceof Error ? error.message : String(error);
+      console.warn(
+        `Stored login expired and token refresh failed (${reason}). ` +
+        'Continuing without it — run `onasis-repl login` to sign in again.'
+      );
       return null;
     }
   }
 
-  // Token expired and no refresh token
+  console.warn('Stored login expired and has no refresh token — run `onasis-repl login` to sign in again.');
   return null;
 }
 
@@ -157,7 +201,7 @@ export function getAuthStatus(): {
   return {
     authenticated: !expired || needsRefresh,
     method: credentials.auth_method,
-    expiresAt: new Date(credentials.expires_at),
+    expiresAt: credentials.expires_at > 0 ? new Date(credentials.expires_at) : undefined,
     scope: credentials.scope,
     needsRefresh,
   };

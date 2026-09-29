@@ -71,16 +71,17 @@ try {
 
   // After construction, system prompt should contain "LZero" (the default constructor prompt).
   // setPersona(mind) should replace it with the Mind persona prompt.
-  const histBefore = orch.conversationHistory ?? null;
-  // conversationHistory is private; reach through any-cast pattern: use bracket access
-  // (TypeScript private != JS-runtime private; tsx exposes it).
+  // The persona prompt is held in getSystemPrompt(), not in conversationHistory
+  // (the AI Router rejects caller system messages).
   const cw = orch;
-  const sysBefore = cw.conversationHistory?.[0]?.content ?? '';
+  const sysBefore = orch.getSystemPrompt();
   assert(sysBefore.includes('LZero'), 'constructor seeded LZero system prompt');
 
   orch.setPersona(mind);
 
-  const sysAfter = cw.conversationHistory?.[0]?.content ?? '';
+  const sysAfter = orch.getSystemPrompt();
+  assert(!(cw.conversationHistory ?? []).some((m) => m.role === 'system'),
+    'no system message in router-bound history after setPersona');
   assert(sysAfter.includes('LZero — Mind'), 'setPersona(mind) replaced system prompt with Mind body');
   assert(!sysAfter.includes('LanOnasis ecosystem'),
     'old LZero default prompt body is no longer present');
@@ -89,7 +90,7 @@ try {
   // Switch back to LZero — full round trip.
   const lzero = registry.switch('lzero');
   orch.setPersona(lzero);
-  const sysRestored = cw.conversationHistory?.[0]?.content ?? '';
+  const sysRestored = orch.getSystemPrompt();
   assert(sysRestored.includes('LanOnasis ecosystem'),
     'setPersona(lzero) restored the LZero body');
 
