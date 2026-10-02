@@ -1,4 +1,4 @@
-# @lanonasis/cli v3.11.2 - Advanced CLI Suite
+# @lanonasis/cli v3.11.3 - Advanced CLI Suite
 
 [![NPM Version](https://img.shields.io/npm/v/@lanonasis/cli)](https://www.npmjs.com/package/@lanonasis/cli)
 [![Downloads](https://img.shields.io/npm/dt/@lanonasis/cli)](https://www.npmjs.com/package/@lanonasis/cli)
@@ -52,13 +52,13 @@ This section is the agent-facing usage guide for `@lanonasis/cli`. The command t
 | Option | Meaning |
 |---|---|
 | `-h, --help` | show command help |
-| `-V, --version` | show version |
-| `-v, --verbose` | verbose logging |
+| `-v, --version` | show version |
+| `-V, --verbose` | verbose logging |
 | `--api-url <url>` | override API base URL |
 | `--output <format>` | `table` (default) \| `json` \| `yaml` |
 | `--no-mcp` | disable MCP route, use direct API |
 
-> ⚠️ **Pitfall — do NOT use `--no-mcp` for memory operations.** Verified live: `--no-mcp` forces `baseURL` to `https://api.lanonasis.com` (the vendor AI proxy), which returns an empty HTML page for `/api/v1/memories/<id>` — the CLI surfaces this as `Request failed with status code 500`. The default route sends memory ops to `https://mcp.lanonasis.com/api/v1/memory/<id>` (the real memory service). Source: `src/utils/api.ts:638-640` ("api.lanonasis.com is the vendor AI proxy, NOT the memory service. Memory operations must go to mcp.lanonasis.com."). `--no-mcp` is only meaningful for non-memory service commands.
+> ⚠️ **Route choice decides which dataset you read.** Memory ops default to the MCP route (`https://mcp.lanonasis.com/api/v1/memory/...`); `--no-mcp` forces the direct API (`https://api.lanonasis.com`). Measured 2026-09-30 on 3.11.2: both routes answered `memory list` / `get` / `search` with real data, but they reported **different totals** — 868 rows on the MCP route vs 927 on the direct API. Pick the route by *which store you mean*, and re-measure before citing a count. An earlier revision of this README claimed `--no-mcp` + memory → HTTP 500; that no longer reproduces.
 
 ### Top-level commands
 
@@ -687,7 +687,23 @@ onasis health
 
 ## 📝 Version History
 
-### v3.10.1 (Current)
+### v3.11.3 (Current)
+
+- 📚 **Operator-first `SKILL.md`**: rewritten as a one-read guide — auth path, copy-paste examples for the core memory commands, headless stdout caveats, and a dated verified baseline
+- 🐛 **Doc corrections**: `-v`/`--version` vs `-V`/`--verbose` were documented inverted; `memory intelligence` subcommand names and the `memory behavior` group were wrong or missing; repo paths now match the monorepo layout
+- ⚠️ **Route behaviour corrected**: `--no-mcp` memory calls work and read a *different* dataset than the MCP route (927 vs 868 rows on `memory list`, measured 2026-09-30)
+
+### v3.11.2
+
+- 🔁 **Explicit search fallback**: `memory search` reports lexical fallback metadata, supports `--no-fallback`, `--fail-on-fallback`, and `--ci`
+- 📦 **Self-contained prescan installs**: bundled `@lanonasis/privacy-sdk` alongside `@lanonasis/secret-prescan`
+
+### v3.11.1
+
+- 🌉 **REPL bridge**: `lanonasis repl` forwards `--ai-router`, `--model`, and `--config` to `@lanonasis/repl-cli`
+- 📚 **Published `SKILL.md`** so agent runtimes can discover package-specific guidance
+
+### v3.10.1
 
 - 🔍 **Secret Prescan**: Local secret/PII scanning before MIRA context extraction
 - 🧩 **Lazy Runtime Loading**: Prescan packages load only when prescan commands run

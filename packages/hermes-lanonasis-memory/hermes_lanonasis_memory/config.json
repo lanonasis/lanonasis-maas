@@ -1,0 +1,11 @@
+{
+  "api_url": "https://api.lanonasis.com",
+  "api_key": "lano_nmpidur33vcn2t8qh61iffy08ulyerd5",
+  "organization_id": "22032169-3c5c-45d1-b217-48a608c2bed0",
+  "project_scope": "project",
+  "subject_id_strategy": "current_user",
+  "subject_id": "",
+  "tool_policy": "full_access",
+  "privacy_mode": false,
+  "embedding_model": ""
+}

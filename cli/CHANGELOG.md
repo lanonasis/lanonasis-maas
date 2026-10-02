@@ -1,5 +1,24 @@
 # Changelog - @lanonasis/cli
 
+## [3.11.3] - 2026-09-30
+
+### 📚 Documentation
+
+- **Rewrote the published `SKILL.md` as an operator-first guide.** It now opens with a verified baseline (package version, global bin path, config location, verification date) and a rule that every live-behaviour claim carries a date, so stale claims get caught instead of repeated.
+- **Split operator and maintainer guidance.** `SKILL.md` now ships consumer-shaped only (operate + field contract + safety); the repo-internal material — monorepo paths, package boundaries, build/verify commands, release rules, docs-drift hotspots — moved to `MAINTAINER.md`, which is deliberately excluded from package `files`. npm consumers cannot act on monorepo paths, and shipping them was misleading.
+- **Added the missing authentication path.** The skill previously never documented `auth login` (`-e/--email`, `-p/--password`, `-k/--vendor-key`) even though `whoami`, `status`, `health`, and every `memory` call require a session.
+- **Added copy-paste examples for the commands agents actually run** — memory create/list/search/get/update/delete, topics, and the session-continuity commands — with the JSON output switches (`--output json` global vs `memory search --json` local) called out explicitly.
+- **Documented headless stdout noise.** Every invocation emits a dotenv banner and repeated `Keytar retrieval failed … org.freedesktop.secrets` fallback lines on hosts without a secret service; scripts parsing output must filter them. This is expected behaviour, not an auth failure.
+- **Corrected the global flag contract.** `-v` is `--version` and `-V` is `--verbose`; the skill had these inverted.
+- **Corrected the command surface.** Added the top-level `mcp-server` command, the `memory behavior` group (`record`, `recall`, `suggest`), and the real `memory intelligence` subcommand names (`health-check`, `find-related`, `extract-insights`, `analyze-patterns`). Documented the `prescan run` and `config` option sets.
+- **Corrected repo paths.** The skill previously said `cd cli` / `cd ../packages/repl-cli`; the real monorepo paths are `apps/lanonasis-maas/cli` and `apps/lanonasis-maas/packages/repl-cli`.
+- **Replaced the stale `--no-mcp` memory warning with measured route behaviour.** Verified 2026-09-30 at 3.11.2: `--no-mcp` memory `list`/`get`/`search` all return 200 with real data, and the direct-API route reported a different dataset than the MCP route (927 vs 868 rows on `memory list`). Route selection is now framed as a correctness decision, not crash avoidance. The 59-row gap was traced to a `user_id` read fence that mcp-core applied by default and the Supabase edge layer did not; mcp-core was aligned to the edge behaviour on 2026-09-30, so the totals now converge at 927.
+- **Documented a known defect:** `memory list --type <x>` is a silent no-op (verified 2026-09-30).
+
+### ⚠️ Breaking Changes
+
+- None. Documentation and metadata only; no command, flag, or wire-contract changes.
+
 ## [3.11.2] - 2026-07-21
 
 ### 🐛 Bug Fixes
