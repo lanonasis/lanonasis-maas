@@ -115,6 +115,21 @@ Binaries from `package.json`: `lanonasis`, `onasis`, `lanonasis-mcp`. `memory`/`
 
 **`memory behavior`:** `record`, `recall`, `suggest` — learned workflow-pattern intelligence.
 
+> ⚠️ **Known defects — `memory intelligence`.** Verified 2026-10-04 on 3.11.2. Every subcommand is served by the Supabase edge functions on **both** routes: `--no-mcp` changes the transport, not the backend, so the results below are the same with or without it.
+
+| Subcommand | Result (2026-10-04) | Notes |
+|---|---|---|
+| `health-check` | works | `recommendations` can come back as one string wrapped in a ` ```json ` fence instead of a list |
+| `suggest-tags <id>` | works | `--max` is not honoured: `--max 3` returned 5 |
+| `find-related <id>` | works | semantic; the source memory is returned as its own top match (similarity ~1.0) |
+| `detect-duplicates` | **fails**: `canceling statement due to statement timeout` | succeeds when narrowed, e.g. `--memory-types reference` |
+| `extract-insights` | **fails**: `Internal server error` on every call, any options | server bug, fix in Onasis-CORE #139 (not deployed as of this date) |
+| `analyze-patterns` | works | `insights` can come back as one fenced string, as with `health-check` |
+
+- **Always pass `--no-mcp` when scripting `memory intelligence`.** On the default route the command prints its result and then **does not exit**: the MCP connection it opened stays up (observed >45 s, killed by hand). With `--no-mcp` it exits normally.
+- `--json` output is preceded by a spinner line (`- Detecting duplicates...`); strip everything before the first `{`.
+- The MCP **tools** of the same name (`intelligence_suggest_tags`, `intelligence_find_related`, …, called by an MCP client rather than this CLI) are a different implementation in mcp-core with different defects: as of 2026-10-04 `suggest_tags` by id and `find_related` fail with `organization_id is required for non-master memory reads` (fix in mcp-core #48, not deployed).
+
 **`mcp`:** `connect`, `disconnect`, `status`, `tools`, `call <tool>`, `memory`, `config`, `start`, `diagnose`.
 **`mcp-server`:** `init`.
 **`config`:** `set`, `get`, `show`, `list`, `set-url`, `test`, `discover`, `endpoints`, `set-endpoint <type> <url>` (`auth|memory|mcp-http|mcp-ws|mcp-sse`), `clear-overrides`, `validate`, `backup`, `restore`, `reset`.
