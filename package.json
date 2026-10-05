@@ -47,7 +47,9 @@
     "package:claude-memory:install": "npm install --prefix packages/claude-memory",
     "package:claude-memory:build": "npm run build --prefix packages/claude-memory",
     "package:claude-memory:test": "npm run test --prefix packages/claude-memory",
-    "package:claude-memory:typecheck": "npm run typecheck --prefix packages/claude-memory"
+    "package:claude-memory:typecheck": "npm run typecheck --prefix packages/claude-memory",
+    "build:cli": "bun install --cwd cli --frozen-lockfile && bun run --cwd cli build",
+    "test:cli:integration": "bun run build:cli && bun run --cwd cli test -- test/integration.test.ts --testPathIgnorePatterns 'test/load\\.' --testTimeout 60000"
   },
   "keywords": [
     "memory",
