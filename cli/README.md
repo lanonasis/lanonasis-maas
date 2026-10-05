@@ -101,14 +101,16 @@ This section is the agent-facing usage guide for `@lanonasis/cli`. The command t
 | `update` | | `<id>`, `-t/--title`, `-c/--content`, `--type`, `--tags`, `-i/--interactive` |
 | `delete` | `rm` | `<id>`, `-f/--force` |
 | `stats` | | memory statistics |
-| `intelligence` | | `health`, `suggest-tags <memory-id>`, `related <memory-id>`, `detect-duplicates` (shared: `--organization-id`, `--topic-id`, `--scope`, `--json`) |
+| `intelligence` | | `health-check`, `suggest-tags <memory-id>`, `find-related <memory-id>`, `detect-duplicates` (shared: `--organization-id`, `--topic-id`, `--scope`, `--json`) |
+
+`memory list --type` accepts `context`, `project`, `knowledge`, `reference`, `personal`, and `workflow`. The CLI forwards the value without validation; the REST list handler ignores unsupported values, so results may include every type without an error.
 
 ### Field naming contract — `memory_type` vs `type`
 
 - **Wire format is `memory_type`.** The CLI REST client (`src/utils/api.ts`), the MaaS REST server schema (`src/types/memory-aligned.ts`), and the CLI MCP server (`src/mcp/server/lanonasis-server.ts`) all use `memory_type`.
 - **`type` is only an alias at the Supabase Edge Function layer**: `memory-create` (`const memoryType = body.memory_type || body.type`) and `memory-search` (`url.searchParams.get("type")`).
 - CLI input (`--type` flag or `--json '{"type": ...}'`) is coerced to `memory_type` before it is sent.
-- On create/update/list the CLI sends **both** `memory_type` and `type` (alias) so the type persists and the list filter applies regardless of which gateway/schema layer is live (`src/utils/api.ts` `withTypeAlias`).
+- Create/update and GET-list requests use `memory_type`; the current REST client does not add a `type` alias (`src/utils/api.ts`). The POST-list fallback in `getMemories` also sends **only `memory_type`** for the type filter, without `type`.
 - Search responses may return `type` on the row; the CLI normalizes to `memory_type` (`src/commands/memory.ts:1170`).
 
 ## 🔍 Secret Prescan (v3.10.1+)

@@ -6,17 +6,20 @@ Operator-facing guide (shipped in the package): [`SKILL.md`](./SKILL.md).
 
 ## 1. Repo paths
 
-The package lives at `apps/lanonasis-maas/cli/`. There is **no** top-level `cli/` in the monorepo.
+The main CLI package lives at `cli/`; the Concierge REPL package lives at `packages/repl-cli/`. Run each command block below from the repository root.
 
 ```bash
-cd apps/lanonasis-maas/cli
+cd cli
 bun install --no-save
 bun run build
 node dist/index.js -h
 node dist/index.js repl -h
 npm pack --dry-run
 
-cd ../packages/repl-cli
+```
+
+```bash
+cd packages/repl-cli
 bun install --no-save
 bun run build
 node dist/index.js -h
@@ -26,22 +29,27 @@ npm pack --dry-run
 
 ## 2. Package boundaries
 
-- Main CLI package: `apps/lanonasis-maas/cli/`, published as `@lanonasis/cli`.
+- Main CLI package: `cli/`, published as `@lanonasis/cli`.
 - Main binaries: `lanonasis`, `onasis`, `lanonasis-mcp`.
-- Concierge REPL package: `apps/lanonasis-maas/packages/repl-cli/`, published as `@lanonasis/repl-cli`.
+- Concierge REPL package: `packages/repl-cli/`, published as `@lanonasis/repl-cli`.
 - REPL binaries: `lrepl`, `onasis-repl`.
 - `lanonasis repl` bridges into `@lanonasis/repl-cli`, preserving `--ai-router`, `--model`, `--config`, `--token`, `--api`, `--mcp`.
 - Do not collapse the REPL into generic MCP behavior unless the MCP tool contract is explicitly implemented and tested.
 
 ## 3. Preferred verification
 
+Run each command block from the repository root.
+
 ```bash
-cd apps/lanonasis-maas/cli
+cd cli
 bun run build
 node --experimental-vm-modules node_modules/jest/bin/jest.js tests/cli-smoke.test.js --runInBand
 npm pack --dry-run --json
 
-cd ../packages/repl-cli
+```
+
+```bash
+cd packages/repl-cli
 bun run type-check && bun run test && bun run build && npm pack --dry-run
 ```
 

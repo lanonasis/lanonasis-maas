@@ -28,10 +28,13 @@ On a headless host, **every** invocation prepends noise to stdout:
 Keytar retrieval failed, trying file: [Error: The name org.freedesktop.secrets was not provided by any .service files]
 ```
 
-Keytar has no secret service on such hosts, so it falls back to the file store — this is **expected, not an error**. It does not break auth. Any script parsing output must strip it:
+Keytar has no secret service on such hosts, so it falls back to the file store — this is **expected, not an error**. It does not break auth. Any script parsing output must strip it, along with the `Memories` heading and `Page N of M` preamble. Keep stderr visible and enable `pipefail` so a failed list request fails the pipeline:
 
 ```bash
-lanonasis memory list -l 1 --output json 2>/dev/null | grep -v '^◇\|^Keytar' | jq .
+set -o pipefail
+lanonasis memory list -l 1 --output json |
+  grep -v '^◇\|^Keytar\|^📚 Memories (\|^Page [0-9][0-9]* of [0-9][0-9]*$' |
+  jq .
 ```
 
 ## 1. Authenticate (step zero)
@@ -170,7 +173,7 @@ Observed healthy-but-uneven baseline (2026-09-30): `health` reported API **conne
 - `type` is accepted as an **alias only by the Supabase Edge Function layer**: `memory-create` (`body.memory_type || body.type`) and `memory-search` (`url.searchParams.get("type")`).
 - The CLI `--type` flag / `--json '{"type": ...}'` input is coerced to `memory_type` before send (`src/commands/memory.ts:681-690`).
 - Search rows may return `type`; the CLI normalizes to `memory_type` (`src/commands/memory.ts:1170`).
-- Create/update/list send **both** keys so the deployed gateway (persists `type`) and the MaaS schema (reads `memory_type`) both apply the value. Never send `type` *instead of* `memory_type`.
+- Create/update and GET-list requests use `memory_type`; the current REST client does not add a `type` alias (`src/utils/api.ts`). The POST-list fallback in `getMemories` also sends **only `memory_type`** for the type filter, without `type`. Never send `type` *instead of* `memory_type`.
 - Read-path divergence to be aware of: mcp-core filters `.eq('type', …)` while the edge filters `.eq('memory_type', …)` on the same table.
 
 ## 8. Safety
