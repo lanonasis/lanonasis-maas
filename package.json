@@ -158,7 +158,6 @@
     "@tootallnate/once": "^2.0.0",
     "body-parser": "^1.20.4",
     "update-browserslist-db": "^1.1.4",
-    "ajv": "^8.17.1",
     "lodash": "^4.17.22",
     "@babel/helper-module-transforms": "^7.26.0"
   }
