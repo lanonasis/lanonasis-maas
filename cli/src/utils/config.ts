@@ -945,6 +945,36 @@ export class CLIConfig {
   }
 
   // Enhanced authentication support
+  /**
+   * Store a vendor key for the current user.
+   *
+   * IMPORTANT (VERA C-3, cli 3.11.4): this method has a destructive
+   * side-effect that callers MUST be aware of. The provided `vendorKey` is
+   * persisted via `@lanonasis/oauth-client`; in Node.js, the key is stored
+   * with `keytar` if its write succeeds, or in the encrypted file
+   * `~/.lanonasis/api-key.enc` otherwise. This method also overwrites the
+   * `authMethod` marker in
+   * `~/.maas/config.json` (unless the existing marker is already `oauth`,
+   * `oauth2`, or `jwt`). This is true regardless of whether `vendorKey` was
+   * supplied by the user (`auth login --vendor-key`) or read from
+   * `LANONASIS_API_KEY` by `mcp-server-entry.ts` / `mcp start` — the
+   * env-supplied key becomes the new persistent key on every successful
+   * resolution.
+   *
+   * Implications:
+   *   1. A user who alternates between env-supplied keys (e.g. CI) and
+   *      saved keys (e.g. local development) will silently see their saved
+   *      key replaced each time the env var is set.
+   *   2. The proper long-term fix is a `--no-persist` flag on `lanonasis-mcp`
+   *      that lets the caller use an env-supplied key without overwriting
+   *      saved state. That flag is out of scope for 3.11.4 but should
+   *      accompany the next transport PR.
+   *
+   * @param vendorKey    Vendor key string. Trimmed; non-empty.
+   * @param options.skipServerValidation  Skip the auth-gateway validation
+   *   probe. Set true for OAuth tokens that the auth-gateway would reject
+   *   as vendor keys but the memory API recognises.
+   */
   async setVendorKey(vendorKey: string, options: { skipServerValidation?: boolean } = {}): Promise<void> {
     const trimmedKey = typeof vendorKey === 'string' ? vendorKey.trim() : '';
 

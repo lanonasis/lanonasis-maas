@@ -84,6 +84,8 @@ config.local.json
 # lanonasis-sdk's api-keys client is source code, not a key file
 !packages/lanonasis-sdk/src/api-keys/
 !packages/lanonasis-sdk/src/api-keys/**
+# cli/src/utils/auth-keys.ts is source code (auth-keys helper), not a key file
+!cli/src/utils/auth-keys.ts
 .cache_ggshield
 *.backup
 

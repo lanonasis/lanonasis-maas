@@ -9,6 +9,26 @@ import { CLIConfig } from '../../utils/config.js';
 import { APIClient } from '../../utils/api.js';
 import chalk from 'chalk';
 
+/**
+ * Returns true if the address is a loopback host that should be allowed
+ * without an explicit `--allow-public-bind` opt-in. We intentionally accept
+ * the full 127.0.0.0/8 range, IPv6 `::1`, and the literal `localhost`.
+ * Anything else (including `0.0.0.0`, `::`, public IPs, and DNS names that
+ * resolve to a non-loopback address) requires opt-in.
+ *
+ * Exported so the CLI layer (`cli/src/commands/mcp.ts`) and the unit tests
+ * can share the same definition.
+ */
+export function isLoopbackHost(host: string): boolean {
+  if (typeof host !== 'string') return false;
+  const trimmed = host.trim();
+  if (trimmed === '') return false;
+  if (/^127\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(trimmed)) return true;
+  if (trimmed.toLowerCase() === 'localhost') return true;
+  if (trimmed === '::1' || trimmed === '[::1]') return true;
+  return false;
+}
+
 export interface LanonasisServerOptions {
   name?: string;
   version?: string;
@@ -19,6 +39,7 @@ export interface LanonasisServerOptions {
   transport?: 'stdio' | 'ws' | 'http' | 'sse';  // Transport type for mcp start command
   port?: number;  // Port for ws/http/sse transports
   host?: string;  // Host address for ws/http/sse transports
+  allowPublicBind?: boolean;  // Opt-in flag to permit non-loopback --host values (VERA C-1)
   preferredTransport?: 'stdio' | 'websocket' | 'http';
   enableTransportFallback?: boolean;
 }
@@ -1300,12 +1321,19 @@ Please choose an option (1-4):`
         'X-Project-Scope': 'lanonasis-maas'
       };
 
+      // VERA C-2 (cli 3.11.4): X-Auth-Method is a diagnostic signal, not a
+      // contract. Gate it on CLI_VERBOSE so routine health probes do not
+      // declare the credential class to any intermediate proxy or to the
+      // auth-gateway access log. The auth-gateway already determines the
+      // auth class from the credential itself.
+      const verboseAuth = process.env.CLI_VERBOSE === 'true';
+
       if (vendorKey) {
         headers['X-API-Key'] = vendorKey;
-        headers['X-Auth-Method'] = 'vendor_key';
+        if (verboseAuth) headers['X-Auth-Method'] = 'vendor_key';
       } else if (token) {
         headers['Authorization'] = `Bearer ${token}`;
-        headers['X-Auth-Method'] = 'jwt';
+        if (verboseAuth) headers['X-Auth-Method'] = 'jwt';
       }
 
       const normalizedBase = authBase.replace(/\/$/, '');
@@ -1591,8 +1619,24 @@ Please choose an option (1-4):`
 
   /**
    * Start a specific transport
+   *
+   * VERA C-1 (cli 3.11.4): a non-loopback `host` value must be refused unless
+   * `allowPublicBind: true` is set. Today only `stdio` is a working transport,
+   * but the check runs before the switch so that the moment `ws`/`http`/`sse`
+   * land, the same contract applies. The CLI layer (`mcp.ts`) is the primary
+   * guard; this layer is a defense-in-depth backstop.
    */
   private async startTransport(transport: 'stdio' | 'websocket' | 'http'): Promise<void> {
+    const host = this.options.host;
+    if (host && !isLoopbackHost(host) && !this.options.allowPublicBind) {
+      throw new Error(
+        `Refusing to bind MCP server to non-loopback host '${host}'. ` +
+        `Pass --allow-public-bind on the CLI or set allowPublicBind: true in ` +
+        `LanonasisServerOptions to opt in. Any host that can reach ${host} ` +
+        `will be able to call the server with the saved credentials.`
+      );
+    }
+
     switch (transport) {
       case 'stdio':
         this.transport = new StdioServerTransport();
