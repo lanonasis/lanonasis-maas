@@ -1,11 +1,20 @@
 # Changelog - @lanonasis/cli
 
-## [Unreleased]
+## [3.11.4] - 2026-10-05
 
-### Changed
-- **Metadata normalization (PR-A.2).** Homepage re-pointed at the canonical
-  `tree/main/cli#readme` URL; `engines.node >= 18` added. Repository, bugs,
-  keywords, files allowlist, and dependencies unchanged.
+### 🔐 Security
+- **MCP server `--host` guard (VERA C-1).** Non-loopback `--host` on `mcp start` now refuses to bind unless `--allow-public-bind` is passed, with a stderr warning. Default `127.0.0.1` is unchanged. Closes the VERA medium finding that any local user could bind the MCP server on a routable address.
+- **`X-Auth-Method` header now opt-in (VERA C-2).** The auth-method header is only attached when `CLI_VERBOSE=true`. Removes a covert channel that advertised the credential family in production traffic.
+- **Documented `setVendorKey` persistence (VERA C-3).** JSDoc on `CLIConfig.setVendorKey` now states explicitly that it persists env-supplied keys and overwrites any previously saved config entry. No behaviour change, but the side-effect is no longer implicit.
+
+### 🧠 Routing & API Keys
+- **Transport-routing direct flow.** Memory list/get/search calls now use the direct `api/v1` path when an `api_key` is configured, skipping the auth-gateway hop. Falls back to the gateway route transparently on 401/403/404.
+- **Local flow guard.** When the CLI is talking to `127.0.0.1`/localhost and a user-key is set, the request signs with the user key (LANONASIS_USER_KEY) rather than the gateway session, keeping local dev flows aligned with the documented credential model.
+- **Auth-gateway 404 handling.** A 404 from `api/v1/auth-gateway/memory/*` is treated as a routing/credential problem rather than an empty result, so the direct-flow fallback fires and the user sees the real error rather than a misleading empty list.
+- **MCP credential fallback.** MCP server now honours `LANONASIS_API_KEY` / `LANONASIS_USER_KEY` env-supplied credentials in addition to the stored config entry, so headless and CI invocations don't need to write the config file.
+
+### 📦 Dependencies
+- **Declared `boxen` directly in `dependencies`.** The CLI imports `boxen` for the version banner; before this release it was being resolved transitively through `vortexai-l0`. Pinning the direct dep removes the resolution-luck failure mode flagged in `3-clean-build.md`.
 
 ## [3.11.3] - 2026-09-30
 
