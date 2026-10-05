@@ -88,18 +88,10 @@ export class ReplEngine {
       aiRouterApiKey: config.aiRouterApiKey,
       openaiFallback: config.openaiFallback,
       l0: config.l0,
-      agentMemorySessionId: config.agentMemorySessionId,
       userContext: config.userContext
     });
 
     this.personaCommands = new PersonaCommands(this.orchestrator);
-
-    // Wire the local-memory router into the command context so the
-    // MemoryCommands.getRouter() accessor (used by `search`, `list`, `get`,
-    // `delete`) reaches the local-first path instead of silently falling
-    // back to the direct MaaS client. The orchestrator owns the router
-    // lifecycle, so we just expose what it already built.
-    this.context.memoryRouter = this.orchestrator.getMemoryRouter();
 
     // Apply defaultPersona from config (if set and known) before any input.
     // Silent on success; warn if the configured slug is unknown.
@@ -312,14 +304,9 @@ export class ReplEngine {
       }
     });
 
-    // Clear conversation history — starts a new session-memory session too
-    // (when configured), so the abandoned session's events never bleed
-    // into the fresh one.
+    // Clear conversation history
     this.registry.register('reset', async () => {
-      const newSessionId = this.orchestrator.regenerateSession();
-      if (newSessionId) {
-        saveConfig({ agentMemorySessionId: newSessionId });
-      }
+      this.orchestrator.clearHistory();
       console.log(chalk.green('✨ Conversation history cleared'));
     });
 

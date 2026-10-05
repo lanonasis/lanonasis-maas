@@ -50,6 +50,8 @@ export default [
         globalThis: 'readonly',
         console: 'readonly',
         process: 'readonly',
+        Response: 'readonly',
+        RequestInit: 'readonly',
         describe: 'readonly',
         it: 'readonly',
         expect: 'readonly',

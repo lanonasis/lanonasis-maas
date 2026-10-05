@@ -35,6 +35,9 @@ declare module 'vue' {
         unmount(): void;
     }
 
+    // T is part of the public stub surface (provide<T>(key: InjectionKey<T>))
+    // even though the stub body doesn't reference it.
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     export interface InjectionKey<T> {
         readonly __brand: unique symbol;
     }

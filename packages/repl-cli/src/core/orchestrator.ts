@@ -251,8 +251,16 @@ export class NaturalLanguageOrchestrator {
             const res = await this.client.createMemory({
               title: String(payload.title ?? ''),
               content: String(payload.content ?? ''),
-              type: payload.memory_type as string | undefined,
-              tags: Array.isArray(payload.tags) ? (payload.tags as string[]) : undefined,
+              // createMemory's schema field is memory_type (required enum,
+              // runtime default 'context'); the sync payload uses the same field.
+              memory_type: payload.memory_type as
+                | 'context'
+                | 'project'
+                | 'knowledge'
+                | 'reference'
+                | 'personal'
+                | 'workflow',
+              tags: Array.isArray(payload.tags) ? (payload.tags as string[]) : [],
               metadata: (payload.metadata ?? undefined) as Record<string, unknown> | undefined,
             });
             if (res.error) {
