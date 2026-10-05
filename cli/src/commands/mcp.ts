@@ -76,50 +76,57 @@ export function mcpCommands(program: Command) {
     .description('MCP server initialization and management');
 
   mcpServer.command('init')
-    .description('Initialize MCP server configuration')
-    .action(async () => {
-      console.log(chalk.cyan('🚀 Initializing MCP Server Configuration'));
-      console.log('');
+      .description('Initialize MCP server configuration')
+      .action(async () => {
+        console.log(chalk.cyan('🚀 Initializing MCP Server Configuration'));
+        console.log('');
 
-      const config = new CLIConfig();
-      const isAuthenticated = !!config.get('token');
+        const config = new CLIConfig();
+        await config.init();
+        const hasVendor = await config.hasVendorKey();
+        const hasToken = !!config.get('token');
+        const isAuthenticated = hasVendor || hasToken;
 
-      if (isAuthenticated) {
-        console.log(chalk.green('✓ Authenticated - Using remote MCP mode'));
-        console.log('  Your memory operations will use mcp.lanonasis.com');
-        console.log('  with real-time SSE updates enabled');
-      } else {
-        console.log(chalk.yellow('⚠️  Not authenticated - Using local MCP mode'));
-        console.log('  Run "lanonasis auth login" to enable remote mode');
-      }
-
-      console.log('');
-      console.log(chalk.cyan('Available MCP Commands:'));
-      console.log('  lanonasis mcp connect       # Auto-connect to best mode');
-      console.log('  lanonasis mcp connect -r    # Force remote mode');
-      console.log('  lanonasis mcp connect -l    # Force local mode');
-      console.log('  lanonasis mcp status        # Check connection status');
-      console.log('  lanonasis mcp tools         # List available tools');
-      console.log('');
-      console.log(chalk.cyan('Memory operations are MCP-powered by default!'));
-
-      // Auto-connect to MCP
-      const spinner = ora('Auto-connecting to MCP...').start();
-      try {
-        const client = getMCPClient();
-        const connected = await client.connect({ useRemote: isAuthenticated });
-        if (connected) {
-          spinner.succeed(chalk.green(`Connected to ${isAuthenticated ? 'remote' : 'local'} MCP server`));
-          process.exit(0);
+        if (isAuthenticated) {
+          console.log(chalk.green('✓ Authenticated - Using remote MCP mode'));
+          console.log('  Your memory operations will use mcp.lanonasis.com');
+          console.log('  with real-time SSE updates enabled');
         } else {
-          spinner.fail('Failed to auto-connect to MCP');
-          process.exit(1);
+          console.log(chalk.yellow('⚠️  Not authenticated - Using local MCP mode'));
+          console.log('  Run "lanonasis auth login" to enable remote mode');
         }
-      } catch {
-        spinner.fail('MCP auto-connect failed');
-      }
+
+        console.log('');
+        console.log(chalk.cyan('Available MCP Commands:'));
+        console.log('  lanonasis mcp connect       # Auto-connect to best mode');
+        console.log('  lanonasis mcp connect -r    # Force remote mode');
+        console.log('  lanonasis mcp connect -l    # Force local mode');
+        console.log('  lanonasis mcp status        # Check connection status');
+        console.log('  lanonasis mcp tools         # List available tools');
+        console.log('');
+        console.log(chalk.cyan('Memory operations are MCP-powered by default!'));
+
+        // Auto-connect to MCP
+        const spinner = ora('Auto-connecting to MCP...').start();
+        try {
+          const client = getMCPClient();
+          const connected = await client.connect({ useRemote: isAuthenticated });
+          if (connected) {
+            // Read the actual connection mode from the client (public API)
+            // rather than the precomputed isAuthenticated flag.
+            const status = client.getConnectionStatus();
+            const actualMode = status.mode || 'remote';
+            spinner.succeed(chalk.green(`Connected to ${actualMode} MCP server`));
+            process.exit(0);
+          } else {
+            spinner.fail('Failed to auto-connect to MCP');
+            process.exit(1);
+          }
+        } catch {
+          spinner.fail('MCP auto-connect failed');
+        }
         process.exit(1);
-    });
+      });
 
   // Connect command
   mcp.command('connect')
@@ -665,11 +672,18 @@ export function mcpCommands(program: Command) {
     .option('--port <number>', 'Port for ws/http/sse', '3009')
     .option('--host <address>', 'Host address', '127.0.0.1')
     .action(async (options) => {
-      const apiKey = process.env.LANONASIS_API_KEY;
-      if (!apiKey) {
-        console.error('Error: LANONASIS_API_KEY environment variable required');
-        process.exit(1);
-      }
+          // Resolve API key: env var wins, then fall back to CLI session
+          let apiKey = process.env.LANONASIS_API_KEY;
+          if (!apiKey) {
+            const config = new CLIConfig();
+            await config.init();
+            apiKey = (await config.getVendorKeyAsync()) ?? config.get('token');
+          }
+          if (!apiKey) {
+            console.error('Error: No authentication credentials found');
+            console.error('Run "lanonasis auth login" or set LANONASIS_API_KEY.');
+            process.exit(1);
+          }
 
       try {
         const { LanonasisMCPServer } = await import('../mcp/server/lanonasis-server.js');

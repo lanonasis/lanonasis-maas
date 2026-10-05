@@ -19,26 +19,55 @@
  */
 
 import { LanonasisMCPServer } from './mcp/server/lanonasis-server.js';
+import { CLIConfig } from './utils/config.js';
+
+async function resolveApiKey(): Promise<string | undefined> {
+  // 1. Explicit env var always wins
+  const envKey = process.env.LANONASIS_API_KEY;
+  if (typeof envKey === 'string' && envKey.trim().length > 0) {
+    return envKey.trim();
+  }
+
+  // 2. Fall back to the user's saved CLI session
+  const config = new CLIConfig();
+  await config.init();
+
+  // Try vendor key first (most common for external MCP clients)
+  const vendorKey = await config.getVendorKeyAsync();
+  if (typeof vendorKey === 'string' && vendorKey.trim().length > 0) {
+    return vendorKey.trim();
+  }
+
+  // Then try JWT token
+  const token = config.get('token');
+  if (typeof token === 'string' && token.trim().length > 0) {
+    return token.trim();
+  }
+
+  return undefined;
+}
 
 async function main() {
-  // Get API key from environment
-  const apiKey = process.env.LANONASIS_API_KEY;
+  const apiKey = await resolveApiKey();
 
   if (!apiKey) {
-    console.error('Error: LANONASIS_API_KEY environment variable is required');
+    console.error('Error: No authentication credentials found');
     console.error('');
-    console.error('Usage:');
-    console.error('  LANONASIS_API_KEY=lano_xxx lanonasis-mcp');
+    console.error('The MCP server needs an API key or JWT token.');
     console.error('');
-    console.error('Or configure in Claude Desktop/Cursor:');
-    console.error('  {');
-    console.error('    "mcpServers": {');
-    console.error('      "lanonasis": {');
-    console.error('        "command": "lanonasis-mcp",');
-    console.error('        "env": { "LANONASIS_API_KEY": "your_api_key" }');
-    console.error('      }');
-    console.error('    }');
-    console.error('  }');
+    console.error('Options:');
+    console.error('  1. Run "lanonasis auth login" to create a CLI session, then');
+    console.error('     the server will automatically pick up the saved credentials.');
+    console.error('');
+    console.error('  2. Set LANONASIS_API_KEY in your environment or MCP client config:');
+    console.error('     {');
+    console.error('       "mcpServers": {');
+    console.error('         "lanonasis": {');
+    console.error('           "command": "lanonasis-mcp",');
+    console.error('           "env": { "LANONASIS_API_KEY": "your_api_key" }');
+    console.error('         }');
+    console.error('       }');
+    console.error('     }');
     process.exit(1);
   }
 
