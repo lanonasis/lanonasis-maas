@@ -1375,6 +1375,12 @@ export class CLIConfig {
             const status = error.response.status;
             if (status === 401 || status === 403) {
               authError = true;
+            } else if (status === 404) {
+              // The auth-gateway returns 404 'Not found' when it cannot verify a
+              // token (vs. a transient 5xx or connection error). Treat it as an
+              // explicit verification failure so callers don't fall into the
+              // offline-grace path with a token the server has rejected.
+              authError = true;
             } else {
               networkError = true;
             }

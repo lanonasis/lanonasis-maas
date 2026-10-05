@@ -51,7 +51,7 @@ export const IDE_NAMES = {
 } as const;
 
 /**
- * Detect the current platform (browser-safe)
+ * Detect the current platform
  *
  * @returns Platform string (darwin, win32, linux, unknown)
  */
@@ -59,29 +59,17 @@ export function detectPlatform(): string {
   if (typeof process !== 'undefined' && process.platform) {
     return process.platform;
   }
-  if (typeof navigator !== 'undefined' && navigator.platform) {
-    const platform = navigator.platform.toLowerCase();
-    if (platform.includes('mac')) return 'darwin';
-    if (platform.includes('win')) return 'win32';
-    if (platform.includes('linux')) return 'linux';
-  }
   return 'unknown';
 }
 
 /**
- * Detect the current architecture (browser-safe)
+ * Detect the current architecture
  *
  * @returns Architecture string (x64, arm64, unknown)
  */
 export function detectArchitecture(): string {
   if (typeof process !== 'undefined' && process.arch) {
     return process.arch;
-  }
-  // Browser environment - limited detection
-  if (typeof navigator !== 'undefined') {
-    const ua = navigator.userAgent;
-    if (/\barm\b/i.test(ua) || /\baarch64\b/i.test(ua)) return 'arm64';
-    if (/\bx86_64\b/i.test(ua) || /\bwow64\b/i.test(ua) || /\bwin64\b/i.test(ua)) return 'x64';
   }
   return 'unknown';
 }
