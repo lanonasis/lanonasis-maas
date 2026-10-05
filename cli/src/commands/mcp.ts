@@ -6,6 +6,7 @@ import { getMCPClient } from '../utils/mcp-client.js';
 import { EnhancedMCPClient } from '../mcp/client/enhanced-client.js';
 import { CLIConfig } from '../utils/config.js';
 import { apiClient, MemoryEntry } from '../utils/api.js';
+import { isLoopbackHost } from '../mcp/server/lanonasis-server.js';
 import WebSocket from 'ws';
 import { dirname, join } from 'path';
 import { createConnectionManager } from '../ux/index.js';
@@ -671,6 +672,7 @@ export function mcpCommands(program: Command) {
     .option('--transport <type>', 'Transport: stdio (default), ws, http, sse', 'stdio')
     .option('--port <number>', 'Port for ws/http/sse', '3009')
     .option('--host <address>', 'Host address', '127.0.0.1')
+    .option('--allow-public-bind', 'Opt in to binding --host on a non-loopback address. Required when --host is anything other than 127.0.0.0/8, ::1, or localhost. Without this flag, the server refuses to start with a non-loopback host.')
     .action(async (options) => {
           // Resolve API key: env var wins, then fall back to CLI session
           let apiKey = process.env.LANONASIS_API_KEY;
@@ -685,6 +687,27 @@ export function mcpCommands(program: Command) {
             process.exit(1);
           }
 
+          // VERA C-1 (cli 3.11.4): non-loopback --host must be refused unless the
+          // operator explicitly opts in. The credential fallback above means the
+          // user's saved vendor key would otherwise authenticate inbound clients.
+          const host = typeof options.host === 'string' ? options.host : '127.0.0.1';
+          const allowPublicBind = Boolean(options.allowPublicBind);
+          if (!isLoopbackHost(host) && !allowPublicBind) {
+            console.error(
+              `Error: refusing to bind MCP server to non-loopback host '${host}'.`
+            );
+            console.error(
+              `Any host that can reach ${host}:${options.port} would be able to call the`
+            );
+            console.error(
+              `server using the credentials resolved above. Re-run with --allow-public-bind`
+            );
+            console.error(
+              `to opt in, or use the default 127.0.0.1 for a loopback listener.`
+            );
+            process.exit(1);
+          }
+
       try {
         const { LanonasisMCPServer } = await import('../mcp/server/lanonasis-server.js');
 
@@ -692,7 +715,8 @@ export function mcpCommands(program: Command) {
           apiKey,
           transport: options.transport,
           port: parseInt(options.port, 10),
-          host: options.host
+          host,
+          allowPublicBind
         });
 
         if (options.transport === 'stdio') {
@@ -700,7 +724,7 @@ export function mcpCommands(program: Command) {
           console.error(`Starting MCP server in stdio mode...`);
           await server.startStdio();
         } else {
-          console.error(`Starting MCP server on ${options.host}:${options.port} (${options.transport})...`);
+          console.error(`Starting MCP server on ${host}:${options.port} (${options.transport})...`);
           await server.start();
         }
       } catch (error) {
