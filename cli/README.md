@@ -103,7 +103,7 @@ This section is the agent-facing usage guide for `@lanonasis/cli`. The command t
 | `stats` | | memory statistics |
 | `intelligence` | | `health-check`, `suggest-tags <memory-id>`, `find-related <memory-id>`, `detect-duplicates` (shared: `--organization-id`, `--topic-id`, `--scope`, `--json`) |
 
-`memory list --type` accepts `context`, `project`, `knowledge`, `reference`, `personal`, and `workflow`. The CLI forwards the value without validation; the REST list handler ignores unsupported values, so results may include every type without an error.
+`memory list --type` is meant to take `context`, `project`, `knowledge`, `reference`, `personal`, or `workflow`. **Known defect:** the filter is currently a silent no-op. The CLI forwards the value as `memory_type` without validating it, and the list comes back unfiltered with no error for valid and invalid values alike (measured 2026-10-05 on 3.11.2: no flag, `--type reference` and a nonsense value all returned the same total). Filter client-side until this is fixed.
 
 ### Field naming contract — `memory_type` vs `type`
 

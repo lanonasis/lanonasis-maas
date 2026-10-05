@@ -15,7 +15,6 @@ bun run build
 node dist/index.js -h
 node dist/index.js repl -h
 npm pack --dry-run
-
 ```
 
 ```bash

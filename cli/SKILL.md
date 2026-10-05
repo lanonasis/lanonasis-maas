@@ -28,13 +28,13 @@ On a headless host, **every** invocation prepends noise to stdout:
 Keytar retrieval failed, trying file: [Error: The name org.freedesktop.secrets was not provided by any .service files]
 ```
 
-Keytar has no secret service on such hosts, so it falls back to the file store — this is **expected, not an error**. It does not break auth. Any script parsing output must strip it, along with the `Memories` heading and `Page N of M` preamble. Keep stderr visible and enable `pipefail` so a failed list request fails the pipeline:
+Keytar has no secret service on such hosts, so it falls back to the file store — this is **expected, not an error**. It does not break auth.
+
+`--output json` does not give clean JSON either: `memory list` prints a `📚 Memories (N total)` heading and a `Page N of M` line to stdout before the payload, and both carry ANSI colour codes even when piped, so an anchored `grep -v '^Page …'` does not match them. Drop everything before the opening brace instead. Keep stderr visible and enable `pipefail` so a failed request fails the pipeline:
 
 ```bash
 set -o pipefail
-lanonasis memory list -l 1 --output json |
-  grep -v '^◇\|^Keytar\|^📚 Memories (\|^Page [0-9][0-9]* of [0-9][0-9]*$' |
-  jq .
+lanonasis memory list -l 1 --output json | sed -n '/^{$/,$p' | jq .
 ```
 
 ## 1. Authenticate (step zero)
