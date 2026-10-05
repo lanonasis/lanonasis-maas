@@ -316,13 +316,20 @@ export function mcpCommands(program: Command) {
         const token = config.getToken();
         const vendorKey = await config.getVendorKeyAsync();
 
+        // VERA C-2 (cli 3.11.4): X-Auth-Method is a diagnostic signal, not a
+        // contract. Gate it on CLI_VERBOSE so routine health probes do not
+        // declare the credential class to any intermediate proxy or to the
+        // auth-gateway access log. The auth-gateway already determines the
+        // auth class from the credential itself.
+        const verboseAuth = process.env.CLI_VERBOSE === 'true';
+
         const headers: Record<string, string> = {};
         if (vendorKey) {
           headers['X-API-Key'] = vendorKey;
-          headers['X-Auth-Method'] = 'vendor_key';
+          if (verboseAuth) headers['X-Auth-Method'] = 'vendor_key';
         } else if (token) {
           headers['Authorization'] = `Bearer ${token}`;
-          headers['X-Auth-Method'] = 'jwt';
+          if (verboseAuth) headers['X-Auth-Method'] = 'jwt';
         }
 
         const response = await axios.get(healthUrl, {
