@@ -34,7 +34,7 @@ Keytar has no secret service on such hosts, so it falls back to the file store �
 
 ```bash
 set -o pipefail
-lanonasis memory list -l 1 --output json | sed -n '/^{$/,$p' | jq .
+lanonasis memory list -l 1 --output json | sed -n '/^{/,$p' | jq .
 ```
 
 ## 1. Authenticate (step zero)
@@ -92,7 +92,7 @@ lanonasis memory delete <id>                     # -f/--force to skip confirm
 
 # topics
 lanonasis topic list
-lanonasis topic create -t "Topic name"
+lanonasis topic create -n "Topic name"
 
 # session continuity (agent-friendly)
 lanonasis memory save-session -t "Session summary" --tags run,cli
@@ -145,10 +145,12 @@ Memory ops default to the MCP route; `--no-mcp` forces the direct API. **The two
 
 | Route | Endpoint | `memory list` total (measured 2026-09-30) |
 |---|---|---|
-| default (MCP) | `mcp.lanonasis.com/api/v1` → mcp-core | **868** |
-| `--no-mcp` (direct) | `api.lanonasis.com` → Supabase edge functions | **927** |
+| default (MCP) | `mcp.lanonasis.com/api/v1` → mcp-core | **867** |
+| `--no-mcp` (direct) | `api.lanonasis.com` → Supabase edge functions | **926** |
 
 Measured cause: the direct route fenced by organization only, while the MCP route additionally fenced by `user_id`. The 59-row gap was other users' `scope=organization`, `access_mode=shared` memories. Both routes read the same table in the same project. (Fixed in mcp-core 2026-09-30 — the MCP route now reads org-wide too, so the totals converge. Re-measure before citing any count.)
+
+Measured 2026-10-05 — totals shifted since 2026-09-30 (was 868/927). Re-verify the table before publishing.
 
 An earlier revision warned that `--no-mcp` + memory → HTTP 500 against a vendor AI proxy. **That no longer reproduces**: `GET /api/v1/memories` returns 405 (`Use POST`), the CLI then falls back to `POST /api/v1/memory/list` → 200. `list`, `get`, and `search` all work on the forced-direct route.
 

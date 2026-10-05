@@ -72,7 +72,7 @@ This section is the agent-facing usage guide for `@lanonasis/cli`. The command t
 | `topic` | `topics` | topic management: `create`, `list`, `get`, `update`, `delete` |
 | `config` | | config management: `set`, `get`, `show`, `list`, `set-api-url`, `test`, `discover`, `endpoints`, `set-override`, `clear-overrides`, `validate`, `backup`, `restore`, `reset` |
 | `org` | `organization` | organization management |
-| `api-keys` | `keys` | API keys: `project create/list`, `create/list/get/update/delete`, `mcp register-tool/list-tools/request-access`, `usage` |
+| `api-keys` | `keys` | API keys: `create`, `list|ls`, `get`, `update`, `delete|rm`, `projects` (`create/list|ls`), `mcp` (`register-tool`, `list-tools`, `request-access`) |
 | `prescan` | | secret/PII scan: `run <path>` (`--save`, `--ci`, `--fail-on`), `status`, `audit <file>`, `safe <file>` |
 | `completion` | | shell completions |
 | `dashboard` | `dash` | interactive dashboard |
