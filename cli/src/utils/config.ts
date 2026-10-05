@@ -950,8 +950,10 @@ export class CLIConfig {
    *
    * IMPORTANT (VERA C-3, cli 3.11.4): this method has a destructive
    * side-effect that callers MUST be aware of. The provided `vendorKey` is
-   * persisted into the encrypted `~/.maas/api-key-storage` via
-   * `@lanonasis/oauth-client` AND overwrites the `authMethod` marker in
+   * persisted via `@lanonasis/oauth-client`; in Node.js, the key is stored
+   * with `keytar` if its write succeeds, or in the encrypted file
+   * `~/.lanonasis/api-key.enc` otherwise. This method also overwrites the
+   * `authMethod` marker in
    * `~/.maas/config.json` (unless the existing marker is already `oauth`,
    * `oauth2`, or `jwt`). This is true regardless of whether `vendorKey` was
    * supplied by the user (`auth login --vendor-key`) or read from
