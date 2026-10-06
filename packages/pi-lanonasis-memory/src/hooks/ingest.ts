@@ -1,14 +1,25 @@
 /**
- * ingest.ts — Phase 6: Pi hook-driven session ingestion.
+ * ingest.ts — Pi hook-driven session ingestion.
  *
  * Wires the MemoryStore into Pi's ExtensionAPI lifecycle hooks so
  * session content is automatically persisted without requiring a slash
  * command or manual API call.
  *
  * Hooks wired:
- *   `session_start`  — open the store, load session tag
- *   `turn_end`       — classify the assistant's response, store if signal fires
- *   `session_shutdown` — checkpoint WAL, close store
+ *   `session_start`      — open the store, load session tag
+ *   `turn_end`           — buffer assistant text + tool-call counts
+ *   `session_shutdown`   — flush any remaining buffered items, close store
+ *
+ * Architecture (LANA-2026-10-06 PR1/6):
+ *   We no longer classify on every turn_end — Pi sessions can run for
+ *   hundreds of exchanges and classifying each one floods SQLite with
+ *   duplicates. Instead, ingest buffers assistant text per turn and only
+ *   runs the classifier when `ReviewCadence.shouldReview()` flips.
+ *
+ *   Correction capture (`src/hooks/correction.ts`) is intentionally
+ *   separate and runs **outside** this throttle — a user correction is
+ *   the highest-signal content in any session and must never be lost to
+ *   the buffer-and-flush design.
  *
  * What gets stored (classified by signal patterns):
  *   - Explicit memory requests: "remember", "note that", "keep in mind"
@@ -17,7 +28,8 @@
  *   - Conventions:           "always", "never", "the pattern is"
  *   - Error conclusions:     "the issue was", "root cause", "solution"
  *   - Insights:              "interesting", "TIL", "learned that"
- *   - Tool corrections:       correction patterns from tool results
+ *   - Tool corrections:      "that's wrong", "incorrect" (also covered
+ *                              immediately by the correction hook)
  *
  * What's NEVER stored:
  *   - Raw user prompts (privacy boundary)
@@ -25,16 +37,19 @@
  *   - Very short responses (< minContentLength chars)
  *   - Responses flagged as errors by the tool layer
  *
- * Design decisions (from Phase 6 review):
+ * Design decisions:
  *   - Store is opened once at session_start and lives for the session.
  *     This avoids the 1-file-per-session sprawl that pi-hermes-memory has.
  *   - Only assistant messages are classified — user prompts are too variable.
  *   - The scanner gates every write (inherited from Phase 3).
+ *   - All ingested memories carry the `origin:auto` tag so the sync
+ *     policy (PR5) can keep auto-captured memories local by default.
  *   - MaaS sync columns (maas_synced_at / maas_id) are set to null;
  *     Phase 5 will drain them in the background.
  */
 
 import { MemoryStore, type AddMemoryInput, type MemoryTarget } from "../store/memory.js";
+import { ReviewCadence } from "./cadence.js";
 
 /** Ingest configuration — set once at extension load time. */
 export interface IngestConfig {
@@ -66,6 +81,27 @@ export interface IngestConfig {
    * @default undefined (no prefix)
    */
   sessionTag?: string;
+
+  /**
+   * Review-cadence threshold — flush the buffered turns after this many
+   * assistant turns since the last flush. Clamped to ≥1. @default 10
+   */
+  reviewEveryTurns?: number;
+
+  /**
+   * Review-cadence threshold — flush after this many tool-call events
+   * have fired since the last flush. Clamped to ≥1. @default 15
+   */
+  reviewEveryToolCalls?: number;
+}
+
+/** A single buffered turn waiting for the cadence to fire. */
+interface BufferedTurn {
+  text: string;
+  /** Length of event.toolResults for this turn (used to advance cadence). */
+  toolCallCount: number;
+  /** toolResults payload — preserved for the classifier's error gate. */
+  toolResults: Array<{ isError?: boolean }>;
 }
 
 /** Return type from buildIngestPipeline — the three hook handlers. */
@@ -81,6 +117,8 @@ export interface IngestHooks {
     ctx: unknown,
   ) => Promise<void>;
   onSessionShutdown: (event: { type: "session_shutdown" }, ctx: unknown) => Promise<void>;
+  /** Test-only: number of buffered turns waiting on the cadence. */
+  pendingTurns: () => number;
 }
 
 /** Internal state held for the lifetime of a Pi session. */
@@ -90,7 +128,39 @@ interface IngestState {
   enabled: boolean;
   minContentLength: number;
   defaultTarget: MemoryTarget;
-  turnCount: number;
+  cadence: ReviewCadence;
+  buffer: BufferedTurn[];
+}
+
+/**
+ * Map the classifier's bucket to a category in the locked SQLite enum.
+ * PR2 owns the schema; until its mirror/scoping PR lands, only the
+ * existing CATEGORIES (`failure|correction|insight|preference|convention|tool-quirk`)
+ * are accepted by MemoryStore.add. We collapse broader buckets:
+ *   explicit     -> insight  (explicit memory requests)
+ *   preference   -> preference
+ *   config       -> insight  (config / export facts)
+ *   errorDiag    -> failure  (root-cause / fix narratives)
+ *   insight      -> insight
+ *   correction   -> correction
+ *   convention   -> convention
+ */
+function categoryToEnum(category: string): AddMemoryInput["category"] {
+  switch (category) {
+    case "preference":
+      return "preference";
+    case "correction":
+      return "correction";
+    case "convention":
+      return "convention";
+    case "errorDiag":
+      return "failure";
+    case "explicit":
+    case "config":
+    case "insight":
+    default:
+      return "insight";
+  }
 }
 
 /** Signal patterns — matched against assistant message content. */
@@ -103,7 +173,6 @@ const SIGNALS = {
     /\bimportant:?\b/i,
     /\bdon't forget\b/i,
     /\bworth noting\b/i,
-    /\ball caps phrase\b/i,
   ],
 
   /** Preference / convention statements. */
@@ -203,7 +272,7 @@ function buildTitle(category: string, content: string): string {
 
 /**
  * Extract plain text from a Pi AgentMessage.
- * Handles TextContent andToolResultMessage variants.
+ * Handles TextContent and ToolResultMessage variants.
  */
 function extractText(message: {
   role?: string;
@@ -229,11 +298,15 @@ function extractText(message: {
 /**
  * Build the three Pi hook handlers wired to a single MemoryStore instance.
  *
+ * Backward compatible — the previous signature accepted `MemoryStore`
+ * directly; we now accept a getter so callers can defer opening the store
+ * (e.g. only at session_start) and still close over the same store.
+ *
  * Usage in index.ts:
- *   const { onSessionStart, onTurnEnd, onSessionShutdown } = buildIngestPipeline(store, config);
- *   pi.on("session_start", onSessionStart);
- *   pi.on("turn_end",     onTurnEnd);
- *   pi.on("session_shutdown", onSessionShutdown);
+ *   const pipeline = buildIngestPipeline(() => store, config);
+ *   pi.on("session_start", pipeline.onSessionStart);
+ *   pi.on("turn_end",     pipeline.onTurnEnd);
+ *   pi.on("session_shutdown", pipeline.onSessionShutdown);
  *
  * @param getStore  — factory that returns an open MemoryStore (or null if disabled)
  * @param config    — ingest behaviour configuration
@@ -253,8 +326,39 @@ export function buildIngestPipeline(
     enabled,
     minContentLength,
     defaultTarget,
-    turnCount: 0,
+    cadence: new ReviewCadence({
+      everyTurns: config.reviewEveryTurns ?? 10,
+      everyToolCalls: config.reviewEveryToolCalls ?? 15,
+    }),
+    buffer: [],
   };
+
+  /** Persist every buffered turn that fires a signal, then reset cadence. */
+  function flushBuffer(): void {
+    const store = state.store ?? getStore();
+    if (store) state.store = store;
+
+    if (store) {
+      for (const turn of state.buffer) {
+        // Tool errors at this turn disqualify just that turn.
+        const classification = classifyMessage(turn.text, turn.toolResults);
+        if (!classification) continue;
+
+        const titlePrefix = state.sessionTag ? `[${state.sessionTag}] ` : "";
+        const input: AddMemoryInput = {
+          target: defaultTarget,
+          category: categoryToEnum(classification.category),
+          title: titlePrefix + classification.title,
+          content: turn.text,
+          tags: ["origin:auto"],
+        };
+        store.add(input);
+      }
+    }
+
+    state.buffer.length = 0;
+    state.cadence.reset();
+  }
 
   return {
     async onSessionStart(_event, _ctx) {
@@ -262,58 +366,57 @@ export function buildIngestPipeline(
       const store = getStore();
       if (!store) return;
       state.store = store;
-      state.turnCount = 0;
+      state.cadence.reset();
+      state.buffer.length = 0;
       if (state.sessionTag) {
         store.add({
           target: "memory",
           category: "insight",
           title: `[session] ${state.sessionTag}`,
           content: `Session started at ${new Date().toISOString()}.`,
+          tags: ["origin:auto"],
         });
       }
     },
 
     async onTurnEnd(event, _ctx) {
       if (!enabled) return;
-      const store = state.store ?? getStore();
-      if (!store) return;
-      state.store = store;
-      state.turnCount++;
-
       const msg = event.message as { role?: string; content?: unknown };
       // Only classify assistant messages
       if (msg.role !== "assistant") return;
 
       const text = extractText(msg);
-      if (text.length < minContentLength) return;
+      const toolCallCount = Array.isArray(event.toolResults) ? event.toolResults.length : 0;
+      const toolResults = (event.toolResults ?? []) as Array<{ isError?: boolean }>;
 
-      const classification = classifyMessage(text, event.toolResults as Array<{ isError?: boolean }>);
-      if (!classification) return;
+      // Always advance the cadence — even short messages count toward
+      // the "have we done enough work to be worth reviewing?" budget.
+      state.cadence.recordTurn();
+      if (toolCallCount > 0) state.cadence.recordToolCalls(toolCallCount);
 
-      const titlePrefix = state.sessionTag ? `[${state.sessionTag}] ` : "";
+      // Buffer anything substantive. Sub-threshold and tool-error turns
+      // are silently dropped — they will be remembered via the cadence
+      // reset (no noise accumulates forever).
+      if (text.length >= minContentLength) {
+        state.buffer.push({ text, toolCallCount, toolResults });
+      }
 
-      const input: AddMemoryInput = {
-        target: defaultTarget,
-        category: classification.category as AddMemoryInput["category"],
-        title: titlePrefix + classification.title,
-        content: text,
-      };
-
-      const result = store.add(input);
-      if (result.ok) {
-        // Fire-and-forget: don't await the write on the hot path
-        void state.turnCount; // suppress unused-warning; state is live
+      if (state.cadence.shouldReview()) {
+        flushBuffer();
       }
     },
 
     async onSessionShutdown(_event, _ctx) {
-      if (!state.store) return;
-      try {
-        state.store.close();
-      } catch {
-        // best-effort checkpoint
-      }
+      // Final flush — anything still in the buffer is written *before*
+      // the store closes. The store itself is closed by the host
+      // (index.ts) after this handler returns; we only own pipeline
+      // state here so the host can interleave with other shutdown work.
+      flushBuffer();
       state.store = null;
+    },
+
+    pendingTurns() {
+      return state.buffer.length;
     },
   };
 }
