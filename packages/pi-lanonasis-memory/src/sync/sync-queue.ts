@@ -46,6 +46,7 @@
  * to this table.
  */
 
+import { chmodSync } from "node:fs";
 import { openSqlite, type SqliteDatabase } from "../store/sqlite.js";
 import type { MemoryTarget } from "../store/memory.js";
 import type { SyncOrigin } from "./policy.js";
@@ -185,6 +186,7 @@ export class SyncQueue {
 
   static async open(syncDbPath: string): Promise<SyncQueue> {
     const db = await openSqlite(syncDbPath);
+    tightenFileMode(syncDbPath);
     db.exec(SCHEMA_SQL);
     db.prepare(SCHEMA_VERSION_SQL).run(SCHEMA_VERSION);
     return new SyncQueue(db);
@@ -323,5 +325,27 @@ function sanitizeErrorMessage(message: string): string {
     return redactContent(message).text;
   } catch {
     return message;
+  }
+}
+
+/**
+ * Restrict the on-disk sync queue to owner-only (0o600). The queue
+ * carries payload JSON (memory title/content/tags) and dropped-row
+ * error messages — both of which can include secrets caught by the
+ * scanner. SQLite creates the file with the process umask, which on
+ * a shared host is world-readable, so a perms-tighten on open is the
+ * simplest defence-in-depth.
+ *
+ * Runs after `openSqlite` (file exists) and before `db.exec(SCHEMA_SQL)`
+ * (first data write). Windows uses ACL inheritance, so chmod is a
+ * no-op there; we still wrap in try/catch so an EPERM on a
+ * restrictive ACL never blocks `open()`.
+ */
+function tightenFileMode(syncDbPath: string): void {
+  if (process.platform === "win32") return;
+  try {
+    chmodSync(syncDbPath, 0o600);
+  } catch {
+    // Best effort — see the MemoryStore equivalent.
   }
 }
