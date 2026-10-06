@@ -47,11 +47,72 @@ Phase 1 + 2 + 3 still in place:
 
 What it does NOT yet do (Phase 4+):
 
-- Markdown mirror (MEMORY.md / USER.md / STANDING.md). The schema reserves
-  columns for it; Phase 4 wires the mirror writes.
-- MaaS sync (background drain). Reserved columns exist; Phase 5 fills them.
-- Real slash commands (`/memory search`, `/memory save`, `/reflect`, etc.).
 - `@lanonasis/privacy-sdk` Stage 2 PII integration.
+
+## Sync to LanOnasis MaaS
+
+v1.0.1 wires the live sync path (LANA-026 follow-up). The contract:
+
+- **Explicit saves only by default.** `/memory save`, `/reflect`, and the
+  `memory_add` / `memory_replace` / `memory_remove` tools emit
+  `origin: explicit` enqueues; the MaaS worker pushes them as soon as the
+  API is reachable.
+- **Auto-captured memories stay local** unless `LANONASIS_PI_MEMORY_AUTO_SYNC=1`
+  is set. The auto-ingest pipeline tags writes with `origin: auto` and the
+  `shouldSync()` policy (`src/sync/policy.ts`) drops them when the env var
+  is absent. Operators opt in per session, never by accident.
+- **API key.** Read once, in `createMaasClient()` (`src/sync/maas-client.ts`).
+  Sent only as the `X-API-Key` request header. Not logged. Not persisted in
+  `sync.db` (the queue payload carries title / content / tags / type / maasId
+  only).
+- **`preferCLI: false` is mandatory.** The CLI path in
+  `@lanonasis/memory-client` shell-interpolates title and content into an
+  `exec` call, which is a command-injection vector the sync layer cannot
+  tolerate. The wrapper pins `preferCLI: false` and routes everything
+  through fetch.
+- **API URL.** `LANONASIS_API_URL` overrides the default
+  `https://api.lanonasis.com`.
+- **Files.** Both `memories.db` and `sync.db` live under
+  `~/.pi/agent/lanonasis-pi-memory/` with `chmod 0600`. The queue cap is
+  10,000 rows (override with `LANONASIS_PI_MEMORY_MAX_QUEUE`, positive ints
+  only). When the cap is exceeded the OLDEST row is evicted to
+  `sync_queue_dropped` with `last_error='queue-cap'`; the newest intent
+  always wins.
+- **`/memory-sync status`** reports queue depth, dropped-row count, online /
+  offline state, and `client configured: yes/no`. **Never** prints the API
+  key.
+- **`/memory-sync prune [days]`** clears the dropped audit log and removes
+  queued rows older than `days` (default 30). Returns the number of rows
+  removed from each table.
+
+## Commands and tools
+
+| Type     | Name                          | Notes |
+| -------- | ----------------------------- | ----- |
+| Command  | `/memory search <q> [limit]`  | Local FTS5 + best-effort MaaS enrichment. |
+| Command  | `/memory save <text>`         | Explicit save. Alias: `/memory-save`. |
+| Command  | `/reflect`                    | Structured reflection; explicit save. |
+| Command  | `/memory-skills [list]`       | List installed skills (from `src/store/skills.ts`). |
+| Command  | `/memory-pin <id-or-query>`   | Toggle the `pinned` tag. |
+| Command  | `/memory-preview-context`     | Recent 10 entries. |
+| Command  | `/memory-interview`           | First-run 3-question interview. |
+| Command  | `/memory-index-sessions`      | Per-session tag counts. |
+| Command  | `/memory-sync status \| prune [days]` | Queue housekeeping. |
+| Tool     | `memory_add`                  | Pre-scanned write. Always tags `origin: explicit`. |
+| Tool     | `memory_search`               | Local FTS5 + best-effort MaaS enrichment. |
+| Tool     | `memory_replace`              | Pre-scanned update. |
+| Tool     | `memory_remove`               | Hard delete by id. No scanner gate. |
+
+## Environment variables
+
+| Var                                 | Default                  | Effect |
+| ----------------------------------- | ------------------------ | ------ |
+| `LANONASIS_API_KEY`                 | (unset)                  | When unset, sync is disabled. |
+| `LANONASIS_API_URL`                 | `https://api.lanonasis.com` | API base URL. |
+| `LANONASIS_PI_MEMORY_AUTO_SYNC`     | `0`                      | `1` = auto-captures sync to MaaS. |
+| `LANONASIS_PI_MEMORY_MODE`          | `policy-only`            | `legacy-inject` adds a `<memory-context>` block. |
+| `LANONASIS_PI_MEMORY_REDACT`        | `0`                      | `1` = redacts detected secrets instead of blocking. |
+| `LANONASIS_PI_MEMORY_MAX_QUEUE`     | `10000`                  | SyncQueue depth cap (positive integers only). |
 
 ## Quick start
 
@@ -60,7 +121,7 @@ What it does NOT yet do (Phase 4+):
 cd apps/lanonasis-maas
 npm install --prefix packages/pi-lanonasis-memory
 
-# unit tests (133/133 pass)
+# unit tests (502/502 pass as of v1.0.1)
 npm test --prefix packages/pi-lanonasis-memory
 
 # build dist/
@@ -156,12 +217,9 @@ Phase 1–5 does not write to them all — there is nothing to persist yet.
 | `storage_roots.project`| `.pi/memory/`                               | 4     | Per-project MEMORY.md / USER.md      |
 | `storage_roots.sessions_db` | `~/.pi/agent/lanonasis-pi-memory/memories.db` | 3 | SQLite FTS5 session index           |
 
-## Out of scope (Phase 1–6)
+## Out of scope (Layer-1)
 
 Anything touching customer data, payments, KYC, credentials, or PHI is
 explicitly **out of scope** for this release beyond the scanner. The
-extension writes only to its local SQLite database; no markdown mirror
-writes yet (Phase 4), no MaaS sync yet (Phase 5), and no real slash
-commands yet (Phase 7). See the
-[review doc](../../../../docs/context/architecture/pi-maas-integration-review.md)
-for the deferred Layer-1 storage work and the Layer-2 vision.
+extension writes only to its local SQLite database (and the optional
+markdown mirror); sync to MaaS is opt-in per the contract above.

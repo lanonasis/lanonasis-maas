@@ -25,6 +25,7 @@ import type {
 import type { AgentToolResult } from "@earendil-works/pi-agent-core";
 
 import { MemoryStore, type MemoryHit } from "../store/memory.js";
+import type { MemoryStoreLike } from "../store/memory.js";
 import type { MaaSAdapter, MaaSAdapter as _MaasAdapter } from "../deps.js";
 import { ok } from "./tool-result.js";
 
@@ -52,7 +53,7 @@ export interface MemorySearchDetails {
 
 /** Pure search helper. Used by tool execute + tests. */
 export async function searchMemory(
-  store: MemoryStore | null,
+  store: MemoryStoreLike | null,
   maas: MaaSAdapter | _MaasAdapter,
   params: MemorySearchParams,
 ): Promise<MemorySearchDetails> {
@@ -137,7 +138,7 @@ function mergeAndDedupe(a: MemoryHit[], b: MemoryHit[]): MemoryHit[] {
 }
 
 export function buildMemorySearchTool(input: {
-  getStore: () => MemoryStore | null;
+  getStore: () => MemoryStoreLike | null;
   getMaas: () => MaaSAdapter;
 }): {
   name: string;
@@ -191,7 +192,7 @@ export function buildMemorySearchTool(input: {
 
 export function registerMemorySearchTool(
   pi: ExtensionAPI,
-  deps: { getStore: () => MemoryStore | null; getMaas: () => MaaSAdapter },
+  deps: { getStore: () => MemoryStoreLike | null; getMaas: () => MaaSAdapter },
 ): void {
   const tool = buildMemorySearchTool(deps);
   pi.registerTool(tool as Parameters<ExtensionAPI["registerTool"]>[0]);

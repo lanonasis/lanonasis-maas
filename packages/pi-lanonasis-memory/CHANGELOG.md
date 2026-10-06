@@ -1,3 +1,59 @@
+## [1.0.1] — 2026-10-06
+
+### Fixed
+- **Wiring fix (LANA-026-v1.0.1).** After PRs #167-#172 merged on `main`,
+  `src/deps.ts` resolved peer modules via `tryImport()` + export-name
+  lookups that silently missed every time — the real modules export
+  classes (`MirroredStore`, `SyncQueue`, `SyncWorker`) and differently-named
+  factories (`createCorrectionCapture`, `createMaasClient`). Every adapter
+  fell back to a no-op, so at runtime correction capture, the markdown
+  mirror, MaaS sync and MaaS search were all dead. v1.0.1 deletes the
+  indirection: a new `src/runtime.ts` statically composes the real modules
+  into a `Runtime` container that `src/index.ts` wires into the
+  ExtensionAPI. Verified end-to-end by a new `tests/integration/runtime-wiring.test.ts`.
+
+### Added
+- **`/memory-sync` slash command** with subcommands `status` and `prune [days]`.
+  `status` reports queue depth, dropped-row count, online/offline state and
+  client-configured (never prints the API key). `prune` defaults to clearing
+  the dropped audit log and queued rows older than 30 days; the threshold is
+  configurable.
+- **Queue depth cap (VERA R2).** `SyncQueue` now caps `sync_queue` at 10_000
+  rows by default; override via `LANONASIS_PI_MEMORY_MAX_QUEUE` (positive
+  integers only). When a row would overflow the cap, the OLDEST row is
+  evicted to `sync_queue_dropped` with `last_error='queue-cap'`.
+- **`SyncQueue.prune()`** with `{ olderThanDays, dropped }` returns counts.
+- **`tests/sync/maas-client.test.ts` fetch-stub hardening (NORA Q4).**
+  The "real wrapper, no network" block now spies on `globalThis.fetch`,
+  rejects with a deterministic `ECONNREFUSED`, and asserts the API key
+  never appears in the normalised error string. The 8s race is gone.
+
+### Changed
+- **`vitest.config.ts`** forwards `--experimental-sqlite` to workers so
+  `node:sqlite` always loads. The runtime still prefers `bun:sqlite` under
+  Bun.
+- **`src/sync/worker.ts`** `flush()` runs `HealthMonitor.tick()` before
+  every row so a queue drains on shutdown even when the periodic probe has
+  not yet run.
+- **`@lanonasis/memory-client`** is constructed with explicit short
+  retries + `cliDetectionTimeout: 0` so offline first-runs no longer stall.
+- **Lockfile canonicalised (NORA Q1).** `bun.lock` on `main` was missing the
+  `vite` devDep required by `vitest@5`'s peer. v1.0.1 commits the lockfile
+  after `bun install`; `bun install --frozen-lockfile` is now a no-op.
+
+### Security notes for VERA
+- The now-live sync path (`SyncWorker` → `MaasClient.create/update/delete`)
+  carries the API key only in request headers. `MaasClient.create/update`
+  run the error string through the package redactor AND strip `sk-…` shaped
+  substrings so no key leak path remains if a future SDK change introduces
+  one.
+- `SyncQueue` payloads contain ONLY the documented memory fields (title,
+  content, tags, type, maasId). The API key is never persisted.
+- `chmod 0600` on `memories.db` and `sync.db` (PR1/PR5) is still in place.
+- `/memory-sync status` never reads `LANONASIS_API_KEY`; the report only
+  says whether a client was configured.
+
+## [Unreleased] — PR1/6 cadence, correction capture, and manifest cleanup
 # Changelog
 
 All notable changes to `@lanonasis/pi-lanonasis-memory` are documented in this file.

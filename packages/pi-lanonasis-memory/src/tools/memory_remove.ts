@@ -20,6 +20,7 @@ import type {
 import type { AgentToolResult } from "@earendil-works/pi-agent-core";
 
 import { MemoryStore } from "../store/memory.js";
+import type { MemoryStoreLike } from "../store/memory.js";
 import type { SyncAdapter } from "../deps.js";
 import { ok } from "./tool-result.js";
 
@@ -36,7 +37,7 @@ export interface MemoryRemoveDetails {
 }
 
 export function removeMemory(
-  store: MemoryStore | null,
+  store: MemoryStoreLike | null,
   params: MemoryRemoveParams,
   sync: SyncAdapter,
 ): MemoryRemoveDetails {
@@ -60,7 +61,7 @@ export function removeMemory(
 }
 
 export function buildMemoryRemoveTool(input: {
-  getStore: () => MemoryStore | null;
+  getStore: () => MemoryStoreLike | null;
   getSync: () => SyncAdapter;
 }): {
   name: string;
@@ -114,7 +115,7 @@ export function buildMemoryRemoveTool(input: {
 
 export function registerMemoryRemoveTool(
   pi: ExtensionAPI,
-  deps: { getStore: () => MemoryStore | null; getSync: () => SyncAdapter },
+  deps: { getStore: () => MemoryStoreLike | null; getSync: () => SyncAdapter },
 ): void {
   const tool = buildMemoryRemoveTool(deps);
   pi.registerTool(tool as Parameters<ExtensionAPI["registerTool"]>[0]);

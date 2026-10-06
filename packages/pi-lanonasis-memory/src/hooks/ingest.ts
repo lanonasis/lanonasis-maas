@@ -93,6 +93,14 @@ export interface IngestConfig {
    * have fired since the last flush. Clamped to ≥1. @default 15
    */
   reviewEveryToolCalls?: number;
+
+  /**
+   * Optional callback fired after a successful auto-capture. The runtime
+   * uses it to enqueue the row to MaaS when
+   * `LANONASIS_PI_MEMORY_AUTO_SYNC=1`. Never throws.
+   * @default undefined
+   */
+  onWrite?: (input: AddMemoryInput, id: string) => void;
 }
 
 /** A single buffered turn waiting for the cadence to fire. */
@@ -352,7 +360,14 @@ export function buildIngestPipeline(
           content: turn.text,
           tags: ["origin:auto"],
         };
-        store.add(input);
+        const result = store.add(input);
+        if (result.ok && config.onWrite) {
+          try {
+            config.onWrite(input, result.id);
+          } catch {
+            // host-supplied callback must never break the ingest loop
+          }
+        }
       }
     }
 
@@ -369,13 +384,29 @@ export function buildIngestPipeline(
       state.cadence.reset();
       state.buffer.length = 0;
       if (state.sessionTag) {
-        store.add({
+        const result = store.add({
           target: "memory",
           category: "insight",
           title: `[session] ${state.sessionTag}`,
           content: `Session started at ${new Date().toISOString()}.`,
           tags: ["origin:auto"],
         });
+        if (result.ok && config.onWrite) {
+          try {
+            config.onWrite(
+              {
+                target: "memory",
+                category: "insight",
+                title: `[session] ${state.sessionTag}`,
+                content: `Session started at ${new Date().toISOString()}.`,
+                tags: ["origin:auto"],
+              },
+              result.id,
+            );
+          } catch {
+            // host-supplied callback must never break the ingest loop
+          }
+        }
       }
     },
 

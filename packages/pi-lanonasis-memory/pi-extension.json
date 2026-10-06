@@ -1,14 +1,17 @@
 {
   "name": "@lanonasis/pi-lanonasis-memory",
-  "version": "0.2.0",
-  "description": "LanOnasis MaaS Memory — Pi extension that auto-captures assistant responses and corrected facts into a local SQLite FTS5 store, with optional MaaS federation for cross-device sync.",
+  "version": "1.0.1",
+  "description": "LanOnasis MaaS Memory \u2014 Pi extension that auto-captures assistant responses and corrected facts into a local SQLite FTS5 store, with optional MaaS federation for cross-device sync.",
   "entry": "./dist/index.js",
   "source": "./src/index.ts",
-  "extensions": ["./src/index.ts", "./dist/index.js"],
+  "extensions": [
+    "./src/index.ts",
+    "./dist/index.js"
+  ],
   "commands": [
     {
       "name": "echo",
-      "description": "Smoke test — reverses its argument.",
+      "description": "Smoke test \u2014 reverses its argument.",
       "handler": "src/commands/echo.ts"
     }
   ],

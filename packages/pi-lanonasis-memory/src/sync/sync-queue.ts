@@ -8,7 +8,7 @@
  *       id INTEGER PK AUTOINCREMENT,
  *       local_id TEXT NOT NULL,
  *       op        TEXT NOT NULL,   -- 'create' | 'update' | 'delete'
- *       payload   TEXT NOT NULL,   -- JSON: { title, content, tags, type }
+ *       payload   TEXT NOT NULL,   -- JSON: { title, content, tags, type, maasId }
  *       origin    TEXT NOT NULL,   -- 'explicit' | 'auto'
  *       attempts  INTEGER NOT NULL DEFAULT 0,
  *       next_attempt_at INTEGER NOT NULL,  -- epoch ms
@@ -44,6 +44,14 @@
  * Payload invariant: the `payload` column is a JSON string carrying
  * ONLY the documented memory fields. The API key is NEVER written
  * to this table.
+ *
+ * Depth cap (v1.0.1, VERA R2): the queue holds at most `maxDepth`
+ * rows (default 10_000, override with LANONASIS_PI_MEMORY_MAX_QUEUE —
+ * positive integers only). When an enqueue would exceed the cap the
+ * OLDEST rows are moved to `sync_queue_dropped` with
+ * last_error='queue-cap' so the newest intent always lands.
+ * `prune()` is the operator-facing housekeeping hook behind
+ * `/memory-sync prune`.
  */
 
 import { chmodSync } from "node:fs";
@@ -61,6 +69,47 @@ export interface SyncPayload {
   content: string;
   tags: string[];
   type: MemoryTarget;
+  /**
+   * Remote MaaS id, when known at enqueue time. Set for update/delete of
+   * rows that were already synced so the worker never has to guess.
+   */
+  maasId?: string;
+}
+
+/** Default queue depth cap (VERA R2). */
+export const MAX_QUEUE_DEPTH = 10_000;
+export const MAX_QUEUE_ENV_VAR = "LANONASIS_PI_MEMORY_MAX_QUEUE";
+/** last_error recorded for rows evicted by the depth cap. */
+export const QUEUE_CAP_ERROR = "queue-cap";
+
+/**
+ * Resolve the queue cap from the environment. Only a positive integer
+ * (digits only) overrides the default; anything else is ignored.
+ */
+export function resolveMaxQueueDepth(env: NodeJS.ProcessEnv = process.env): number {
+  const raw = (env?.[MAX_QUEUE_ENV_VAR] ?? "").trim();
+  if (!/^[0-9]+$/.test(raw)) return MAX_QUEUE_DEPTH;
+  const n = Number.parseInt(raw, 10);
+  return Number.isSafeInteger(n) && n > 0 ? n : MAX_QUEUE_DEPTH;
+}
+
+export interface SyncQueueOptions {
+  /** Max rows held in sync_queue. Defaults to resolveMaxQueueDepth(). */
+  maxDepth?: number;
+}
+
+export interface PruneOptions {
+  /** Delete queued rows created at least this many days ago. */
+  olderThanDays?: number;
+  /** Clear the dropped-row audit log. */
+  dropped?: boolean;
+}
+
+export interface PruneResult {
+  /** Queued rows removed. */
+  queued: number;
+  /** Dropped-log rows removed. */
+  dropped: number;
 }
 
 /** A row inserted via enqueue(). */
@@ -145,9 +194,14 @@ export class SyncQueue {
   private readonly selectByIdStmt: ReturnType<SqliteDatabase["prepare"]>;
   private readonly dropInsertStmt: ReturnType<SqliteDatabase["prepare"]>;
   private readonly dropDeleteStmt: ReturnType<SqliteDatabase["prepare"]>;
+  private readonly oldestStmt: ReturnType<SqliteDatabase["prepare"]>;
+  private readonly droppedCountStmt: ReturnType<SqliteDatabase["prepare"]>;
+  /** Max rows held in sync_queue (see file header). */
+  readonly maxDepth: number;
 
-  private constructor(db: SqliteDatabase) {
+  private constructor(db: SqliteDatabase, maxDepth: number) {
     this.db = db;
+    this.maxDepth = maxDepth;
     this.inserts = db.prepare(`
       INSERT INTO sync_queue
         (local_id, op, payload, origin, attempts, next_attempt_at, last_error)
@@ -182,14 +236,66 @@ export class SyncQueue {
     this.dropDeleteStmt = db.prepare(`
       DELETE FROM sync_queue WHERE id = ?
     `);
+    this.oldestStmt = db.prepare(`
+      SELECT id, local_id, op FROM sync_queue ORDER BY id ASC LIMIT ?
+    `);
+    this.droppedCountStmt = db.prepare(`SELECT COUNT(*) AS count FROM sync_queue_dropped`);
   }
 
-  static async open(syncDbPath: string): Promise<SyncQueue> {
+  static async open(syncDbPath: string, options: SyncQueueOptions = {}): Promise<SyncQueue> {
     const db = await openSqlite(syncDbPath);
     tightenFileMode(syncDbPath);
     db.exec(SCHEMA_SQL);
     db.prepare(SCHEMA_VERSION_SQL).run(SCHEMA_VERSION);
-    return new SyncQueue(db);
+    const requested = options.maxDepth;
+    const maxDepth =
+      typeof requested === "number" && Number.isSafeInteger(requested) && requested > 0
+        ? requested
+        : resolveMaxQueueDepth();
+    return new SyncQueue(db, maxDepth);
+  }
+
+  /** Number of rows in the dropped audit log. */
+  droppedCount(): number {
+    const row = this.droppedCountStmt.get() as { count: number };
+    return row.count;
+  }
+
+  /**
+   * Housekeeping for `/memory-sync prune`. Removes queued rows created at
+   * least `olderThanDays` days ago (0 = everything queued up to now) and,
+   * when `dropped` is true, clears the dropped audit log. Returns the
+   * number of rows removed from each table.
+   */
+  prune(opts: PruneOptions = {}): PruneResult {
+    let queued = 0;
+    let dropped = 0;
+    const days = opts.olderThanDays;
+    if (typeof days === "number" && Number.isFinite(days) && days >= 0) {
+      const modifier = `-${Math.floor(days)} days`;
+      queued = this.db
+        .prepare(`DELETE FROM sync_queue WHERE created_at <= datetime('now', ?)`)
+        .run(modifier).changes;
+    }
+    if (opts.dropped) {
+      dropped = this.db.prepare(`DELETE FROM sync_queue_dropped`).run().changes;
+    }
+    return { queued, dropped };
+  }
+
+  /**
+   * Evict the oldest rows so that one more row fits under the cap.
+   * Evicted rows are recorded in the dropped log with
+   * last_error='queue-cap' (status NULL).
+   */
+  private enforceCap(): void {
+    const overflow = this.depth() - this.maxDepth + 1;
+    if (overflow <= 0) return;
+    const victims = this.oldestStmt.all(overflow) as Array<{ id: number; local_id: string; op: SyncOp }>;
+    for (const v of victims) {
+      this.dropInsertStmt.run(v.local_id, v.op, null, QUEUE_CAP_ERROR);
+      this.dropDeleteStmt.run(v.id);
+    }
   }
 
   /** Number of items currently in the queue (excluding dropped rows). */
@@ -209,6 +315,7 @@ export class SyncQueue {
    */
   enqueue(input: EnqueueInput, dueAt: number = Date.now()): number {
     const payloadJson = JSON.stringify(input.payload);
+    this.enforceCap();
     const result = this.inserts.run(
       input.localId,
       input.op,

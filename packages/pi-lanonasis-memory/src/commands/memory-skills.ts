@@ -70,7 +70,6 @@ export const register: CommandRegister = (pi, deps) => {
  */
 export async function loadSkills(): Promise<SkillEntry[]> {
   try {
-    // @ts-expect-error — PR2 ships this module post-merge; absent pre-merge.
     const mod = (await import("../store/skills.js")) as SkillsModule;
     if (typeof mod.list === "function") {
       return mod.list();

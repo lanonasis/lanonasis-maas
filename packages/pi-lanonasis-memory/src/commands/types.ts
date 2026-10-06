@@ -7,14 +7,14 @@
  * (fake `pi`, real store, fake sync).
  */
 
-import type { ExtensionAPI, ExtensionCommandContext } from "@earendil-works/pi-coding-agent";
-import type { MemoryStore } from "../store/memory.js";
+import type {
+  ExtensionAPI,
+  ExtensionCommandContext,
+} from "@earendil-works/pi-coding-agent";
+import type { MemoryStoreLike, MirroredStoreLike } from "../deps.js";
 import type {
   MaaSAdapter,
   SyncAdapter,
-  InjectionAdapter,
-  CorrectionAdapter,
-  MirroredStoreLike,
 } from "../deps.js";
 
 /**
@@ -25,12 +25,12 @@ import type {
  * returns a friendly message instead of crashing).
  */
 export interface CommandDeps {
-  getStore: () => MemoryStore | null;
+  getStore: () => MemoryStoreLike | null;
   getMirror: () => MirroredStoreLike | null;
   getMaas: () => MaaSAdapter;
   getSync: () => SyncAdapter;
-  getInjection: () => InjectionAdapter;
-  getCorrection: () => CorrectionAdapter;
+  getInjection: () => { register: (pi: ExtensionAPI) => () => void };
+  getCorrection: () => { register: (pi: ExtensionAPI) => () => void };
 }
 
 /**
