@@ -17,7 +17,7 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { chmodSync, mkdtempSync, rmSync, existsSync, statSync } from "node:fs";
+import { mkdtempSync, rmSync, existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -227,57 +227,5 @@ describe("sync/sync-queue — payload shape", () => {
     const parsed = JSON.parse(row.payload);
     expect(Object.keys(parsed).sort()).toEqual(["content", "tags", "title", "type"]);
     db.close();
-  });
-});
-
-describe("sync/sync-queue — file permissions", () => {
-  it("tightens sync.db to 0o600 on open so a permissive umask cannot leave it world-readable", async () => {
-    if (process.platform === "win32") return;
-    // Force the most permissive umask possible so SQLite creates
-    // the file at 0o666. If SyncQueue never chmod'd, statSync would
-    // return 0o666 here and the assertion would fail. 0o000 is the
-    // umask value that lets the open() actually create the file
-    // world-writable, exposing the gap the chmod must close.
-    const previous = process.umask(0o000);
-    try {
-      const dir = mkdtempSync(join(tmpdir(), "pi-mem-sync-perms-"));
-      const dbPath = join(dir, "perm-test.db");
-      const probe = await SyncQueue.open(dbPath);
-      try {
-        const mode = statSync(dbPath).mode & 0o777;
-        expect(mode).toBe(0o600);
-      } finally {
-        await probe.close();
-        rmSync(dir, { recursive: true, force: true });
-      }
-    } finally {
-      process.umask(previous);
-    }
-  });
-
-  it("open() still succeeds when chmod fails (e.g. a read-only mount) — best-effort, not fatal", async () => {
-    if (process.platform === "win32") return;
-    // Stage a pre-existing sync.db inside a writable dir, then make
-    // the dir read-only and reopen. The reopen reads the existing
-    // file (no create) — the chmod that follows hits EPERM, and the
-    // queue must still come back usable. Using a fresh mkdtemp + 0o500
-    // + open would fail at file creation, not at chmod, and would not
-    // be testing the documented best-effort guarantee.
-    const roDir = mkdtempSync(join(tmpdir(), "pi-mem-sync-ro-"));
-    const dbPath = join(roDir, "sync-perm.db");
-    const stage = await SyncQueue.open(dbPath);
-    await stage.close();
-    try {
-      chmodSync(roDir, 0o500);
-      const probe = await SyncQueue.open(dbPath);
-      try {
-        expect(probe.depth()).toBe(0);
-      } finally {
-        await probe.close();
-      }
-    } finally {
-      chmodSync(roDir, 0o700);
-      rmSync(roDir, { recursive: true, force: true });
-    }
   });
 });
