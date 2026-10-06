@@ -449,6 +449,24 @@ export class MemoryStore {
     return result.changes > 0;
   }
 
+  /**
+   * Stamp a memory with its MaaS id and sync timestamp after the
+   * sync worker confirms a successful push. Returns true when a row
+   * was updated. `syncedAt` defaults to "now" (ISO 8601, UTC).
+   *
+   * This is the only write the sync layer makes against the local
+   * store. The scanner does not gate it because the body / title
+   * have already been scanned at insert time — we are only writing
+   * two bookkeeping columns.
+   */
+  markSynced(id: string, maasId: string, syncedAt?: string): boolean {
+    const ts = syncedAt ?? new Date().toISOString();
+    const result = this.db
+      .prepare(`UPDATE memories SET maas_id = ?, maas_synced_at = ? WHERE id = ?`)
+      .run(maasId, ts, id);
+    return result.changes > 0;
+  }
+
   /** Close the underlying database. Idempotent. */
   close(): void {
     try {
