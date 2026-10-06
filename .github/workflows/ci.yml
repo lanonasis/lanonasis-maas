@@ -133,3 +133,100 @@ jobs:
         if: steps.pkg.outputs.private != 'true' && steps.pkg.outputs.test == 'true'
         working-directory: ${{ matrix.dir }}
         run: bun run test
+
+  # ---------------------------------------------------------------------------
+  # pi-lanonasis-memory min-SDK guard
+  #
+  # Why this is its own job:
+  #   The regular `build` job type-checks against whatever devDependency
+  #   bun.lock pins, which is always newer than the documented peer
+  #   floor (>=0.80.1 in pi-extension.json / package.json). A misaligned
+  #   floor is invisible to the matrix build and only surfaces when a
+  #   real user installs on the minimum version.
+  #
+  # What it does:
+  #   1. Provisions a fresh scratch dir and installs EXACTLY
+  #      @earendil-works/pi-coding-agent@0.80.1 — the declared floor.
+  #   2. Swaps node_modules/@earendil-works for the probe copy.
+  #   3. Runs the package's `bun run check:min-sdk` script which
+  #      invokes tsc --noEmit against src/ using the project's own
+  #      tsconfig (no divergent probe config).
+  #   4. Restores node_modules in a finally block.
+  #
+  # Scope:
+  #   Only triggers when packages/pi-lanonasis-memory/** or this
+  #   workflow file change, so PRs that don't touch the package (and
+  #   PRs in the wider monorepo that aren't stacked on this one) do
+  #   not pay the install cost. The job is intentionally narrow — its
+  #   only purpose is to prove the floor is honest.
+  # ---------------------------------------------------------------------------
+  pi-lanonasis-memory-min-sdk:
+    name: pi-lanonasis-memory min-sdk type-check
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # Filter to runs that actually touch the package (or this
+      # workflow file). Skips the install/network cost for unrelated
+      # PRs in the matrix. Uses the documented `dorny/paths-filter`
+      # action — it inspects the PR diff on pull_request events and
+      # the head commit on push events, returning a `changed` output.
+      - name: Detect changed paths
+        id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          # tokens are OR-ed; a token matching any changed file wins.
+          filters: |
+            package:
+              - 'packages/pi-lanonasis-memory/**'
+            workflow:
+              - '.github/workflows/ci.yml'
+
+      - name: Skip (no relevant changes)
+        if: steps.filter.outputs.package != 'true' && steps.filter.outputs.workflow != 'true'
+        run: |
+          echo "::notice::No changes under packages/pi-lanonasis-memory/ or .github/workflows/ci.yml — skipping min-sdk type-check."
+
+      - name: Setup Bun
+        if: steps.filter.outputs.package == 'true' || steps.filter.outputs.workflow == 'true'
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.2
+
+      - name: Setup Node.js
+        if: steps.filter.outputs.package == 'true' || steps.filter.outputs.workflow == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      # Cache the bun install cache so repeated runs don't redownload
+      # the (small) pi-coding-agent tarball on every CI run. Keyed on
+      # the exact floor version so a floor bump invalidates the cache.
+      - name: Cache bun install cache
+        if: steps.filter.outputs.package == 'true' || steps.filter.outputs.workflow == 'true'
+        uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: bun-pi-coding-agent-floor-0.80.1-${{ runner.os }}-${{ hashFiles('packages/pi-lanonasis-memory/pi-extension.json') }}
+          restore-keys: |
+            bun-pi-coding-agent-floor-0.80.1-${{ runner.os }}-
+
+      - name: Install package deps (no lockfile write)
+        if: steps.filter.outputs.package == 'true' || steps.filter.outputs.workflow == 'true'
+        working-directory: packages/pi-lanonasis-memory
+        run: bun install --no-save
+
+      # Use the project's own scripts/check-min-sdk.mjs which already
+      # implements the swap + tsc + restore dance and prints a clear
+      # message on success/failure. It exits 0 on network-skipped, which
+      # we surface as a soft warning via the script's own logging rather
+      # than a hard fail (the matrix `build` job is the strict gate).
+      - name: Type-check src/ against the declared min SDK
+        if: steps.filter.outputs.package == 'true' || steps.filter.outputs.workflow == 'true'
+        working-directory: packages/pi-lanonasis-memory
+        run: bun run check:min-sdk
