@@ -74,6 +74,11 @@ export interface SearchOptions {
   limit?: number;
   target?: MemoryTarget;
   category?: MemoryCategory;
+  /**
+   * AND filter: every tag must be present in the record's JSON tags
+   * column. Empty array is a no-op. Exact match — no fuzzy / partial.
+   */
+  tags?: string[];
 }
 
 export interface MemoryHit {
@@ -93,6 +98,11 @@ export interface ListOptions {
   limit?: number;
   cursor?: string;
   target?: MemoryTarget;
+  /**
+   * AND filter: every tag must be present in the record's JSON tags
+   * column. Empty array is a no-op. Exact match — no fuzzy / partial.
+   */
+  tags?: string[];
 }
 
 export type AddResult =
@@ -293,6 +303,9 @@ export class MemoryStore {
     const rows = this.stmts.selectAll.all(limit) as InsertRow[];
     let filtered = rows;
     if (options.target) filtered = filtered.filter((r) => r.target === options.target);
+    if (options.tags && options.tags.length > 0) {
+      filtered = filtered.filter((r) => matchesAllTags(r.tags, options.tags!));
+    }
     if (options.cursor !== undefined) {
       const cursor = options.cursor;
       filtered = filtered.filter((r) => r.created_at < cursor);
@@ -321,8 +334,10 @@ export class MemoryStore {
     // statement reusable for the most common case (no filters).
     const hasTarget = options.target !== undefined;
     const hasCategory = options.category !== undefined;
+    const hasTags = options.tags !== undefined && options.tags.length > 0;
     const targetClause = hasTarget ? "AND m.target = ?" : "";
     const categoryClause = hasCategory ? "AND m.category = ?" : "";
+    const tagsClause = hasTags ? "AND m.tags IS NOT NULL" : "";
 
     const sql = `
       SELECT m.id, m.target, m.category, m.title, m.content, m.tags,
@@ -333,6 +348,7 @@ export class MemoryStore {
       WHERE memories_fts MATCH ?
         ${targetClause}
         ${categoryClause}
+        ${tagsClause}
       ORDER BY fts_rank
       LIMIT ?
     `;
@@ -344,8 +360,11 @@ export class MemoryStore {
     params.push(limit);
 
     const rows = stmt.all(...params) as SearchRow[];
+    const filtered = hasTags
+      ? rows.filter((row) => matchesAllTags(row.tags, options.tags!))
+      : rows;
 
-    return rows.map((row) => ({
+    return filtered.map((row) => ({
       id: row.id,
       target: row.target,
       category: row.category,
@@ -470,6 +489,20 @@ function parseTags(tags: string | null): string[] | null {
     // fall through
   }
   return null;
+}
+
+/**
+ * AND filter: every required tag must be present in the JSON-encoded
+ * `tags` column. Non-array / non-string-array payloads never match.
+ */
+function matchesAllTags(tagsJson: string | null, required: readonly string[]): boolean {
+  if (required.length === 0) return true;
+  const parsed = parseTags(tagsJson);
+  if (parsed === null) return false;
+  for (const want of required) {
+    if (!parsed.includes(want)) return false;
+  }
+  return true;
 }
 
 /**
