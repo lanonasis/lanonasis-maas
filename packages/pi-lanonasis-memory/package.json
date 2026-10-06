@@ -19,7 +19,9 @@
     "pi-extension.json"
   ],
   "pi": {
-    "extensions": ["./dist/index.js"],
+    "extensions": [
+      "./dist/index.js"
+    ],
     "name": "@lanonasis/pi-lanonasis-memory",
     "displayName": "LanOnasis MaaS Memory (Phase 1 scaffold)"
   },
@@ -32,22 +34,26 @@
     "prepublishOnly": "npm run build && npm test"
   },
   "dependencies": {
-    "@lanonasis/memory-client": "^2.2.0"
+    "@lanonasis/memory-client": "^2.2.1"
   },
   "peerDependencies": {
-    "@earendil-works/pi-coding-agent": ">=0.80.1",
-    "@earendil-works/pi-ai": ">=0.80.1"
+    "@earendil-works/pi-ai": ">=0.80.1",
+    "@earendil-works/pi-coding-agent": ">=0.80.1"
   },
   "peerDependenciesMeta": {
-    "@earendil-works/pi-coding-agent": { "optional": false },
-    "@earendil-works/pi-ai": { "optional": true }
+    "@earendil-works/pi-coding-agent": {
+      "optional": false
+    },
+    "@earendil-works/pi-ai": {
+      "optional": true
+    }
   },
   "devDependencies": {
-    "@earendil-works/pi-coding-agent": "^0.85.1",
     "@earendil-works/pi-ai": "^0.85.1",
+    "@earendil-works/pi-coding-agent": "^1.0.4",
     "@types/node": "^20.11.0",
     "typescript": "^5.4.0",
-    "vitest": "^2.1.0"
+    "vitest": "^5.0.3"
   },
   "keywords": [
     "pi-package",
