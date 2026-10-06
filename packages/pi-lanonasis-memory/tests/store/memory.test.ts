@@ -23,7 +23,7 @@
  */
 
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from "vitest";
-import { mkdtempSync, rmSync } from "node:fs";
+import { chmodSync, mkdtempSync, rmSync, statSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -76,6 +76,56 @@ describe("MemoryStore (Phase 3)", () => {
         expect(row?.value).toBe("1");
       } finally {
         sidecar.close();
+      }
+    });
+
+    it("tightens the on-disk database to 0o600 so the umask cannot leave it world-readable", async () => {
+      if (process.platform === "win32") return;
+      // Force a permissive umask so the SQLite open() call creates the
+      // file at 0o644 unless MemoryStore tightens it. The default
+      // process umask on the test runner is often 0o022, which would
+      // make this test pass even if the chmod never ran — the 0o000
+      // umask here is the failure mode the chmod must catch.
+      const previous = process.umask(0o000);
+      try {
+        const dbPath = join(tmpDir, `mem-perms-${Date.now()}.db`);
+        const probe = await MemoryStore.open(dbPath);
+        probe.close();
+        const mode = statSync(dbPath).mode & 0o777;
+        expect(mode).toBe(0o600);
+      } finally {
+        process.umask(previous);
+      }
+    });
+
+    it("open() still succeeds when chmod fails (e.g. a read-only mount) — best-effort, not fatal", async () => {
+      if (process.platform === "win32") return;
+      // Stage a pre-existing DB file with read-only parent dir, so
+      // SQLite opens an existing file (no create) and the chmod that
+      // runs AFTER open() then hits EPERM. We can't simply mkdir 0o500
+      // and let openSqlite try to create inside it — that fails at
+      // file creation, not at chmod, and the test wouldn't be testing
+      // what it claims. Pre-creating the file isolates the failure to
+      // the chmod call.
+      const roDir = join(tmpDir, `ro-${Date.now()}`);
+      const { mkdirSync } = await import("node:fs");
+      mkdirSync(roDir, { recursive: true });
+      const dbPath = join(roDir, "perm-test.db");
+      const stage = await MemoryStore.open(dbPath);
+      stage.close();
+      try {
+        chmodSync(roDir, 0o500);
+        // Reopen — open() reads an existing file (no create), then
+        // chmod tries to tighten it and fails. The store must still
+        // come back usable.
+        const probe = await MemoryStore.open(dbPath);
+        try {
+          expect(probe.stats().memories).toBe(0);
+        } finally {
+          probe.close();
+        }
+      } finally {
+        chmodSync(roDir, 0o700);
       }
     });
   });

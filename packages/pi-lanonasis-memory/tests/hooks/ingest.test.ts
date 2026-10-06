@@ -192,6 +192,8 @@ describe("classifyMessage (via buildIngestPipeline)", () => {
             target: "user",
             enabled: true,
             minContentLength: 20,
+            // Review every turn so each case exercises the classifier directly.
+            reviewEveryTurns: 1,
           });
 
           // Fire session_start to open the store
@@ -239,6 +241,7 @@ describe("classifyMessage (via buildIngestPipeline)", () => {
         const pipeline = buildIngestPipeline(() => store, {
           enabled: true,
           minContentLength: 20,
+          reviewEveryTurns: 1,
         });
 
         await pipeline.onSessionStart({ type: "session_start" }, {} as never);
@@ -264,7 +267,7 @@ describe("classifyMessage (via buildIngestPipeline)", () => {
   });
 
   describe("session_shutdown", () => {
-    it("closes the store without throwing", async () => {
+    it("flushes buffered turns without throwing — host owns store.close()", async () => {
       const tmpDir = mkdtempSync(join(tmpdir(), "pi-ingest-test-"));
       try {
         const store = await MemoryStore.open(join(tmpDir, "memories.db"));
@@ -272,16 +275,172 @@ describe("classifyMessage (via buildIngestPipeline)", () => {
 
         await pipeline.onSessionStart({ type: "session_start" }, {} as never);
 
-        // Should not throw
+        // Buffer one substantive turn that should flush on shutdown.
+        await pipeline.onTurnEnd(
+          {
+            type: "turn_end",
+            turnIndex: 1,
+            message: {
+              role: "assistant",
+              content: "Important: clean up the build environment after each deploy.",
+            },
+            toolResults: [],
+          } as never,
+          {} as never,
+        );
+
+        // Should not throw and should write the buffered memory before
+        // returning. Closing the store is the host's job (index.ts).
         await expect(
           pipeline.onSessionShutdown({ type: "session_shutdown" }, {} as never),
         ).resolves.not.toThrow();
 
-        // Store should be closed
+        // The host still has an open store it can close.
+        expect(() => store.stats()).not.toThrow();
+        const records = store.list();
+        expect(records.some((r) => r.content.includes("clean up the build environment"))).toBe(true);
+
+        store.close();
         expect(() => store.stats()).toThrow();
       } finally {
         rmSync(tmpDir, { recursive: true, force: true });
       }
     });
+  });
+});
+
+describe("buildIngestPipeline cadence + buffering", () => {
+  async function newStore(): Promise<{ store: MemoryStore; close: () => void }> {
+    const dir = mkdtempSync(join(tmpdir(), "pi-ingest-cadence-"));
+    const store = await MemoryStore.open(join(dir, "memories.db"));
+    return { store, close: () => {
+      try { store.close(); } catch { /* ignore */ }
+      rmSync(dir, { recursive: true, force: true });
+    } };
+  }
+
+  const fireTurn = (pipeline: ReturnType<typeof buildIngestPipeline>, content: string, toolResults: unknown[] = []) =>
+    pipeline.onTurnEnd(
+      {
+        type: "turn_end",
+        turnIndex: 1,
+        message: { role: "assistant", content },
+        toolResults,
+      } as never,
+      {} as never,
+    );
+
+  it("buffers across turns and only classifies when cadence fires", async () => {
+    const { store, close } = await newStore();
+    try {
+      const pipeline = buildIngestPipeline(() => store, {
+        target: "user",
+        enabled: true,
+        minContentLength: 20,
+        reviewEveryTurns: 3,
+      });
+      await pipeline.onSessionStart({ type: "session_start" }, {} as never);
+
+      await fireTurn(pipeline, "Remember: the default port is 5432.");
+      await fireTurn(pipeline, "I prefer snake_case for SQL column aliases.");
+      expect(store.list()).toHaveLength(0); // nothing classified yet
+
+      await fireTurn(pipeline, "Root cause: stale WAL was being checkpointed.");
+      const records = store.list();
+      expect(records.length).toBe(3);
+      for (const r of records) expect(r.tags).toContain("origin:auto");
+    } finally {
+      close();
+    }
+  });
+
+  it("auto-captured memories carry origin:auto tag", async () => {
+    const { store, close } = await newStore();
+    try {
+      const pipeline = buildIngestPipeline(() => store, {
+        target: "user",
+        enabled: true,
+        minContentLength: 20,
+        reviewEveryTurns: 1,
+      });
+      await pipeline.onSessionStart({ type: "session_start" }, {} as never);
+      await fireTurn(pipeline, "Important: run migrations before deploys.");
+      const [rec] = store.list();
+      expect(rec.tags).toEqual(["origin:auto"]);
+    } finally {
+      close();
+    }
+  });
+
+  it("counts tool calls from event.toolResults.length for the tool-call cadence", async () => {
+    const { store, close } = await newStore();
+    try {
+      const pipeline = buildIngestPipeline(() => store, {
+        target: "user",
+        enabled: true,
+        minContentLength: 20,
+        reviewEveryTurns: 1000,
+        reviewEveryToolCalls: 4,
+      });
+      await pipeline.onSessionStart({ type: "session_start" }, {} as never);
+
+      // First two turns have tool calls but no classification-worthy content.
+      await fireTurn(pipeline, "Just verifying the schema looks correct now.", [
+        { isError: false },
+        { isError: false },
+      ]);
+      expect(store.list()).toHaveLength(0);
+
+      // Third turn pushes cumulative tool calls past the threshold; even
+      // though no classifier fires for "Just verifying the schema", the
+      // prior buffered turns are flushed.
+      await fireTurn(pipeline, "Important: clean up the build environment after deploy.", [
+        { isError: false },
+        { isError: false },
+      ]);
+      const records = store.list();
+      expect(records.length).toBeGreaterThanOrEqual(1);
+    } finally {
+      close();
+    }
+  });
+
+  it("session_shutdown flushes the remaining buffer before close", async () => {
+    const { store, close } = await newStore();
+    try {
+      const pipeline = buildIngestPipeline(() => store, {
+        target: "user",
+        enabled: true,
+        minContentLength: 20,
+        reviewEveryTurns: 1000, // cadence never fires during the test
+      });
+      await pipeline.onSessionStart({ type: "session_start" }, {} as never);
+      await fireTurn(pipeline, "Keep in mind: the API rate limit is 100/min.");
+      expect(store.list()).toHaveLength(0);
+
+      await pipeline.onSessionShutdown({ type: "session_shutdown" }, {} as never);
+      const records = store.list({ target: "user" });
+      expect(records.length).toBe(1);
+      expect(records[0].content).toContain("rate limit is 100/min");
+    } finally {
+      close();
+    }
+  });
+
+  it("session_start tag is still emitted on session_start", async () => {
+    const { store, close } = await newStore();
+    try {
+      const pipeline = buildIngestPipeline(() => store, {
+        target: "user",
+        enabled: true,
+        sessionTag: "session:demo",
+      });
+      await pipeline.onSessionStart({ type: "session_start" }, {} as never);
+      const rec = store.list().find((r) => r.title.startsWith("[session]"));
+      expect(rec).toBeDefined();
+      expect(rec!.target).toBe("memory");
+    } finally {
+      close();
+    }
   });
 });

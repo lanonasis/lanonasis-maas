@@ -9,3 +9,7 @@ coverage
 .idea
 .vscode/settings.json
 *.log
+
+# bun.lock is canonical. package-lock.json (npm) is untracked; bun install
+# would otherwise regenerate it.
+package-lock.json

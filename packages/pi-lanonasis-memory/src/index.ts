@@ -3,21 +3,18 @@
  *
  * Pi extension that brings LanOnasis MaaS persistent memory into a Pi session.
  *
- * Phase 6 wires the local SQLite FTS5 store into Pi's lifecycle hooks so
- * session content is automatically classified and persisted without requiring
- * a slash command. Phases 1-5 built the foundation:
+ * Wires the local SQLite FTS5 store into Pi's lifecycle hooks so session
+ * content is automatically classified and persisted without requiring a
+ * slash command. Background review (PR1/6) throttles classification to
+ * once every N turns or M tool calls so we don't flood SQLite during
+ * long sessions; corrections bypass the throttle and land immediately.
  *
- *   - Phase 1: Extension loads, /echo command works
- *   - Phase 2: Pre-write scanner (39+ rules, block/redact modes)
- *   - Phase 3: Local SQLite FTS5 store with scanner gating
- *   - Phase 4: Markdown mirror (MEMORY.md / USER.md) ← reserved
- *   - Phase 5: MaaS background sync ← reserved columns exist
- *   - Phase 6: Hook ingestion (this file)
- *
- * Hooks wired in Phase 6:
- *   `session_start`     — open the store, register session tag
- *   `turn_end`         — classify assistant responses, store actionable facts
- *   `session_shutdown` — checkpoint WAL, close store
+ * Hooks wired:
+ *   `input`              — observe the user prompt (text never persisted)
+ *   `session_start`      — open the store, register session tag
+ *   `turn_end`           — buffer assistant text + tool-call counts;
+ *                            flush when cadence fires; capture corrections
+ *   `session_shutdown`   — flush any remaining buffered items, close store
  *
  * Why this lives at packages/pi-lanonasis-memory/ rather than apps/:
  *   Pi extensions are packages, not apps. The Pi loader expects either a
@@ -45,6 +42,7 @@ import {
   buildIngestPipeline,
   type IngestConfig,
 } from "./hooks/ingest.js";
+import { createCorrectionCapture } from "./hooks/correction.js";
 
 export interface ExtensionContextLike {
   ui: {
@@ -67,9 +65,6 @@ const DEFAULT_STORE_PATH = join(
 export default function extension(pi: ExtensionAPI): void {
   registerEchoCommand(pi);
 
-  // Phase 6: open a single store and wire lifecycle hooks.
-  // The store lives for the session; WAL is checkpointed on shutdown so
-  // no WAL file is left behind after the session ends.
   const ingestConfig: IngestConfig = {
     target: "user",
     enabled: true,
@@ -79,23 +74,12 @@ export default function extension(pi: ExtensionAPI): void {
   let store: MemoryStore | null = null;
   let storeOpen = false;
 
-  /** Lazily opens the store on first session_start. */
-  function openStore(cwd: string): MemoryStore | null {
-    if (storeOpen && store) return store;
-
-    try {
-      // Ensure parent directory exists (MemoryStore.open creates the file, not the dir).
-      mkdirSync(join(DEFAULT_STORE_PATH, ".."), { recursive: true });
-      store = null; // will be set after async open
-      storeOpen = false;
-      return null; // signal that we need to await the open
-    } catch (err) {
-      return null;
-    }
-  }
-
-  // Build the pipeline with a getter that returns the current store.
+  // Build both hooks around the same store-getter so they share a single
+  // open/close window. Correction capture is intentionally outside the
+  // ingest cadence — a user correction is the highest-signal content in
+  // any session and must not wait for the throttle to fire.
   const pipeline = buildIngestPipeline(() => store, ingestConfig);
+  const correction = createCorrectionCapture(() => store);
 
   pi.on("session_start", async (event, ctx) => {
     if (!ingestConfig.enabled) return;
@@ -122,14 +106,28 @@ export default function extension(pi: ExtensionAPI): void {
     }
   });
 
+  // Observe the user prompt to set a pending-correction flag. The prompt
+  // text is NEVER persisted. (Brief LANA-2026-10-06 PR1/6 contract.)
+  pi.on("input", (event) => {
+    correction.onInput(event as { type: "input"; text?: string; source?: string });
+  });
+
   pi.on("turn_end", async (event, ctx) => {
     if (!storeOpen || !store) return;
     await pipeline.onTurnEnd(event, ctx);
+    // Fire correction capture AFTER ingest so a corrected assistant text
+    // is written immediately, even if the ingest cadence wouldn't have fired.
+    await correction.onTurnEnd(event as { type: "turn_end"; message?: unknown });
   });
 
   pi.on("session_shutdown", async (event, ctx) => {
     if (!store) return;
     await pipeline.onSessionShutdown(event, ctx);
+    try {
+      store.close();
+    } catch {
+      // best-effort WAL checkpoint
+    }
     store = null;
     storeOpen = false;
   });

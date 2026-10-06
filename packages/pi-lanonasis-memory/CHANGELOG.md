@@ -5,6 +5,52 @@ All notable changes to `@lanonasis/pi-lanonasis-memory` are documented in this f
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [Unreleased] — PR1/6 cadence, correction capture, and manifest cleanup
+
+### Added
+- **`src/hooks/cadence.ts`** — `ReviewCadence({ everyTurns, everyToolCalls })`
+  state machine. Pure, unit-tested. Threshold defaults: 10 turns or 15 tool
+  calls since the last flush, whichever lands first. Records turn and tool
+  counts, exposes `shouldReview()` and `reset()`. Negative / non-finite
+  tool-call counts are ignored so a buggy caller can't poison the counter.
+- **`src/hooks/correction.ts`** — user-correction cue detector
+  (`detectCorrectionCue`) + assistant-acknowledgement detector
+  (`detectCorrectionAck`) + `createCorrectionCapture(getStore)` factory
+  that wires the `input` / `turn_end` hooks. Privacy contract: the user
+  prompt text is **never** stored — only the assistant's acknowledgement
+  is, with `category: 'correction'` and tags `['origin:auto', 'correction']`.
+  Extension-sourced input is ignored.
+- **`tests/hooks/cadence.test.ts`** (8 cases) and
+  **`tests/hooks/correction.test.ts`** (32 cases).
+
+### Changed
+- **`src/hooks/ingest.ts`** — classification is no longer one-shot per
+  `turn_end`. Assistant text is buffered across turns and flushed only
+  when `ReviewCadence.shouldReview()` flips, or on `session_shutdown`.
+  The store is closed by the **host** (`src/index.ts`) rather than by the
+  pipeline's `onSessionShutdown` so the shutdown ordering is explicit.
+  Auto-captured memories now carry the `origin:auto` tag (downstream sync
+  policy in PR5 keeps `origin:auto` memories local by default).
+  Classifier buckets are mapped to the locked SQLite category enum so
+  writes succeed without a schema change (`explicit|config|insight → insight`,
+  `errorDiag → failure`).
+- **`src/index.ts`** — `pi.on("input")` now arms a pending-correction flag
+  (text never persisted); `pi.on("turn_end")` runs the ingest pipeline
+  and the correction capture back-to-back so corrections land immediately.
+  Removed the dead `openStore()` helper and stale phase comments.
+- **`pi-extension.json`** — `version` bumped to `0.2.0`; description no
+  longer mentions "Phase 1 scaffold"; `storage_roots.global` and
+  `sessions_db` corrected to `~/.pi/agent/lanonasis-pi-memory`
+  (matches the runtime `DEFAULT_STORE_PATH`); `storage_roots.project`
+  normalised to `~/.pi/agent/projects-memory/<project>`.
+- **`package.json`** — `pi.displayName` drops "Phase 1 scaffold"; dev
+  `vite` added (vitest 5 requires `vite@^6|7|8`; the committed `bun.lock`
+  was stale and CI was failing at the Install step).
+- **`.gitignore`** — `package-lock.json` added (bun.lock is canonical).
+
+### Tests
+- `npx vitest run` → **178 passed (8 files)** (was 133 in baseline).
+
 ## [Unreleased] — PR-A.2 metadata normalization
 
 ### Changed

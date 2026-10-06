@@ -1,21 +1,21 @@
 {
   "name": "@lanonasis/pi-lanonasis-memory",
-  "version": "0.1.0",
-  "description": "Phase 1 scaffold: a single /echo command and the minimum Pi SDK plumbing for LanOnasis MaaS persistent memory.",
+  "version": "0.2.0",
+  "description": "LanOnasis MaaS Memory — Pi extension that auto-captures assistant responses and corrected facts into a local SQLite FTS5 store, with optional MaaS federation for cross-device sync.",
   "entry": "./dist/index.js",
   "source": "./src/index.ts",
   "extensions": ["./src/index.ts", "./dist/index.js"],
   "commands": [
     {
       "name": "echo",
-      "description": "Phase 1 smoke — reverses its argument.",
+      "description": "Smoke test — reverses its argument.",
       "handler": "src/commands/echo.ts"
     }
   ],
   "storage_roots": {
-    "global": "~/.pi/agent/pi-lanonasis-memory",
-    "project": ".pi/memory",
-    "sessions_db": "~/.pi/agent/pi-lanonasis-memory/sessions.db"
+    "global": "~/.pi/agent/lanonasis-pi-memory",
+    "project": "~/.pi/agent/projects-memory/<project>",
+    "sessions_db": "~/.pi/agent/lanonasis-pi-memory/sessions.db"
   },
   "memory_client": {
     "package": "@lanonasis/memory-client",

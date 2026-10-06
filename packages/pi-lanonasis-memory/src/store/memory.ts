@@ -21,6 +21,7 @@
  *   - Trigram FTS5 tokenizer (Phase 8+)
  */
 
+import { chmodSync } from "node:fs";
 import { randomUUID } from "node:crypto";
 
 import {
@@ -180,6 +181,7 @@ export class MemoryStore {
   static async open(dbPath: string, options: StoreOptions = {}): Promise<MemoryStore> {
     const mode: ScannerMode = options.mode ?? "block";
     const db = await openSqlite(dbPath);
+    tightenFileMode(dbPath);
     const store = new MemoryStore(db, mode);
     store.initialize();
     store.prepareAll();
@@ -504,4 +506,33 @@ function rankToScore(rank: number): number {
 
 function clamp(n: number, min: number, max: number): number {
   return Math.min(Math.max(n, min), max);
+}
+
+/**
+ * Restrict the on-disk database to owner-only (0o600) so a multi-user
+ * host cannot read another user's memory entries through the file
+ * permissions inherited from the process umask (typically 0o644).
+ *
+ * SQLite creates the file with the process umask, which on a shared
+ * box is world-readable. The file is created by `openSqlite` above
+ * (bun:sqlite with `create: true` / node:sqlite with `open: true`),
+ * so the path is guaranteed to exist by the time we reach this point
+ * — and we run BEFORE `initialize()` writes any data, so a tighter
+ * mode is the mode that ends up recorded in the file's inode.
+ *
+ * Windows ignores POSIX mode bits and uses ACL inheritance, so the
+ * chmod call is a no-op there. We still wrap it in try/catch so a
+ * restrictive ACL policy can never crash `open()` — a perms error
+ * is logged-but-not-fatal because the alternative (refuse to open)
+ * is worse than the leak we're trying to narrow.
+ */
+function tightenFileMode(dbPath: string): void {
+  if (process.platform === "win32") return;
+  try {
+    chmodSync(dbPath, 0o600);
+  } catch {
+    // Best effort — see function header. We deliberately do not throw
+    // because a perm error on a fresh DB should not block reads that
+    // the operator may still want to recover from.
+  }
 }
