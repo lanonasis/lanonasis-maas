@@ -17,10 +17,10 @@
 
 import { Type, type Static } from "typebox";
 import type {
+  AgentToolResult,
   ExtensionAPI,
-  ExtensionToolContext,
+  ExtensionContext,
 } from "@earendil-works/pi-coding-agent";
-import type { AgentToolResult } from "@earendil-works/pi-agent-core";
 
 import { MemoryStore, type AddMemoryInput } from "../store/memory.js";
 import type { MemoryStoreLike } from "../store/memory.js";
@@ -150,7 +150,7 @@ export function buildMemoryReplaceTool(input: {
     params: MemoryReplaceParams,
     signal: AbortSignal | undefined,
     onUpdate: ((partial: AgentToolResult<MemoryReplaceDetails>) => void) | undefined,
-    ctx: ExtensionToolContext,
+    ctx: ExtensionContext,
   ) => Promise<AgentToolResult<MemoryReplaceDetails>>;
 } {
   return {

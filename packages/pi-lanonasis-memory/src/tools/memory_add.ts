@@ -16,10 +16,10 @@
 
 import { Type, type Static } from "typebox";
 import type {
+  AgentToolResult,
   ExtensionAPI,
-  ExtensionToolContext,
+  ExtensionContext,
 } from "@earendil-works/pi-coding-agent";
-import type { AgentToolResult } from "@earendil-works/pi-agent-core";
 
 import {
   MemoryStore,
@@ -222,7 +222,7 @@ export function buildMemoryAddTool(input: {
     params: MemoryAddParams,
     signal: AbortSignal | undefined,
     onUpdate: ((partial: AgentToolResult<MemoryAddDetails>) => void) | undefined,
-    ctx: ExtensionToolContext,
+    ctx: ExtensionContext,
   ) => Promise<AgentToolResult<MemoryAddDetails>>;
 } {
   return {
