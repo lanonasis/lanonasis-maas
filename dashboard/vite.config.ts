@@ -16,6 +16,7 @@ export default defineConfig(({ mode }) => ({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
+      "@lanonasis/security-sdk": path.resolve(__dirname, "../shared"),
     },
   },
 }));

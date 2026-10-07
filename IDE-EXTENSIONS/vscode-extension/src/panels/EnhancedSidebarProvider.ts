@@ -152,11 +152,23 @@ export class EnhancedSidebarProvider implements vscode.WebviewViewProvider {
                 case 'getApiKeys':
                     await this.handleGetApiKeys();
                     break;
+                case 'apiKeysRequest':
+                    await this.handleApiKeysRequest(data.data as { projectId?: string } | undefined);
+                    break;
+                case 'projectsRequest':
+                    await this.handleGetProjects();
+                    break;
+                case 'getApiKey':
+                    await this.handleGetApiKey(data.data as { keyId: string });
+                    break;
                 case 'createApiKey':
                     await this.handleCreateApiKey(data.data as { name: string; scope?: string });
                     break;
                 case 'deleteApiKey':
-                    await this.handleDeleteApiKey(data.data as string);
+                    await this.handleDeleteApiKey(data.data as string | { keyId: string });
+                    break;
+                case 'rotateApiKey':
+                    await this.handleRotateApiKey(data.data as { keyId: string });
                     break;
                 case 'storeApiKey':
                     await this.handleStoreApiKey();
@@ -479,9 +491,35 @@ export class EnhancedSidebarProvider implements vscode.WebviewViewProvider {
         }
     }
 
-    private async handleCreateApiKey(_keyData: { name: string; scope?: string }): Promise<void> {
+    private async handleCreateApiKey(keyData: { name: string; scope?: string } & Record<string, unknown>): Promise<void> {
         try {
-            // Delegate creation to the existing command flow (collects required fields)
+            // Prefer calling the ApiKeyService directly so we get the new
+            // ApiKey object (incl. server-generated `value` returned once
+            // on rotate, and the metadata block the React manager needs).
+            const svc = this._apiKeyService;
+            if (svc && keyData?.name) {
+                try {
+                    const body: Record<string, unknown> = { name: keyData.name };
+                    for (const [k, v] of Object.entries(keyData)) {
+                        if (k === 'name' || k === 'scope') continue;
+                        body[k] = v;
+                    }
+                    const created = await svc.createApiKey(body as unknown as Parameters<typeof svc.createApiKey>[0]);
+                    this._view?.webview.postMessage({
+                        type: 'apiKeyResponse',
+                        data: created,
+                    });
+                    await this.handleGetApiKeys();
+                    return;
+                } catch (serviceError) {
+                    console.warn(
+                        '[EnhancedSidebarProvider] createApiKey via service failed; falling back to command:',
+                        serviceError
+                    );
+                }
+            }
+
+            // Fallback: delegate to the existing command flow (collects fields).
             await vscode.commands.executeCommand('lanonasis.createApiKey');
 
             // Refresh API keys after creation
@@ -499,8 +537,12 @@ export class EnhancedSidebarProvider implements vscode.WebviewViewProvider {
         }
     }
 
-    private async handleDeleteApiKey(keyId: string): Promise<void> {
+    private async handleDeleteApiKey(keyIdOrPayload: string | { keyId: string }): Promise<void> {
         try {
+            const keyId =
+                typeof keyIdOrPayload === 'string'
+                    ? keyIdOrPayload
+                    : keyIdOrPayload?.keyId;
             if (this._apiKeyService && keyId) {
                 await this._apiKeyService.deleteApiKey(keyId);
             } else {
@@ -512,12 +554,135 @@ export class EnhancedSidebarProvider implements vscode.WebviewViewProvider {
 
             this._view?.webview.postMessage({
                 type: 'apiKeyDeleted',
-                data: { success: true, message: 'API key deleted.' }
+                data: { success: true, id: keyId, message: 'API key deleted.' }
             });
         } catch (error) {
             this._view?.webview.postMessage({
                 type: 'apiKeyError',
                 data: 'Failed to delete API key: ' + (error instanceof Error ? error.message : String(error))
+            });
+        }
+    }
+
+    /**
+     * Fetch API keys for the React webview (full ApiKey shape) — paired
+     * with the message contract used by src/components/ApiKeyManager.tsx.
+     */
+    private async handleApiKeysRequest(payload: { projectId?: string } | undefined): Promise<void> {
+        try {
+            if (!this._apiKeyService) {
+                this._view?.webview.postMessage({ type: 'apiKeysResponse', data: [] });
+                return;
+            }
+            const keys = await this._apiKeyService.getApiKeys(payload?.projectId);
+            this._view?.webview.postMessage({
+                type: 'apiKeysResponse',
+                data: keys,
+            });
+        } catch (error) {
+            this._view?.webview.postMessage({
+                type: 'apiKeyError',
+                data: 'Failed to load API keys: ' + (error instanceof Error ? error.message : String(error))
+            });
+            this._view?.webview.postMessage({ type: 'apiKeysResponse', data: [] });
+        }
+    }
+
+    /**
+     * Project list for the project filter dropdown. Uses the canonical
+     * /api/v1/api-keys/projects endpoint, NOT /api/v1/projects (which does
+     * not exist server-side — see contract Gap 3).
+     */
+    private async handleGetProjects(): Promise<void> {
+        try {
+            if (!this._apiKeyService) {
+                this._view?.webview.postMessage({ type: 'projectsResponse', data: [] });
+                return;
+            }
+
+            let projects: unknown[] = [];
+            try {
+                const baseUrl = (this._apiKeyService as unknown as { baseUrl?: string }).baseUrl;
+                if (!baseUrl) {
+                    throw new Error('baseUrl unavailable');
+                }
+                const auth = await (this._apiKeyService as unknown as {
+                    resolveCredentials(): Promise<{ type: string; token: string }>;
+                }).resolveCredentials();
+                const headers: Record<string, string> =
+                    auth.type === 'oauth'
+                        ? { Authorization: `Bearer ${auth.token}` }
+                        : { 'X-API-Key': auth.token };
+                const response = await fetch(`${baseUrl}/api/v1/api-keys/projects`, { headers });
+                if (!response.ok) {
+                    throw new Error(`API request failed: ${response.status} ${response.statusText}`);
+                }
+                projects = (await response.json()) as unknown[];
+            } catch (directError) {
+                console.warn(
+                    '[EnhancedSidebarProvider] Direct projects fetch failed; falling back to service:',
+                    directError
+                );
+                // Fallback to the service helper (which has its own legacy-path probing).
+                const viaService = await (this._apiKeyService as unknown as {
+                    getProjects(): Promise<unknown[]>;
+                }).getProjects();
+                projects = viaService ?? [];
+            }
+
+            this._view?.webview.postMessage({
+                type: 'projectsResponse',
+                data: projects,
+            });
+        } catch (error) {
+            this._view?.webview.postMessage({
+                type: 'apiKeyError',
+                data: 'Failed to load projects: ' + (error instanceof Error ? error.message : String(error))
+            });
+            this._view?.webview.postMessage({ type: 'projectsResponse', data: [] });
+        }
+    }
+
+    /**
+     * Rotate an API key (server-side generated new value, returned once).
+     * POST /api/v1/api-keys/:keyId/rotate — see contract §3.4 / Gap 1.
+     */
+    private async handleRotateApiKey(payload: { keyId: string }): Promise<void> {
+        try {
+            if (!this._apiKeyService || !payload?.keyId) {
+                throw new Error('Missing keyId for rotate');
+            }
+            const updated = await this._apiKeyService.rotateApiKey(payload.keyId);
+            this._view?.webview.postMessage({
+                type: 'apiKeyResponse',
+                data: updated,
+            });
+        } catch (error) {
+            this._view?.webview.postMessage({
+                type: 'apiKeyError',
+                data: 'Failed to rotate API key: ' + (error instanceof Error ? error.message : String(error))
+            });
+        }
+    }
+
+    /**
+     * Get a single API key by id. Used after a create response lands on the
+     * client to refresh metadata (the create response already includes value).
+     */
+    private async handleGetApiKey(payload: { keyId: string }): Promise<void> {
+        try {
+            if (!this._apiKeyService || !payload?.keyId) {
+                throw new Error('Missing keyId');
+            }
+            const key = await this._apiKeyService.getApiKey(payload.keyId);
+            this._view?.webview.postMessage({
+                type: 'apiKeyResponse',
+                data: key,
+            });
+        } catch (error) {
+            this._view?.webview.postMessage({
+                type: 'apiKeyError',
+                data: 'Failed to load API key: ' + (error instanceof Error ? error.message : String(error))
             });
         }
     }

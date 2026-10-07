@@ -1,0 +1,11 @@
+{
+  "api_url": "https://api.lanonasis.com",
+  "api_key": "lano_7bxi41l2sm86scqsyn9e1a92zib7w7rz",
+  "organization_id": "",
+  "project_scope": "",
+  "subject_id_strategy": "current_user",
+  "subject_id": "HMS-LANA",
+  "tool_policy": "read_only",
+  "privacy_mode": false,
+  "embedding_model": ""
+}
