@@ -212,6 +212,18 @@ export async function buildRuntime(opts: BuildRuntimeOptions = {}): Promise<Runt
         // gets pushed; tools and commands emit intents and we apply the
         // policy. Read the post-scan record from the store so the
         // payload matches what's in SQLite (never the caller's raw text).
+        if (input.op === "delete") {
+          const maasId = (input.payload as { maasId?: string } | undefined)?.maasId;
+          try {
+            queue.enqueue({
+              localId: input.localId,
+              op: "delete",
+              payload: { title: "", content: "", tags: [], type: "memory", maasId },
+              origin: input.origin,
+            });
+          } catch {}
+          return;
+        }
         const record: MemoryRecord | null = store.get(input.localId);
         if (!record) {
           // The store rejected the row (scanner block, validation). Do
