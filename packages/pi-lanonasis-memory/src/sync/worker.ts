@@ -11,10 +11,14 @@
  *   - On failure: funnel through SyncQueue.markFailed with the
  *     status code from the client (4xx-drop / 5xx-retry handled in
  *     the queue).
- *   - flush(timeoutMs): drain as fast as allowed until the queue is
- *     empty or the timeout elapses. Used on session_shutdown.
- *   - stop(): clear the timer; safe to call multiple times. Waits for
- *     any in-flight push to settle so the caller can close the queue.
+ *   - flush(timeoutMs): stop the periodic loop, then drain as fast as
+ *     allowed until the queue is empty or the deadline passes. Every
+ *     wait inside flush (health probe, an in-flight push, its own push)
+ *     is bounded by the deadline, so a stalled request can never block
+ *     session_shutdown. Used on session_shutdown.
+ *   - stop(graceMs): clear the timer; safe to call multiple times. Waits
+ *     up to graceMs for an in-flight push, and not at all for a push
+ *     flush() already abandoned at its deadline.
  *
  * The worker never throws. Unhandled rejections from the per-row
  * pipeline are caught and reported as retryable failures so a single
@@ -67,6 +71,8 @@ export class SyncWorker {
    * before the caller closes the queue.
    */
   private inFlight: Promise<boolean> | null = null;
+  /** An in-flight push that flush() gave up on at its deadline. */
+  private abandoned: Promise<boolean> | null = null;
 
   constructor(options: SyncWorkerOptions) {
     this.queue = options.queue;
@@ -89,19 +95,24 @@ export class SyncWorker {
     }
   }
 
-  /** Stop the drain loop. Safe to call multiple times or before start. */
-  async stop(): Promise<void> {
+  /**
+   * Stop the drain loop. Safe to call multiple times or before start.
+   * Waits at most `graceMs` for an in-flight push to settle, and does
+   * not wait at all for a push that flush() already abandoned.
+   */
+  async stop(graceMs = 1000): Promise<void> {
+    this.haltPolling();
+    const pending = this.inFlight;
+    if (pending && pending !== this.abandoned) {
+      await withDeadline(pending, graceMs);
+    }
+  }
+
+  private haltPolling(): void {
     this.stopped = true;
     if (this.timer !== null) {
       clearInterval(this.timer);
       this.timer = null;
-    }
-    if (this.inFlight) {
-      try {
-        await this.inFlight;
-      } catch {
-        // processRow never rejects; belt and braces.
-      }
     }
   }
 
@@ -115,25 +126,42 @@ export class SyncWorker {
    * would only re-order them.
    */
   async flush(timeoutMs: number): Promise<number> {
-    const start = Date.now();
+    // Stop polling first so the interval loop cannot start a new push
+    // while (or after) we drain.
+    this.haltPolling();
+    const deadline = Date.now() + timeoutMs;
+    const remaining = () => deadline - Date.now();
     let pushed = 0;
-    while (Date.now() - start < timeoutMs) {
+    while (remaining() > 0) {
       // Always run a probe before each row. This lets a queue drain
       // even when the periodic monitor hasn't ticked yet (the test path
       // and the shutdown path both need this).
-      try {
-        await this.health.tick();
-      } catch {
-        // best-effort
-      }
+      const probe = await withDeadline(
+        this.health.tick().then(
+          () => true,
+          () => true,
+        ),
+        remaining(),
+      );
+      if (probe === TIMED_OUT) break;
       if (this.inFlight) {
-        await this.inFlight;
+        const pending = this.inFlight;
+        if ((await withDeadline(pending, remaining())) === TIMED_OUT) {
+          this.abandoned = pending;
+          break;
+        }
         continue;
       }
       const row = this.queue.next();
       if (!row) break;
-      const ok = await this.run(row);
-      if (ok) pushed++;
+      const outcome = await withDeadline(this.run(row), remaining());
+      if (outcome === TIMED_OUT) {
+        // The push keeps running in the background; the row stays in the
+        // queue (markDone never ran) and is retried next session.
+        this.abandoned = this.inFlight;
+        break;
+      }
+      if (outcome) pushed++;
     }
     return pushed;
   }
@@ -220,6 +248,30 @@ export class SyncWorker {
       }
       return false;
     }
+  }
+}
+
+const TIMED_OUT: unique symbol = Symbol("timed-out");
+
+/**
+ * Resolve with the promise's value, or TIMED_OUT once `ms` elapses.
+ * The timer is cleared on settle and unref'd so it never holds the
+ * process open. Never rejects: a rejected promise also resolves as
+ * TIMED_OUT (callers here only race promises that are not expected to
+ * reject, so treating a rejection as "gave up" is the safe default).
+ */
+async function withDeadline<T>(p: Promise<T>, ms: number): Promise<T | typeof TIMED_OUT> {
+  if (ms <= 0) return TIMED_OUT;
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const expiry = new Promise<typeof TIMED_OUT>((resolve) => {
+    timer = setTimeout(() => resolve(TIMED_OUT), ms);
+    (timer as { unref?: () => void }).unref?.();
+  });
+  try {
+    const settled: Promise<T | typeof TIMED_OUT> = p.catch((): typeof TIMED_OUT => TIMED_OUT);
+    return await Promise.race([settled, expiry]);
+  } finally {
+    if (timer !== undefined) clearTimeout(timer);
   }
 }
 

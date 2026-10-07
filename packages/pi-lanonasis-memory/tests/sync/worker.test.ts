@@ -197,3 +197,49 @@ describe("sync/worker — offline accumulates, online drains", () => {
     expect(onSynced.mock.calls.map((c) => c[0])).toEqual(["off-1", "off-2"]);
   });
 });
+
+describe("sync/worker — bounded shutdown (CodeRabbit: shutdown deadline)", () => {
+  const hang = () => new Promise<never>(() => {});
+
+  it("flush(timeoutMs) returns by the deadline even when a periodic push is stalled in flight", async () => {
+    queue.enqueue({ localId: "hang-1", op: "create", payload: { title: "t", content: "c", tags: [], type: "memory" }, origin: "explicit" });
+    buildWorker({ create: hang });
+    void worker.tick(); // periodic push now stuck in flight
+    await new Promise((r) => setTimeout(r, 20));
+    const start = Date.now();
+    await worker.flush(150);
+    expect(Date.now() - start).toBeLessThan(600);
+  });
+
+  it("flush(timeoutMs) returns by the deadline when its own push stalls", async () => {
+    queue.enqueue({ localId: "hang-2", op: "create", payload: { title: "t", content: "c", tags: [], type: "memory" }, origin: "explicit" });
+    buildWorker({ create: hang });
+    const start = Date.now();
+    const pushed = await worker.flush(150);
+    expect(Date.now() - start).toBeLessThan(600);
+    expect(pushed).toBe(0);
+  });
+
+  it("stop() after a timed-out flush does not wait again for the stalled push", async () => {
+    queue.enqueue({ localId: "hang-3", op: "create", payload: { title: "t", content: "c", tags: [], type: "memory" }, origin: "explicit" });
+    buildWorker({ create: hang });
+    worker.start();
+    await worker.flush(100);
+    const start = Date.now();
+    await worker.stop();
+    expect(Date.now() - start).toBeLessThan(200);
+  });
+
+  it("the periodic loop does not start new pushes once a flush has begun", async () => {
+    for (let i = 0; i < 3; i++) {
+      queue.enqueue({ localId: `p-${i}`, op: "create", payload: { title: "t", content: "c", tags: [], type: "memory" }, origin: "explicit" });
+    }
+    let calls = 0;
+    buildWorker({ create: async () => { calls++; return { ok: true, maasId: `m-${calls}` }; } }, { intervalMs: 5 });
+    worker.start();
+    await worker.flush(1000);
+    await new Promise((r) => setTimeout(r, 40));
+    expect(calls).toBe(3); // each row pushed exactly once
+    expect(queue.depth()).toBe(0);
+  });
+});
