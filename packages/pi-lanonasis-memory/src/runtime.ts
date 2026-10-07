@@ -204,6 +204,7 @@ export async function buildRuntime(opts: BuildRuntimeOptions = {}): Promise<Runt
     const worker = new SyncWorker(workerOptions);
     rawSyncWorker = worker;
     health.start();
+    worker.start();
     sync = {
       enabled: true,
       enqueue(input: SyncEnqueueInput): void {
