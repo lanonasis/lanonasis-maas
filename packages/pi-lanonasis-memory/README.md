@@ -113,6 +113,24 @@ v1.0.1 wires the live sync path (LANA-026 follow-up). The contract:
 | `LANONASIS_PI_MEMORY_MODE`          | `policy-only`            | `legacy-inject` adds a `<memory-context>` block. |
 | `LANONASIS_PI_MEMORY_REDACT`        | `0`                      | `1` = redacts detected secrets instead of blocking. |
 | `LANONASIS_PI_MEMORY_MAX_QUEUE`     | `10000`                  | SyncQueue depth cap (positive integers only). |
+| `LANONASIS_PI_MEMORY_DEBUG`         | `0`                      | `1` = print errors that are deliberately swallowed (best-effort sync, fallbacks) to stderr, one redacted line each. |
+
+## Runtime requirements
+
+The extension runs under **Bun** or **Node.js >= 22.5**. It needs no
+native `better-sqlite3` dependency: `src/store/sqlite.ts` opens the
+database with the runtime's built-in SQLite binding:
+
+1. `bun:sqlite` when running under Bun.
+2. `node:sqlite` when running under Node.js. `node:sqlite` was added in
+   Node 22.5.0.
+
+On **Node 22.5 to 22.12**, `node:sqlite` is behind a flag. Launch Node
+with `--experimental-sqlite` (or set
+`NODE_OPTIONS=--experimental-sqlite`). From **Node 22.13 / 23.4**
+onward, the module loads without a flag. It is still marked
+experimental and may print an `ExperimentalWarning`. If neither binding
+loads, opening the store fails with a message that names both options.
 
 ## Quick start
 
@@ -121,7 +139,7 @@ v1.0.1 wires the live sync path (LANA-026 follow-up). The contract:
 cd apps/lanonasis-maas
 npm install --prefix packages/pi-lanonasis-memory
 
-# unit tests (502/502 pass as of v1.0.1)
+# unit tests (508/508 pass as of v1.0.2)
 npm test --prefix packages/pi-lanonasis-memory
 
 # build dist/
@@ -129,6 +147,12 @@ npm run build --prefix packages/pi-lanonasis-memory
 
 # typecheck
 npm run typecheck --prefix packages/pi-lanonasis-memory
+
+# lint (ESLint + typescript-eslint)
+npm run lint --prefix packages/pi-lanonasis-memory
+
+# coverage (v8; fails if it drops below the thresholds in vitest.config.ts)
+npm run test:coverage --prefix packages/pi-lanonasis-memory
 
 # validate against the declared minimum Pi SDK
 npm run check:min-sdk --prefix packages/pi-lanonasis-memory

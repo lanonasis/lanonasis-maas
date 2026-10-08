@@ -90,6 +90,6 @@
     "url": "https://github.com/lanonasis/lanonasis-maas/issues"
   },
   "engines": {
-    "node": ">=18"
+    "node": ">=22.5"
   }
 }
