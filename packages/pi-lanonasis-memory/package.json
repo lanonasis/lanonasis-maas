@@ -34,7 +34,7 @@
     "test:watch": "vitest --config vitest.config.ts",
     "test:coverage": "vitest run --config vitest.config.ts --coverage",
     "check:min-sdk": "node scripts/check-min-sdk.mjs",
-    "prepublishOnly": "npm run build && npm test"
+    "prepublishOnly": "bun run build && bun run test"
   },
   "dependencies": {
     "@lanonasis/memory-client": "^2.2.1"
