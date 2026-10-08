@@ -14,14 +14,15 @@
 
 import { Type, type Static } from "typebox";
 import type {
+  AgentToolResult,
   ExtensionAPI,
-  ExtensionToolContext,
+  ExtensionContext,
 } from "@earendil-works/pi-coding-agent";
-import type { AgentToolResult } from "@earendil-works/pi-agent-core";
 
 import { MemoryStore } from "../store/memory.js";
+import type { MemoryStoreLike } from "../store/memory.js";
 import type { SyncAdapter } from "../deps.js";
-import { ok } from "./tool-result.js";
+import { err, ok } from "./tool-result.js";
 
 export const memoryRemoveParams = Type.Object({
   id: Type.String({ minLength: 1 }),
@@ -36,7 +37,7 @@ export interface MemoryRemoveDetails {
 }
 
 export function removeMemory(
-  store: MemoryStore | null,
+  store: MemoryStoreLike | null,
   params: MemoryRemoveParams,
   sync: SyncAdapter,
 ): MemoryRemoveDetails {
@@ -60,7 +61,7 @@ export function removeMemory(
 }
 
 export function buildMemoryRemoveTool(input: {
-  getStore: () => MemoryStore | null;
+  getStore: () => MemoryStoreLike | null;
   getSync: () => SyncAdapter;
 }): {
   name: string;
@@ -72,7 +73,7 @@ export function buildMemoryRemoveTool(input: {
     params: MemoryRemoveParams,
     signal: AbortSignal | undefined,
     onUpdate: ((partial: AgentToolResult<MemoryRemoveDetails>) => void) | undefined,
-    ctx: ExtensionToolContext,
+    ctx: ExtensionContext,
   ) => Promise<AgentToolResult<MemoryRemoveDetails>>;
 } {
   return {
@@ -102,11 +103,7 @@ export function buildMemoryRemoveTool(input: {
       } catch (e) {
         const msg = e instanceof Error ? e.message : String(e);
         ctx.ui.notify(`memory_remove failed: ${msg}`, "error");
-        return {
-          content: [{ type: "text", text: `error: ${msg}` }],
-          details: { ok: false, id: params.id, reason: msg },
-          isError: true,
-        };
+        return err({ ok: false, id: params.id, reason: msg }, `error: ${msg}`);
       }
     },
   };
@@ -114,7 +111,7 @@ export function buildMemoryRemoveTool(input: {
 
 export function registerMemoryRemoveTool(
   pi: ExtensionAPI,
-  deps: { getStore: () => MemoryStore | null; getSync: () => SyncAdapter },
+  deps: { getStore: () => MemoryStoreLike | null; getSync: () => SyncAdapter },
 ): void {
   const tool = buildMemoryRemoveTool(deps);
   pi.registerTool(tool as Parameters<ExtensionAPI["registerTool"]>[0]);

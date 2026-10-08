@@ -209,14 +209,18 @@ export function injectSystemPrompt(base: string, options: InjectOptions): string
 }
 
 /**
- * Register the `before_agent_start` handler. Returns Pi's unsubscribe function.
+ * Register the `before_agent_start` handler. Returns an unsubscribe function.
  * The handler never throws into Pi; on any error it returns `undefined`.
+ *
+ * `pi.on` returns `void` in the declared SDK floor (0.80.1) and an
+ * unsubscribe function in newer SDKs, so the result is normalised: a
+ * returned function is forwarded, otherwise the disposer is a no-op.
  */
 export function registerSystemPromptInjection(
   pi: ExtensionAPI,
   deps: SystemPromptInjectionDeps,
 ): () => void {
-  return pi.on(
+  const off: unknown = pi.on(
     "before_agent_start",
     (event: BeforeAgentStartEvent): BeforeAgentStartEventResult | undefined => {
       try {
@@ -231,4 +235,5 @@ export function registerSystemPromptInjection(
       }
     },
   );
+  return typeof off === "function" ? (off as () => void) : () => {};
 }

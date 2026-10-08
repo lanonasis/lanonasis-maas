@@ -3,15 +3,22 @@
  *
  * Responsibilities:
  *   - Poll the queue at a steady cadence (default 1/sec).
- *   - Skip ticks when HealthMonitor.isOnline() === false.
+ *   - Skip ticks when HealthMonitor.isOnline() === false (the periodic
+ *     tick; flush() probes on demand so a queue drains on shutdown even
+ *     when the monitor has not run yet).
  *   - Dispatch each row to MaasClient.{create,update,delete}.
  *   - On success: invoke onSynced(localId, maasId) and remove the row.
  *   - On failure: funnel through SyncQueue.markFailed with the
  *     status code from the client (4xx-drop / 5xx-retry handled in
  *     the queue).
- *   - flush(timeoutMs): drain as fast as allowed until the queue is
- *     empty or the timeout elapses. Used on session_shutdown.
- *   - stop(): clear the timer; safe to call multiple times.
+ *   - flush(timeoutMs): stop the periodic loop, then drain as fast as
+ *     allowed until the queue is empty or the deadline passes. Every
+ *     wait inside flush (health probe, an in-flight push, its own push)
+ *     is bounded by the deadline, so a stalled request can never block
+ *     session_shutdown. Used on session_shutdown.
+ *   - stop(graceMs): clear the timer; safe to call multiple times. Waits
+ *     up to graceMs for an in-flight push, and not at all for a push
+ *     flush() already abandoned at its deadline.
  *
  * The worker never throws. Unhandled rejections from the per-row
  * pipeline are caught and reported as retryable failures so a single
@@ -38,6 +45,14 @@ export interface SyncWorkerOptions {
   onSynced: (localId: string, maasId: string) => void;
   /** Drain cadence in milliseconds. Defaults to 1000. */
   intervalMs?: number;
+  /**
+   * Resolve the REMOTE MaaS id for a local id (v1.0.1). Used for
+   * update/delete rows whose payload carries no `maasId`. When supplied
+   * and it returns null: an update is pushed as a create (the memory was
+   * never synced), a delete is discarded (nothing exists remotely).
+   * When omitted, the local id is passed through (legacy behaviour).
+   */
+  resolveRemoteId?: (localId: string) => string | null;
 }
 
 export class SyncWorker {
@@ -46,8 +61,18 @@ export class SyncWorker {
   private readonly health: HealthMonitor;
   private readonly onSynced: (localId: string, maasId: string) => void;
   private readonly intervalMs: number;
+  private readonly resolveRemoteId: ((localId: string) => string | null) | undefined;
   private timer: ReturnType<typeof setInterval> | null = null;
   private stopped = false;
+  /**
+   * The row currently being pushed, if any. tick() and flush() share it
+   * so the interval loop and a shutdown flush can never push the same
+   * row twice, and stop() can wait for an in-flight push to settle
+   * before the caller closes the queue.
+   */
+  private inFlight: Promise<boolean> | null = null;
+  /** An in-flight push that flush() gave up on at its deadline. */
+  private abandoned: Promise<boolean> | null = null;
 
   constructor(options: SyncWorkerOptions) {
     this.queue = options.queue;
@@ -55,6 +80,7 @@ export class SyncWorker {
     this.health = options.health;
     this.onSynced = options.onSynced;
     this.intervalMs = options.intervalMs ?? 1000;
+    this.resolveRemoteId = options.resolveRemoteId;
   }
 
   /** Start the drain loop. Idempotent. */
@@ -69,8 +95,20 @@ export class SyncWorker {
     }
   }
 
-  /** Stop the drain loop. Safe to call multiple times or before start. */
-  async stop(): Promise<void> {
+  /**
+   * Stop the drain loop. Safe to call multiple times or before start.
+   * Waits at most `graceMs` for an in-flight push to settle, and does
+   * not wait at all for a push that flush() already abandoned.
+   */
+  async stop(graceMs = 1000): Promise<void> {
+    this.haltPolling();
+    const pending = this.inFlight;
+    if (pending && pending !== this.abandoned) {
+      await withDeadline(pending, graceMs);
+    }
+  }
+
+  private haltPolling(): void {
     this.stopped = true;
     if (this.timer !== null) {
       clearInterval(this.timer);
@@ -88,51 +126,103 @@ export class SyncWorker {
    * would only re-order them.
    */
   async flush(timeoutMs: number): Promise<number> {
-    const start = Date.now();
+    // Stop polling first so the interval loop cannot start a new push
+    // while (or after) we drain.
+    this.haltPolling();
+    const deadline = Date.now() + timeoutMs;
+    const remaining = () => deadline - Date.now();
     let pushed = 0;
-    while (Date.now() - start < timeoutMs) {
-      if (!this.health.isOnline()) {
-        // Wait briefly for the next health tick; if it's been a long
-        // time without a probe, just bail out of flush rather than
-        // spin.
-        await sleep(50);
+    while (remaining() > 0) {
+      // Always run a probe before each row. This lets a queue drain
+      // even when the periodic monitor hasn't ticked yet (the test path
+      // and the shutdown path both need this).
+      const probe = await withDeadline(
+        this.health.tick().then(
+          () => true,
+          () => true,
+        ),
+        remaining(),
+      );
+      if (probe === TIMED_OUT) break;
+      if (this.inFlight) {
+        const pending = this.inFlight;
+        if ((await withDeadline(pending, remaining())) === TIMED_OUT) {
+          this.abandoned = pending;
+          break;
+        }
         continue;
       }
       const row = this.queue.next();
       if (!row) break;
-      const ok = await this.processRow(row);
-      if (ok) pushed++;
+      const outcome = await withDeadline(this.run(row), remaining());
+      if (outcome === TIMED_OUT) {
+        // The push keeps running in the background; the row stays in the
+        // queue (markDone never ran) and is retried next session.
+        this.abandoned = this.inFlight;
+        break;
+      }
+      if (outcome) pushed++;
     }
     return pushed;
   }
 
   /** One tick. Exposed for tests; production uses start(). */
   async tick(): Promise<void> {
-    if (this.stopped) return;
+    if (this.stopped || this.inFlight) return;
     if (!this.health.isOnline()) return;
-    const row = this.queue.next();
-    if (!row) return;
-    await this.processRow(row);
+    try {
+      const row = this.queue.next();
+      if (!row) return;
+      await this.run(row);
+    } catch {
+      // Queue closed underneath us (session teardown) — never throw
+      // out of an interval callback.
+    }
+  }
+
+  private async run(row: QueueRow): Promise<boolean> {
+    const p = this.processRow(row);
+    this.inFlight = p;
+    try {
+      return await p;
+    } finally {
+      this.inFlight = null;
+    }
   }
 
   private async processRow(row: QueueRow): Promise<boolean> {
     try {
+      let op = row.op;
+      let remoteId = row.localId;
+      if (op !== "create") {
+        const known = row.payload.maasId ?? (this.resolveRemoteId ? this.resolveRemoteId(row.localId) : row.localId);
+        if (!known) {
+          if (op === "delete") {
+            // Never synced — nothing to delete remotely.
+            this.queue.markDone(row.id);
+            return false;
+          }
+          op = "create"; // update of a never-synced memory: push it whole
+        } else {
+          remoteId = known;
+        }
+      }
       const result =
-        row.op === "create"
+        op === "create"
           ? await this.client.create({
               title: row.payload.title,
               content: row.payload.content,
               tags: row.payload.tags,
               memory_type: targetToMemoryType(row.payload.type),
             })
-          : row.op === "update"
-            ? await this.client.update(row.localId, {
+          : op === "update"
+            ? await this.client.update(remoteId, {
                 title: row.payload.title,
                 content: row.payload.content,
                 tags: row.payload.tags,
                 memory_type: targetToMemoryType(row.payload.type),
               })
-            : await this.client.delete(row.localId);
+            : await this.client.delete(remoteId);
       if (result.ok) {
         this.queue.markDone(row.id);
         try {
@@ -151,23 +241,40 @@ export class SyncWorker {
       return false;
     } catch (err) {
       const e = err as Error;
-      this.queue.markFailed(e, undefined, row.id);
+      try {
+        this.queue.markFailed(e, undefined, row.id);
+      } catch {
+        // Queue closed mid-push; the row stays queued for next session.
+      }
       return false;
     }
   }
 }
 
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
+const TIMED_OUT: unique symbol = Symbol("timed-out");
 
 /**
- * Map a local MemoryTarget to a MaaS memory_type. The worker keeps
- * a duplicate of this map (maas-client.ts owns the canonical
- * version) so the worker's hot path doesn't need a circular import
- * on every tick. The two maps MUST stay in sync; the
- * sync/policy.test.ts matrix exercises the canonical one.
+ * Resolve with the promise's value, or TIMED_OUT once `ms` elapses.
+ * The timer is cleared on settle and unref'd so it never holds the
+ * process open. Never rejects: a rejected promise also resolves as
+ * TIMED_OUT (callers here only race promises that are not expected to
+ * reject, so treating a rejection as "gave up" is the safe default).
  */
+async function withDeadline<T>(p: Promise<T>, ms: number): Promise<T | typeof TIMED_OUT> {
+  if (ms <= 0) return TIMED_OUT;
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const expiry = new Promise<typeof TIMED_OUT>((resolve) => {
+    timer = setTimeout(() => resolve(TIMED_OUT), ms);
+    (timer as { unref?: () => void }).unref?.();
+  });
+  try {
+    const settled: Promise<T | typeof TIMED_OUT> = p.catch((): typeof TIMED_OUT => TIMED_OUT);
+    return await Promise.race([settled, expiry]);
+  } finally {
+    if (timer !== undefined) clearTimeout(timer);
+  }
+}
+
 function targetToMemoryType(target: string): "context" | "project" | "knowledge" | "personal" {
   switch (target) {
     case "user":

@@ -1,70 +1,49 @@
 /**
  * @lanonasis/pi-lanonasis-memory
  *
- * Pi extension wiring Layer-1 PR4 — tools, slash commands, and the
- * ExtensionAPI lifecycle that integrates with PR1/2/3/5 via stand-alone
- * adapters. See `src/deps.ts` for the adapter pattern: each dependency on
- * a peer PR is resolved at runtime; when the peer PR's module is not
- * present (pre-merge), a no-op fallback is used so PR4 still loads.
+ * Pi extension wiring the real, on-main modules into a session. v1.0.1
+ * replaces v0.2.0's `tryImport()` adapter indirection (which silently
+ * fell back to no-ops after PRs #167-#172 merged) with a direct
+ * dependency on `src/runtime.ts`, which statically composes:
+ *
+ *   - MarkdownMirror + MirroredStore (PR2)
+ *   - createCorrectionCapture (PR1)
+ *   - registerSystemPromptInjection (PR3)
+ *   - SyncQueue + HealthMonitor + SyncWorker + createMaasClient (PR5)
+ *   - bootstrapSoul for SOUL.md (PR2)
  *
  * Lifecycle (single session):
- *   session_start     → open MemoryStore (PR3 mirror; PR4 schema)
- *   turn_end               → existing PR1 ingest pipeline (already in main)
- *   before_agent_start → PR3 injection adapter (no-op pre-merge)
- *   tool_call/input     → PR1 correction adapter (no-op pre-merge)
- *   session_shutdown → flush SyncWorker (no-op pre-merge) + close store
+ *   session_start     → buildRuntime(); ingest.onSessionStart()
+ *   input             → correction.onInput (sets pending flag; NEVER persists user text)
+ *   turn_end          → ingest.onTurnEnd, then correction.onTurnEnd
+ *   before_agent_start → injection.register(pi, { getStanding })
+ *   session_shutdown  → flush worker (5s) → stop worker/health/queue/store
  *
- * Tool surface (PR4 ships four):
- *   memory_add, memory_search, memory_replace, memory_remove
+ * Surface shipped:
+ *   tools     — memory_add, memory_search, memory_replace, memory_remove
+ *   commands  — /memory, /memory-save, /reflect, /memory-skills,
+ *               /memory-pin, /memory-preview-context, /memory-interview,
+ *               /memory-index-sessions, /memory-sync
  *
- * Slash commands (PR4 ships seven):
- *   /memory, /reflect, /memory-save, /memory-skills, /memory-pin,
- *   /memory-preview-context, /memory-interview, /memory-index-sessions
- *
- * Stand-alone contract: PR4 alone must `npm install` and load in Pi without
- * the peer PRs. The adapter pattern in deps.ts makes that possible.
+ * Test seam: `__setRuntimeForTest(factory)` lets the runtime-wiring suite
+ * substitute the queue factory / MaaS factory / skipSoulBootstrap. The
+ * default `extension()` call does not touch the seam.
  */
-
-import { join } from "node:path";
-import { homedir } from "node:os";
-import { mkdirSync } from "node:fs";
 
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 
-import {
-  MemoryStore,
-  defaultStorageRoot,
-  defaultDbPath,
-  resolveInjectionAdapter,
-  resolveCorrectionAdapter,
-  resolveSyncAdapter,
-  resolveMirror,
-  resolveMaasAdapter,
-  type InjectionAdapter,
-  type CorrectionAdapter,
-  type SyncAdapter,
-  type MaaSAdapter,
-  type MirroredStoreLike,
-} from "./deps.js";
-import {
-  scanForWrite,
-  scanSecretsOnly,
-  defaultScannerConfig,
-  type ScannerConfig,
-  type ScannerDecision,
-} from "./scanner/scanner.js";
+import { buildRuntime, type BuildRuntimeOptions, type Runtime } from "./runtime.js";
+import { scanForWrite, scanSecretsOnly, defaultScannerConfig } from "./scanner/scanner.js";
+import { MemoryStore } from "./store/memory.js";
 import { SCHEMA_VERSION } from "./store/schema.js";
-import { buildIngestPipeline, type IngestConfig } from "./hooks/ingest.js";
+import type { CommandDeps } from "./commands/types.js";
+import { registerAllCommands } from "./commands/index.js";
 import {
   registerMemoryAddTool,
   registerMemorySearchTool,
   registerMemoryReplaceTool,
   registerMemoryRemoveTool,
 } from "./tools/index.js";
-import {
-  registerAllCommands,
-  type CommandDeps,
-} from "./commands/index.js";
 
 export interface ExtensionContextLike {
   ui: {
@@ -79,14 +58,6 @@ export {
   MemoryStore,
   SCHEMA_VERSION,
 };
-export type { ScannerConfig, ScannerDecision, IngestConfig };
-
-/**
- * Default store path — one store per user, scoped to this extension.
- * Mirrors the original Phase 1 default but uses the brief's storage root.
- */
-const DEFAULT_STORE_PATH = defaultDbPath();
-const DEFAULT_STORAGE_ROOT = defaultStorageRoot();
 
 /**
  * Container held for the lifetime of the Pi session. Built at session_start
@@ -94,122 +65,80 @@ const DEFAULT_STORAGE_ROOT = defaultStorageRoot();
  * down at session_shutdown.
  */
 interface SessionContainer {
-  store: MemoryStore | null;
-  mirror: MirroredStoreLike | null;
-  sync: SyncAdapter;
-  maas: MaaSAdapter;
-  injection: InjectionAdapter;
-  correction: CorrectionAdapter;
-  commandDeps: CommandDeps;
+  runtime: Runtime;
+  deps: CommandDeps;
+  unsubscribeInjection?: () => void;
 }
 
-/**
- * Lazily resolve the per-session container. The first call awaits the
- * store open; subsequent calls return the cached container. Tests can
- * pre-fill the cache by passing a session into `installForTest`, or
- * clear it with `resetForTests()`.
- */
 let cachedSession: SessionContainer | null = null;
 
+type RuntimeFactory = (cwd: string) => Promise<Runtime>;
+
 /**
- * Test-only: clear the cached session container so a subsequent
- * `session_start` fires a fresh open. Exported as `__resetForTests` to
- * keep the surface tiny. Not part of the runtime API.
+ * Test seam: replace the runtime factory used by `extension()`. Production
+ * passes nothing and gets the default `buildRuntime` call. The
+ * runtime-wiring test uses this seam so it can run in a sandboxed HOME.
  */
+let testRuntimeFactory: RuntimeFactory | null = null;
+export function __setRuntimeForTest(factory: RuntimeFactory | null): void {
+  testRuntimeFactory = factory;
+}
+
+/** Test-only: drop the cached container so a subsequent session_start rebuilds. */
 export function __resetForTests(): void {
   cachedSession = null;
 }
 
 export default async function extension(pi: ExtensionAPI): Promise<void> {
-  // Adapters that don't need the store — resolved immediately.
-  const maas = await resolveMaasAdapter();
-  const injection = await resolveInjectionAdapter();
-  const correction = await resolveCorrectionAdapter();
-
   /**
-   * Build the command dependency container that every PR4 command and
-   * tool consumes. All accessors are lazy so the order of side-effects
-   * during session_start doesn't matter.
+   * Build the command dependency container. All accessors are lazy so the
+   * order of side-effects during session_start doesn't matter.
    */
-  function buildCommandDeps(): CommandDeps {
-    const sync = resolveSyncAdapterSync();
-    return {
-      getStore: () => cachedSession?.store ?? null,
-      getMirror: () => cachedSession?.mirror ?? null,
-      getMaas: () => maas,
-      getSync: () => sync,
-      getInjection: () => injection,
-      getCorrection: () => correction,
-    };
-  }
-
-  /** Lazy sync adapter — resolved once per session when first accessed. */
-  let syncCache: SyncAdapter | null = null;
-  function resolveSyncAdapterSync(): SyncAdapter {
-    if (syncCache) return syncCache;
-    // Synchronous fallback: stand-alone build returns the no-op.
-    syncCache = {
-      enabled: false,
-      createWorker: () => null,
-      enqueue: () => {},
-      async start() {},
-      async stop() {},
-      async flush() {},
-    };
-    return syncCache;
-  }
+  const buildCommandDeps = (): CommandDeps => ({
+    getStore: () => cachedSession?.runtime.store ?? null,
+    getMirror: () =>
+      cachedSession ? { store: cachedSession.runtime.store } : null,
+    getMaas: () =>
+      cachedSession?.runtime.maas ?? {
+        enabled: false,
+        async search() {
+          return [];
+        },
+      },
+    getSync: () =>
+      cachedSession?.runtime.sync ?? {
+        enabled: false,
+        enqueue: () => {},
+      },
+    getInjection: () => ({
+      register: () => () => {},
+    }),
+    getCorrection: () => ({
+      register: () => () => {},
+    }),
+  });
 
   // Register tools and commands eagerly (Pi binds registrations immediately
   // and resolves parameters at call time, so this is safe before the
   // store is open).
-  const cmdDeps = buildCommandDeps();
-  registerAllCommands(pi, cmdDeps);
-  registerMemoryAddTool(pi, cmdDeps);
-  registerMemorySearchTool(pi, cmdDeps);
-  registerMemoryReplaceTool(pi, cmdDeps);
-  registerMemoryRemoveTool(pi, cmdDeps);
-
-  // Register correction hook (PR1 contract; no-op until PR1 lands).
-  correction.register(pi);
-
-  // Build the ingest pipeline from PR1 — already in main.
-  const ingestConfig: IngestConfig = {
-    target: "user",
-    enabled: true,
-    sessionTag: undefined,
-  };
-  const pipeline = buildIngestPipeline(() => cachedSession?.store ?? null, ingestConfig);
+  const initialDeps = buildCommandDeps();
+  registerAllCommands(pi, initialDeps);
+  registerMemoryAddTool(pi, initialDeps);
+  registerMemorySearchTool(pi, initialDeps);
+  registerMemoryReplaceTool(pi, initialDeps);
+  registerMemoryRemoveTool(pi, initialDeps);
 
   pi.on("session_start", async (event, ctx) => {
-    if (cachedSession) return; // already initialized this session
-
-    const cwd = (ctx as { cwd?: string }).cwd ?? "";
-    const sessionTag = cwd
-      ? `session:${cwd.split("/").pop() ?? cwd}`
-      : undefined;
-    ingestConfig.sessionTag = sessionTag;
-
+    if (cachedSession) return;
+    const ctxCwd = (ctx as { cwd?: string }).cwd ?? "";
     try {
-      mkdirSync(join(DEFAULT_STORE_PATH, ".."), { recursive: true });
-      const store = await MemoryStore.open(DEFAULT_STORE_PATH);
-      const mirror = await resolveMirror(store, DEFAULT_STORAGE_ROOT);
-      const sync = await resolveSyncAdapter(() => store);
-      sync.start();
-      cachedSession = {
-        store,
-        mirror,
-        sync,
-        maas,
-        injection,
-        correction,
-        commandDeps: cmdDeps,
-      };
-      // Register injection adapter (post-merge per session_start contract).
-      injection.register(pi, {
-        getStanding: () => [], // PR3 will wire standing entries; empty pre-merge
-        getContextEntries: () => [], // PR3 will wire; empty pre-merge
-      });
-      await pipeline.onSessionStart(event, ctx);
+      const runtime = testRuntimeFactory
+        ? await testRuntimeFactory(ctxCwd)
+        : await buildRuntimeForCwd(ctxCwd);
+      const deps = buildCommandDeps();
+      cachedSession = { runtime, deps, unsubscribeInjection: undefined };
+      cachedSession.unsubscribeInjection = runtime.injection(pi);
+      await runtime.ingestPipeline.onSessionStart(event, ctx);
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       (ctx as { ui?: { notify?: (m: string, l?: string) => void } }).ui?.notify?.(
@@ -219,51 +148,77 @@ export default async function extension(pi: ExtensionAPI): Promise<void> {
     }
   });
 
+  pi.on("input", async (event, _ctx) => {
+    if (!cachedSession?.runtime) return;
+    cachedSession.runtime.correction.onInput(
+      event as { type: "input"; text?: string; source?: string },
+    );
+  });
+
   pi.on("turn_end", async (event, ctx) => {
-    if (!cachedSession?.store) return;
-    await pipeline.onTurnEnd(event, ctx);
+    if (!cachedSession?.runtime) return;
+    try {
+      await cachedSession.runtime.ingestPipeline.onTurnEnd(event, ctx);
+    } catch {
+      // ingest never throws, but belt and braces
+    }
+    try {
+      await cachedSession.runtime.correction.onTurnEnd(
+        event as { type: "turn_end"; message?: unknown },
+      );
+    } catch {
+      // same
+    }
   });
 
   pi.on("session_shutdown", async (event, ctx) => {
     const session = cachedSession;
     cachedSession = null;
     if (!session) return;
-
     try {
-      await session.sync.flush();
-      await session.sync.stop();
+      session.unsubscribeInjection?.();
     } catch {
       // best-effort
     }
-
     try {
-      await pipeline.onSessionShutdown(event, ctx);
+      await session.runtime.ingestPipeline.onSessionShutdown(event, ctx);
     } catch {
       // best-effort
     }
-
     try {
-      session.store?.close();
+      await session.runtime.shutdown();
     } catch {
-      // best-effort checkpoint
+      // best-effort
     }
   });
 }
 
-// Re-exports for downstream consumers.
+/**
+ * Wrapper used by the extension factory and the test seam. Production
+ * reads `process.env` and the real HOME; tests can override via
+ * `__setRuntimeForTest`.
+ */
+async function buildRuntimeForCwd(cwd: string): Promise<Runtime> {
+  const opts: BuildRuntimeOptions = { cwd };
+  return buildRuntime(opts);
+}
+
+// Re-exports for downstream consumers and test surface.
 export { registerEchoCommand } from "./commands/echo.js";
-export {
-  registerAllCommands,
-} from "./commands/index.js";
+export { registerAllCommands } from "./commands/index.js";
 export {
   registerMemoryAddTool,
   registerMemorySearchTool,
   registerMemoryReplaceTool,
   registerMemoryRemoveTool,
 } from "./tools/index.js";
-
-// Re-export the homedir so tests can stub it.
-export { homedir, join };
-
-// Re-export the default store path so the smoke test can verify it.
-export const DEFAULT_DB_PATH = DEFAULT_STORE_PATH;
+export { buildRuntime, type Runtime, type BuildRuntimeOptions } from "./runtime.js";
+export type {
+  MaaSAdapter,
+  SyncAdapter,
+  MaasSearchHit,
+  SyncEnqueueInput,
+  SyncStatus,
+  SyncPruneCounts,
+  MirroredStoreLike,
+} from "./deps.js";

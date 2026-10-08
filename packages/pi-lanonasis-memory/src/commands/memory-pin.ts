@@ -100,7 +100,7 @@ export const register: CommandRegister = (pi, deps) => {
  * Returns null when nothing matches.
  */
 export async function resolveId(
-  store: import("../store/memory.js").MemoryStore,
+  store: import("../store/memory.js").MemoryStoreLike,
   deps: CommandDeps,
   arg: string,
 ): Promise<string | null> {

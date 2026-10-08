@@ -19,14 +19,15 @@
 
 import { Type, type Static } from "typebox";
 import type {
+  AgentToolResult,
   ExtensionAPI,
-  ExtensionToolContext,
+  ExtensionContext,
 } from "@earendil-works/pi-coding-agent";
-import type { AgentToolResult } from "@earendil-works/pi-agent-core";
 
 import { MemoryStore, type MemoryHit } from "../store/memory.js";
+import type { MemoryStoreLike } from "../store/memory.js";
 import type { MaaSAdapter, MaaSAdapter as _MaasAdapter } from "../deps.js";
-import { ok } from "./tool-result.js";
+import { err, ok } from "./tool-result.js";
 
 export const memorySearchParams = Type.Object({
   query: Type.String({ minLength: 1 }),
@@ -52,7 +53,7 @@ export interface MemorySearchDetails {
 
 /** Pure search helper. Used by tool execute + tests. */
 export async function searchMemory(
-  store: MemoryStore | null,
+  store: MemoryStoreLike | null,
   maas: MaaSAdapter | _MaasAdapter,
   params: MemorySearchParams,
 ): Promise<MemorySearchDetails> {
@@ -137,7 +138,7 @@ function mergeAndDedupe(a: MemoryHit[], b: MemoryHit[]): MemoryHit[] {
 }
 
 export function buildMemorySearchTool(input: {
-  getStore: () => MemoryStore | null;
+  getStore: () => MemoryStoreLike | null;
   getMaas: () => MaaSAdapter;
 }): {
   name: string;
@@ -149,7 +150,7 @@ export function buildMemorySearchTool(input: {
     params: MemorySearchParams,
     signal: AbortSignal | undefined,
     onUpdate: ((partial: AgentToolResult<MemorySearchDetails>) => void) | undefined,
-    ctx: ExtensionToolContext,
+    ctx: ExtensionContext,
   ) => Promise<AgentToolResult<MemorySearchDetails>>;
 } {
   return {
@@ -179,11 +180,10 @@ export function buildMemorySearchTool(input: {
       } catch (e) {
         const msg = e instanceof Error ? e.message : String(e);
         ctx.ui.notify(`memory_search failed: ${msg}`, "error");
-        return {
-          content: [{ type: "text", text: `error: ${msg}` }],
-          details: { hits: [], query: params.query, source: "local" },
-          isError: true,
-        };
+        return err(
+          { hits: [], query: params.query, source: "local" as const },
+          `error: ${msg}`,
+        );
       }
     },
   };
@@ -191,7 +191,7 @@ export function buildMemorySearchTool(input: {
 
 export function registerMemorySearchTool(
   pi: ExtensionAPI,
-  deps: { getStore: () => MemoryStore | null; getMaas: () => MaaSAdapter },
+  deps: { getStore: () => MemoryStoreLike | null; getMaas: () => MaaSAdapter },
 ): void {
   const tool = buildMemorySearchTool(deps);
   pi.registerTool(tool as Parameters<ExtensionAPI["registerTool"]>[0]);

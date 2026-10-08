@@ -26,6 +26,7 @@ import { register as _registerMemoryPin, resolveId } from "./memory-pin.js";
 import { register as _registerMemoryPreviewContext } from "./memory-preview-context.js";
 import { register as _registerMemoryInterview } from "./memory-interview.js";
 import { register as _registerMemoryIndexSessions, indexSessions } from "./memory-index-sessions.js";
+import { register as _registerMemorySync } from "./memory-sync.js";
 
 export { parseSearchArgs } from "./memory-search.js";
 export { runSave } from "./memory-save.js";
@@ -44,6 +45,7 @@ export const registerMemoryPin: CommandRegister = _registerMemoryPin;
 export const registerMemoryPreviewContext: CommandRegister = _registerMemoryPreviewContext;
 export const registerMemoryInterview: CommandRegister = _registerMemoryInterview;
 export const registerMemoryIndexSessions: CommandRegister = _registerMemoryIndexSessions;
+export const registerMemorySync: CommandRegister = _registerMemorySync;
 
 /**
  * Register every PR4 command against a single ExtensionAPI. Used by the
@@ -61,4 +63,5 @@ export function registerAllCommands(
   registerMemoryPreviewContext(pi, deps);
   registerMemoryInterview(pi, deps);
   registerMemoryIndexSessions(pi, deps);
+  registerMemorySync(pi, deps);
 }

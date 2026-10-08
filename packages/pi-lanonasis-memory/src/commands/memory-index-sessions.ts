@@ -58,7 +58,7 @@ export const register: CommandRegister = (pi, deps) => {
  * object literal so tests are deterministic.
  */
 export function indexSessions(
-  store: import("../store/memory.js").MemoryStore,
+  store: import("../store/memory.js").MemoryStoreLike,
 ): Record<string, number> {
   const all = store.list({ limit: 500 });
   const counts: Record<string, number> = {};

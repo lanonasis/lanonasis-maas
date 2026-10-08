@@ -16,14 +16,15 @@
 
 import { Type, type Static } from "typebox";
 import type {
+  AgentToolResult,
   ExtensionAPI,
-  ExtensionToolContext,
+  ExtensionContext,
 } from "@earendil-works/pi-coding-agent";
-import type { AgentToolResult } from "@earendil-works/pi-agent-core";
 
 import {
   MemoryStore,
   type AddMemoryInput,
+  type MemoryStoreLike,
   type MemoryCategory,
   type MemoryTarget,
 } from "../store/memory.js";
@@ -85,7 +86,7 @@ function defaultTitle(content: string): string {
  * hook-driven auto-ingest.
  */
 export function addMemory(
-  store: MemoryStore | null,
+  store: MemoryStoreLike | null,
   params: MemoryAddParams,
   sync: SyncAdapter,
 ): { details: MemoryAddDetails; written: boolean } {
@@ -209,7 +210,7 @@ function mergeTags(supplied: string[] | undefined, extra: string[]): string[] {
  * sessions.
  */
 export function buildMemoryAddTool(input: {
-  getStore: () => MemoryStore | null;
+  getStore: () => MemoryStoreLike | null;
   getSync: () => SyncAdapter;
 }): {
   name: string;
@@ -221,7 +222,7 @@ export function buildMemoryAddTool(input: {
     params: MemoryAddParams,
     signal: AbortSignal | undefined,
     onUpdate: ((partial: AgentToolResult<MemoryAddDetails>) => void) | undefined,
-    ctx: ExtensionToolContext,
+    ctx: ExtensionContext,
   ) => Promise<AgentToolResult<MemoryAddDetails>>;
 } {
   return {
@@ -274,7 +275,7 @@ export function buildMemoryAddTool(input: {
  */
 export function registerMemoryAddTool(
   pi: ExtensionAPI,
-  deps: { getStore: () => MemoryStore | null; getSync: () => SyncAdapter },
+  deps: { getStore: () => MemoryStoreLike | null; getSync: () => SyncAdapter },
 ): void {
   const tool = buildMemoryAddTool(deps);
   pi.registerTool(tool as Parameters<ExtensionAPI["registerTool"]>[0]);

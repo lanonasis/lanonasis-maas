@@ -17,12 +17,13 @@
 
 import { Type, type Static } from "typebox";
 import type {
+  AgentToolResult,
   ExtensionAPI,
-  ExtensionToolContext,
+  ExtensionContext,
 } from "@earendil-works/pi-coding-agent";
-import type { AgentToolResult } from "@earendil-works/pi-agent-core";
 
 import { MemoryStore, type AddMemoryInput } from "../store/memory.js";
+import type { MemoryStoreLike } from "../store/memory.js";
 import { scanForWrite } from "../scanner/scanner.js";
 import type { SyncAdapter } from "../deps.js";
 import { ok, err } from "./tool-result.js";
@@ -62,7 +63,7 @@ export interface MemoryReplaceDetails {
 }
 
 export function replaceMemory(
-  store: MemoryStore | null,
+  store: MemoryStoreLike | null,
   params: MemoryReplaceParams,
   sync: SyncAdapter,
 ): MemoryReplaceDetails {
@@ -137,7 +138,7 @@ export function replaceMemory(
 }
 
 export function buildMemoryReplaceTool(input: {
-  getStore: () => MemoryStore | null;
+  getStore: () => MemoryStoreLike | null;
   getSync: () => SyncAdapter;
 }): {
   name: string;
@@ -149,7 +150,7 @@ export function buildMemoryReplaceTool(input: {
     params: MemoryReplaceParams,
     signal: AbortSignal | undefined,
     onUpdate: ((partial: AgentToolResult<MemoryReplaceDetails>) => void) | undefined,
-    ctx: ExtensionToolContext,
+    ctx: ExtensionContext,
   ) => Promise<AgentToolResult<MemoryReplaceDetails>>;
 } {
   return {
@@ -199,7 +200,7 @@ export function buildMemoryReplaceTool(input: {
 
 export function registerMemoryReplaceTool(
   pi: ExtensionAPI,
-  deps: { getStore: () => MemoryStore | null; getSync: () => SyncAdapter },
+  deps: { getStore: () => MemoryStoreLike | null; getSync: () => SyncAdapter },
 ): void {
   const tool = buildMemoryReplaceTool(deps);
   pi.registerTool(tool as Parameters<ExtensionAPI["registerTool"]>[0]);

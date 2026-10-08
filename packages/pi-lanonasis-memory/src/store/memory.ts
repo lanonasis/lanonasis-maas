@@ -167,6 +167,24 @@ interface PreparedStatements {
 }
 
 /**
+ * The read/write surface tools, commands and hooks depend on. Both
+ * `MemoryStore` and the markdown-mirroring `MirroredStore` satisfy it, so
+ * the runtime can hand callers the mirrored store and every add / replace /
+ * remove keeps MEMORY.md / USER.md in sync with SQLite.
+ */
+export interface MemoryStoreLike {
+  add(input: AddMemoryInput): AddResult;
+  replace(id: string, patch: Partial<AddMemoryInput>): AddResult;
+  remove(id: string): boolean;
+  get(id: string): MemoryRecord | null;
+  list(options?: ListOptions): MemoryRecord[];
+  search(options: SearchOptions): MemoryHit[];
+  stats(): { memories: number };
+  /** Optional; runtime owns the lifecycle. */
+  close?(): void;
+}
+
+/**
  * Local-first memory store backed by a single SQLite FTS5 database.
  *
  * Construct with `await MemoryStore.open(dbPath)` — never with `new`.
