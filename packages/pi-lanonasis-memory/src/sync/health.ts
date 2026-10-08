@@ -18,6 +18,7 @@
  */
 
 import type { MaasClient } from "./maas-client.js";
+import { debugLog } from "../debug.js";
 
 export interface HealthMonitorOptions {
   client: MaasClient;
@@ -72,7 +73,8 @@ export class HealthMonitor {
     try {
       const ok = await this.client.health();
       this.online = !!ok;
-    } catch {
+    } catch (err) {
+      debugLog("sync.health.tick", err);
       this.online = false;
     }
   }

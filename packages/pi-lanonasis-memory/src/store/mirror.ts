@@ -26,6 +26,8 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
+import { debugLog } from "../debug.js";
+
 import { ensureDir, atomicWrite, parseMemoryFile, renderMemoryFile, type MarkdownEntry } from "./markdown.js";
 import {
   MemoryStore,
@@ -135,7 +137,8 @@ export class MarkdownMirror {
     if (!existsSync(spec.path)) return [];
     try {
       return parseMemoryFile(readFileSync(spec.path, "utf8"));
-    } catch {
+    } catch (err) {
+      debugLog("store.mirror.read", err);
       // Corrupt file: best we can do is return empty so the rebuild
       // path can fix it on the next write.
       return [];

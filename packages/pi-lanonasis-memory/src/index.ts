@@ -38,6 +38,7 @@ import { MemoryStore } from "./store/memory.js";
 import { SCHEMA_VERSION } from "./store/schema.js";
 import type { CommandDeps } from "./commands/types.js";
 import { registerAllCommands } from "./commands/index.js";
+import { debugLog } from "./debug.js";
 import {
   registerMemoryAddTool,
   registerMemorySearchTool,
@@ -159,15 +160,17 @@ export default async function extension(pi: ExtensionAPI): Promise<void> {
     if (!cachedSession?.runtime) return;
     try {
       await cachedSession.runtime.ingestPipeline.onTurnEnd(event, ctx);
-    } catch {
+    } catch (err) {
       // ingest never throws, but belt and braces
+      debugLog("index.turnEnd.ingest", err);
     }
     try {
       await cachedSession.runtime.correction.onTurnEnd(
         event as { type: "turn_end"; message?: unknown },
       );
-    } catch {
-      // same
+    } catch (err) {
+      // Never throw into Pi from a turn hook.
+      debugLog("index.turnEnd.correction", err);
     }
   });
 

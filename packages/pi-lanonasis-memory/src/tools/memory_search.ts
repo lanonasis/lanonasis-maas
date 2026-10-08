@@ -28,6 +28,7 @@ import type { MemoryHit } from "../store/memory.js";
 import type { MemoryStoreLike } from "../store/memory.js";
 import type { MaaSAdapter, MaaSAdapter as _MaasAdapter } from "../deps.js";
 import { err, ok } from "./tool-result.js";
+import { debugLog } from "../debug.js";
 
 export const memorySearchParams = Type.Object({
   query: Type.String({ minLength: 1 }),
@@ -94,8 +95,9 @@ export async function searchMemory(
   let remote: Awaited<ReturnType<typeof maas.search>> = [];
   try {
     remote = await maas.search(params.query, remaining);
-  } catch {
+  } catch (e) {
     // Best-effort path: never let MaaS failures surface to the caller.
+    debugLog("tools.memory_search.remote", e);
     remote = [];
   }
 

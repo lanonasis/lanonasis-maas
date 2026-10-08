@@ -21,6 +21,8 @@
 
 import { createRequire } from "node:module";
 
+import { debugLog } from "../debug.js";
+
 export type SqliteStatement = {
   run(...params: unknown[]): SqliteRunResult;
   get<T = unknown>(...params: unknown[]): T | undefined;
@@ -61,8 +63,9 @@ export async function openSqlite(dbPath: string): Promise<SqliteDatabase> {
     };
     const db = new bunSqlite.Database(dbPath, { create: true });
     return wrapBun(db);
-  } catch {
+  } catch (err) {
     // bun:sqlite unavailable — fall through to node:sqlite.
+    debugLog("store.sqlite.bun", err);
   }
 
   // 2. Node.js built-in (experimental in 22.5+).
@@ -72,8 +75,10 @@ export async function openSqlite(dbPath: string): Promise<SqliteDatabase> {
     };
     const db = new nodeSqlite.DatabaseSync(dbPath, { open: true });
     return wrapNode(db);
-  } catch {
-    // node:sqlite unavailable — fall through to error.
+  } catch (err) {
+    // node:sqlite unavailable — fall through to error. The debug line
+    // keeps the real cause (e.g. EACCES on open) visible.
+    debugLog("store.sqlite.node", err);
   }
 
   throw new Error(

@@ -24,6 +24,8 @@
 import { chmodSync } from "node:fs";
 import { randomUUID } from "node:crypto";
 
+import { debugLog } from "../debug.js";
+
 import {
   scanForWrite,
   type ScannerMode,
@@ -521,8 +523,9 @@ function parseTags(tags: string | null): string[] | null {
     if (Array.isArray(parsed) && parsed.every((t) => typeof t === "string")) {
       return parsed as string[];
     }
-  } catch {
-    // fall through
+  } catch (err) {
+    // Corrupt tags JSON reads as "no tags" rather than failing the row.
+    debugLog("store.memory.parseTags", err);
   }
   return null;
 }

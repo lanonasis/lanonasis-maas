@@ -31,6 +31,7 @@ import type {
 
 import type { MemoryTarget } from "../store/memory.js";
 import { redactContent } from "../scanner/redactor.js";
+import { debugLog } from "../debug.js";
 
 /** Local -> MaaS memory_type mapping (per PR5 contract). */
 const TARGET_TO_MEMORY_TYPE: Record<MemoryTarget, CreateMemoryRequest["memory_type"]> = {
@@ -138,7 +139,9 @@ function createRealMaasClient(sdk: EnhancedMemoryClient): MaasClient {
       try {
         const result = await sdk.healthCheck();
         return result.data?.status === "ok" && !result.error;
-      } catch {
+      } catch (err) {
+        // Any transport failure means "offline" to the health monitor.
+        debugLog("sync.maas.health", err);
         return false;
       }
     },

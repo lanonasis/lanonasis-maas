@@ -12,6 +12,7 @@ import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 
 import { SKILLS_DIR } from "./paths.js";
+import { debugLog } from "../debug.js";
 
 export interface SkillEntry {
   slug: string;
@@ -56,7 +57,9 @@ export class SkillsStore {
     let entries: import("node:fs").Dirent[];
     try {
       entries = readdirSync(dir, { withFileTypes: true });
-    } catch {
+    } catch (err) {
+      // Unreadable skills dir lists as empty.
+      debugLog("store.skills.readdir", err);
       return [];
     }
     const out: SkillEntry[] = [];
@@ -67,7 +70,9 @@ export class SkillsStore {
       let stat;
       try {
         stat = statSync(skillPath);
-      } catch {
+      } catch (err) {
+        // Dangling symlink or race with deletion: skip this entry.
+        debugLog("store.skills.stat", err);
         continue;
       }
       if (!stat.isFile()) continue;

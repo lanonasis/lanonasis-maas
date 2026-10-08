@@ -10,6 +10,7 @@
  */
 
 import type { CommandRegister } from "./types.js";
+import { debugLog } from "../debug.js";
 
 interface SkillEntry {
   slug: string;
@@ -73,7 +74,9 @@ export async function loadSkills(): Promise<SkillEntry[]> {
       return mod.list();
     }
     return [];
-  } catch {
+  } catch (err) {
+    // Contract: never throws; a missing/broken skills module reads as empty.
+    debugLog("commands.loadSkills", err);
     return [];
   }
 }
