@@ -35,7 +35,7 @@ from hermes_lanonasis_memory.provider import (
     register as _provider_register,
 )
 
-__version__ = "0.2.0"
+__version__ = "0.3.0"
 __all__ = ["LanonasisMemoryProvider", "register"]
 
 

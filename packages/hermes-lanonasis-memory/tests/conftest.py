@@ -10,6 +10,32 @@ def isolate_api_key_environment(monkeypatch):
     monkeypatch.delenv("LANONASIS_API_KEY", raising=False)
 
 
+@pytest.fixture(autouse=True)
+def reset_dedup_guard():
+    """Reset the process-wide DedupGuard between tests.
+
+    H2: ``DedupGuard`` is a module-level singleton so repeated tests in
+    the same ``pytest`` process would otherwise see each other's prior
+    writes. Each test starts with a clean dedup state.
+    """
+    from hermes_lanonasis_memory import scope
+    scope.get_dedup_guard().reset()
+    yield
+    scope.get_dedup_guard().reset()
+
+
+@pytest.fixture(autouse=True)
+def isolate_hermes_opt_in_env(monkeypatch):
+    """Make sure H2 opt-in env vars are absent unless a test sets them."""
+    for key in (
+        "LANONASIS_HERMES_REMOTE_RAW_TURNS",
+        "LANONASIS_HERMES_REMOTE_SESSION_SUMMARY",
+        "LANONASIS_HERMES_SCOPE_TYPE",
+        "LANONASIS_HERMES_SCOPE_ID",
+    ):
+        monkeypatch.delenv(key, raising=False)
+
+
 @pytest.fixture
 def mock_httpx_client():
     """Return a MagicMock that behaves like an httpx.Client."""
@@ -35,8 +61,17 @@ def mock_config():
 
 
 @pytest.fixture
-def provider(mock_config):  # mock_httpx_client removed — provider fixture injects _client directly
-    """Return an initialized LanonasisMemoryProvider with mocked deps."""
+def provider(mock_config, tmp_path):  # mock_httpx_client removed — provider fixture injects _client directly
+    """Return an initialized LanonasisMemoryProvider with mocked deps.
+
+    H2 isolation: every test gets a fresh ``hermes_home`` directory
+    under ``tmp_path`` so the local FTS5 store starts empty and the
+    fallback writer writes into a per-test sub-directory. Without
+    this, prior tests' rows leak into later ones and the assertion
+    that "this test wrote X" is no longer reliable.
+    """
+    hermes_home = tmp_path / "hermes-home"
+    hermes_home.mkdir()
     with patch("hermes_lanonasis_memory.provider.LanOnasisClient") as MockClient:
         mock_instance = MagicMock()
         mock_instance.health_check.return_value = True
@@ -50,7 +85,7 @@ def provider(mock_config):  # mock_httpx_client removed — provider fixture inj
 
         from hermes_lanonasis_memory import LanonasisMemoryProvider
         p = LanonasisMemoryProvider()
-        p.initialize(session_id="test-session-001", hermes_home="/tmp/hermes-test")
+        p.initialize(session_id="test-session-001", hermes_home=str(hermes_home))
         # Overwrite the live config with our mock
         p._config = mock_config
         p._client = mock_instance

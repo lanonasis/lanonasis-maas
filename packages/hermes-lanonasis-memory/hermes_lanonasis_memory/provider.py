@@ -42,6 +42,22 @@ from .security import (
     detect_embedding_profile_mismatch,
 )
 from .local_store import LocalMemoryStore, MemoryHit
+from . import scope as _scope
+from .scope import (
+    ScopeEnvelope,
+    build_envelope,
+    resolve_project_scope,
+    is_junk_title,
+    merge_envelope_into_tags,
+    get_dedup_guard,
+    MEMORY_CLASS_CANONICAL,
+    MEMORY_CLASS_RAW_EVENT,
+    MEMORY_CLASS_SUMMARY,
+    MEMORY_CLASS_WORKING_CONTEXT,
+    SCOPE_PROJECT,
+    SCOPE_AGENT,
+    SCOPE_SESSION,
+)
 
 _UUID_RE = re.compile(
     r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
@@ -528,12 +544,39 @@ class LanonasisMemoryProvider(MemoryProvider):
         return out
 
     def _tool_store(self, args: Dict[str, Any]) -> Dict[str, Any]:
-        """Local-first hybrid store.
+        """Local-first hybrid store — the canonical REMOTE write path.
 
-        Writes to local SQLite first (durable, <10ms), then attempts
-        remote sync. On remote failure, the local entry persists and
-        the fallback writer captures the pending sync.
+        Write policy (H2):
+        - This is the ONLY default-remote write path.
+        - Every remote write carries a scope envelope (scope_type,
+          scope_id, memory_class=canonical, visibility, source, session_id)
+          in payload ``metadata`` AND as tags.
+        - Junk / pre-policy titles are rejected with a clear error.
+        - A process-local dedup guard skips identical (title, content)
+          writes inside the last 50 remote writes.
+        - The legacy literal "Context (...)", "Session summary (...)", etc.
+          will never be emitted.
         """
+        # 1. Title validation — reject junk before any I/O.
+        raw_title = (args.get("title") or "").strip()
+        if not raw_title:
+            return {
+                "stored": False,
+                "local": False,
+                "error": "memory_store requires a non-empty title",
+            }
+        if is_junk_title(raw_title):
+            return {
+                "stored": False,
+                "local": False,
+                "error": (
+                    f"memory_store refused: title {raw_title!r} matches a "
+                    "legacy junk pattern. Provide a descriptive title "
+                    "(e.g. 'Operator decision: keep Python 3.10 floor')."
+                ),
+            }
+
+        # 2. Redact outbound.
         title_redacted = self._protect_outbound(args["title"])
         content_redacted = self._protect_outbound(args["content"])
         if title_redacted.secrets_found > 0 or content_redacted.secrets_found > 0:
@@ -542,12 +585,13 @@ class LanonasisMemoryProvider(MemoryProvider):
                 f"title={title_redacted.types}, content={content_redacted.types}"
             )
 
-        # --- Tier 1: Local write (durable, always fast) ---
+        # 3. Local write (durable, always fast).
         memory_type = args.get("memory_type", "context")
         local_result = self._local_store_add(
             title=title_redacted.text,
             content=content_redacted.text,
             memory_type=memory_type,
+            tags=list(args.get("tags") or []),
         )
 
         if not local_result.get("ok"):
@@ -557,20 +601,69 @@ class LanonasisMemoryProvider(MemoryProvider):
                 "error": local_result.get("reason", "unknown"),
             }
 
-        # --- Tier 2: Remote sync (fire-and-forget, non-blocking) ---
+        # 4. Build the scope envelope (memory_class=canonical, project by default).
+        scope_type, scope_id = resolve_project_scope(
+            env=os.environ,
+            config_scope=getattr(self._config, "project_scope", None),
+        )
+        visibility = (
+            str(args.get("visibility") or "private").strip().lower()
+            or "private"
+        )
+        if visibility not in {"private", "project", "organization", "shared"}:
+            visibility = "private"
+        env = build_envelope(
+            memory_class=MEMORY_CLASS_CANONICAL,
+            scope_type=scope_type,
+            scope_id=scope_id,
+            visibility=visibility,
+            session_id=self._session_id,
+            source_memory_id=args.get("source_memory_id"),
+        )
+
+        # 5. Dedup guard (process-local ring buffer).
+        dedup = get_dedup_guard().check_and_record(
+            title=title_redacted.text,
+            content=content_redacted.text,
+            session_id=self._session_id,
+        )
+        if dedup:
+            _logger.info(
+                f"[lanonasis] remote store skipped by dedup: {dedup}"
+            )
+            return {
+                "stored": True,
+                "local": True,
+                "local_id": local_result.get("id"),
+                "remote_synced": False,
+                "remote_deduped": True,
+                "dedup_reason": dedup,
+            }
+
+        # 6. Remote sync (fire-and-forget, non-blocking).
         client = self._ensure_client()
+        payload: Optional[Dict[str, Any]] = None
         if client is not None:
             try:
+                caller_tags = list(args.get("tags") or [])
+                # The envelope's ``source`` field is the operator/system
+                # identity (``hermes``). The outer ``call_site`` field
+                # records where the write came from inside the provider
+                # without overwriting the envelope.
                 payload = {
                     "title": title_redacted.text,
                     "content": content_redacted.text,
                     "memory_type": memory_type,
+                    "tags": merge_envelope_into_tags(env, caller_tags=caller_tags),
+                    "metadata": {
+                        **env.as_metadata(),
+                        "call_site": "hermes_memory_store",
+                    },
                 }
                 if self._config.organization_id:
                     payload["organization_id"] = self._config.organization_id
                 if self._config.project_scope:
-                    payload["metadata"] = {"project_scope": self._config.project_scope}
-
+                    payload["metadata"]["project_scope"] = self._config.project_scope
                 resp = client.post("/api/v1/memories", json=payload)
                 resp.raise_for_status()
                 data = resp.json()
@@ -580,6 +673,16 @@ class LanonasisMemoryProvider(MemoryProvider):
                 return data
             except Exception as e:
                 _logger.warning(f"[lanonasis] remote sync failed: {e}")
+                # Persist the pending write to the on-disk fallback so the
+                # next ``initialize()`` can replay it. This keeps the
+                # local-first / never-lose contract.
+                if payload is not None and self._fallback is not None:
+                    try:
+                        self._fallback.write(payload)
+                    except Exception as fb_err:
+                        _logger.warning(
+                            f"[lanonasis] fallback write also failed: {fb_err}"
+                        )
                 # Local write succeeded — still return success with local_only flag
                 return {
                     "stored": True,
@@ -703,8 +806,58 @@ class LanonasisMemoryProvider(MemoryProvider):
             _logger.warning(f"[lanonasis] sync_turn dispatch failed: {e}")
 
     def on_session_end(self, messages: List[Dict[str, Any]]) -> None:
-        """Force reasoning flush for this session's subject (non-blocking)."""
-        del messages  # accepted for contract; the flush hits the subject only
+        """Force reasoning flush for this session's subject (non-blocking).
+
+        Write policy (H2):
+        - The reasoning flush itself still runs (subject is the
+          canonical-session identifier, not a memory payload).
+        - We persist AT MOST ONE local session-synthesis row per session
+          as ``memory_class=summary``.
+        - Remote write of the synthesis is opt-in via
+          ``LANONASIS_HERMES_REMOTE_SESSION_SUMMARY=1``. When opted in,
+          the title is a real synthesis title (date + project + topic),
+          never the legacy literal ``"Session summary (pre-compress)"``.
+        """
+        # 1. Local synthesis — at most one per session. The dedup guard
+        #    inside ``_start_background_store`` is bypassed here because
+        #    we want exactly one row, but the dedup is per title and we
+        #    always use a date-based title. The one-per-session rule is
+        #    enforced below via a flag on the instance.
+        try:
+            if not getattr(self, "_session_synthesis_written", False):
+                summary_text = self._synthesize_session(messages)
+                if summary_text:
+                    self._start_background_store(
+                        summary_text, MEMORY_CLASS_SUMMARY
+                    )
+                    self._session_synthesis_written = True
+        except Exception as e:
+            _logger.warning(
+                f"[lanonasis] on_session_end local synthesis failed: {e}"
+            )
+
+        # 2. Optional remote synthesis (opt-in only).
+        try:
+            if (
+                os.environ.get(
+                    "LANONASIS_HERMES_REMOTE_SESSION_SUMMARY", ""
+                ).strip()
+                in ("1", "true", "yes", "on")
+            ):
+                summary_text = self._synthesize_session(messages)
+                if summary_text:
+                    title = self._session_synthesis_title(messages, summary_text)
+                    self._start_background_store_remote(
+                        summary_text,
+                        memory_class=MEMORY_CLASS_SUMMARY,
+                        title=title,
+                    )
+        except Exception as e:
+            _logger.warning(
+                f"[lanonasis] on_session_end remote synthesis dispatch failed: {e}"
+            )
+
+        # 3. Reasoning flush (unchanged contract).
         try:
             client = self._ensure_client()
             if client is None:
@@ -722,16 +875,83 @@ class LanonasisMemoryProvider(MemoryProvider):
                     f"[lanonasis] on_session_end dispatch failed: {e}"
                 )
 
-    def on_pre_compress(self, messages: List[Dict[str, Any]]) -> str:
-        """Write a summary memory before context compression.
+    def _synthesize_session(self, messages: List[Dict[str, Any]]) -> str:
+        """Cheap single-pass synthesis of a session for end-of-session storage.
 
-        Returns a string per the contract: a brief text summary that's
-        suitable to feed into the compression-summary prompt. The actual
-        write happens in the background (non-blocking).
+        Differs from ``_summarise_messages`` (which is the pre-compress
+        helper that returns the most recent ~10 lines). The synthesis
+        here is a single canonical summary line, suitable for a MaaS
+        memory row's title content.
+        """
+        if not messages:
+            return ""
+        last_user = next(
+            (
+                m for m in reversed(messages)
+                if m.get("role") == "user" and (m.get("content") or "").strip()
+            ),
+            None,
+        )
+        first_meaningful = ""
+        for m in messages:
+            content = m.get("content") or ""
+            if isinstance(content, list):
+                content = " ".join(
+                    c.get("text", "") for c in content if isinstance(c, dict)
+                )
+            content = str(content).strip()
+            # Skip tiny chatty turns.
+            if len(content.split()) >= 5:
+                first_meaningful = content[:240]
+                break
+        if not first_meaningful and last_user is not None:
+            content = last_user.get("content") or ""
+            if isinstance(content, list):
+                content = " ".join(
+                    c.get("text", "") for c in content if isinstance(c, dict)
+                )
+            first_meaningful = str(content).strip()[:240]
+        if not first_meaningful:
+            return ""
+        return f"Session topics: {first_meaningful}"
+
+    def _session_synthesis_title(
+        self, messages: List[Dict[str, Any]], summary_text: str
+    ) -> str:
+        """Build a real synthesis title for the remote memory row.
+
+        Format: ``Hermes session <date> — <project>: <first meaningful topic>``.
+        Never the legacy literal ``"Session summary (pre-compress)"``.
+        """
+        from datetime import datetime, timezone
+        today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        scope_type, scope_id = resolve_project_scope(
+            config_scope=getattr(self._config, "project_scope", None)
+        )
+        project = scope_id if scope_type == SCOPE_PROJECT else "hermes"
+        topic = (summary_text or "").replace("Session topics:", "").strip()
+        if len(topic) > 80:
+            topic = topic[:77] + "…"
+        return f"Hermes session {today} — {project}: {topic}"
+
+    def on_pre_compress(self, messages: List[Dict[str, Any]]) -> str:
+        """Return a summary string for the compression prompt.
+
+        Write policy (H2):
+        - The summary is still returned (per the contract) so Hermes can
+          feed it into the compression-summary prompt.
+        - The summary is persisted ONLY to the local store as
+          ``memory_class=working_context``. The remote MaaS bank is NEVER
+          written to from this hook — pre-compress is session-internal
+          working state, not a canonical memory.
+        - The legacy literal title ``"Session summary (pre-compress)"`` is
+          never stored; the local title is descriptive.
         """
         summary = self._summarise_messages(messages)
+        if not summary:
+            return ""
         try:
-            self._start_background_store(summary, "context")
+            self._start_background_store(summary, MEMORY_CLASS_WORKING_CONTEXT)
         except Exception as e:
             _logger.warning(
                 f"[lanonasis] on_pre_compress dispatch failed: {e}"
@@ -756,6 +976,9 @@ class LanonasisMemoryProvider(MemoryProvider):
     # ---- Private helpers --------------------------------------------------
     # ---- Turn-level content classification ---------------------------------
     # Patterns that signal the user wants to *store* knowledge, not just chat.
+    # NOTE: a 'credential' class used to live here. It was removed in the
+    # H2 write-policy refactor — a turn that mentions an api_key/secret/token
+    # must NEVER be auto-stored, even as raw_event.
     _STORE_SIGNALS: list[tuple[str, str]] = [
         # Explicit intent
         (r"\bremember(?:\s+that)?\s+", "remembered_fact"),
@@ -767,9 +990,8 @@ class LanonasisMemoryProvider(MemoryProvider):
         (r"\b(?:always\s+|never\s+|don't\s+|do\s+not\s+|convention|rule)", "convention"),
         # Explicit save/store intent
         (r"\b(?:save|store|keep|record|note)\s+(?:this|that|the\s+)", "stored_fact"),
-        # Key-value / URL / credential patterns
+        # Key-value / URL patterns  (NO credentials — see note above)
         (r"\b(?:url|endpoint|uri|href)\s*[=:]?\s*https?://", "reference_url"),
-        (r"\b(?:api[_-]?key|secret|token)\s*[=:]\s*\S", "credential"),
         # "The X is Y" / "X was Y" fact patterns
         (r"\b(?:the\s+\w+|it)\s+(?:is|was|became|remains|equals)\s+", "fact_statement"),
     ]
@@ -801,22 +1023,29 @@ class LanonasisMemoryProvider(MemoryProvider):
     ) -> None:
         """Daemon thread body for sync_turn — never raises.
 
-        Now filters each turn: only stores content that carries
-        recognisable signal (facts, preferences, conventions, URLs, etc.).
-        Chatty turns and short questions are silently skipped.
+        Write policy (H2):
+        - Raw turns go to the LOCAL FTS5 store as ``memory_class=raw_event``
+          by default. The remote MaaS bank is NOT written to.
+        - Opt-in remote writes are gated by ``LANONASIS_HERMES_REMOTE_RAW_TURNS=1``
+          and carry a scope envelope (memory_class=raw_event).
+        - The 'credential' store-signal class was removed entirely, so
+          a turn that ONLY mentions an api_key/secret/token is no longer
+          selected.
         """
         try:
             client = self._ensure_client()
-            if client is None or self._fallback is None:
-                return
             effective_session = session_id or self._session_id
+            remote_raw_opt_in = (
+                os.environ.get("LANONASIS_HERMES_REMOTE_RAW_TURNS", "").strip()
+                in ("1", "true", "yes", "on")
+            )
             for content, role in (
                 (user_content, "user"),
                 (assistant_content, "assistant"),
             ):
                 if not content or content.isspace():
                     continue
-                should_store, mtype = self._classify_turn_content(content)
+                should_store, _mtype = self._classify_turn_content(content)
                 if not should_store:
                     continue  # Skip chatty / short / question turns silently
                 redacted = self._protect_outbound(content)
@@ -825,14 +1054,57 @@ class LanonasisMemoryProvider(MemoryProvider):
                         f"[lanonasis] secrets redacted in sync_turn ({role}): "
                         f"{redacted.types}"
                     )
+                redacted_text = redacted.text
+
+                # Build the local-only payload first (this always happens).
+                local_payload = {
+                    "title": f"raw_event ({role}) {effective_session[:8] or 'no-session'}",
+                    "content": redacted_text,
+                    "tags": [
+                        "source:hermes",
+                        f"scope:session:{effective_session or 'no-session'}",
+                        f"class:{MEMORY_CLASS_RAW_EVENT}",
+                        f"role:{role}",
+                    ],
+                }
+                self._local_store_add(
+                    title=local_payload["title"],
+                    content=local_payload["content"],
+                    memory_type=MEMORY_CLASS_RAW_EVENT,
+                    tags=local_payload["tags"],
+                )
+
+                # Remote write is opt-in only.
+                if not remote_raw_opt_in or client is None or self._fallback is None:
+                    continue
+                env = build_envelope(
+                    memory_class=MEMORY_CLASS_RAW_EVENT,
+                    scope_type=SCOPE_SESSION,
+                    scope_id=effective_session or "no-session",
+                    session_id=effective_session,
+                )
+                # Dedup guard — raw turns can repeat; skip identical ones.
+                dedup = get_dedup_guard().check_and_record(
+                    title=local_payload["title"],
+                    content=redacted_text,
+                    session_id=effective_session,
+                )
+                if dedup:
+                    _logger.debug(
+                        "[lanonasis] sync_turn remote write skipped: %s", dedup
+                    )
+                    continue
                 payload = {
-                    "title": f"{mtype.title()} ({role})",
-                    "content": redacted.text,
+                    "title": local_payload["title"],
+                    "content": redacted_text,
                     "memory_type": "context",
+                    "tags": merge_envelope_into_tags(
+                        env, caller_tags=[f"role:{role}"]
+                    ),
                     "metadata": {
-                        "session_id": effective_session,
+                        **env.as_metadata(),
                         "role": role,
-                        "source": "hermes_sync_turn",
+                        "call_site": "hermes_sync_turn",
                     },
                 }
                 if self._config.organization_id:
@@ -862,20 +1134,95 @@ class LanonasisMemoryProvider(MemoryProvider):
     def _start_background_store(
         self, content: str, memory_type: str
     ) -> None:
-        """Daemon-thread wrapper for pre-compress / opportunistic writes."""
+        """Local-only background store for opportunistic writes.
+
+        Write policy (H2):
+        - Pre-compress summaries and other opportunistic writes are
+          PERSISTED TO THE LOCAL STORE ONLY. The remote MaaS bank is
+          never written from these code paths by default.
+        - Local rows carry a proper ``working_context`` / ``summary`` tag
+          set so the FTS5 store can find them later.
+        - The legacy literal title ``"Session summary (pre-compress)"`` is
+          no longer used anywhere; the title is derived from the source
+          hook and the date.
+        """
         redacted = self._protect_outbound(content)
         if redacted.secrets_found > 0:
             _logger.warning(
                 f"[lanonasis] secrets redacted in background store: "
                 f"{redacted.types}"
             )
+        redacted_text = redacted.text
+        # Build a descriptive local title. We deliberately do NOT use the
+        # legacy literal "Session summary (pre-compress)".
+        from datetime import datetime, timezone
+        today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        if memory_type == MEMORY_CLASS_WORKING_CONTEXT:
+            title = f"working_context {today} (pre-compress)"
+        elif memory_type == MEMORY_CLASS_SUMMARY:
+            title = f"summary {today} (session-end)"
+        else:
+            title = f"{memory_type} {today}"
+        tags = [
+            "source:hermes",
+            f"scope:session:{self._session_id or 'no-session'}",
+            f"class:{memory_type}",
+        ]
+        self._local_store_add(
+            title=title,
+            content=redacted_text,
+            memory_type=memory_type,
+            tags=tags,
+        )
+        # NOTE: We do NOT enqueue a remote write. Remote memory is the
+        # explicit ``memory_store`` tool's job; everything else is local
+        # working state. Operators who want session summaries on the
+        # remote bank must opt in via LANONASIS_HERMES_REMOTE_SESSION_SUMMARY
+        # in the explicit session-end handler.
+
+    def _start_background_store_remote(
+        self, content: str, memory_class: str, *, title: Optional[str] = None
+    ) -> None:
+        """Opt-in remote store for opportunistic writes (H2).
+
+        Currently used by ``on_session_end`` when
+        ``LANONASIS_HERMES_REMOTE_SESSION_SUMMARY=1`` is set. Pre-compress
+        never calls this — pre-compress is working context, not canonical.
+        """
+        redacted = self._protect_outbound(content)
+        if redacted.secrets_found > 0:
+            _logger.warning(
+                f"[lanonasis] secrets redacted in remote background store: "
+                f"{redacted.types}"
+            )
+        from datetime import datetime, timezone
+        today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        if not title:
+            title = f"summary {today} (session-end)"
+        dedup = get_dedup_guard().check_and_record(
+            title=title,
+            content=redacted.text,
+            session_id=self._session_id,
+        )
+        if dedup:
+            _logger.debug(
+                "[lanonasis] remote opportunistic write skipped: %s", dedup
+            )
+            return
+        env = build_envelope(
+            memory_class=memory_class,
+            scope_type=SCOPE_SESSION,
+            scope_id=self._session_id or "no-session",
+            session_id=self._session_id,
+        )
         payload = {
-            "title": "Session summary (pre-compress)",
+            "title": title,
             "content": redacted.text,
-            "memory_type": memory_type,
+            "memory_type": "context",
+            "tags": merge_envelope_into_tags(env),
             "metadata": {
-                "session_id": self._session_id,
-                "source": "hermes_on_pre_compress",
+                **env.as_metadata(),
+                "call_site": "hermes_opportunistic",
             },
         }
         if self._config.organization_id:
@@ -885,7 +1232,7 @@ class LanonasisMemoryProvider(MemoryProvider):
         self._start_background_write(
             self._run_store_payload,
             payload,
-            name="lanonasis-precompress",
+            name="lanonasis-opportunistic",
         )
 
     def _run_store_payload(self, payload: Dict[str, Any]) -> None:
@@ -967,9 +1314,18 @@ class LanonasisMemoryProvider(MemoryProvider):
             return []
 
     def _local_store_add(
-        self, title: str, content: str, memory_type: str = "context"
+        self,
+        title: str,
+        content: str,
+        memory_type: str = "context",
+        tags: Optional[List[str]] = None,
     ) -> Dict[str, Any]:
-        """Write a memory to the local store. Returns dict result."""
+        """Write a memory to the local store. Returns dict result.
+
+        ``tags`` (optional) is persisted as a JSON array and indexed by
+        the FTS5 ``tags`` column so callers can filter the local store
+        by envelope tags (e.g. ``class:working_context``).
+        """
         if self._local_store is None:
             return {"ok": False, "id": None, "reason": "local_store_unavailable"}
         try:
@@ -977,6 +1333,7 @@ class LanonasisMemoryProvider(MemoryProvider):
                 title=title,
                 content=content,
                 memory_type=memory_type,
+                tags=tags,
             )
         except Exception as e:
             _logger.warning(f"[lanonasis] local store add failed: {e}")

@@ -344,7 +344,9 @@ class TestProviderUsesHermesHomeForFallback:
         kwarg passed to ``initialize()`` — never from a hardcoded path.
 
         Live tests use ``tmp_path`` to avoid touching the real filesystem
-        under ``~/.hermes``.
+        under ``~/.hermes``. H2: the explicit ``memory_store`` tool is the
+        only default-remote write path; we trigger a fallback write by
+        forcing its post to fail.
         """
         hermes_home = tmp_path / "my_lana_profile"
         hermes_home.mkdir()
@@ -364,12 +366,18 @@ class TestProviderUsesHermesHomeForFallback:
             from hermes_lanonasis_memory import LanonasisMemoryProvider
             p = LanonasisMemoryProvider()
             p.initialize(session_id="s-1", hermes_home=str(hermes_home))
+            # H2: enable the explicit store tool after init (the config
+            # is reloaded from defaults inside ``initialize()``).
+            p._config.tool_policy = "write"
 
             # Force the next API call to fail so a fallback write fires.
-            # Use content with a store signal so it passes classification
-            # (short chatty turns are filtered before any API call).
+            # The explicit ``memory_store`` tool is now the only default-remote
+            # write path (H2). Raw turns (sync_turn) are local-only.
             p._client.post.side_effect = Exception("API down")
-            p.sync_turn("Remember that the project deadline is tomorrow", "Got it.")
+            p.handle_tool_call(
+                "memory_store",
+                {"title": "Project deadline tomorrow", "content": "must finish"},
+            )
             p.shutdown()
 
             expected_dir = hermes_home / "workspace" / "memory"
