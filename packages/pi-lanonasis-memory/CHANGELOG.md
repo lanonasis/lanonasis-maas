@@ -1,3 +1,43 @@
+## [1.0.2] — 2026-10-08
+
+Hygiene release. No runtime behaviour change unless
+`LANONASIS_PI_MEMORY_DEBUG=1` is set.
+
+### Added
+- **ESLint.** Flat `eslint.config.js` (eslint 9 + typescript-eslint
+  recommended) over `src/` and `tests/`, plus `lint` / `lint:fix` scripts.
+  Leading-underscore names count as intentionally unused, and
+  `no-non-null-assertion` is off for `tests/**` only. No Prettier.
+- **Coverage.** A `test:coverage` script uses `@vitest/coverage-v8` 5.0.3,
+  scoped to `src/**`. Measured: statements 86.45%, branches 75.27%,
+  functions 86.99%, lines 87.89%. Thresholds sit about 5 points lower
+  (81/70/82/82) and act as a regression guard. The default `test` script
+  is unchanged.
+- **`LANONASIS_PI_MEMORY_DEBUG=1`.** A new `src/debug.ts` `debugLog()`
+  writes errors that would otherwise be swallowed to stderr, one line each,
+  after passing them through the scanner redactor. It is wired into 20
+  catch blocks (MaaS search/health, sync enqueue, worker tick, SQLite
+  binding fallback, skills listing, SOUL bootstrap, and others). Off by
+  default; the helper never throws.
+
+### Changed
+- **`engines.node` is now `>=22.5`** (was `>=18`). `src/store/sqlite.ts`
+  only loads `bun:sqlite` or `node:sqlite`, with no `better-sqlite3`
+  path, and `node:sqlite` first shipped in Node 22.5.0. The README now
+  documents the supported runtimes and the `--experimental-sqlite` flag
+  needed on Node 22.5–22.12.
+- **`prepublishOnly`** now runs `bun run build && bun run test` (was npm),
+  matching the canonical `bun.lock`.
+- **`noUncheckedIndexedAccess: true`** in `tsconfig.json`. Two src sites
+  got real guards (`store/memory.ts` validation-message map,
+  `scanner/content-scanner.ts` first-secret-hit lookup); no `!` was added.
+- Removed unused imports and two inline `require("node:fs")` calls.
+
+### Corrected
+- The 1.0.1 entry below says `vitest.config.ts` forwards
+  `--experimental-sqlite` to workers. It does not, and never did. Tests
+  pick up `node:sqlite` unflagged on Node >= 22.13 (CI uses Node 22 LTS).
+
 ## [1.0.1] — 2026-10-06
 
 ### Fixed

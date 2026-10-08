@@ -1,6 +1,6 @@
 {
   "name": "@lanonasis/pi-lanonasis-memory",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "LanOnasis MaaS Memory \u2014 Pi extension that auto-captures assistant responses and corrected facts into a local SQLite FTS5 store, with optional MaaS federation for cross-device sync.",
   "entry": "./dist/index.js",
   "source": "./src/index.ts",
