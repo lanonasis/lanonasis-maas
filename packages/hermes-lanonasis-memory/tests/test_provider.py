@@ -204,9 +204,10 @@ class TestSyncTurnNonBlocking:
             user_content="Remember that the API key is abc123",
             assistant_content="I've noted that.",
         )
-        # Read local store BEFORE shutdown closes the DB.
-        records = provider._local_store.list_memories(limit=20)
+        # Drain the background write BEFORE reading the local store.
         provider.shutdown()
+        from hermes_lanonasis_memory.local_store import LocalMemoryStore
+        records = LocalMemoryStore(provider._local_store._path).list_memories(limit=20)
         # At least the user content matches a store signal → local row.
         assert any(
             r.title.startswith("raw_event") for r in records

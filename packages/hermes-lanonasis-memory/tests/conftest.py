@@ -61,8 +61,17 @@ def mock_config():
 
 
 @pytest.fixture
-def provider(mock_config):  # mock_httpx_client removed — provider fixture injects _client directly
-    """Return an initialized LanonasisMemoryProvider with mocked deps."""
+def provider(mock_config, tmp_path):  # mock_httpx_client removed — provider fixture injects _client directly
+    """Return an initialized LanonasisMemoryProvider with mocked deps.
+
+    H2 isolation: every test gets a fresh ``hermes_home`` directory
+    under ``tmp_path`` so the local FTS5 store starts empty and the
+    fallback writer writes into a per-test sub-directory. Without
+    this, prior tests' rows leak into later ones and the assertion
+    that "this test wrote X" is no longer reliable.
+    """
+    hermes_home = tmp_path / "hermes-home"
+    hermes_home.mkdir()
     with patch("hermes_lanonasis_memory.provider.LanOnasisClient") as MockClient:
         mock_instance = MagicMock()
         mock_instance.health_check.return_value = True
@@ -76,7 +85,7 @@ def provider(mock_config):  # mock_httpx_client removed — provider fixture inj
 
         from hermes_lanonasis_memory import LanonasisMemoryProvider
         p = LanonasisMemoryProvider()
-        p.initialize(session_id="test-session-001", hermes_home="/tmp/hermes-test")
+        p.initialize(session_id="test-session-001", hermes_home=str(hermes_home))
         # Overwrite the live config with our mock
         p._config = mock_config
         p._client = mock_instance

@@ -139,9 +139,12 @@ class TestSyncTurnLocalByDefault:
             user_content="Remember that the API key is <<LOOKUP_KEY>>",
             assistant_content="Noted.",
         )
-        # Read local store BEFORE shutdown closes the DB.
-        records = provider._local_store.list_memories(limit=20)
+        # Drain the background write thread BEFORE reading the local store
+        # so the in-flight SQLite commit from the daemon thread has landed.
         provider.shutdown()
+        # Open a fresh store on the same DB file for a race-free read.
+        from hermes_lanonasis_memory.local_store import LocalMemoryStore
+        records = LocalMemoryStore(provider._local_store._path).list_memories(limit=20)
         assert any(
             r.title.startswith("raw_event") or "raw_event" in (r.tags or [])
             for r in records
