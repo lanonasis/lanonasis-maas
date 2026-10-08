@@ -135,6 +135,51 @@ jobs:
         run: bun run test
 
   # ---------------------------------------------------------------------------
+  # Hermes Python plugin packages
+  #
+  # The three Hermes plugins are Python (pyproject.toml), so they are not in
+  # .github/release-packages.json and the JS `build` matrix never sees them.
+  # This job installs each package editable with its `test` extra into a
+  # clean venv and runs its pytest suite. Tests that need a Hermes runtime
+  # (agent.* imports) skip cleanly here by design.
+  #
+  # Python 3.11 matches the Hermes runtime venv; requires-python is >=3.10.
+  # ---------------------------------------------------------------------------
+  hermes-python-packages:
+    name: ${{ matrix.package }} (pytest)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    strategy:
+      fail-fast: false
+      matrix:
+        package:
+          - hermes-lanonasis-memory
+          - hermes-lanonasis-context-engine
+          - hermes-lanonasis-secret-source
+
+    defaults:
+      run:
+        working-directory: packages/${{ matrix.package }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install package with test deps
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e '.[test]'
+
+      - name: Test
+        run: python -m pytest -q -rs
+
+  # ---------------------------------------------------------------------------
   # pi-lanonasis-memory min-SDK guard
   #
   # Why this is its own job:
