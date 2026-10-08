@@ -27,7 +27,7 @@
  * mkdir -p wrapper.
  */
 
-import { mkdirSync, renameSync, writeFileSync, existsSync } from "node:fs";
+import { mkdirSync, renameSync, writeFileSync, existsSync, unlinkSync } from "node:fs";
 import { dirname } from "node:path";
 import { randomBytes } from "node:crypto";
 
@@ -208,7 +208,6 @@ export function atomicWrite(path: string, text: string): void {
   } catch (err) {
     try {
       // Best-effort cleanup; never mask the real error.
-      const { unlinkSync } = require("node:fs") as typeof import("node:fs");
       unlinkSync(tmp);
     } catch {
       // ignore

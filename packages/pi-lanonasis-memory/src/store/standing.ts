@@ -14,7 +14,7 @@
  * a single bullet's body (no leading `- `); we render it.
  */
 
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, unlinkSync } from "node:fs";
 import { join } from "node:path";
 
 import { scanForWrite } from "../scanner/scanner.js";
@@ -76,7 +76,6 @@ export class StandingStore {
     const next = entries.filter((_, i) => i !== index);
     if (next.length === 0) {
       // Drop the file entirely so an empty list maps to "no file".
-      const { unlinkSync } = require("node:fs") as typeof import("node:fs");
       try {
         unlinkSync(this.path);
       } catch {

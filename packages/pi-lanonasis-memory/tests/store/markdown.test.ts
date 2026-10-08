@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { mkdtempSync, rmSync, readFileSync } from "node:fs";
+import { mkdtempSync, rmSync, readFileSync, readdirSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -161,8 +161,7 @@ describe("atomicWrite", () => {
   it("does not leave temp files behind on success", () => {
     const path = join(dir, "note.md");
     atomicWrite(path, "x\n");
-    const fs = require("node:fs") as typeof import("node:fs");
-    expect(fs.readdirSync(dir).filter((n) => n.includes(".tmp-"))).toEqual([]);
+    expect(readdirSync(dir).filter((n) => n.includes(".tmp-"))).toEqual([]);
   });
 });
 

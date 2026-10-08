@@ -15,8 +15,6 @@
  * is never echoed.
  */
 
-import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
-
 import type { CommandDeps, CommandRegister } from "./types.js";
 
 export const register: CommandRegister = (pi, deps) => {

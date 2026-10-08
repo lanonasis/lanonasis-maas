@@ -364,7 +364,7 @@ async function forceOnline(h: Harness): Promise<void> {
     // far-future `now` so the gate is satisfied for any retry window
     // up to 300s. We may need a couple of attempts if the worker
     // retried mid-flight, so try once with a far-future now.
-    let remaining = h.queue.next(Date.now() + 5 * 60_000);
+    const remaining = h.queue.next(Date.now() + 5 * 60_000);
     expect(remaining).not.toBeNull();
     expect(remaining!.localId).toBe(idUpdate);
     // attempts may be >1 if the worker re-ticked during the wait;

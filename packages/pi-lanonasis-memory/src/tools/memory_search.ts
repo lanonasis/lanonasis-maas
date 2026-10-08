@@ -24,7 +24,7 @@ import type {
   ExtensionContext,
 } from "@earendil-works/pi-coding-agent";
 
-import { MemoryStore, type MemoryHit } from "../store/memory.js";
+import type { MemoryHit } from "../store/memory.js";
 import type { MemoryStoreLike } from "../store/memory.js";
 import type { MaaSAdapter, MaaSAdapter as _MaasAdapter } from "../deps.js";
 import { err, ok } from "./tool-result.js";

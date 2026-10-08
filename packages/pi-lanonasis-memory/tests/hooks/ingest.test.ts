@@ -9,7 +9,7 @@
  * tests that require a live Pi instance and are covered by the manual smoke test.
  */
 
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -17,10 +17,7 @@ import { join } from "node:path";
 // Import internals for unit testing (these are module-private; tests live
 // in the same package so they can access them via the test helper pattern).
 // We re-export them via the hooks index for testability.
-import {
-  buildIngestPipeline,
-  type IngestConfig,
-} from "../../src/hooks/ingest.js";
+import { buildIngestPipeline } from "../../src/hooks/ingest.js";
 import { MemoryStore } from "../../src/store/memory.js";
 
 describe("classifyMessage (via buildIngestPipeline)", () => {

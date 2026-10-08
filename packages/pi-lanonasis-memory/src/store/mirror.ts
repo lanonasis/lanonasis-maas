@@ -201,7 +201,7 @@ export class MirroredStore {
     if (!removed) return false;
     try {
       this.mirror.remove(id);
-    } catch (err) {
+    } catch {
       // Mirror failure on remove: best-effort. The SQLite row is gone
       // so a future rebuild from `list()` will reconcile.
     }

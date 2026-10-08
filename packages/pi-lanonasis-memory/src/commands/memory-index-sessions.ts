@@ -10,9 +10,7 @@
  * Per the brief: "if no sessions, message 'no sessions indexed yet'".
  */
 
-import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
-
-import type { CommandDeps, CommandRegister } from "./types.js";
+import type { CommandRegister } from "./types.js";
 
 export const register: CommandRegister = (pi, deps) => {
   pi.registerCommand("memory-index-sessions", {

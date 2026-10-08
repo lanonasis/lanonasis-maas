@@ -13,9 +13,7 @@
 import { createInterface } from "node:readline/promises";
 import { stdin as input, stdout as output } from "node:process";
 
-import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
-
-import type { CommandDeps, CommandRegister } from "./types.js";
+import type { CommandRegister } from "./types.js";
 import { addMemory } from "../tools/memory_add.js";
 import { categorizeReflection } from "./reflect-categorize.js";
 

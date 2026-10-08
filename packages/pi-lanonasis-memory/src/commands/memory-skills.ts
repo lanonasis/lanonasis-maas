@@ -9,9 +9,7 @@
  * Always pretty. Never throws.
  */
 
-import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
-
-import type { CommandDeps, CommandRegister } from "./types.js";
+import type { CommandRegister } from "./types.js";
 
 interface SkillEntry {
   slug: string;

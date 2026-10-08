@@ -13,8 +13,6 @@
  * Always tags with `origin:explicit` for the sync policy to honour.
  */
 
-import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
-
 import type { CommandDeps, CommandRegister } from "./types.js";
 import { searchMemory } from "../tools/memory_search.js";
 

@@ -11,8 +11,6 @@
  * we expose the latter for convenience when the user wants to bind it.
  */
 
-import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
-
 import type { CommandDeps, CommandRegister } from "./types.js";
 import { addMemory } from "../tools/memory_add.js";
 
