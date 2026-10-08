@@ -24,6 +24,8 @@
 import { chmodSync } from "node:fs";
 import { randomUUID } from "node:crypto";
 
+import { debugLog } from "../debug.js";
+
 import {
   scanForWrite,
   type ScannerMode,
@@ -114,12 +116,12 @@ export interface StoreOptions {
   mode?: ScannerMode;
 }
 
-const VALIDATION_ERROR_MESSAGES: Record<string, string> = {
+const VALIDATION_ERROR_MESSAGES = {
   target: `target must be one of: ${TARGETS.join(", ")}`,
   category: `category must be one of: ${CATEGORIES.join(", ")} (when provided)`,
   title: "title is required",
   content: "content is required",
-};
+} as const satisfies Record<string, string>;
 
 function validateInput(input: AddMemoryInput): string | null {
   if (!TARGETS.includes(input.target)) return VALIDATION_ERROR_MESSAGES.target;
@@ -521,8 +523,9 @@ function parseTags(tags: string | null): string[] | null {
     if (Array.isArray(parsed) && parsed.every((t) => typeof t === "string")) {
       return parsed as string[];
     }
-  } catch {
-    // fall through
+  } catch (err) {
+    // Corrupt tags JSON reads as "no tags" rather than failing the row.
+    debugLog("store.memory.parseTags", err);
   }
   return null;
 }

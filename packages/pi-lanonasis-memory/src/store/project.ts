@@ -60,6 +60,8 @@ export function resolveProject(cwd: string): ResolvedProject | null {
     if (toplevel.length === 0) throw new Error("empty toplevel");
     name = basename(toplevel);
   } catch {
+    // Expected outside a git checkout (or without git on PATH): fall
+    // back to the directory name.
     name = basename(cwd);
   }
 

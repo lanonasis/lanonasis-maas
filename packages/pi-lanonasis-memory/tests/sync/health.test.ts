@@ -22,7 +22,6 @@ import { HealthMonitor } from "../../src/sync/health.js";
 import type { MaasClient } from "../../src/sync/maas-client.js";
 
 let now = 0;
-let client: MaasClient;
 
 function fakeClient(behaviour: (n: number) => boolean): MaasClient {
   let n = 0;

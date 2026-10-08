@@ -32,6 +32,7 @@
 import type { MaasClient } from "./maas-client.js";
 import type { QueueRow, SyncQueue } from "./sync-queue.js";
 import type { HealthMonitor } from "./health.js";
+import { debugLog } from "../debug.js";
 
 export interface SyncWorkerOptions {
   queue: SyncQueue;
@@ -174,9 +175,10 @@ export class SyncWorker {
       const row = this.queue.next();
       if (!row) return;
       await this.run(row);
-    } catch {
+    } catch (err) {
       // Queue closed underneath us (session teardown) — never throw
       // out of an interval callback.
+      debugLog("sync.worker.tick", err);
     }
   }
 

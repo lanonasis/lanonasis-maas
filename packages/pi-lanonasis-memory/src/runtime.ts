@@ -17,6 +17,8 @@
 import { join } from "node:path";
 import { mkdirSync } from "node:fs";
 
+import { debugLog } from "./debug.js";
+
 import { MemoryStore, type MemoryRecord } from "./store/memory.js";
 import { MarkdownMirror, MirroredStore } from "./store/mirror.js";
 import { resolveProject, bootstrapSoul } from "./store/project.js";
@@ -158,7 +160,9 @@ export async function buildRuntime(opts: BuildRuntimeOptions = {}): Promise<Runt
               tags: Array.isArray(r.tags) ? (r.tags as string[]) : null,
               score: typeof r.score === "number" ? r.score : 0,
             }));
-          } catch {
+          } catch (err) {
+            // Remote enrichment is optional; local results still stand.
+            debugLog("runtime.maas.search", err);
             return [];
           }
         },
@@ -194,7 +198,8 @@ export async function buildRuntime(opts: BuildRuntimeOptions = {}): Promise<Runt
       onSynced: (localId, maasId) => {
         try {
           store.markSynced(localId, maasId);
-        } catch {
+        } catch (err) {
+          debugLog("runtime.sync.markSynced", err);
           // Store may already be closed — tolerate it; the next session
           // opens the same row and the MaaS-side id survives.
         }
@@ -222,7 +227,10 @@ export async function buildRuntime(opts: BuildRuntimeOptions = {}): Promise<Runt
               payload: { title: "", content: "", tags: [], type: "memory", maasId },
               origin: input.origin,
             });
-          } catch {}
+          } catch (err) {
+            // Delete propagation is best-effort; the local row is already gone.
+            debugLog("runtime.sync.enqueueDelete", err);
+          }
           return;
         }
         const record: MemoryRecord | null = store.get(input.localId);
@@ -244,8 +252,9 @@ export async function buildRuntime(opts: BuildRuntimeOptions = {}): Promise<Runt
             },
             origin: input.origin,
           });
-        } catch {
+        } catch (err) {
           // queue.enqueue throws only on a JSON.stringify failure; tolerate.
+          debugLog("runtime.sync.enqueue", err);
         }
       },
       async status(): Promise<SyncStatus> {
@@ -281,8 +290,9 @@ export async function buildRuntime(opts: BuildRuntimeOptions = {}): Promise<Runt
     onWrite: (_input, id) => {
       try {
         sync.enqueue({ localId: id, op: "create", origin: "auto" });
-      } catch {
+      } catch (err) {
         // never break the ingest loop
+        debugLog("runtime.ingest.onWrite", err);
       }
     },
   });
@@ -330,8 +340,9 @@ export async function buildRuntime(opts: BuildRuntimeOptions = {}): Promise<Runt
   if (!opts.skipSoulBootstrap && opts.cwd && projectRoot !== undefined) {
     try {
       bootstrapSoul(projectRoot, opts.cwd, store);
-    } catch {
-      // ignore
+    } catch (err) {
+      // Never block session_start on an unparsable SOUL.md (see above).
+      debugLog("runtime.bootstrapSoul", err);
     }
   }
 

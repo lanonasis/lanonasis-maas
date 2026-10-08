@@ -29,6 +29,7 @@ import type {
   BeforeAgentStartEventResult,
   ExtensionAPI,
 } from "@earendil-works/pi-coding-agent";
+import { debugLog } from "../debug.js";
 
 export type InjectionMode = "policy-only" | "legacy-inject";
 
@@ -230,7 +231,9 @@ export function registerSystemPromptInjection(
         const contextEntries =
           mode === "legacy-inject" && deps.getContextEntries ? deps.getContextEntries() : undefined;
         return { systemPrompt: injectSystemPrompt(event.systemPrompt, { standing, mode, contextEntries }) };
-      } catch {
+      } catch (err) {
+        // Never throw into Pi: fall back to the unmodified system prompt.
+        debugLog("injection.beforeAgentStart", err);
         return undefined;
       }
     },

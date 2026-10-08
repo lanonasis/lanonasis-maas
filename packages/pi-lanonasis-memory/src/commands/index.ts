@@ -18,14 +18,14 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import type { CommandDeps, CommandRegister } from "./types.js";
 
-import { register as _registerMemorySearch, parseSearchArgs } from "./memory-search.js";
+import { register as _registerMemorySearch } from "./memory-search.js";
 import { register as _registerReflect } from "./reflect.js";
-import { register as _registerMemorySave, runSave } from "./memory-save.js";
-import { register as _registerMemorySkills, loadSkills } from "./memory-skills.js";
-import { register as _registerMemoryPin, resolveId } from "./memory-pin.js";
+import { register as _registerMemorySave } from "./memory-save.js";
+import { register as _registerMemorySkills } from "./memory-skills.js";
+import { register as _registerMemoryPin } from "./memory-pin.js";
 import { register as _registerMemoryPreviewContext } from "./memory-preview-context.js";
 import { register as _registerMemoryInterview } from "./memory-interview.js";
-import { register as _registerMemoryIndexSessions, indexSessions } from "./memory-index-sessions.js";
+import { register as _registerMemoryIndexSessions } from "./memory-index-sessions.js";
 import { register as _registerMemorySync } from "./memory-sync.js";
 
 export { parseSearchArgs } from "./memory-search.js";

@@ -22,7 +22,6 @@ import type {
 } from "@earendil-works/pi-coding-agent";
 
 import {
-  MemoryStore,
   type AddMemoryInput,
   type MemoryStoreLike,
   type MemoryCategory,

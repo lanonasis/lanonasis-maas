@@ -19,7 +19,6 @@ import type {
   ExtensionContext,
 } from "@earendil-works/pi-coding-agent";
 
-import { MemoryStore } from "../store/memory.js";
 import type { MemoryStoreLike } from "../store/memory.js";
 import type { SyncAdapter } from "../deps.js";
 import { err, ok } from "./tool-result.js";

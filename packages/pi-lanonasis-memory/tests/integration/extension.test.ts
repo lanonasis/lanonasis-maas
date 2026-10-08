@@ -7,7 +7,7 @@
  * root. Each test opens an isolated store path.
  */
 
-import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+import { describe, it, expect, beforeEach, afterEach } from "vitest";
 
 import extensionFactory, { __resetForTests } from "../../src/index.js";
 import { SCHEMA_VERSION } from "../../src/store/schema.js";

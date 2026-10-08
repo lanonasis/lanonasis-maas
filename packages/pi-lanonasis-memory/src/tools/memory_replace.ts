@@ -22,7 +22,7 @@ import type {
   ExtensionContext,
 } from "@earendil-works/pi-coding-agent";
 
-import { MemoryStore, type AddMemoryInput } from "../store/memory.js";
+import type { AddMemoryInput } from "../store/memory.js";
 import type { MemoryStoreLike } from "../store/memory.js";
 import { scanForWrite } from "../scanner/scanner.js";
 import type { SyncAdapter } from "../deps.js";

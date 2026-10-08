@@ -5,11 +5,7 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 
 import { register as registerMemorySync } from "../../src/commands/memory-sync.js";
-import {
-  FakeCommandCtx,
-  FakePi,
-  type StoreHandle,
-} from "../test-helpers.js";
+import { FakeCommandCtx, FakePi } from "../test-helpers.js";
 import type { CommandDeps } from "../../src/commands/types.js";
 
 describe("/memory-sync", () => {

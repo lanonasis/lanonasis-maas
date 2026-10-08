@@ -115,8 +115,8 @@ export function scanContent(content: string): ScanVerdict {
       secretHits.push({ id, severity });
     }
   }
-  if (secretHits.length > 0) {
-    const first = secretHits[0];
+  const [first] = secretHits;
+  if (first) {
     return {
       blocked: `Blocked: content looks like a ${first.severity}-severity credential or secret ('${first.id}'). Never persist API keys, tokens, or passwords to memory. Use an .env file or secrets manager instead.`,
       secretHits,

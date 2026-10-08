@@ -1,9 +1,9 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { mkdtempSync, rmSync, writeFileSync, readFileSync } from "node:fs";
+import { mkdtempSync, rmSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { StandingStore, MAX_ENTRIES, MAX_CHARS } from "../../src/store/standing.js";
+import { StandingStore, MAX_ENTRIES } from "../../src/store/standing.js";
 
 const ANTHROPIC_FIXTURE =
   String.fromCharCode(115, 107, 45, 97, 110, 116, 45) + "api" + "a".repeat(20);

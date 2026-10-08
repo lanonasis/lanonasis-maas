@@ -7,9 +7,7 @@
  * Per the brief: "no LLM call" — this is a pure read from the store.
  */
 
-import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
-
-import type { CommandDeps, CommandRegister } from "./types.js";
+import type { CommandRegister } from "./types.js";
 
 export const register: CommandRegister = (pi, deps) => {
   pi.registerCommand("memory-preview-context", {
