@@ -164,3 +164,15 @@ testsprite_tests/    # generated test scaffolding with hard-coded creds; was tra
 
 # vitest JSON reports
 **/.vitest/
+
+# hermes-lanonasis-memory local plugin config (carries operator credentials)
+# Source: #174 leak — never commit a real API key to a public repo.
+packages/hermes-lanonasis-memory/hermes_lanonasis_memory/config.json
+
+# Generic local plugin config.json pattern — never commit per-machine
+# plugin configs into the Hermes packages, the dashboard, or any IDE ext.
+**/plugins/**/config.json
+
+# Dashboard Playwright transient results — keep specs, drop the run JSON.
+dashboard/test-results/
+dashboard/playwright-report/

@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import Button from '@/components/ui/Button';
+import { ToastViewport, type ToastMsg } from '@/components/ui/Toast';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -45,6 +46,17 @@ import { OnboardingPanel } from './OnboardingPanel';
 import { GuidedTourOverlay, type GuidedTourStep } from './GuidedTourOverlay';
 import { VirtualSectionList, type VirtualItem } from './VirtualSectionList';
 import type { Memory, MemoryStatus, MemoryUpdateInput } from '../shared/types';
+import {
+  deletedSuccessToast,
+  updatedSuccessToast,
+  deleteErrorToast,
+  updateErrorToast,
+  deleteTimeoutToast,
+} from '../utils/toastCopy';
+
+// Tracks the 15s window for a delete or update that the host hasn't
+// heard back about yet. Each entry is keyed by memory.id.
+const DELETE_TIMEOUT_MS = 15_000;
 
 // Chat message type for history
 interface ChatMessage {
@@ -224,6 +236,35 @@ export const IDEPanel = () => {
   const [pendingDelete, setPendingDelete] = useState<Memory | null>(null);
   const [isOnline, setIsOnline] = useState(() => navigator.onLine);
 
+  // UI-only state for the new Toast/MemoryCard pending flows.
+  const [toasts, setToasts] = useState<ToastMsg[]>([]);
+  const [deletingIds, setDeletingIds] = useState<Set<string>>(new Set());
+  const [savingIds, setSavingIds] = useState<Set<string>>(new Set());
+  const [updateErrors, setUpdateErrors] = useState<Record<string, string>>({});
+  // Snapshot of recently-deleted memories for the Undo toast (AC-T4).
+  const [deletedSnapshots, setDeletedSnapshots] = useState<Map<string, Memory>>(() => new Map());
+  // Last successful update snapshot, so a Retry after a failure restores
+  // the same draft the user was working with (AC-O3).
+  const lastUpdatesRef = useRef<Map<string, MemoryUpdateInput>>(new Map());
+
+  const deleteTimeoutsRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+  const saveTimeoutsRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+
+  // Toast helpers — these replace the host's responsibility for AC-T1..T6.
+  const pushToast = useCallback((toast: Omit<ToastMsg, 'id'>) => {
+    setToasts((prev) => {
+      const next: ToastMsg = {
+        ...toast,
+        id: `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+      };
+      return [...prev, next];
+    });
+  }, []);
+
+  const dismissToast = useCallback((id: string) => {
+    setToasts((prev) => prev.filter((t) => t.id !== id));
+  }, []);
+
   // Define trimmedQuery early to avoid TDZ issues in useMemo dependencies
   const trimmedQuery = searchQuery.trim();
 
@@ -362,8 +403,42 @@ export const IDEPanel = () => {
   }, [setSearchQuery, updateRecentSearches]);
 
   const handleDeleteRequest = useCallback((memory: Memory) => {
-    setPendingDelete(memory);
-  }, []);
+    // AC-C1: clicking the dropdown Delete item posts `confirmDeleteMemory`,
+    // never `deleteMemory`. The provider is responsible for the actual
+    // vscode.window.showWarningMessage modal (see EnhancedSidebarProvider
+    // `handleConfirmDeleteMemory`). Until the user confirms, we mark the
+    // card as pending so the UI shows reduced opacity + a spinner (AC-O1).
+    setDeletingIds((prev) => {
+      const next = new Set(prev);
+      next.add(memory.id);
+      return next;
+    });
+    setDeletedSnapshots((prev) => {
+      const next = new Map(prev);
+      next.set(memory.id, memory);
+      return next;
+    });
+    postMessage('confirmDeleteMemory', { id: memory.id, title: memory.title });
+
+    // 15s window — if no `memoryDeleted` arrives, surface the timeout toast.
+    if (deleteTimeoutsRef.current.has(memory.id)) {
+      clearTimeout(deleteTimeoutsRef.current.get(memory.id)!);
+    }
+    const timeoutId = setTimeout(() => {
+      // If the timeout fires and the row is still considered deleting,
+      // either the user cancelled (no `memoryDeleted` will arrive) or the
+      // request hung. In either case, drop pending state and surface a toast.
+      setDeletingIds((prev) => {
+        if (!prev.has(memory.id)) return prev;
+        const next = new Set(prev);
+        next.delete(memory.id);
+        return next;
+      });
+      deleteTimeoutsRef.current.delete(memory.id);
+      pushToast(deleteTimeoutToast());
+    }, DELETE_TIMEOUT_MS);
+    deleteTimeoutsRef.current.set(memory.id, timeoutId);
+  }, [postMessage, pushToast]);
 
   const handleConfirmDelete = useCallback(() => {
     if (!pendingDelete) return;
@@ -374,6 +449,86 @@ export const IDEPanel = () => {
   const handleCancelDelete = useCallback(() => {
     setPendingDelete(null);
   }, []);
+
+  // Legacy helper retained for non-confirm deletion paths; clears pending UI.
+  const clearDeletePending = useCallback((id: string) => {
+    setDeletingIds((prev) => {
+      if (!prev.has(id)) return prev;
+      const next = new Set(prev);
+      next.delete(id);
+      return next;
+    });
+    const t = deleteTimeoutsRef.current.get(id);
+    if (t) {
+      clearTimeout(t);
+      deleteTimeoutsRef.current.delete(id);
+    }
+  }, []);
+
+  const handleCommitEdit = useCallback((memory: Memory, updates: MemoryUpdateInput) => {
+    lastUpdatesRef.current.set(memory.id, updates);
+    setSavingIds((prev) => {
+      const next = new Set(prev);
+      next.add(memory.id);
+      return next;
+    });
+    // Clear any prior error for this card — the user is committing again.
+    setUpdateErrors((prev) => {
+      if (!(memory.id in prev)) return prev;
+      const next = { ...prev };
+      delete next[memory.id];
+      return next;
+    });
+    postMessage('updateMemory', { id: memory.id, updates });
+  }, [postMessage]);
+
+  const handleRetryUpdate = useCallback((memory: Memory, updates: MemoryUpdateInput) => {
+    // AC-O3: a Retry re-issues the EXACT same draft — don't read from
+    // `memory` props. Just keep the existing draft in the card and re-post.
+    handleCommitEdit(memory, updates);
+  }, [handleCommitEdit]);
+
+  const handleSaveStarted = useCallback((_memory: Memory) => {
+    // Hook for future telemetry; the 15s timeout is owned by the card.
+  }, []);
+
+  const handleToastAction = useCallback((toast: ToastMsg) => {
+    if (!toast.action) return;
+    const action = toast.action;
+    if (action.command === 'undo') {
+      // AC-T4: post `restoreMemory` with the React-side snapshot.
+      // Find which memory.id this toast corresponds to by matching the
+      // truncated title against any of our cached snapshots.
+      let snapshotId: string | null = null;
+      let snapshot: Memory | null = null;
+      deletedSnapshots.forEach((mem, id) => {
+        if (snapshot) return;
+        const expected = `Deleted "${mem.title.length > 60 ? mem.title.slice(0, 57) + '…' : mem.title}"`;
+        if (expected === toast.message) {
+          snapshotId = id;
+          snapshot = mem;
+        }
+      });
+      if (snapshotId && snapshot) {
+        postMessage('restoreMemory', { id: snapshotId, snapshot });
+      }
+    } else if (action.command === 'retry') {
+      if (action.payload === 'authenticate') {
+        postMessage('authenticate');
+      } else if (typeof toast.message === 'string' && toast.message.startsWith('Could not delete')) {
+        // Retry a delete — re-issue confirmDeleteMemory for the snapshot we
+        // still have. The user will get a fresh confirmation modal.
+        deletedSnapshots.forEach((mem) => {
+          postMessage('confirmDeleteMemory', { id: mem.id, title: mem.title });
+        });
+      } else {
+        // Generic refresh: trigger the getMemories fallback.
+        refresh();
+      }
+    } else if (action.command === 'open' && action.payload === 'authenticate') {
+      postMessage('authenticate');
+    }
+  }, [deletedSnapshots, postMessage, refresh]);
 
   // Callbacks moved before virtualItems useMemo to prevent TDZ errors
   const toggleTypeSection = useCallback((type: string) => {
@@ -397,12 +552,14 @@ export const IDEPanel = () => {
     [postMessage],
   );
 
-  const handleEditMemory = useCallback(
-    (memory: Memory, updates: MemoryUpdateInput) => {
-      postMessage('updateMemory', { id: memory.id, updates });
-    },
-    [postMessage],
-  );
+  const handleEditMemoryOpened = useCallback((_memory: Memory) => {
+    // Hook for future telemetry; the card is already in edit mode.
+  }, []);
+
+  // Legacy alias kept so existing call sites that bind `onEdit` still work.
+  // MemoryCard's `onEdit` is now an "edit mode started" notification; the
+  // actual commit fires through `onCommitEdit`.
+  const handleEditMemory = handleEditMemoryOpened;
 
   useEffect(() => {
     const query = searchQuery.trim();

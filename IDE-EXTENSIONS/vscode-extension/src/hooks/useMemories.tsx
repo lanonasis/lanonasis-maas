@@ -63,6 +63,31 @@ export function useMemories(initialMemories: Memory[] = []): UseMemoriesReturn {
         setError(typeof message.data === 'string' ? message.data : 'An error occurred');
         setIsLoading(false);
         initialLoadDone.current = true;
+      } else if (message.type === 'memoryDeleted') {
+        // Incremental delete (AC-R1): remove the entry by id without re-requesting.
+        const id = message.data?.id;
+        if (typeof id === 'string' && id.length > 0) {
+          setMemories(prev => prev.filter(m => m.id !== id));
+        }
+      } else if (message.type === 'memoryUpdated') {
+        // Incremental update (AC-R1): replace the matching entry by id via the
+        // canonical prototype -> view-model converter. Do not re-request; do
+        // not touch searchQuery (filteredMemories recomputes via the memo).
+        const updated = message.data as PrototypeMemory | undefined;
+        if (updated && typeof updated.id === 'string') {
+          setMemories(prev =>
+            prev.map(m => (m.id === updated.id ? prototypeMemoryToMemory(updated) : m))
+          );
+        }
+      } else if (message.type === 'updateMemoryFailed') {
+        // AC-R4: surface the failure message on the existing error channel
+        // so an inline card error can read it. The card keeps its draft
+        // locally; toasts come from the dedicated `error` channel / Toast
+        // component, not from this hook.
+        const msg = message.data?.message;
+        if (typeof msg === 'string' && msg.length > 0) {
+          setError(msg);
+        }
       }
     };
 
