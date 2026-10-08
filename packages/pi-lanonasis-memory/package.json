@@ -1,7 +1,7 @@
 {
   "name": "@lanonasis/pi-lanonasis-memory",
   "version": "1.0.1",
-  "description": "LanOnasis Memory \u2014 Pi extension that wires LanOnasis MaaS persistent memory into a coding session. Local-first (Markdown + SQLite FTS5) with MaaS federation for cross-device sync and profile intelligence. Port of the pi-hermes-memory patterns to LanOnasis.",
+  "description": "LanOnasis Memory — Pi extension that wires LanOnasis MaaS persistent memory into a coding session. Local-first (Markdown + SQLite FTS5) with MaaS federation for cross-device sync and profile intelligence. Port of the pi-hermes-memory patterns to LanOnasis.",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -32,6 +32,7 @@
     "lint:fix": "eslint src tests --fix",
     "test": "vitest run --config vitest.config.ts",
     "test:watch": "vitest --config vitest.config.ts",
+    "test:coverage": "vitest run --config vitest.config.ts --coverage",
     "check:min-sdk": "node scripts/check-min-sdk.mjs",
     "prepublishOnly": "npm run build && npm test"
   },
@@ -55,6 +56,7 @@
     "@earendil-works/pi-coding-agent": "^1.0.4",
     "@eslint/js": "^9.39.5",
     "@types/node": "^20.11.0",
+    "@vitest/coverage-v8": "^5.0.3",
     "eslint": "^9.39.5",
     "typescript": "^5.4.0",
     "typescript-eslint": "^8.71.1",
