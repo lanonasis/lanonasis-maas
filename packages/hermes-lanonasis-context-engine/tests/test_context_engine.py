@@ -84,6 +84,7 @@ class TestFailOpen:
         engine.context_length = 0
         assert engine.should_compress(prompt_tokens=10_000) is False
 
+    @requires_hermes  # update_model() is inherited from the host ContextEngine ABC
     def test_should_compress_true_at_threshold(self, engine):
         engine.context_length = 100_000
         engine.update_model("test-model", 100_000)

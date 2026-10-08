@@ -129,6 +129,7 @@ class TestWireframeBehavior:
                     "timeout_seconds"):
             assert key in schema, f"config_schema missing '{key}'"
 
+    @requires_hermes  # remediation() keys off ErrorKind.value; the offline stub passes bare strings
     def test_remediation_for_not_configured(self, source):
         # The real contract passes the ErrorKind enum, not a string.
         kind = ErrorKind.NOT_CONFIGURED if HAS_HERMES else "not_configured"
