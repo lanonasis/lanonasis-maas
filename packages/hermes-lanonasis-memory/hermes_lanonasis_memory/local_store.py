@@ -179,7 +179,18 @@ class LocalMemoryStore:
     def __init__(self, db_path: str, mode: str = "block") -> None:
         self._path = db_path
         self._mode = mode
-        conn = sqlite3.connect(str(db_path))
+        # ``check_same_thread=False`` is safe here because every call into
+        # ``self._conn`` is a short statement committed immediately, and
+        # SQLite serializes writers at the file level. The provider's
+        # background write threads (sync_turn, on_pre_compress,
+        # on_session_end) all need to write to the same store from their
+        # own threads, and a per-thread connection would require a
+        # global lock — simpler to let SQLite serialize.
+        conn = sqlite3.connect(
+            str(db_path),
+            check_same_thread=False,
+            timeout=10.0,
+        )
         conn.execute("PRAGMA journal_mode=WAL")
         conn.execute("PRAGMA foreign_keys=ON")
         self._conn = conn

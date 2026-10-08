@@ -10,6 +10,32 @@ def isolate_api_key_environment(monkeypatch):
     monkeypatch.delenv("LANONASIS_API_KEY", raising=False)
 
 
+@pytest.fixture(autouse=True)
+def reset_dedup_guard():
+    """Reset the process-wide DedupGuard between tests.
+
+    H2: ``DedupGuard`` is a module-level singleton so repeated tests in
+    the same ``pytest`` process would otherwise see each other's prior
+    writes. Each test starts with a clean dedup state.
+    """
+    from hermes_lanonasis_memory import scope
+    scope.get_dedup_guard().reset()
+    yield
+    scope.get_dedup_guard().reset()
+
+
+@pytest.fixture(autouse=True)
+def isolate_hermes_opt_in_env(monkeypatch):
+    """Make sure H2 opt-in env vars are absent unless a test sets them."""
+    for key in (
+        "LANONASIS_HERMES_REMOTE_RAW_TURNS",
+        "LANONASIS_HERMES_REMOTE_SESSION_SUMMARY",
+        "LANONASIS_HERMES_SCOPE_TYPE",
+        "LANONASIS_HERMES_SCOPE_ID",
+    ):
+        monkeypatch.delenv(key, raising=False)
+
+
 @pytest.fixture
 def mock_httpx_client():
     """Return a MagicMock that behaves like an httpx.Client."""

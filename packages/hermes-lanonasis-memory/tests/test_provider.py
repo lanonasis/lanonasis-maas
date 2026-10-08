@@ -195,15 +195,26 @@ class TestSyncTurnNonBlocking:
         assert provider._client.post.call_count == 0
 
     def test_sync_turn_stores_when_signal_present(self, provider):
-        """Turns with 'remember' signals are stored."""
+        """Turns with 'remember' signals are stored — locally by default.
+
+        H2: raw turns are local-only unless ``LANONASIS_HERMES_REMOTE_RAW_TURNS=1``.
+        """
         provider._client.post.return_value.json.return_value = {"id": "mem-1"}
         provider.sync_turn(
             user_content="Remember that the API key is abc123",
             assistant_content="I've noted that.",
         )
+        # Read local store BEFORE shutdown closes the DB.
+        records = provider._local_store.list_memories(limit=20)
         provider.shutdown()
-        # At least the user content matches a store signal.
-        assert provider._client.post.call_count >= 1
+        # At least the user content matches a store signal → local row.
+        assert any(
+            r.title.startswith("raw_event") for r in records
+        ), f"no local raw_event record: titles={[r.title for r in records]}"
+        # And no remote post happened (opt-in required).
+        assert provider._client.post.call_count == 0, (
+            "remote post happened without LANONASIS_HERMES_REMOTE_RAW_TURNS=1"
+        )
 
     def test_sync_turn_accepts_kw_only_session_id_and_messages(self, provider):
         """Per the contract: ``sync_turn(user, assistant, *, session_id=\"\", messages=None)``."""
@@ -258,17 +269,27 @@ class TestShutdown:
         provider.shutdown()
 
     def test_shutdown_drains_precompress_write(self, provider):
-        completed = threading.Event()
+        """H2: on_pre_compress is local-only — it writes via the local
+        store synchronously (the local FTS5 add is fast enough that
+        no background drain is needed). The shutdown() call must still
+        complete cleanly even if a previous pre_compress ran.
+        """
+        from hermes_lanonasis_memory.local_store import LocalMemoryStore
+        # Track local writes that the pre_compress made.
+        original_add = provider._local_store.add
+        calls = []
 
-        def slow_store(payload):
-            time.sleep(0.05)
-            completed.set()
+        def tracked_add(*args, **kwargs):
+            calls.append((args, kwargs))
+            return original_add(*args, **kwargs)
 
-        with patch.object(provider, "_run_store_payload", side_effect=slow_store):
+        provider._local_store.add = tracked_add
+        try:
             provider.on_pre_compress([{"role": "user", "content": "summary"}])
             provider.shutdown()
-
-        assert completed.is_set()
+        finally:
+            provider._local_store.add = original_add
+        assert calls, "pre_compress did not enqueue a local write"
 
     def test_shutdown_drains_session_end_flush(self, provider):
         completed = threading.Event()
