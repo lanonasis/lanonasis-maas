@@ -18,6 +18,9 @@ test = [
   "pytest>=8.0.0",
 ]
 
+[project.urls]
+Repository = "https://github.com/lanonasis/lanonasis-maas"
+
 # Register the package with Hermes' pip-installed plugin discovery.
 # This is one of two supported install paths (the other is dropping the
 # package directory directly under $HERMES_HOME/plugins/memory/<name>/).

@@ -15,6 +15,9 @@ test = [
     "pytest>=8.0",
 ]
 
+[project.urls]
+Repository = "https://github.com/lanonasis/lanonasis-maas"
+
 [project.entry-points."hermes_agent.plugins"]
 lanonasis-context = "hermes_lanonasis_context_engine"
 
