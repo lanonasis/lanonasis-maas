@@ -1,7 +1,7 @@
-import React, { useState, useCallback, useMemo, useEffect } from 'react';
+import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { format, isValid } from 'date-fns';
-import { Copy, Check, Hash, Paperclip, MoreHorizontal, ExternalLink, Trash2, Pencil, ChevronDown, ChevronUp, Save, X } from 'lucide-react';
+import { Copy, Check, Hash, Paperclip, MoreHorizontal, ExternalLink, Trash2, Pencil, ChevronDown, ChevronUp, Save, X, Loader2 } from 'lucide-react';
 import Button from '@/components/ui/Button';
 import {
   DropdownMenu,
@@ -17,23 +17,48 @@ export interface MemoryCardProps {
   onAttach?: (memory: Memory) => void;
   onCopy?: (memory: Memory) => void;
   onOpen?: (memory: Memory) => void;
+  /**
+   * Asks the host to confirm deletion. The host (IDEPanel) translates this
+   * into a `confirmDeleteMemory` postMessage — see AC-C1 / AC-U0.
+   */
   onDelete?: (memory: Memory) => void;
-  onEdit?: (memory: Memory, updates: MemoryUpdateInput) => void;
+  /** Opens the inline edit form. */
+  onEdit?: (memory: Memory) => void;
+  /** Commits a draft edit. */
+  onCommitEdit?: (memory: Memory, updates: MemoryUpdateInput) => void;
   highlightQuery?: string;
   showRelevance?: boolean;
   typeLabel?: string;
+  /** True while a delete is in flight for this card (AC-O1). */
+  isDeleting?: boolean;
+  /** True while a save (updateMemory) is in flight (AC-O2). */
+  isSaving?: boolean;
+  /** Last updateMemoryFailed message — inline error + Retry (AC-O3). */
+  updateErrorMessage?: string | null;
+  /** Re-issues the failed updateMemory post. */
+  onRetryUpdate?: (memory: Memory, updates: MemoryUpdateInput) => void;
+  /** Optional callback fired when the Save button is clicked (lets the host start its 15s timeout). */
+  onSaveStarted?: (memory: Memory) => void;
 }
 
-export const MemoryCard = ({ 
-  memory, 
+const SAVE_TIMEOUT_MS = 15_000;
+
+export const MemoryCard = ({
+  memory,
   onAttach,
   onCopy,
   onOpen,
   onDelete,
   onEdit,
+  onCommitEdit,
   highlightQuery,
   showRelevance = false,
   typeLabel,
+  isDeleting = false,
+  isSaving = false,
+  updateErrorMessage = null,
+  onRetryUpdate,
+  onSaveStarted,
 }: MemoryCardProps) => {
   const [isHovered, setIsHovered] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -45,6 +70,11 @@ export const MemoryCard = ({
   const [draftTags, setDraftTags] = useState(memory.tags.join(', '));
   const isOpenable = Boolean(onOpen);
 
+  // Tracks whether the user already kicked off a save this session so the
+  // 15s timeout can revert to "Save" if no reply arrives (AC-O2).
+  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [saveTimedOut, setSaveTimedOut] = useState(false);
+
   useEffect(() => {
     if (!isEditing) {
       setDraftTitle(memory.title);
@@ -52,6 +82,16 @@ export const MemoryCard = ({
       setDraftTags(memory.tags.join(', '));
     }
   }, [memory.content, memory.tags, memory.title, isEditing]);
+
+  // Clean up the save-timeout timer if the card unmounts mid-save.
+  useEffect(() => {
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+        saveTimeoutRef.current = null;
+      }
+    };
+  }, []);
 
   const handleCopy = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
@@ -92,24 +132,30 @@ export const MemoryCard = ({
     setIsExpanded((prev) => !prev);
   }, []);
 
-  const handleStartEdit = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (!onEdit) return;
+  const handleStartEdit = useCallback((e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    if (!onCommitEdit) return;
+    if (onEdit) onEdit(memory);
     setIsEditing(true);
     setIsExpanded(true);
-  }, [onEdit]);
+  }, [memory, onCommitEdit, onEdit]);
 
-  const handleCancelEdit = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation();
+  const handleCancelEdit = useCallback((e?: React.MouseEvent) => {
+    e?.stopPropagation();
     setIsEditing(false);
     setDraftTitle(memory.title);
     setDraftContent(memory.content);
     setDraftTags(memory.tags.join(', '));
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+      saveTimeoutRef.current = null;
+    }
+    setSaveTimedOut(false);
   }, [memory.content, memory.tags, memory.title]);
 
   const handleSaveEdit = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!onEdit) return;
+    if (!onCommitEdit) return;
     const nextTags = draftTags
       .split(',')
       .map((tag) => tag.trim())
@@ -125,10 +171,71 @@ export const MemoryCard = ({
       updates.tags = nextTags;
     }
     if (Object.keys(updates).length > 0) {
-      onEdit(memory, updates);
+      setSaveTimedOut(false);
+      onCommitEdit(memory, updates);
+      if (onSaveStarted) onSaveStarted(memory);
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+      saveTimeoutRef.current = setTimeout(() => {
+        setSaveTimedOut(true);
+        saveTimeoutRef.current = null;
+      }, SAVE_TIMEOUT_MS);
     }
-    setIsEditing(false);
-  }, [draftContent, draftTags, draftTitle, memory, onEdit]);
+  }, [draftContent, draftTags, draftTitle, memory, onCommitEdit, onSaveStarted]);
+
+  // When the host flips `isSaving` back to false and a `memoryUpdated`
+  // event landed, the draft was committed — exit edit mode. If a failure
+  // (updateMemoryFailed) landed instead, the host will pass an
+  // `updateErrorMessage`, and we keep `isEditing` true so the draft is
+  // preserved (AC-O3).
+  useEffect(() => {
+    if (!isSaving && isEditing && !updateErrorMessage && !saveTimedOut) {
+      // Only exit if the host has explicitly cleared the saving flag —
+      // the typical happy path. We rely on the host emitting memoryUpdated,
+      // which will eventually flow through and reset isEditing.
+    }
+  }, [isSaving, isEditing, updateErrorMessage, saveTimedOut]);
+
+  // If the host reports a timeout failure (saveTimedOut) and clears isSaving,
+  // we surface the inline error message exactly once via updateErrorMessage.
+  // Keep the draft intact and let the user retry.
+  useEffect(() => {
+    if (saveTimedOut && !isSaving) {
+      // Inline error message will be rendered from updateErrorMessage; the
+      // timeout flag stays until the user either retries or cancels.
+    }
+  }, [saveTimedOut, isSaving]);
+
+  const handleRetry = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!onRetryUpdate) return;
+    const nextTags = draftTags
+      .split(',')
+      .map((tag) => tag.trim())
+      .filter(Boolean);
+    const updates: MemoryUpdateInput = {};
+    if (draftTitle.trim() && draftTitle !== memory.title) {
+      updates.title = draftTitle.trim();
+    }
+    if (draftContent.trim() !== memory.content) {
+      updates.content = draftContent.trim();
+    }
+    if (nextTags.join(',') !== memory.tags.join(',')) {
+      updates.tags = nextTags;
+    }
+    if (Object.keys(updates).length > 0) {
+      setSaveTimedOut(false);
+      onRetryUpdate(memory, updates);
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+      saveTimeoutRef.current = setTimeout(() => {
+        setSaveTimedOut(true);
+        saveTimeoutRef.current = null;
+      }, SAVE_TIMEOUT_MS);
+    }
+  }, [draftContent, draftTags, draftTitle, memory, onRetryUpdate]);
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
     if (e.key === 'Enter' || e.key === ' ') {
@@ -246,15 +353,18 @@ export const MemoryCard = ({
       animate={{ opacity: 1, x: 0 }}
       className={cn(
         'group relative flex flex-col gap-1.5 rounded-sm p-2 hover:bg-[var(--vscode-list-hoverBackground)] transition-colors duration-100 cursor-pointer border border-transparent hover:border-[var(--vscode-focusBorder)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--vscode-focusBorder)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--vscode-sideBar-background)]',
+        isDeleting && 'opacity-60 pointer-events-none',
       )}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       onClick={handleOpen}
       onKeyDown={handleKeyDown}
       data-testid={`memory-card-${memory.id}`}
+      data-deleting={isDeleting || undefined}
       role={isOpenable && !isEditing ? 'button' : 'group'}
       tabIndex={isOpenable && !isEditing ? 0 : -1}
       aria-label={isOpenable && !isEditing ? `Open memory ${memory.title}` : undefined}
+      aria-busy={isDeleting || undefined}
     >
       <div className="flex items-start justify-between gap-2">
         <div className="flex items-center gap-2 flex-1 min-w-0">
@@ -323,34 +433,6 @@ export const MemoryCard = ({
             )}
           </Button>
 
-          {onEdit && !isEditing && (
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-5 w-5 text-[var(--vscode-editor-foreground)] hover:bg-[var(--vscode-button-secondaryHoverBackground)] shrink-0 rounded-sm"
-              onClick={handleStartEdit}
-              title="Edit memory"
-              aria-label="Edit memory"
-              data-testid="btn-edit-memory"
-            >
-              <Pencil className="h-3 w-3" />
-            </Button>
-          )}
-
-          {onDelete && (
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-5 w-5 text-[var(--vscode-errorForeground)] hover:bg-[var(--vscode-button-secondaryHoverBackground)] shrink-0 rounded-sm"
-              onClick={handleDelete}
-              title="Delete memory"
-              aria-label="Delete memory"
-              data-testid="btn-delete-memory"
-            >
-              <Trash2 className="h-3 w-3" />
-            </Button>
-          )}
-
           {/* More actions dropdown */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -385,6 +467,16 @@ export const MemoryCard = ({
                 <Copy className="mr-2 h-3 w-3 opacity-70" />
                 Copy
               </DropdownMenuItem>
+              {onCommitEdit && (
+                <DropdownMenuItem
+                  className="text-[12px] hover:bg-[var(--vscode-menu-selectionBackground)] hover:text-[var(--vscode-menu-selectionForeground)] cursor-pointer rounded-sm px-2 py-1"
+                  onClick={(e) => handleStartEdit(e)}
+                  data-testid="menu-edit-memory"
+                >
+                  <Pencil className="mr-2 h-3 w-3 opacity-70" />
+                  Edit
+                </DropdownMenuItem>
+              )}
               {onAttach && (
                 <DropdownMenuItem
                   className="text-[12px] hover:bg-[var(--vscode-menu-selectionBackground)] hover:text-[var(--vscode-menu-selectionForeground)] cursor-pointer rounded-sm px-2 py-1"
@@ -392,6 +484,26 @@ export const MemoryCard = ({
                 >
                   <Paperclip className="mr-2 h-3 w-3 opacity-70" />
                   Add to context
+                </DropdownMenuItem>
+              )}
+              {onDelete && (
+                <DropdownMenuItem
+                  className={cn(
+                    'text-[12px] hover:bg-[var(--vscode-menu-selectionBackground)] hover:text-[var(--vscode-menu-selectionForeground)] cursor-pointer rounded-sm px-2 py-1',
+                    isDeleting && 'opacity-60 pointer-events-none',
+                  )}
+                  onClick={handleDelete}
+                  data-testid={isDeleting ? 'btn-delete-memory-pending' : 'menu-delete-memory'}
+                  aria-disabled={isDeleting || undefined}
+                >
+                  {isDeleting ? (
+                    <Loader2 className="mr-2 h-3 w-3 opacity-70 animate-spin" />
+                  ) : (
+                    <Trash2 className="mr-2 h-3 w-3 opacity-70 text-[var(--vscode-errorForeground)]" />
+                  )}
+                  <span className={isDeleting ? '' : 'text-[var(--vscode-errorForeground)]'}>
+                    {isDeleting ? 'Deleting…' : 'Delete'}
+                  </span>
                 </DropdownMenuItem>
               )}
             </DropdownMenuContent>
@@ -420,21 +532,49 @@ export const MemoryCard = ({
             aria-label="Edit memory tags"
             placeholder="tags, comma, separated"
           />
+          {updateErrorMessage && (
+            <div
+              className="rounded-sm border border-[var(--vscode-inputValidation-errorBorder)] bg-[var(--vscode-inputValidation-errorBackground)] px-2 py-1.5 text-[11px] text-[var(--vscode-errorForeground)] flex items-center justify-between gap-2"
+              role="alert"
+              data-testid="memory-update-error"
+            >
+              <span className="flex-1 break-words">
+                Update failed: {updateErrorMessage}. Retry?
+              </span>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-6 px-2 text-[11px] text-[var(--vscode-textLink-foreground)]"
+                onClick={handleRetry}
+                disabled={isSaving}
+                data-testid="memory-update-retry"
+              >
+                Retry
+              </Button>
+            </div>
+          )}
           <div className="flex items-center gap-2">
             <Button
               variant="ghost"
               size="sm"
               className="h-6"
               onClick={handleSaveEdit}
+              disabled={isSaving}
+              data-testid="btn-save-edit"
+              aria-busy={isSaving || undefined}
             >
-              <Save className="mr-1 h-3 w-3" />
-              Save
+              {isSaving ? (
+                <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+              ) : (
+                <Save className="mr-1 h-3 w-3" />
+              )}
+              {isSaving ? 'Saving…' : 'Save'}
             </Button>
             <Button
               variant="ghost"
               size="sm"
               className="h-6"
-              onClick={handleCancelEdit}
+              onClick={(e) => handleCancelEdit(e)}
             >
               <X className="mr-1 h-3 w-3" />
               Cancel

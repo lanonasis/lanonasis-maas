@@ -1,0 +1,11 @@
+{
+  "name": "@lanonasis/security-sdk",
+  "version": "0.0.1",
+  "private": true,
+  "exports": {
+    "./hash-utils": "./hash-utils.ts"
+  },
+  "main": "./hash-utils.js",
+  "module": "./hash-utils.js",
+  "types": "./hash-utils.d.ts"
+}
