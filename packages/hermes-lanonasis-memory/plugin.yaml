@@ -1,0 +1,23 @@
+name: lanonasis
+version: 0.2.0
+description: "LanOnasis Memory-as-a-Service provider for Hermes Agent."
+author: LanOnasis
+# `kind: memory-provider` routes this directly through Hermes' memory
+# plugin discovery (bundled and pip-installed entry points). Without
+# this flag the plugin manager would still auto-coerce via a text scan,
+# but explicit kind makes intent clear and survives future scan changes.
+kind: memory-provider
+hooks:
+  - system_prompt_block
+  - prefetch
+  - queue_prefetch
+  - sync_turn
+  - on_session_end
+  - on_pre_compress
+  - shutdown
+tools:
+  - memory_search
+  - memory_get
+# memory_store and memory_forget are optional capabilities exposed only by the
+# configured tool_policy. The manifest lists the safe default surface.
+requires_config: true
