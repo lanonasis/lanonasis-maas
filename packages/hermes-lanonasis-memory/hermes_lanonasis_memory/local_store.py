@@ -274,7 +274,7 @@ class LocalMemoryStore:
         sql = """
         SELECT m.id, m.target, m.category, m.title, m.content, m.tags,
                m.created_at,
-               snippet(memories_fts, 2, '<', '>', '…', 8) AS matched_snippet,
+               snippet(memories_fts, -1, '<', '>', '…', 8) AS matched_snippet,
                rank AS fts_rank
         FROM memories_fts
         JOIN memories m ON m.rowid = memories_fts.rowid
@@ -309,8 +309,8 @@ class LocalMemoryStore:
                 content=row[4],
                 score=score,
                 tags=tags,
-                created_at=row[7],
-                matched_snippet=row[8],
+                created_at=row[6],
+                matched_snippet=row[7],
             ))
         return hits
 
