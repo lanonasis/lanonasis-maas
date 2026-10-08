@@ -116,12 +116,12 @@ export interface StoreOptions {
   mode?: ScannerMode;
 }
 
-const VALIDATION_ERROR_MESSAGES: Record<string, string> = {
+const VALIDATION_ERROR_MESSAGES = {
   target: `target must be one of: ${TARGETS.join(", ")}`,
   category: `category must be one of: ${CATEGORIES.join(", ")} (when provided)`,
   title: "title is required",
   content: "content is required",
-};
+} as const satisfies Record<string, string>;
 
 function validateInput(input: AddMemoryInput): string | null {
   if (!TARGETS.includes(input.target)) return VALIDATION_ERROR_MESSAGES.target;
