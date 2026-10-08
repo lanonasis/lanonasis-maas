@@ -158,11 +158,11 @@ This provider is a **cloud (off-device)** backend. What is sent to
 
 | Path | Sent off-device | Notes |
 |------|-----------------|-------|
-| `memory_store(title, content, memory_type)` | title + content (always) | secrets redacted before send (always-on credential strip) |
-| `sync_turn(user_content, assistant_content)` | both messages (always) | redaction + PrivacyGuard PII pass (`privacy_mode=true`) |
+| `memory_store(title, content, memory_type)` | title + content (always) | secrets redacted before send (always-on credential strip); **only default-remote write path** |
+| `sync_turn(user_content, assistant_content)` | both messages (off only with opt-in) | by default local-only; opt-in via `LANONASIS_HERMES_REMOTE_RAW_TURNS=1`. redaction + PrivacyGuard PII pass (`privacy_mode=true`) |
 | `memory_search(query)` | the query string | credentials are redacted; PII is masked when `privacy_mode=true` |
-| `on_pre_compress(messages)` | the last ~10 turns (truncated to 200 chars each) | the summariser is local; the storage of the summary is off-device |
-| `on_session_end` | the resolved subject id | no message bodies |
+| `on_pre_compress(messages)` | nothing off-device | the summary is local `working_context` only — pre-compress never writes remotely |
+| `on_session_end` | at most one synthesis (opt-in) | local `summary` by default; opt-in remote via `LANONASIS_HERMES_REMOTE_SESSION_SUMMARY=1`. The reasoning flush (subject id) is unchanged |
 
 **Always-on credential redaction** runs before any off-device send.
 Setting `privacy_mode: true` also masks emails / phones / SSNs from
@@ -173,11 +173,70 @@ transmission; when `privacy_mode=true`, PII is masked as well. Tool **results**
 returned to the model pass through defensive HTML escaping, a prompt-injection
 filter, and a `CONTEXT BLOCK` wrapper before they reach the system prompt.
 
-**Local cache.** `LocalFallbackWriter` writes a JSONL file per UTC day
-to `$HERMES_HOME/workspace/memory/YYYY-MM-DD.jsonl` (mode `0600`,
-directory `0700`). The file holds only payloads the API refused.
-It is replayed on the next `initialize()`; entries that succeed are
-marked `_replayed: true` and never re-sent.
+### What gets stored where (H2 write policy)
+
+Every write carries a **scope envelope** so the remote bank is searchable
+and the local working state is separable from canonical knowledge.
+
+| Event | Default destination | Remote only with |
+|-------|---------------------|------------------|
+| Explicit `memory_store` tool call | local + remote (canonical) | (always) |
+| Raw turn (`sync_turn`) | local `raw_event` | `LANONASIS_HERMES_REMOTE_RAW_TURNS=1` |
+| Pre-compress summary (`on_pre_compress`) | local `working_context` | **never** |
+| Session-end synthesis (`on_session_end`) | one local `summary` | `LANONASIS_HERMES_REMOTE_SESSION_SUMMARY=1` |
+
+### Scope envelope
+
+Every **remote** write carries these fields in `metadata`:
+
+```jsonc
+{
+  "scope_type": "project",          // personal | project | workspace | agent | session | organization
+  "scope_id":   "lanonasis-monorepo",
+  "source":     "hermes",
+  "memory_class": "canonical",      // canonical | raw_event | session_context | summary | conclusion | profile | working_context
+  "visibility": "private",          // private | project | organization | shared
+  "session_id": "<hermes-session>",
+  "source_memory_id": null          // optional, for promotions from local → remote
+}
+```
+
+and the same fields are mirrored as tags for indexability:
+
+```
+source:hermes
+scope:project:lanonasis-monorepo
+class:canonical
+```
+
+`project` scope is derived from `git rev-parse --show-toplevel` of the
+current working directory (no `shell=True` — list-form subprocess with a
+2-second timeout, cached per path). Operators can override via
+`LANONASIS_HERMES_SCOPE_TYPE` / `LANONASIS_HERMES_SCOPE_ID`. The safe
+default when no project context is available is `("agent", "agent:hermes")`.
+
+Caller tags are merged in (de-duped, order-preserving). The legacy
+literal titles `Context (user)`, `Context (assistant)`,
+`Session summary (pre-compress)`, `user turn`, `response`, and
+`pre-compaction` are **rejected** at the `memory_store` boundary with
+a clear error asking for a descriptive title.
+
+A process-local dedup guard (last 50 remote writes, sha256 of content +
+normalized title) skips identical repeats and debug-logs same-session
+title collisions.
+
+**Local cache.** `LocalMemoryStore` keeps a per-profile SQLite FTS5
+file at `$HERMES_HOME/workspace/lanonasis-memory.db` and is the
+default destination for every non-explicit hook. Rows carry the
+`source:hermes`, `scope:<type>:<id>`, and `class:<memory_class>` tags
+so the FTS5 search can filter by envelope.
+
+**Replay fallback.** `LocalFallbackWriter` writes a JSONL file per UTC
+day to `$HERMES_HOME/workspace/memory/YYYY-MM-DD.jsonl` (mode `0600`,
+directory `0700`). The file holds only payloads the API refused (the
+explicit `memory_store` tool is the only path that can still hit the
+remote bank by default). It is replayed on the next `initialize()`;
+entries that succeed are marked `_replayed: true` and never re-sent.
 
 **Never logs.** The provider never logs message contents — only
 operational warnings (`[lanonasis] handle_tool_call(memory_search) raised: …`).
