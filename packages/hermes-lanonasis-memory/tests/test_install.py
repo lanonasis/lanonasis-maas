@@ -70,9 +70,14 @@ class TestImportPath:
             f"dead editable install. Reinstall with: "
             f"pip install -e /current/source/path"
         )
-        # The resolved origin must live under the expected repo layout,
-        # not some torn-down kanban workspace.
-        assert "lan-onasis-monorepo" in str(origin), f"unexpected import origin: {origin}"
+        # The resolved origin must be THIS checkout's source tree, not some
+        # torn-down kanban workspace. Compare against the package root next
+        # to this test file rather than a hard-coded directory name, so the
+        # check holds in worktrees and CI runners too.
+        pkg_root = Path(__file__).resolve().parents[1]
+        assert pkg_root in origin.parents, (
+            f"unexpected import origin: {origin} (expected under {pkg_root})"
+        )
 
     def test_register_entry_point_exists(self):
         """The hermes_agent.plugins entry point must be registered."""
@@ -121,13 +126,15 @@ class TestRuntimeContract:
             "provider leaves abstract methods unimplemented"
         )
 
-    def test_instantiate_and_initialize(self):
+    def test_instantiate_and_initialize(self, tmp_path):
         from hermes_lanonasis_memory import LanonasisMemoryProvider
 
         provider = LanonasisMemoryProvider()
+        # Use a throwaway HERMES_HOME: initialize() opens the local SQLite
+        # store and fallback dir under it, which must never touch ~/.hermes.
         provider.initialize(
             "install-smoke-test",
-            hermes_home=str(Path.home() / ".hermes"),
+            hermes_home=str(tmp_path / "hermes-home"),
         )
         assert provider._initialized is True
         provider.shutdown()
