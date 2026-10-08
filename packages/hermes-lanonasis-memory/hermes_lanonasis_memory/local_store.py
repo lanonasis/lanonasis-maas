@@ -3,7 +3,7 @@
 Port of the pi-lanonasis-memory patterns (src/store/) into a pure-Python
 module for the Hermes provider.  Provides a single-file ``.db`` with:
 
-- ``memories`` table  (id, title, content, tags, memory_type, …)
+- ``memories`` table  (id, target, category, title, content, tags, …)
 - ``memories_fts`` FTS5 virtual table (porter unicode61 tokenizer)
 - Auto-sync triggers on INSERT / UPDATE / DELETE
 
@@ -22,6 +22,7 @@ import json
 import logging
 import sqlite3
 import time
+import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
@@ -118,7 +119,6 @@ class MemoryRecord:
     id: str
     title: str
     content: str
-    memory_type: str = "context"
     target: str = "memory"
     category: Optional[str] = None
     tags: Optional[List[str]] = None
@@ -202,6 +202,9 @@ class LocalMemoryStore:
     ) -> Dict[str, Any]:
         """Insert a memory. Gated by ``scan_for_write``.
 
+        ``memory_type`` is accepted for call-site compatibility with the
+        provider but is not persisted: the schema has no such column.
+
         Returns dict with keys: ``ok`` (bool), ``id`` (str|None),
         ``redacted`` (bool), ``secrets_found`` (int).
         """
@@ -225,7 +228,6 @@ class LocalMemoryStore:
 
         tags_json = json.dumps(tags) if tags else None
         now = datetime.now(timezone.utc).isoformat()
-        import uuid
         mem_id = str(uuid.uuid4())
 
         self._conn.execute(
@@ -274,7 +276,7 @@ class LocalMemoryStore:
         sql = """
         SELECT m.id, m.target, m.category, m.title, m.content, m.tags,
                m.created_at,
-               snippet(memories_fts, 2, '<', '>', '…', 8) AS matched_snippet,
+               snippet(memories_fts, -1, '<', '>', '…', 8) AS matched_snippet,
                rank AS fts_rank
         FROM memories_fts
         JOIN memories m ON m.rowid = memories_fts.rowid
@@ -309,8 +311,8 @@ class LocalMemoryStore:
                 content=row[4],
                 score=score,
                 tags=tags,
-                created_at=row[7],
-                matched_snippet=row[8],
+                created_at=row[6],
+                matched_snippet=row[7],
             ))
         return hits
 
