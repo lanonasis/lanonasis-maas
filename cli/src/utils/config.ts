@@ -76,6 +76,8 @@ export type RemoteAuthVerification = {
   method: 'token' | 'vendor_key' | 'none';
   endpoint?: string;
   reason?: string;
+  status?: number; // HTTP status code from the verification request
+  throttled?: boolean; // true when the verification failed due to rate limiting (429)
 };
 
 export class CLIConfig {
@@ -88,6 +90,16 @@ export class CLIConfig {
   private readonly AUTH_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
   private apiKeyStorage?: ApiKeyStorage;
   private vendorKeyCache?: string;
+  // Per-process memoization: once vendor-key auth succeeds in this process,
+  // skip all subsequent server verification calls for the lifetime of this
+  // process. Vendor keys are long-lived by construction (opaque 45-char
+  // string, sent as X-API-Key, no JWT, no client-side TTL).
+  // Bound: at most 1 verify request per process run for vendor-key sessions.
+  private vendorKeyVerifiedThisProcess: boolean | null = null;
+  // Tracks why the last `isAuthenticated()` call returned false so that
+  // the CLI can surface an accurate message (e.g. "rate-limited" instead of
+  // "Authentication required").
+  private lastAuthFailureReason: string | null = null;
 
   private isLegacyHashedCredential(value: unknown): value is string {
     return typeof value === 'string' && /^[a-f0-9]{64}$/i.test(value.trim());
@@ -716,6 +728,18 @@ export class CLIConfig {
         ) {
           return { valid: false, method: 'token', endpoint, reason };
         }
+
+        // 429 rate-limit — fail fast with throttled flag.
+        if (normalizedError.response?.status === 429) {
+          return {
+            valid: false,
+            method: 'token',
+            endpoint,
+            reason: normalizedError.message || 'Authentication service rate-limited',
+            status: 429,
+            throttled: true
+          };
+        }
       }
     }
 
@@ -745,6 +769,17 @@ export class CLIConfig {
       } catch (error: unknown) {
         const normalizedError = this.normalizeServiceError(error);
         const responsePayload = normalizedError.response?.data as Record<string, unknown> | undefined;
+        // 429 on the fallback — also rate-limited, propagate the flag.
+        if (normalizedError.response?.status === 429) {
+          return {
+            valid: false,
+            method: 'token',
+            endpoint,
+            reason: normalizedError.message || 'Authentication service rate-limited',
+            status: 429,
+            throttled: true
+          };
+        }
         fallbackReason = this.extractAuthErrorMessage(responsePayload) || normalizedError.message || fallbackReason;
       }
     }
@@ -812,6 +847,18 @@ export class CLIConfig {
         ) {
           return { valid: false, method: 'vendor_key', endpoint, reason };
         }
+
+        // 429 rate-limit — fail fast with throttled flag.
+        if (normalizedError.response?.status === 429) {
+          return {
+            valid: false,
+            method: 'vendor_key',
+            endpoint,
+            reason: normalizedError.message || 'Authentication service rate-limited',
+            status: 429,
+            throttled: true
+          };
+        }
       }
     }
 
@@ -838,6 +885,17 @@ export class CLIConfig {
       } catch (error: unknown) {
         const normalizedError = this.normalizeServiceError(error);
         const responsePayload = normalizedError.response?.data as Record<string, unknown> | undefined;
+        // 429 on the fallback — also rate-limited, propagate the flag.
+        if (normalizedError.response?.status === 429) {
+          return {
+            valid: false,
+            method: 'vendor_key',
+            endpoint,
+            reason: normalizedError.message || 'Authentication service rate-limited',
+            status: 429,
+            throttled: true
+          };
+        }
         fallbackReason = this.extractAuthErrorMessage(responsePayload) || normalizedError.message || fallbackReason;
       }
     }
@@ -928,6 +986,18 @@ export class CLIConfig {
    */
   async invalidateAuthCache(): Promise<void> {
     this.authCheckCache = null;
+    // Also reset the per-process vendor-key memoization so that
+    // invalidateAuthCache() truly forces a fresh server verification.
+    this.vendorKeyVerifiedThisProcess = null;
+  }
+
+  /**
+   * Returns the reason the last `isAuthenticated()` call returned false,
+   * or `null` if the last check was successful or never attempted.
+   * Currently returns 'throttled' when auth-gateway returned HTTP 429.
+   */
+  getAuthFailureReason(): string | null {
+    return this.lastAuthFailureReason;
   }
 
   async clearManualEndpointOverrides(): Promise<void> {
@@ -1231,10 +1301,21 @@ export class CLIConfig {
           console.warn(`⚠️  ${this.getLegacyHashedVendorKeyReason()}`);
         }
         this.authCheckCache = { isValid: false, timestamp: Date.now() };
+        this.lastAuthFailureReason = 'invalid_credential';
         return false;
       }
 
-      // Check in-memory cache first (5-minute TTL)
+      // Per-process memoization: once vendor-key auth succeeds in this process,
+      // skip all subsequent server verification calls for the lifetime of this
+      // process. Vendor keys are long-lived by construction (opaque 45-char
+      // string, sent as X-API-Key, no JWT, no client-side TTL).
+      // Bound: at most 1 verify request per process run for vendor-key sessions.
+      if (this.vendorKeyVerifiedThisProcess === true) {
+        return true;
+      }
+
+      // Check in-memory cache first (5-minute TTL). A 429-throttled result is
+      // cached here, so we don't re-probe the auth gateway within the TTL.
       if (this.authCheckCache && (Date.now() - this.authCheckCache.timestamp) < this.AUTH_CACHE_TTL) {
         return this.authCheckCache.isValid;
       }
@@ -1249,6 +1330,11 @@ export class CLIConfig {
         const verification = await this.verifyVendorKeyWithAuthGateway(vendorKey);
         if (!verification.valid) {
           // Auth gateway explicitly rejected the key — no grace period applies.
+          if (verification.throttled) {
+            this.lastAuthFailureReason = 'throttled';
+          } else {
+            this.lastAuthFailureReason = 'invalid_credential';
+          }
           this.authCheckCache = { isValid: false, timestamp: Date.now() };
           return false;
         }
@@ -1258,6 +1344,8 @@ export class CLIConfig {
         await this.save().catch(() => {}); // Don't fail auth check if save fails
 
         this.authCheckCache = { isValid: true, timestamp: Date.now() };
+        // Per-process memoization for vendor-key sessions.
+        this.vendorKeyVerifiedThisProcess = true;
         return true;
       } catch (err: unknown) {
         // verifyVendorKeyWithAuthGateway throws only on network/timeout errors
@@ -1268,6 +1356,15 @@ export class CLIConfig {
 
         if (httpStatus === 401 || httpStatus === 403) {
           // Explicit auth rejection propagated as an exception — definitely invalid.
+          this.lastAuthFailureReason = 'invalid_credential';
+          this.authCheckCache = { isValid: false, timestamp: Date.now() };
+          return false;
+        }
+
+        // 429 rate-limit — don't apply grace period; the server is saying
+        // "too many requests", not "bad credential".
+        if (httpStatus === 429) {
+          this.lastAuthFailureReason = 'throttled';
           this.authCheckCache = { isValid: false, timestamp: Date.now() };
           return false;
         }
