@@ -95,6 +95,26 @@ class TestImportPath:
             "entry point must resolve to a module exposing register(ctx)"
         )
 
+    def test_memory_providers_entry_point_exists(self):
+        """The hermes_agent.memory_providers entry point must be registered.
+
+        `plugins.memory.discover_memory_providers()` reads THIS group, not
+        `hermes_agent.plugins`. Registering only the legacy group makes the
+        pip-installed package invisible to `hermes memory setup`/`status`
+        even though `hermes plugins list` still sees it — a silent discovery
+        gap that breaks UI activation.
+        """
+        eps = list(importlib.metadata.entry_points(group="hermes_agent.memory_providers"))
+        matches = [ep for ep in eps if ep.name == ENTRY_NAME]
+        assert matches, (
+            "no 'lanonasis' entry point in group 'hermes_agent.memory_providers'; "
+            "pip install -e . into the Hermes venv to register it."
+        )
+        loader = matches[0].load()
+        assert callable(getattr(loader, "register", None)), (
+            "entry point must resolve to a module exposing register(ctx)"
+        )
+
     def test_register_actually_registers_a_provider(self):
         """register(ctx) must hand a MemoryProvider to the context."""
         from hermes_lanonasis_memory import register

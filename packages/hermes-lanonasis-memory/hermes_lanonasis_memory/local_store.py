@@ -125,6 +125,20 @@ class MemoryRecord:
     created_at: Optional[str] = None
     updated_at: Optional[str] = None
     last_accessed_at: Optional[str] = None
+    # ``maas_id`` is the REMOTE MaaS row id populated by
+    # ``mark_synced`` after a successful POST. Without surfacing it
+    # here, callers like ``_tool_forget`` cannot resolve the correct
+    # remote handle and end up DELETEing the wrong record.
+    maas_id: Optional[str] = None
+    # ``maas_synced_at`` is the timestamp of the last successful
+    # (or attempted) sync — surfaced alongside ``maas_id`` so the
+    # pair round-trips consistently.
+    maas_synced_at: Optional[str] = None
+    # ``failure_reason`` exists in the schema but has no public write
+    # path yet (producers live elsewhere in the pipeline); we surface
+    # it so the failure-mode handler can read the value back via
+    # ``get_by_id`` / ``list_memories``.
+    failure_reason: Optional[str] = None
 
 
 @dataclass
@@ -133,6 +147,35 @@ class ScanVerdict:
     reason: Optional[str] = None
     redacted_text: Optional[str] = None
     secrets_found: int = 0
+
+
+# ---------------------------------------------------------------------------
+# Module-level helpers
+# ---------------------------------------------------------------------------
+
+def _parse_tags(value: Optional[str]) -> Optional[List[str]]:
+    """Decode the stored ``tags`` JSON column.
+
+    Contract: the tags column on ``memories`` is documented as "JSON
+    array, may be null". Public-facing ``MemoryRecord.tags`` /
+    ``MemoryHit.tags`` must always be ``Optional[List[str]]`` — never
+    a bare string, dict, or other JSON value. This helper returns
+    ``None`` for anything that isn't a JSON list (missing, malformed,
+    or "shape mismatch" cases like ``'"foo"'`` or ``'{"k": 1}'``).
+
+    Centralizing the rule here keeps ``search()``, ``get_by_id()``,
+    and ``list_memories()`` returning identical shapes for the same
+    row.
+    """
+    if not value:
+        return None
+    try:
+        decoded = json.loads(value)
+    except (json.JSONDecodeError, TypeError):
+        return None
+    if not isinstance(decoded, list):
+        return None
+    return decoded
 
 
 # ---------------------------------------------------------------------------
@@ -304,16 +347,6 @@ class LocalMemoryStore:
             rank = row[8]
             score = max(0.0, min(1.0, 1.0 + rank / 10))
 
-            tags_str = row[5]
-            tags = None
-            if tags_str:
-                try:
-                    tags = json.loads(tags_str)
-                    if not isinstance(tags, list):
-                        tags = None
-                except (json.JSONDecodeError, TypeError):
-                    tags = None
-
             hits.append(MemoryHit(
                 id=row[0],
                 target=row[1],
@@ -321,7 +354,7 @@ class LocalMemoryStore:
                 title=row[3],
                 content=row[4],
                 score=score,
-                tags=tags,
+                tags=_parse_tags(row[5]),
                 created_at=row[6],
                 matched_snippet=row[7],
             ))
@@ -335,6 +368,143 @@ class LocalMemoryStore:
             (now, id),
         )
         self._conn.commit()
+
+    def get_by_id(self, id: str) -> Optional[MemoryRecord]:
+        """Fetch a single memory row by id, or ``None`` if absent.
+
+        Best-effort: never raises — a missing or malformed id returns
+        ``None`` rather than propagating a SQLite error to the caller.
+        Reuses the same row->``MemoryRecord`` mapping shape as
+        :meth:`list_memories` so the two paths return identical record
+        types for the same row.
+        """
+        if not id:
+            return None
+        try:
+            row = self._conn.execute(
+                "SELECT id, title, content, created_at, updated_at, last_accessed_at, target, category, tags, maas_id, maas_synced_at, failure_reason FROM memories WHERE id = ?",
+                (id,),
+            ).fetchone()
+        except sqlite3.Error:
+            logger.exception("get_by_id failed for id=%r", id)
+            return None
+        if row is None:
+            return None
+        return MemoryRecord(
+            id=row[0],
+            title=row[1],
+            content=row[2],
+            created_at=row[3],
+            updated_at=row[4],
+            last_accessed_at=row[5],
+            target=row[6],
+            category=row[7],
+            tags=_parse_tags(row[8]),
+            # Sync / failure columns surfaced so downstream callers
+            # (notably ``_tool_forget``) can resolve the REMOTE id
+            # without reading the raw SQLite row.
+            maas_id=row[9],
+            maas_synced_at=row[10],
+            failure_reason=row[11],
+        )
+
+    def mark_synced(self, id: str, maas_id: Optional[str]) -> None:
+        """Record that a memory was synced to the remote MaaS API.
+
+        Contract:
+        - ``id`` is required. ``None`` or ``""`` → early-return with a
+          DEBUG log; no SQL is run. (Previously the empty-string guard
+          was correct but ``None`` slipped through to a silent no-op
+          UPDATE; both are now treated identically.)
+        - When ``maas_id`` is ``None``:
+          - ``maas_id`` column is left untouched (never clobbers a
+            previously-set remote id).
+          - ``maas_synced_at`` IS still stamped, so callers can tell
+            when the last sync attempt happened.
+        - When ``maas_id`` is a real string:
+          - Both columns are updated.
+          - ``maas_synced_at`` is idempotent: a retry that supplies the
+            same id does NOT rewrite the timestamp. SQLite's
+            ``COALESCE(maas_synced_at, datetime('now'))`` keeps the
+            first successful sync timestamp.
+
+        Best-effort: never raises — failures are logged and swallowed
+        so a sync hiccup never blocks the local write path. A missing
+        local row is a no-op (the UPDATE simply matches no rows).
+        """
+        # Falsy-id guard — must catch BOTH ``""`` and ``None``. The
+        # original code only caught ``""`` because ``not id`` is true
+        # for both, but earlier this was ``if not id: return`` and
+        # was apparently lost in a refactor (None slipped through).
+        # Debug-level log so a caller can distinguish "we skipped this
+        # deliberately" from "we silently swallowed it".
+        if not id:
+            logger.debug("mark_synced: skipped — empty/None id (maas_id=%r)", maas_id)
+            return
+
+        now = datetime.now(timezone.utc).isoformat()
+        try:
+            if maas_id is not None:
+                # Real assignment — set maas_id; let COALESCE keep the
+                # first successful timestamp (idempotent on retry).
+                self._conn.execute(
+                    "UPDATE memories "
+                    "SET maas_id = ?, "
+                    "    maas_synced_at = COALESCE(maas_synced_at, ?) "
+                    "WHERE id = ?",
+                    (maas_id, now, id),
+                )
+            else:
+                # maas_id=None is a NO-OP for that column (would
+                # otherwise clobber a previously-stored remote id).
+                # We still stamp ``maas_synced_at`` so the caller can
+                # tell we attempted sync.
+                self._conn.execute(
+                    "UPDATE memories SET maas_synced_at = ? WHERE id = ?",
+                    (now, id),
+                )
+            self._conn.commit()
+        except sqlite3.Error:
+            logger.exception("mark_synced failed for id=%r", id)
+            # Best effort — drop the transaction state so subsequent
+            # calls keep working instead of failing with "no transaction".
+            try:
+                self._conn.rollback()
+            except sqlite3.Error:
+                pass
+
+    def delete(self, id: str) -> bool:
+        """Remove a memory row by id. Returns True iff a row was removed.
+
+        Contract:
+        - ``DELETE FROM memories WHERE id = ?`` and commit.
+        - Returns ``True`` when ``cursor.rowcount > 0`` (a row was
+          removed), ``False`` otherwise (no such id).
+        - The ``memories_ad`` AFTER DELETE trigger handles the FTS index
+          cleanup automatically — do NOT touch ``memories_fts`` directly.
+        - Best-effort: any ``sqlite3.Error`` is logged and swallowed,
+          returning ``False``; the method must never raise so callers
+          can safely chain it with the remote delete on the forget path.
+        - Falsy-id (empty / ``None``) is a no-op returning ``False``
+          with a DEBUG log, mirroring the ``mark_synced`` guard.
+        """
+        if not id:
+            logger.debug("delete: skipped — empty/None id")
+            return False
+        try:
+            cursor = self._conn.execute(
+                "DELETE FROM memories WHERE id = ?",
+                (id,),
+            )
+            self._conn.commit()
+            return cursor.rowcount > 0
+        except sqlite3.Error:
+            logger.exception("delete failed for id=%r", id)
+            try:
+                self._conn.rollback()
+            except sqlite3.Error:
+                pass
+            return False
 
     def close(self) -> None:
         try:
@@ -350,20 +520,19 @@ class LocalMemoryStore:
     def list_memories(
         self, limit: int = 50, offset: int = 0
     ) -> List[MemoryRecord]:
-        """List memories newest first."""
+        """List memories newest first.
+
+        SELECT and record shape mirror :meth:`get_by_id` 1:1 so both
+        paths return identical records (including the new
+        ``maas_id`` / ``maas_synced_at`` / ``failure_reason`` columns
+        populated by ``get_by_id``).
+        """
         rows = self._conn.execute(
-            "SELECT id, title, content, created_at, updated_at, last_accessed_at, target, category, tags FROM memories ORDER BY created_at DESC LIMIT ? OFFSET ?",
+            "SELECT id, title, content, created_at, updated_at, last_accessed_at, target, category, tags, maas_id, maas_synced_at, failure_reason FROM memories ORDER BY created_at DESC LIMIT ? OFFSET ?",
             (limit, offset),
         ).fetchall()
         results = []
         for row in rows:
-            tags_str = row[8]
-            tags = None
-            if tags_str:
-                try:
-                    tags = json.loads(tags_str)
-                except (json.JSONDecodeError, TypeError):
-                    tags = None
             results.append(MemoryRecord(
                 id=row[0],
                 title=row[1],
@@ -373,6 +542,10 @@ class LocalMemoryStore:
                 last_accessed_at=row[5],
                 target=row[6],
                 category=row[7],
-                tags=tags,
+                tags=_parse_tags(row[8]),
+                # Mirror the new columns from get_by_id().
+                maas_id=row[9],
+                maas_synced_at=row[10],
+                failure_reason=row[11],
             ))
         return results

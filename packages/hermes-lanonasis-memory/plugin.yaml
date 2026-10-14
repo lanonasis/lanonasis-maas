@@ -1,5 +1,5 @@
 name: lanonasis
-version: 0.2.0
+version: 0.3.0
 description: "LanOnasis Memory-as-a-Service provider for Hermes Agent."
 author: LanOnasis
 # `kind: memory-provider` routes this directly through Hermes' memory

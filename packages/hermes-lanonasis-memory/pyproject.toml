@@ -27,5 +27,12 @@ Repository = "https://github.com/lanonasis/lanonasis-maas"
 [project.entry-points."hermes_agent.plugins"]
 lanonasis = "hermes_lanonasis_memory"
 
+# Memory-provider discovery (`hermes memory setup`/`status`,
+# plugins.memory.discover_memory_providers) reads this group, not
+# hermes_agent.plugins. Register under both so the package is visible
+# to the legacy activation pathway AND the memory-specific scanner.
+[project.entry-points."hermes_agent.memory_providers"]
+lanonasis = "hermes_lanonasis_memory"
+
 [tool.setuptools.packages.find]
 include = ["hermes_lanonasis_memory*"]

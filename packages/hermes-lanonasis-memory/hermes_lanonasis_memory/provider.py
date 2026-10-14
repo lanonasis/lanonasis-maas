@@ -42,6 +42,7 @@ from .security import (
     detect_embedding_profile_mismatch,
 )
 from .local_store import LocalMemoryStore, MemoryHit
+from .merge import merge_hits
 from . import scope as _scope
 from .scope import (
     ScopeEnvelope,
@@ -472,30 +473,32 @@ class LanonasisMemoryProvider(MemoryProvider):
 
         Tier 1: Local FTS5 (≤5ms, always fast)
         Tier 2: Remote API (≤800ms, enriches with semantic search)
-        Tier 3: Empty context if both miss — NO hallucination.
+        Tier 3: Empty context if both miss -- NO hallucination.
+
+        Wave 2: the local+remote merge goes through ``merge_hits`` so
+        duplicates collapse by id OR (title, content) hash, ties keep
+        the local row, and the final list is truncated to ``limit``.
+        The prompt-injection filter still runs over both tiers so
+        ``injection_count`` stays accurate; surviving rows carry
+        ``_source`` from the merge's ``source`` tag (``local`` /
+        ``maas`` / ``merged``).
         """
         query = self._protect_outbound(args["query"]).text
         limit = args.get("limit", 5)
-        all_memories: List[Dict[str, Any]] = []
         injection_count = 0
-        local_had_hits = False
 
         # --- Tier 1: Local FTS5 (always fast, never blocks) ---
         local_hits = self._local_search(query, limit=limit)
-        if local_hits:
-            local_had_hits = True
-            api_format = self._local_to_api_format(local_hits)
-            for memory in api_format:
-                content = memory.get("content", "")
-                if looks_like_prompt_injection(content):
-                    injection_count += 1
-                    continue
-                memory["_source"] = "local"
-                all_memories.append(memory)
+        local_list: List[Any] = []
+        for hit in local_hits:
+            if looks_like_prompt_injection(hit.content):
+                injection_count += 1
+                continue
+            local_list.append(hit)
 
-        # --- Tier 2: Remote API (enrich if local had hits or no local) ---
+        # --- Tier 2: Remote API (enriches with semantic search) ---
         client = self._ensure_client()
-        remote_result = []
+        remote_list: List[Dict[str, Any]] = []
         if client is not None:
             try:
                 resp = client.post(
@@ -504,20 +507,37 @@ class LanonasisMemoryProvider(MemoryProvider):
                 )
                 resp.raise_for_status()
                 result = resp.json()
-                remote_result = result.get("memories", [])
             except Exception as e:
                 _logger.warning(f"[lanonasis] memory_search remote degraded: {e}")
+                result = {}
+            for memory in result.get("memories", []) or []:
+                content = memory.get("content", "")
+                if looks_like_prompt_injection(content):
+                    injection_count += 1
+                    continue
+                remote_list.append(memory)
 
-        # Merge remote results (dedup by id if present, or just append)
-        remote_injection_count = 0
-        for memory in remote_result:
-            content = memory.get("content", "")
-            if looks_like_prompt_injection(content):
-                remote_injection_count += 1
-                continue
-            memory["_source"] = "remote"
-            all_memories.append(memory)
-        injection_count += remote_injection_count
+        # --- Federation: dedup + sort + truncate via merge_hits ---
+        # ``prefer_remote=False`` mirrors repl-cli: on an equal-score
+        # tie the local row keeps the body, and the survivor gets
+        # ``source='merged'`` to signal we saw this in two places.
+        merged = merge_hits(
+            local_list, remote_list,
+            prefer_remote=False, limit=limit,
+        )
+
+        # Project merge output to the public API dict shape and stamp
+        # the per-row ``_source`` for downstream consumers. The merge's
+        # ``source`` is ``local`` / ``maas`` / ``merged``; we mirror it
+        # 1:1 on ``_source`` so callers don't need to know about the
+        # merge contract.
+        all_memories: List[Dict[str, Any]] = []
+        for row in merged:
+            target = row.get("target", "memory")
+            row["type"] = "context" if target == "memory" else target
+            row["similarity"] = row.get("score", 0.0)
+            row["_source"] = row.get("source", "local")
+            all_memories.append(row)
 
         out: Dict[str, Any] = {
             "memories": all_memories,
@@ -528,8 +548,13 @@ class LanonasisMemoryProvider(MemoryProvider):
         }
 
         if all_memories:
-            # Tag the source breakdown
-            local_count = sum(1 for m in all_memories if m.get("_source") == "local")
+            # Source breakdown: any merge whose ``_source`` is ``local``
+            # or ``merged`` involved the local tier. ``maas`` means the
+            # row came from the remote API only.
+            local_count = sum(
+                1 for m in all_memories
+                if m.get("_source") in ("local", "merged")
+            )
             out["_local_hits"] = local_count
             out["_local_source"] = True
             out["_formatted_context"] = format_recalled_memories(
@@ -542,7 +567,6 @@ class LanonasisMemoryProvider(MemoryProvider):
             out["_searched_tiers"] = ["local", "remote" if client else "local-only"]
 
         return out
-
     def _tool_store(self, args: Dict[str, Any]) -> Dict[str, Any]:
         """Local-first hybrid store — the canonical REMOTE write path.
 
@@ -670,6 +694,25 @@ class LanonasisMemoryProvider(MemoryProvider):
                 data.setdefault("stored", True)
                 data["local"] = True
                 data["local_id"] = local_result.get("id")
+                # Wave 2: record the local->remote id mapping so a
+                # later ``memory_get`` / ``memory_forget`` can locate
+                # both ends of the same memory. The MaaS POST returns
+                # ``{"data": <memory>, "message": ..., "has_embedding": ...}``
+                # but earlier API shapes and tests use the flat
+                # ``{"id": ...}`` -- try all three.
+                remote_id = (
+                    data.get("id")
+                    or (data.get("data") or {}).get("id")
+                    or (data.get("memories") or {}).get("id")
+                )
+                local_id = local_result.get("id")
+                if local_id and remote_id and self._local_store is not None:
+                    try:
+                        self._local_store.mark_synced(local_id, remote_id)
+                    except Exception as sync_err:
+                        _logger.warning(
+                            f"[lanonasis] mark_synced failed: {sync_err}"
+                        )
                 return data
             except Exception as e:
                 _logger.warning(f"[lanonasis] remote sync failed: {e}")
@@ -701,32 +744,154 @@ class LanonasisMemoryProvider(MemoryProvider):
         }
 
     def _tool_get(self, args: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """Local-first fetch by id.
+
+        Wave 2: checks the local SQLite FTS5 store first; only on a
+        miss does it call the remote API. A successful remote hit is
+        best-effort backfilled into the local store so subsequent
+        reads can short-circuit.
+
+        Returns a dict shaped like the API response (``id``,
+        ``title``, ``content``, ``tags``, ``memory_type``,
+        ``created_at``) on success, ``None`` when both tiers miss or
+        the remote call raises and there is no local row.
+        """
         memory_id = args.get("id")
         if not isinstance(memory_id, str) or not _UUID_RE.match(memory_id):
             raise ValueError(f"Invalid memory id: {memory_id!r}")
+
+        # --- Local-first ---
+        if self._local_store is not None:
+            try:
+                rec = self._local_store.get_by_id(memory_id)
+                if rec is not None:
+                    return {
+                        "id": rec.id,
+                        "title": rec.title,
+                        "content": rec.content,
+                        "tags": list(rec.tags) if rec.tags else [],
+                        "memory_type": rec.category or "context",
+                        "created_at": rec.created_at,
+                        "source": "local",
+                    }
+            except Exception as e:
+                _logger.warning(f"[lanonasis] memory_get local lookup failed: {e}")
+
+        # --- Remote fallback ---
         client = self._ensure_client()
         if client is None:
             return None
         try:
             resp = client.get(f"/api/v1/memories/{memory_id}")
             resp.raise_for_status()
-            return resp.json()
+            data = resp.json()
         except Exception as e:
             _logger.warning(f"[lanonasis] memory_get degraded: {e}")
             return None
 
+        # Best-effort backfill: keep the local tier warm so a repeat
+        # read of the same id can short-circuit. Failures here are
+        # logged-and-swallowed; they MUST NOT corrupt the response.
+        if self._local_store is not None and isinstance(data, dict):
+            try:
+                title = data.get("title") or ""
+                content = data.get("content") or ""
+                if title and content:
+                    self._local_store_add(
+                        title=title,
+                        content=content,
+                        memory_type=data.get("memory_type") or "context",
+                        tags=["source:remote-backfill"],
+                    )
+            except Exception as e:
+                _logger.warning(f"[lanonasis] memory_get backfill failed: {e}")
+
+        return data
+
     def _tool_forget(self, args: Dict[str, Any]) -> Dict[str, Any]:
+        """Delete a memory by id from BOTH tiers.
+
+        Wave 2: removes the local row first (best-effort, never
+        raises) then calls the remote DELETE. The return shape gains
+        ``local`` and ``remote`` booleans so the caller can tell which
+        tiers actually lost the row. When ``_local_store`` is None the
+        local flag is False and we still try the remote.
+
+        Wave 3 (remote-id resolution): the caller supplies the LOCAL
+        id, but the remote MaaS row lives under a different id
+        (populated by ``mark_synced`` after a successful POST). When
+        ``maas_id`` is known, ``memory_forget`` MUST issue the remote
+        DELETE against the remote id — otherwise the request 404s and
+        the server-side row leaks. We look up the local record FIRST
+        (before deleting it) so the resolution is still possible in
+        the synced branch; for unsynced rows we fall back to the
+        supplied local id (the only known handle).
+        """
         memory_id = args.get("id")
         if not isinstance(memory_id, str) or not _UUID_RE.match(memory_id):
             raise ValueError(f"Invalid memory id: {memory_id!r}")
+
+        # Step 1: resolve the REMOTE id BEFORE the local delete so the
+        # local row's ``maas_id`` is still readable in the synced
+        # branch. The local delete below will remove the row, so the
+        # lookup must happen first.
+        remote_id = memory_id
+        if self._local_store is not None:
+            try:
+                local_record = self._local_store.get_by_id(memory_id)
+            except Exception as e:
+                _logger.warning(
+                    f"[lanonasis] local forget lookup failed: {e}"
+                )
+                local_record = None
+            remote_id = (
+                local_record.maas_id if local_record and local_record.maas_id
+                else memory_id
+            )
+            if remote_id != memory_id:
+                _logger.info(
+                    f"[lanonasis] forget: using remote_id={remote_id!r} "
+                    f"(local_id={memory_id!r})"
+                )
+
+        local_deleted = False
+        if self._local_store is not None:
+            try:
+                local_deleted = bool(self._local_store.delete(memory_id))
+            except Exception as e:
+                _logger.warning(f"[lanonasis] local forget failed: {e}")
+
         client = self._ensure_client()
         if client is None:
-            return {"deleted": False, "id": memory_id, "_degraded": True}
-        resp = client.delete(f"/api/v1/memories/{memory_id}")
-        resp.raise_for_status()
-        return {"deleted": True, "id": memory_id}
+            return {
+                "deleted": local_deleted,
+                "id": memory_id,
+                "local": local_deleted,
+                "remote": False,
+                "_degraded": True,
+            }
 
-    # ---- Optional hooks ---------------------------------------------------
+        try:
+            resp = client.delete(f"/api/v1/memories/{remote_id}")
+            resp.raise_for_status()
+        except Exception as e:
+            _logger.warning(f"[lanonasis] remote forget failed: {e}")
+            return {
+                "deleted": local_deleted,
+                "id": memory_id,
+                "local": local_deleted,
+                "remote": False,
+                "_degraded": True,
+            }
+
+        return {
+            "deleted": True,
+            "id": memory_id,
+            "local": local_deleted,
+            "remote": True,
+        }
+
+# ---- Optional hooks ---------------------------------------------------
     def system_prompt_block(self) -> str:
         instructions = [
             "You have access to a persistent memory system.",

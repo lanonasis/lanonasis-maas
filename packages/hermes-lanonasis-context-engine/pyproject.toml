@@ -21,6 +21,13 @@ Repository = "https://github.com/lanonasis/lanonasis-maas"
 [project.entry-points."hermes_agent.plugins"]
 lanonasis-context = "hermes_lanonasis_context_engine"
 
+# Context-engine discovery (`plugins.context_engine.discover_context_engines`)
+# reads this group, not hermes_agent.plugins. Register under both so the
+# package is visible to the legacy activation pathway AND the
+# context-engine-specific scanner.
+[project.entry-points."hermes_agent.context_engines"]
+lanonasis-context = "hermes_lanonasis_context_engine"
+
 [build-system]
 requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
