@@ -125,6 +125,98 @@ describe('auth gateway candidate probing', () => {
       .getAuthVerificationEndpoints(pathname);
   }
 
+  describe('clearing manual endpoint overrides', () => {
+    it.each([false, true])('persists cleared overrides when discovery is skipped: %s', async (skipDiscovery) => {
+      config.discoverServices = CLIConfig.prototype.discoverServices;
+      if (!skipDiscovery) {
+        delete process.env.SKIP_SERVICE_DISCOVERY;
+      }
+      config.set('manualEndpointOverrides', true);
+      config.set('lastManualEndpointUpdate', new Date().toISOString());
+      config.set('discoveredServices', {
+        auth_base: LOCAL_BASE,
+        memory_base: 'https://manual.example.com'
+      });
+      config.set('lastServiceDiscovery', new Date().toISOString());
+      await config.save();
+      mockAxios.get.mockResolvedValue({
+        data: { auth: { base: PROD_BASE }, endpoints: { http: 'https://discovered.example.com/api/v1' } }
+      } as never);
+
+      await config.clearManualEndpointOverrides();
+      await config.load();
+
+      expect(config.hasManualEndpointOverrides()).toBe(false);
+      expect(config.get('lastManualEndpointUpdate')).toBeUndefined();
+      if (skipDiscovery) {
+        expect(mockAxios.get).not.toHaveBeenCalled();
+      } else {
+        expect(mockAxios.get).toHaveBeenCalledTimes(1);
+        expect(config.getApiUrl()).toBe('https://discovered.example.com');
+        expect(config.getDiscoveredApiUrl()).toBe(PROD_BASE);
+      }
+    });
+  });
+
+  describe('vendor key validation metadata', () => {
+    it.each([undefined, '2025-01-01T00:00:00.000Z'])('preserves validation state on unreachable gateways (%s)', async (lastValidated) => {
+      config.set('lastValidated', lastValidated);
+      config.set('authFailureCount', 2);
+      config.set('lastAuthFailure', '2025-01-02T00:00:00.000Z');
+      mockAxios.post.mockRejectedValue(connectionRefused('203.0.113.1:443') as never);
+
+      await config.setVendorKey(TEST_KEY);
+      expect(await config.getVendorKeyAsync()).toBe(TEST_KEY);
+      await config.load();
+
+      expect(config.get('lastValidated')).toBe(lastValidated);
+      expect(config.getFailureCount()).toBe(2);
+      expect(config.get('lastAuthFailure')).toBe('2025-01-02T00:00:00.000Z');
+    });
+
+    it.each(['environment', 'option', 'oauth', 'oauth2'])('keeps the %s validation bypass', async (bypass) => {
+      const lastValidated = '2025-01-01T00:00:00.000Z';
+      config.set('lastValidated', lastValidated);
+      config.set('authFailureCount', 2);
+      if (bypass === 'environment') {
+        process.env.SKIP_SERVER_VALIDATION = 'true';
+      } else if (bypass === 'oauth' || bypass === 'oauth2') {
+        config.set('authMethod', bypass);
+      }
+
+      await config.setVendorKey(TEST_KEY, { skipServerValidation: bypass === 'option' });
+
+      expect(await config.getVendorKeyAsync()).toBe(TEST_KEY);
+      expect(mockAxios.post).not.toHaveBeenCalled();
+      expect(config.get('lastValidated')).toBe(lastValidated);
+      expect(config.getFailureCount()).toBe(2);
+      expect(config.get('authMethod')).toBe(bypass.startsWith('oauth') ? bypass : 'vendor_key');
+    });
+
+    it.each([false, true])('records success for a confirmed key, using the disk cache: %s', async (useCache) => {
+      process.env.NODE_ENV = 'production';
+      mockAxios.post.mockResolvedValue({ status: 200, data: { valid: true } } as never);
+      if (useCache) {
+        await config.setVendorKey(TEST_KEY);
+      }
+      config.set('lastValidated', '2025-01-01T00:00:00.000Z');
+      config.set('authFailureCount', 2);
+      config.set('lastAuthFailure', '2025-01-02T00:00:00.000Z');
+      await config.save();
+      await config.load(); // Discard the in-memory cache to exercise the hidden disk cache.
+      mockAxios.post.mockClear();
+
+      const startedAt = Date.now();
+      await config.setVendorKey(TEST_KEY);
+      await config.load();
+
+      expect(new Date(config.get('lastValidated') as string).getTime()).toBeGreaterThanOrEqual(startedAt);
+      expect(config.getFailureCount()).toBe(0);
+      expect(config.get('lastAuthFailure')).toBeUndefined();
+      expect(mockAxios.post).toHaveBeenCalledTimes(useCache ? 0 : 1);
+    });
+  });
+
   describe('candidate list', () => {
     it('does not probe localhost:4000 outside a dev environment', () => {
       process.env.NODE_ENV = 'production';

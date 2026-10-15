@@ -1304,7 +1304,8 @@ export class CLIConfig {
     delete this.config.lastManualEndpointUpdate;
 
     // Rediscover services
-    await this.discoverServices();
+    await this.discoverServices(false, true);
+    await this.save();
   }
 
   getDiscoveredApiUrl(): string {
@@ -1357,8 +1358,9 @@ export class CLIConfig {
     // (e.g. an OAuth access token being stored for MCP/API access — auth-gateway won't
     // recognise it as a vendor key even though the memory API accepts it).
     const isOAuthContext = ['oauth', 'oauth2'].includes(this.config.authMethod || '');
+    let validated = false;
     if (!options.skipServerValidation && !isOAuthContext) {
-      await this.validateVendorKeyWithServer(trimmedKey);
+      validated = await this.validateVendorKeyWithServer(trimmedKey);
     }
 
     // Initialize and store using ApiKeyStorage from @lanonasis/oauth-client
@@ -1387,8 +1389,10 @@ export class CLIConfig {
     if (!this.config.authMethod || !['oauth', 'oauth2', 'jwt'].includes(this.config.authMethod)) {
       this.config.authMethod = 'vendor_key';
     }
-    this.config.lastValidated = new Date().toISOString();
-    await this.resetFailureCount(); // Reset failure count on successful auth
+    if (validated) {
+      this.config.lastValidated = new Date().toISOString();
+      await this.resetFailureCount(); // Reset failure count on successful auth
+    }
     await this.save();
   }
 
@@ -1427,6 +1431,8 @@ export class CLIConfig {
 
   /**
    * Validates a vendor key against the auth gateway before it is persisted.
+   * Returns true for a confirmed key (including a trusted cache hit), false
+   * when validation is skipped.
    *
    * Two outcomes matter and they are no longer conflated:
    *   - the gateway answered and rejected the key  -> throw, with its reason;
@@ -1439,15 +1445,15 @@ export class CLIConfig {
    * `isAuthenticated()` still re-verifies on every cache miss, and the offline
    * grace period still applies.
    */
-  private async validateVendorKeyWithServer(vendorKey: string): Promise<void> {
+  private async validateVendorKeyWithServer(vendorKey: string): Promise<boolean> {
     if (process.env.SKIP_SERVER_VALIDATION === 'true') {
-      return;
+      return false;
     }
 
     // Already verified this exact key against this exact gateway a moment ago
     // (e.g. an MCP client restarting the stdio server) — don't pay for it again.
     if (await this.hasFreshValidation(vendorKey, 'vendor_key')) {
-      return;
+      return true;
     }
 
     try {
@@ -1479,14 +1485,14 @@ export class CLIConfig {
         'vendor_key',
         this.authPathFromEndpoint(verification.endpoint)
       );
-      return;
+      return true;
     }
 
     if (verification.unreachable) {
       // stderr: stdout belongs to the MCP protocol when running under `mcp start`.
       console.error('⚠️  Could not reach the auth gateway to validate the API key — continuing without server-side validation.');
       console.error(`   ${verification.reason ?? 'Connection failed'}`);
-      return;
+      return false;
     }
 
     throw new Error(this.describeVendorKeyRejection(verification.reason));
