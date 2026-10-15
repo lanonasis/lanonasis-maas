@@ -267,8 +267,15 @@ const requireAuth = (command: Command) => {
     await cliConfig.init();
     const isAuthenticated = await cliConfig.isAuthenticated();
     if (!isAuthenticated) {
-      console.error(chalk.red('✖ Authentication required'));
-      console.log(chalk.yellow('Please run:'), chalk.white('lanonasis auth login'));
+      const failureReason = cliConfig.getAuthFailureReason();
+      if (failureReason === 'throttled') {
+        console.error(chalk.red('✖ Authentication service rate-limited'));
+        console.log(chalk.yellow('Your credentials are likely still valid — the verification endpoint is temporarily overloaded.'));
+        console.log(chalk.yellow('Try again shortly, or run:'), chalk.white('lanonasis auth login --vendor-key <key>'));
+      } else {
+        console.error(chalk.red('✖ Authentication required'));
+        console.log(chalk.yellow('Please run:'), chalk.white('lanonasis auth login'));
+      }
       process.exit(1);
     }
   });
