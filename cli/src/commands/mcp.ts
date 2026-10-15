@@ -807,7 +807,7 @@ export function mcpCommands(program: Command) {
       const spinner1 = ora('Testing MCP endpoints...').start();
 
       try {
-        await config.discoverServices(options.verbose);
+        await config.discoverServices(options.verbose, true);
         const services = config.get('discoveredServices');
 
         if (services) {

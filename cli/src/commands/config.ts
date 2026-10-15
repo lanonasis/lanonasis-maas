@@ -264,7 +264,8 @@ export function configCommands(program: Command): void {
       console.log();
 
       try {
-        await config.discoverServices(options.verbose);
+        // User asked for discovery explicitly: bypass the 24h cache.
+        await config.discoverServices(options.verbose, true);
 
         const services = config.get<CLIConfigData['discoveredServices']>('discoveredServices');
         if (services) {

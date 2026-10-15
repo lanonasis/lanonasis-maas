@@ -1,5 +1,16 @@
 # Changelog - @lanonasis/cli
 
+## [Unreleased]
+
+### 🐛 Fixed
+- **`mcp start --transport stdio` no longer dies on a refused local auth gateway.** Vendor-key validation probed a hardcoded `http://localhost:4000` candidate on every machine. Nothing listens there on a normal user install, and the resulting `ECONNREFUSED` both overwrote the auth gateway's real answer and aborted `setVendorKey()`, so the MCP server exited at startup and clients reported `-32000: Connection closed`. The candidate list is now ordered (explicit `AUTH_BASE`/`LANONASIS_AUTH_URL` → service discovery → production → local), `http://localhost:4000` is only probed when `isDevEnvironment()` says so, a loopback address left in `discoveredServices` by a dev session is ignored outside dev, and a refused candidate falls through instead of failing.
+- **Unreachable is no longer treated as invalid.** Verification now distinguishes "every candidate failed to connect" from "a gateway rejected the credential". The first warns on stderr and lets `mcp start` proceed (the existing offline grace period still applies); the second still fails, and now reports the gateway's own reason instead of a connection error from an unrelated candidate. The unreachable message names the bases that were tried and how to override them.
+
+### ⚡ Performance
+- **Auth round trips per CLI invocation cut from two to zero on a warm cache.** API keys are now verified on `/v1/auth/verify-api-key` first; `/v1/auth/verify` requires a Bearer token and answered `401 AUTH_TOKEN_MISSING` for every API key, so probing it first cost an extra round trip on every single command. It remains a fallback.
+- **Successful validations are cached on disk for 5 minutes** in `~/.maas/auth-cache.json` (mode 0600), so a tool that shells out to `lanonasis` per message does not re-verify every time. Only successes are cached, and only a salted SHA-256 digest of the credential — never the credential. A rotated credential, a changed auth base, an explicit rejection, `logout`, or `invalidateAuthCache()` all drop the entry. Set `LANONASIS_DISABLE_AUTH_CACHE=true` to turn it off.
+- **Service discovery reuses a result for 24h** instead of re-fetching `.well-known/onasis.json` on every invocation. The failure path already accepted a cached result for 24h; the success path now does too. `config discover` and `mcp diagnose` force a refresh.
+
 ## [3.11.4] - 2026-10-05
 
 ### 🔐 Security

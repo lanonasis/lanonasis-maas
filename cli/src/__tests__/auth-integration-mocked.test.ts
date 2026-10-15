@@ -126,12 +126,21 @@ describe('CLI Authentication Integration Tests (Mocked)', () => {
       await expect(config.setVendorKey(invalidKey)).rejects.toThrow(/(Key is invalid|invalid vendor key)/i);
     });
 
-    it('should handle network errors during vendor key validation', async () => {
-      const testVendorKey = 'pk_test123456789.sk_test123456789012345';
+    it('stores the key when no auth gateway can be reached', async () => {
+      // An unreachable gateway is NOT a rejected credential. This used to throw,
+      // which is what killed `lanonasis mcp start --transport stdio` with
+      // "Vendor key validation failed: connect ECONNREFUSED 127.0.0.1:4000".
+      // See auth-gateway-candidates.test.ts for the full fall-through contract.
+      const testVendorKey = 'test-unreachable-gateway-key';
 
+      await config.invalidateAuthCache();
       mockAxios.get.mockRejectedValue(new Error('Network error'));
+      const connectionRefused = new Error('connect ECONNREFUSED 127.0.0.1:4000');
+      (connectionRefused as any).code = 'ECONNREFUSED';
+      mockAxios.post.mockRejectedValue(connectionRefused);
 
-      await expect(config.setVendorKey(testVendorKey)).rejects.toThrow();
+      await expect(config.setVendorKey(testVendorKey)).resolves.toBeUndefined();
+      expect(await config.getVendorKeyAsync()).toBe(testVendorKey);
     });
   });
 
