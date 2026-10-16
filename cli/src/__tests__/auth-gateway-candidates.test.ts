@@ -331,6 +331,26 @@ describe('auth gateway candidate probing', () => {
       await expect(config.setVendorKey(TEST_KEY)).resolves.toBeUndefined();
     });
 
+    it('treats gateway 5xx responses as unavailable, not as a rejected credential', async () => {
+      process.env.NODE_ENV = 'development';
+
+      routePosts([
+        { match: `${PROD_BASE}/`, respond: () => httpError(503, { error: 'Service Unavailable' }) },
+        { match: `${LOCAL_BASE}/`, respond: () => connectionRefused('127.0.0.1:4000') }
+      ]);
+
+      const verification = await (config as unknown as {
+        verifyVendorKeyWithAuthGateway: (key: string) => Promise<{ valid: boolean; unreachable?: boolean; throttled?: boolean }>;
+      }).verifyVendorKeyWithAuthGateway(TEST_KEY);
+
+      expect(verification.valid).toBe(false);
+      expect(verification.unreachable).toBe(true);
+      expect(verification.throttled).toBeFalsy();
+
+      // A gateway outage must not be fatal to the `mcp start` path.
+      await expect(config.setVendorKey(TEST_KEY)).resolves.toBeUndefined();
+    });
+
     it('still rejects a credential the gateway refuses', async () => {
       process.env.NODE_ENV = 'production';
 

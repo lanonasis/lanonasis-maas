@@ -943,10 +943,18 @@ export class CLIConfig {
           continue;
         }
 
+        const status = normalizedError.response?.status;
+        // A 5xx means the gateway (or a proxy in front of it) failed; it says
+        // nothing about the credential, so treat it like an unreachable candidate.
+        if (typeof status === 'number' && status >= 500) {
+          outcome.transportReason = outcome.transportReason
+            ?? (normalizedError.message || `Auth gateway returned ${status}`);
+          continue;
+        }
+
         outcome.reachedGateway = true;
         const responsePayload = normalizedError.response?.data as Record<string, unknown> | undefined;
         const responseCode = typeof responsePayload?.code === 'string' ? responsePayload.code : undefined;
-        const status = normalizedError.response?.status;
         const reason = this.extractAuthErrorMessage(responsePayload) || normalizedError.message;
 
         // `AUTH_TOKEN_MISSING` means "wrong path for this credential kind",
