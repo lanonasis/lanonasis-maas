@@ -1,4 +1,4 @@
-# @lanonasis/cli v3.11.3 - Advanced CLI Suite
+# @lanonasis/cli v3.11.5 - Advanced CLI Suite
 
 [![NPM Version](https://img.shields.io/npm/v/@lanonasis/cli)](https://www.npmjs.com/package/@lanonasis/cli)
 [![Downloads](https://img.shields.io/npm/dt/@lanonasis/cli)](https://www.npmjs.com/package/@lanonasis/cli)
@@ -689,7 +689,19 @@ onasis health
 
 ## 📝 Version History
 
-### v3.11.3 (Current)
+### v3.11.5 (Current)
+
+- 🔌 **`mcp start` survives a missing local gateway**: `http://localhost:4000` is only probed in dev, and a refused candidate no longer aborts startup with `-32000: Connection closed`
+- 🌐 **Unavailable ≠ invalid**: an unreachable gateway or a 5xx warns and lets `mcp start` proceed; only a real rejection fails the key. HTTP 429 is reported as rate-limited, not "Authentication required"
+- ⚡ **Fewer auth round trips**: API keys hit `/v1/auth/verify-api-key` first; successful checks are cached for 5 minutes in `~/.maas/auth-cache.json` (set `LANONASIS_DISABLE_AUTH_CACHE=true` to disable); service discovery is reused for 24h
+- 🔑 **Clean vendor-key login**: `auth login --vendor-key` clears a previous OAuth session instead of inheriting it
+
+### v3.11.4
+
+- 🔐 **MCP `--host` guard**: a non-loopback `--host` requires `--allow-public-bind`
+- 🔇 **`X-Auth-Method` is opt-in**: only sent with `CLI_VERBOSE=true`
+
+### v3.11.3
 
 - 📚 **Operator-first `SKILL.md`**: rewritten as a one-read guide — auth path, copy-paste examples for the core memory commands, headless stdout caveats, and a dated verified baseline
 - 🐛 **Doc corrections**: `-v`/`--version` vs `-V`/`--verbose` were documented inverted; `memory intelligence` subcommand names and the `memory behavior` group were wrong or missing; repo paths now match the monorepo layout
