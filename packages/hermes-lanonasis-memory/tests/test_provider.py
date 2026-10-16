@@ -25,10 +25,23 @@ class TestIsAvailable:
         with patch.object(provider, "_ensure_client", return_value=None):
             assert provider.is_available() is True
 
-    def test_returns_false_when_no_api_key(self, provider, monkeypatch):
+    def test_available_without_api_key_when_local_home_resolvable(self, provider, monkeypatch):
+        """Local-first (H2): no remote key, but a resolvable HERMES_HOME → available
+        so the FTS5 local tier can activate standalone. The activation gate in
+        ``agent_init`` requires ``is_available()`` to be True; without this the
+        local-only default would be unreachable."""
         monkeypatch.delenv("LANONASIS_API_KEY", raising=False)
         provider._config.api_key = ""
         provider._config.api_url = "https://api.lanonasis.com"
+        assert provider._hermes_home  # the fixture initialized with a tmp home
+        assert provider.is_available() is True
+
+    def test_returns_false_when_no_key_and_no_home(self, provider, monkeypatch):
+        """Neither remote creds nor a resolvable storage home → unavailable."""
+        monkeypatch.delenv("LANONASIS_API_KEY", raising=False)
+        monkeypatch.delenv("HERMES_HOME", raising=False)
+        provider._config.api_key = ""
+        provider._hermes_home = ""
         assert provider.is_available() is False
 
     def test_never_makes_network_call(self, provider, monkeypatch):

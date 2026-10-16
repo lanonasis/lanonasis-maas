@@ -226,9 +226,14 @@ class LanonasisMemoryProvider(MemoryProvider):
         installed deps only. Health-pinging the backend is ``initialize()``'s
         job (lazy / non-fatal).
 
-        Returns True iff we have the minimum config needed to attempt use:
-        a non-empty API URL and an API key from the environment or profile
-        config. Discovery can still list the provider before activation.
+        Local-first (H2): the FTS5 local tier needs NO credential, so the
+        provider is available when EITHER remote creds are present OR a
+        HERMES_HOME is resolvable for the local store. Without the local
+        allowance, the activation gate in ``agent_init``
+        (``if _mp and _mp.is_available()``) would refuse the provider
+        whenever no remote key is configured — making the local-only
+        default unreachable. Discovery can still list the provider
+        before activation.
         """
         try:
             # Fast local check ONLY — no HTTP, no health_check() call.
@@ -238,9 +243,11 @@ class LanonasisMemoryProvider(MemoryProvider):
                 or ""
             ).strip()
             api_url = (self._config.api_url or "").strip() or "https://api.lanonasis.com"
-            # Considered "available" when we have BOTH an api_url and an api_key.
-            # The setup wizard can still surface us as a choice either way.
-            return bool(api_key) and bool(api_url)
+            have_remote = bool(api_key) and bool(api_url)
+            have_home = bool(
+                (self._hermes_home or os.environ.get("HERMES_HOME", "")).strip()
+            )
+            return have_remote or have_home
         except Exception:
             return False
 
