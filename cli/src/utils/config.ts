@@ -2,7 +2,7 @@ import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as os from 'os';
 import { jwtDecode } from 'jwt-decode';
-import { randomUUID } from 'crypto';
+import { createHash, randomUUID } from 'crypto';
 import { ApiKeyStorage } from '@lanonasis/oauth-client';
 import axios from 'axios';
 import type { AxiosInstance, AxiosRequestConfig } from 'axios';
@@ -76,8 +76,55 @@ export type RemoteAuthVerification = {
   method: 'token' | 'vendor_key' | 'none';
   endpoint?: string;
   reason?: string;
-  status?: number; // HTTP status code from the verification request
-  throttled?: boolean; // true when the verification failed due to rate limiting (429)
+  /**
+   * True when *no* auth gateway candidate could be reached at all (every probe
+   * failed at the connection level). Callers must treat this as "unknown",
+   * never as "rejected" — a refused local gateway is not a bad credential.
+   */
+  unreachable?: boolean;
+  /** Endpoints that were probed, for actionable diagnostics. */
+  attempted?: string[];
+  /** HTTP status from the verification request, when one was received. */
+  status?: number;
+  /** True when the gateway rate-limited the probe (429) rather than rejecting it. */
+  throttled?: boolean;
+};
+
+type AuthVerificationPath = '/v1/auth/verify' | '/v1/auth/verify-token' | '/v1/auth/verify-api-key';
+
+type AuthProbeAttempt = {
+  path: AuthVerificationPath;
+  headers: Record<string, string>;
+  body: Record<string, unknown>;
+  /** `/v1/auth/verify` answers with a decoded `payload` instead of `valid: true`. */
+  treatPayloadAsValid?: boolean;
+};
+
+type AuthProbeOutcome = {
+  /** Set only when a candidate answered conclusively (valid or rejected). */
+  verification?: RemoteAuthVerification;
+  /** Reason derived from an actual gateway response. Preferred when reporting. */
+  gatewayReason?: string;
+  /** Reason derived from a connection-level failure. Reported only as a last resort. */
+  transportReason?: string;
+  /** True once any candidate produced an HTTP response. */
+  reachedGateway: boolean;
+  attempted: string[];
+};
+
+/**
+ * On-disk record of a *successful* credential verification. Holds a salted
+ * digest of the credential, never the credential itself. Rejections are never
+ * persisted, so a revoked credential is re-checked as soon as the short TTL
+ * lapses, and a rotated credential misses the cache immediately.
+ */
+type AuthValidationCacheEntry = {
+  fingerprint: string;
+  method: 'token' | 'vendor_key';
+  authBase: string;
+  /** Verification path that answered, used to order the next probe. */
+  verifiedVia?: AuthVerificationPath;
+  validatedAt: number;
 };
 
 export class CLIConfig {
@@ -90,6 +137,29 @@ export class CLIConfig {
   private readonly AUTH_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
   private apiKeyStorage?: ApiKeyStorage;
   private vendorKeyCache?: string;
+  private authDiskCache: AuthValidationCacheEntry | null = null;
+  private authDiskCacheLoaded = false;
+  private lastSuccessfulAuthPath?: AuthVerificationPath;
+
+  private static readonly PRODUCTION_AUTH_BASE = 'https://auth.lanonasis.com';
+  private static readonly LOCAL_AUTH_BASE = 'http://localhost:4000';
+  /** Service-discovery cache lifetime; mirrors the stale-cache window already used on failure. */
+  private static readonly SERVICE_DISCOVERY_TTL_MS = 24 * 60 * 60 * 1000;
+  /** Domain-separation label so the cached digest is not an api-key lookup hash. */
+  private static readonly AUTH_CACHE_FINGERPRINT_LABEL = 'lanonasis-cli/auth-validation-cache/v1';
+  private static readonly UNREACHABLE_ERROR_CODES = [
+    'ECONNREFUSED',
+    'ECONNRESET',
+    'ECONNABORTED',
+    'ENOTFOUND',
+    'ETIMEDOUT',
+    'EAI_AGAIN',
+    'EHOSTUNREACH',
+    'ENETUNREACH',
+    'EPIPE',
+    'ERR_NETWORK',
+    'ERR_CANCELED'
+  ];
   // Per-process memoization: once vendor-key auth succeeds in this process,
   // skip all subsequent server verification calls for the lifetime of this
   // process. Vendor keys are long-lived by construction (opaque 45-char
@@ -170,6 +240,8 @@ export class CLIConfig {
     this.configPath = path.join(configDir, 'config.json');
     this.lockFile = path.join(configDir, 'config.lock');
     this.vendorKeyCache = undefined;
+    this.authDiskCache = null;
+    this.authDiskCacheLoaded = false;
   }
 
   /**
@@ -191,6 +263,8 @@ export class CLIConfig {
   async load(): Promise<void> {
     // Reset in-memory cache; disk state may have changed
     this.vendorKeyCache = undefined;
+    this.authDiskCache = null;
+    this.authDiskCacheLoaded = false;
 
     try {
       const data = await fs.readFile(this.configPath, 'utf-8');
@@ -345,14 +419,33 @@ export class CLIConfig {
   }
 
   // Enhanced Service Discovery Integration
-  async discoverServices(verbose: boolean = false): Promise<void> {
+  /**
+   * @param force Re-fetch even when a recent discovery result is cached.
+   *   Pass true only for user-initiated discovery (`config discover`,
+   *   `mcp diagnose`), never from a hot path.
+   */
+  async discoverServices(verbose: boolean = false, force: boolean = false): Promise<void> {
     // Honour manually configured endpoints — skip auto-discovery so we don't clobber them.
     if (this.config.manualEndpointOverrides) {
       return;
     }
 
     const isTestEnvironment = process.env.NODE_ENV === 'test';
-    const forceDiscovery = process.env.FORCE_SERVICE_DISCOVERY === 'true';
+    const forceDiscovery = force || process.env.FORCE_SERVICE_DISCOVERY === 'true';
+
+    // Reuse a recent discovery result instead of re-fetching .well-known on
+    // every single CLI invocation. The failure path already accepts a cached
+    // result for 24h; honouring the same window on the success path removes a
+    // network round trip from every command.
+    if (!forceDiscovery && this.config.discoveredServices && this.config.lastServiceDiscovery) {
+      const age = Date.now() - new Date(this.config.lastServiceDiscovery).getTime();
+      if (Number.isFinite(age) && age >= 0 && age < CLIConfig.SERVICE_DISCOVERY_TTL_MS) {
+        if (verbose) {
+          console.log('\u2713 Using cached service endpoints (less than 24 hours old)');
+        }
+        return;
+      }
+    }
 
     if ((isTestEnvironment && !forceDiscovery) || process.env.SKIP_SERVICE_DISCOVERY === 'true') {
       if (!this.config.discoveredServices) {
@@ -557,6 +650,16 @@ export class CLIConfig {
     return 'unknown';
   }
 
+  /**
+   * Single source of truth for "is this plausibly a dev machine running the
+   * stack locally". Used both for fallback endpoint defaults and for deciding
+   * whether `http://localhost:4000` is worth probing at all.
+   */
+  private isDevEnvironment(): boolean {
+    const nodeEnv = (process.env.NODE_ENV ?? '').toLowerCase();
+    return nodeEnv === 'development' || nodeEnv === 'test';
+  }
+
   private resolveFallbackEndpoints(): {
     endpoints: {
       auth_base: string;
@@ -574,8 +677,7 @@ export class CLIConfig {
     const envMcpSseBase = process.env.LANONASIS_FALLBACK_MCP_SSE_BASE ?? process.env.MCP_SSE_BASE;
 
     const hasEnvOverrides = Boolean(envAuthBase || envMemoryBase || envMcpBase || envMcpWsBase || envMcpSseBase);
-    const nodeEnv = (process.env.NODE_ENV ?? '').toLowerCase();
-    const isDevEnvironment = nodeEnv === 'development' || nodeEnv === 'test';
+    const isDevEnvironment = this.isDevEnvironment();
 
     const defaultAuthBase = isDevEnvironment ? 'http://localhost:4000' : 'https://auth.lanonasis.com';
     const defaultMemoryBase = isDevEnvironment ? 'http://localhost:4000' : 'https://api.lanonasis.com'; // Primary REST API (Supabase Edge Functions)
@@ -659,13 +761,111 @@ export class CLIConfig {
     throw new Error('Auth health endpoints unreachable');
   }
 
-  private getAuthVerificationEndpoints(pathname: '/v1/auth/verify' | '/v1/auth/verify-token' | '/v1/auth/verify-api-key'): string[] {
-    const authBase = (this.config.discoveredServices?.auth_base || 'https://auth.lanonasis.com').replace(/\/$/, '');
-    return Array.from(new Set([
-      `${authBase}${pathname}`,
-      `https://auth.lanonasis.com${pathname}`,
-      `http://localhost:4000${pathname}`
-    ]));
+  /**
+   * An auth base the operator configured explicitly — via `AUTH_BASE` /
+   * `LANONASIS_AUTH_URL` / `LANONASIS_FALLBACK_AUTH_BASE`, or via
+   * `config set` (which sets `manualEndpointOverrides`). This wins over both
+   * the production default and the local dev gateway, including when it points
+   * at localhost: if someone asked for a local gateway, probe it.
+   */
+  private getExplicitAuthBase(): string | undefined {
+    const fromEnv = process.env.LANONASIS_AUTH_URL
+      ?? process.env.LANONASIS_FALLBACK_AUTH_BASE
+      ?? process.env.AUTH_BASE;
+
+    if (fromEnv) {
+      return this.normalizeOptionalString(fromEnv);
+    }
+
+    if (this.config.manualEndpointOverrides) {
+      return this.normalizeOptionalString(this.config.discoveredServices?.auth_base);
+    }
+
+    return undefined;
+  }
+
+  private isLoopbackUrl(url: string): boolean {
+    return /^[a-z][a-z0-9+.-]*:\/\/(?:localhost|127(?:\.\d{1,3}){3}|\[::1\]|0\.0\.0\.0)(?::\d+)?(?:\/|$)/i
+      .test(url.trim());
+  }
+
+  /**
+   * Ordered, de-duplicated list of auth gateway bases to probe.
+   *
+   * Order matters:
+   *   1. an explicitly configured base (env or `config set`),
+   *   2. whatever service discovery returned (unless it is a loopback address
+   *      left over from a dev session),
+   *   3. the production gateway,
+   *   4. `http://localhost:4000` — **only** in a dev environment.
+   *
+   * Nothing listens on port 4000 on a normal user machine. Probing it
+   * unconditionally used to turn an instant ECONNREFUSED into the reported
+   * failure reason (masking the gateway's real answer) and, through
+   * `setVendorKey`, into a fatal `mcp start` error.
+   */
+  private getAuthCandidateBases(): string[] {
+    const candidates: string[] = [];
+    const add = (url: string | undefined): void => {
+      if (!url) {
+        return;
+      }
+      const normalized = url.trim().replace(/\/+$/, '');
+      if (normalized && !candidates.includes(normalized)) {
+        candidates.push(normalized);
+      }
+    };
+
+    const isDev = this.isDevEnvironment();
+
+    add(this.getExplicitAuthBase());
+
+    const discovered = this.normalizeOptionalString(this.config.discoveredServices?.auth_base);
+    if (discovered && (isDev || !this.isLoopbackUrl(discovered))) {
+      add(discovered);
+    }
+
+    add(CLIConfig.PRODUCTION_AUTH_BASE);
+
+    if (isDev) {
+      add(CLIConfig.LOCAL_AUTH_BASE);
+    }
+
+    return candidates;
+  }
+
+  private getAuthVerificationEndpoints(pathname: AuthVerificationPath): string[] {
+    return this.getAuthCandidateBases().map(base => `${base}${pathname}`);
+  }
+
+  /**
+   * True when the request never reached an auth gateway (DNS/connect/timeout),
+   * as opposed to reaching one and being told "no".
+   */
+  private isUnreachableError(error: ServiceDiscoveryError): boolean {
+    if (typeof error.response?.status === 'number') {
+      return false;
+    }
+
+    if (error.code && CLIConfig.UNREACHABLE_ERROR_CODES.includes(error.code)) {
+      return true;
+    }
+
+    // Node collapses dual-stack connect failures into a single message such as
+    // "connect ECONNREFUSED 127.0.0.1:4000; ::1:4000", sometimes with no `code`.
+    const message = (error.message ?? '').toUpperCase();
+    return CLIConfig.UNREACHABLE_ERROR_CODES.some(code => message.includes(code));
+  }
+
+  /**
+   * Removes anything credential-shaped from a gateway-supplied message before
+   * it reaches a console line or an error the user may paste into an issue.
+   */
+  private redactCredentials(text: string): string {
+    return text
+      .replace(/\(received[^)]*\)/gi, '(received ***)')
+      .replace(/\b(lano|lns|sk|pk|onasis)_[A-Za-z0-9._-]+/gi, '$1_***')
+      .replace(/\b[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\b/g, '***.***.***');
   }
 
   private extractAuthErrorMessage(payload: unknown): string | undefined {
@@ -685,110 +885,211 @@ export class CLIConfig {
     return undefined;
   }
 
-  private async verifyTokenWithAuthGateway(token: string): Promise<RemoteAuthVerification> {
-    const headers: Record<string, string> = {
-      'Authorization': `Bearer ${token}`,
-      'X-Project-Scope': 'lanonasis-maas'
-    };
+  /**
+   * Probes one verification path across every auth candidate.
+   *
+   * Fall-through rules:
+   *   - a refused/unreachable candidate is NEVER fatal and never becomes the
+   *     reported reason while any other candidate or path remains;
+   *   - an explicit rejection from a gateway that answered IS conclusive and
+   *     stops the walk immediately, so the user sees the real reason;
+   *   - reasons from a real HTTP response always outrank connection errors.
+   */
+  private async probeAuthEndpoints(
+    attempt: AuthProbeAttempt,
+    method: 'token' | 'vendor_key'
+  ): Promise<AuthProbeOutcome> {
+    const outcome: AuthProbeOutcome = { reachedGateway: false, attempted: [] };
 
-    let fallbackReason = 'Unable to verify token with auth gateway';
+    for (const endpoint of this.getAuthVerificationEndpoints(attempt.path)) {
+      outcome.attempted.push(endpoint);
 
-    // Primary check (required by auth contract): /v1/auth/verify
-    for (const endpoint of this.getAuthVerificationEndpoints('/v1/auth/verify')) {
       try {
-        const response = await axios.post(endpoint, {}, {
-          headers,
+        const response = await axios.post(endpoint, attempt.body, {
+          headers: attempt.headers,
           timeout: 5000,
           proxy: false
         });
-        const payload = response.data as Record<string, unknown>;
-        if (payload.valid === true || Boolean(payload.payload)) {
-          return { valid: true, method: 'token', endpoint };
+
+        outcome.reachedGateway = true;
+        const payload = (response?.data ?? {}) as Record<string, unknown>;
+
+        if (payload.valid === true || (attempt.treatPayloadAsValid && Boolean(payload.payload))) {
+          outcome.verification = { valid: true, method, endpoint };
+          return outcome;
         }
+
         if (payload.valid === false) {
-          return {
+          outcome.verification = {
             valid: false,
-            method: 'token',
+            method,
             endpoint,
-            reason: this.extractAuthErrorMessage(payload) || 'Token is invalid'
+            reason: this.extractAuthErrorMessage(payload)
+              || (method === 'token' ? 'Token is invalid' : 'API key is invalid')
           };
+          return outcome;
         }
+
+        // Reached a gateway, but it answered neither valid nor invalid.
+        outcome.gatewayReason = outcome.gatewayReason
+          ?? this.extractAuthErrorMessage(payload)
+          ?? `Auth gateway returned an unexpected response from ${endpoint}`;
       } catch (error: unknown) {
         const normalizedError = this.normalizeServiceError(error);
+
+        if (this.isUnreachableError(normalizedError)) {
+          outcome.transportReason = outcome.transportReason
+            ?? (normalizedError.message || 'Connection failed');
+          continue;
+        }
+
+        const status = normalizedError.response?.status;
+        // A 5xx means the gateway (or a proxy in front of it) failed; it says
+        // nothing about the credential, so treat it like an unreachable candidate.
+        if (typeof status === 'number' && status >= 500) {
+          outcome.transportReason = outcome.transportReason
+            ?? (normalizedError.message || `Auth gateway returned ${status}`);
+          continue;
+        }
+
+        outcome.reachedGateway = true;
         const responsePayload = normalizedError.response?.data as Record<string, unknown> | undefined;
         const responseCode = typeof responsePayload?.code === 'string' ? responsePayload.code : undefined;
-        const reason = this.extractAuthErrorMessage(responsePayload) || normalizedError.message || fallbackReason;
-        fallbackReason = reason;
+        const reason = this.extractAuthErrorMessage(responsePayload) || normalizedError.message;
 
-        // If auth gateway explicitly rejected token, stop early.
+        // `AUTH_TOKEN_MISSING` means "wrong path for this credential kind",
+        // not "bad credential" — keep walking.
         if (
-          (normalizedError.response?.status === 401 || normalizedError.response?.status === 403) &&
+          (status === 401 || status === 403) &&
           responseCode &&
           responseCode !== 'AUTH_TOKEN_MISSING'
         ) {
-          return { valid: false, method: 'token', endpoint, reason };
+          outcome.verification = {
+            valid: false,
+            method,
+            endpoint,
+            reason: reason || 'Credential was rejected by the auth gateway'
+          };
+          return outcome;
         }
 
-        // 429 rate-limit — fail fast with throttled flag.
-        if (normalizedError.response?.status === 429) {
-          return {
+        if (reason) {
+          outcome.gatewayReason = outcome.gatewayReason ?? reason;
+        }
+
+        // 429 rate-limit — stop probing and report a throttle rather than a
+        // rejection, so callers back off instead of discarding the credential.
+        if (status === 429) {
+          outcome.verification = {
             valid: false,
-            method: 'token',
+            method,
             endpoint,
-            reason: normalizedError.message || 'Authentication service rate-limited',
+            reason: reason || 'Authentication service rate-limited',
             status: 429,
             throttled: true
           };
+          return outcome;
         }
       }
     }
 
-    // Fallback for deployments where proxy layers strip Authorization headers.
-    for (const endpoint of this.getAuthVerificationEndpoints('/v1/auth/verify-token')) {
-      try {
-        const response = await axios.post(endpoint, { token }, {
-          headers: {
-            'Content-Type': 'application/json',
-            'X-Project-Scope': 'lanonasis-maas'
-          },
-          timeout: 5000,
-          proxy: false
-        });
-        const payload = response.data as Record<string, unknown>;
-        if (payload.valid === true) {
-          return { valid: true, method: 'token', endpoint };
+    return outcome;
+  }
+
+  /**
+   * Walks the ordered verification attempts and aggregates their outcomes into
+   * a single verdict. Only reports failure once EVERY candidate of EVERY
+   * attempt has been exhausted, and distinguishes "rejected" from "could not
+   * reach any gateway".
+   */
+  private async runAuthProbes(
+    method: 'token' | 'vendor_key',
+    attempts: AuthProbeAttempt[],
+    fallbackReason: string
+  ): Promise<RemoteAuthVerification> {
+    const attempted: string[] = [];
+    let reachedGateway = false;
+    let gatewayReason: string | undefined;
+    let transportReason: string | undefined;
+
+    for (const attempt of attempts) {
+      const outcome = await this.probeAuthEndpoints(attempt, method);
+      attempted.push(...outcome.attempted);
+      reachedGateway = reachedGateway || outcome.reachedGateway;
+      gatewayReason = gatewayReason ?? outcome.gatewayReason;
+      transportReason = transportReason ?? outcome.transportReason;
+
+      if (outcome.verification) {
+        const verification = { ...outcome.verification, attempted };
+        if (verification.reason) {
+          verification.reason = this.redactCredentials(verification.reason);
         }
-        if (payload.valid === false) {
-          return {
-            valid: false,
-            method: 'token',
-            endpoint,
-            reason: this.extractAuthErrorMessage(payload) || 'Token is invalid'
-          };
+        if (verification.valid) {
+          this.lastSuccessfulAuthPath = attempt.path;
         }
-      } catch (error: unknown) {
-        const normalizedError = this.normalizeServiceError(error);
-        const responsePayload = normalizedError.response?.data as Record<string, unknown> | undefined;
-        // 429 on the fallback — also rate-limited, propagate the flag.
-        if (normalizedError.response?.status === 429) {
-          return {
-            valid: false,
-            method: 'token',
-            endpoint,
-            reason: normalizedError.message || 'Authentication service rate-limited',
-            status: 429,
-            throttled: true
-          };
-        }
-        fallbackReason = this.extractAuthErrorMessage(responsePayload) || normalizedError.message || fallbackReason;
+        return verification;
       }
+    }
+
+    if (!reachedGateway) {
+      const bases = this.getAuthCandidateBases().join(', ');
+      return {
+        valid: false,
+        method,
+        unreachable: true,
+        attempted,
+        reason: `Could not reach any Lanonasis auth gateway (${transportReason ?? 'connection failed'}). `
+          + `Tried: ${bases}. Check your network connection, or point AUTH_BASE at a reachable auth gateway.`
+      };
     }
 
     return {
       valid: false,
-      method: 'token',
-      reason: fallbackReason
+      method,
+      attempted,
+      reason: this.redactCredentials(gatewayReason ?? fallbackReason)
     };
+  }
+
+  /**
+   * Orders verification attempts so the path that worked last time goes first.
+   */
+  private orderAuthAttempts(attempts: AuthProbeAttempt[]): AuthProbeAttempt[] {
+    const preferred = this.lastSuccessfulAuthPath;
+    if (!preferred) {
+      return attempts;
+    }
+    const first = attempts.filter(attempt => attempt.path === preferred);
+    if (first.length === 0) {
+      return attempts;
+    }
+    return [...first, ...attempts.filter(attempt => attempt.path !== preferred)];
+  }
+
+  private async verifyTokenWithAuthGateway(token: string): Promise<RemoteAuthVerification> {
+    const attempts: AuthProbeAttempt[] = [
+      // Primary check (required by auth contract): /v1/auth/verify
+      {
+        path: '/v1/auth/verify',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'X-Project-Scope': 'lanonasis-maas'
+        },
+        body: {},
+        treatPayloadAsValid: true
+      },
+      // Fallback for deployments where proxy layers strip Authorization headers.
+      {
+        path: '/v1/auth/verify-token',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Project-Scope': 'lanonasis-maas'
+        },
+        body: { token }
+      }
+    ];
+
+    return this.runAuthProbes('token', this.orderAuthAttempts(attempts), 'Unable to verify token with auth gateway');
   }
 
   private async verifyVendorKeyWithAuthGateway(vendorKey: string): Promise<RemoteAuthVerification> {
@@ -810,101 +1111,17 @@ export class CLIConfig {
       'X-Project-Scope': 'lanonasis-maas'
     };
 
-    let fallbackReason = 'Unable to verify API key with auth gateway';
+    // API keys are authoritative on /v1/auth/verify-api-key. /v1/auth/verify
+    // requires a Bearer token and answers `401 AUTH_TOKEN_MISSING` for an API
+    // key, so probing it first cost every single CLI invocation an extra
+    // round trip. It stays as a fallback for deployments that only expose
+    // /verify (or that forward custom auth headers to it).
+    const attempts: AuthProbeAttempt[] = [
+      { path: '/v1/auth/verify-api-key', headers, body: {} },
+      { path: '/v1/auth/verify', headers, body: {}, treatPayloadAsValid: true }
+    ];
 
-    // Primary check (required by auth contract): /v1/auth/verify
-    for (const endpoint of this.getAuthVerificationEndpoints('/v1/auth/verify')) {
-      try {
-        const response = await axios.post(endpoint, {}, {
-          headers,
-          timeout: 5000,
-          proxy: false
-        });
-        const payload = response.data as Record<string, unknown>;
-        if (payload.valid === true || Boolean(payload.payload)) {
-          return { valid: true, method: 'vendor_key', endpoint };
-        }
-        if (payload.valid === false) {
-          return {
-            valid: false,
-            method: 'vendor_key',
-            endpoint,
-            reason: this.extractAuthErrorMessage(payload) || 'API key is invalid'
-          };
-        }
-      } catch (error: unknown) {
-        const normalizedError = this.normalizeServiceError(error);
-        const responsePayload = normalizedError.response?.data as Record<string, unknown> | undefined;
-        const responseCode = typeof responsePayload?.code === 'string' ? responsePayload.code : undefined;
-        const reason = this.extractAuthErrorMessage(responsePayload) || normalizedError.message || fallbackReason;
-        fallbackReason = reason;
-
-        // If auth gateway explicitly rejected API key, stop early.
-        if (
-          (normalizedError.response?.status === 401 || normalizedError.response?.status === 403) &&
-          responseCode &&
-          responseCode !== 'AUTH_TOKEN_MISSING'
-        ) {
-          return { valid: false, method: 'vendor_key', endpoint, reason };
-        }
-
-        // 429 rate-limit — fail fast with throttled flag.
-        if (normalizedError.response?.status === 429) {
-          return {
-            valid: false,
-            method: 'vendor_key',
-            endpoint,
-            reason: normalizedError.message || 'Authentication service rate-limited',
-            status: 429,
-            throttled: true
-          };
-        }
-      }
-    }
-
-    // Fallback for deployments where reverse proxies don't forward custom auth headers on /verify.
-    for (const endpoint of this.getAuthVerificationEndpoints('/v1/auth/verify-api-key')) {
-      try {
-        const response = await axios.post(endpoint, {}, {
-          headers,
-          timeout: 5000,
-          proxy: false
-        });
-        const payload = response.data as Record<string, unknown>;
-        if (payload.valid === true) {
-          return { valid: true, method: 'vendor_key', endpoint };
-        }
-        if (payload.valid === false) {
-          return {
-            valid: false,
-            method: 'vendor_key',
-            endpoint,
-            reason: this.extractAuthErrorMessage(payload) || 'API key is invalid'
-          };
-        }
-      } catch (error: unknown) {
-        const normalizedError = this.normalizeServiceError(error);
-        const responsePayload = normalizedError.response?.data as Record<string, unknown> | undefined;
-        // 429 on the fallback — also rate-limited, propagate the flag.
-        if (normalizedError.response?.status === 429) {
-          return {
-            valid: false,
-            method: 'vendor_key',
-            endpoint,
-            reason: normalizedError.message || 'Authentication service rate-limited',
-            status: 429,
-            throttled: true
-          };
-        }
-        fallbackReason = this.extractAuthErrorMessage(responsePayload) || normalizedError.message || fallbackReason;
-      }
-    }
-
-    return {
-      valid: false,
-      method: 'vendor_key',
-      reason: fallbackReason
-    };
+    return this.runAuthProbes('vendor_key', this.orderAuthAttempts(attempts), 'Unable to verify API key with auth gateway');
   }
 
   async verifyCurrentCredentialsWithServer(): Promise<RemoteAuthVerification> {
@@ -975,6 +1192,135 @@ export class CLIConfig {
   }
 
   /**
+   * Path of the short-lived, on-disk record of the last successful credential
+   * verification. Derived from `configDir` on every call so that tests (and
+   * `setConfigDirectory`) that relocate the config also relocate the cache.
+   */
+  private getAuthCacheFile(): string {
+    return path.join(this.configDir, 'auth-cache.json');
+  }
+
+  private isAuthDiskCacheEnabled(): boolean {
+    return process.env.LANONASIS_DISABLE_AUTH_CACHE !== 'true';
+  }
+
+  /**
+   * Salted digest of a credential. Deliberately domain-separated from
+   * `hashApiKey()` so this value is useless as an api-key lookup hash, and so
+   * it can never be mistaken for the legacy hashed-credential format.
+   */
+  private credentialFingerprint(credential: string, method: 'token' | 'vendor_key'): string {
+    return createHash('sha256')
+      .update(`${CLIConfig.AUTH_CACHE_FINGERPRINT_LABEL}|${method}|${credential}`)
+      .digest('hex');
+  }
+
+  private async readAuthValidationCache(): Promise<AuthValidationCacheEntry | null> {
+    if (this.authDiskCacheLoaded) {
+      return this.authDiskCache;
+    }
+    this.authDiskCacheLoaded = true;
+
+    try {
+      const raw = await fs.readFile(this.getAuthCacheFile(), 'utf-8');
+      const parsed = JSON.parse(raw) as AuthValidationCacheEntry;
+      this.authDiskCache = parsed
+        && typeof parsed.fingerprint === 'string'
+        && typeof parsed.validatedAt === 'number'
+        ? parsed
+        : null;
+    } catch {
+      this.authDiskCache = null;
+    }
+
+    if (this.authDiskCache?.verifiedVia && !this.lastSuccessfulAuthPath) {
+      this.lastSuccessfulAuthPath = this.authDiskCache.verifiedVia;
+    }
+
+    return this.authDiskCache;
+  }
+
+  /**
+   * True when `credential` was verified successfully against the same auth base
+   * within `AUTH_CACHE_TTL`.
+   *
+   * This is what keeps a shell-out-per-keystroke integration from paying an
+   * auth round trip every time. It cannot resurrect a bad credential: only
+   * successes are ever written, the TTL is minutes, a rotated credential yields
+   * a different fingerprint, and a changed auth base invalidates the entry.
+   */
+  private async hasFreshValidation(credential: string, method: 'token' | 'vendor_key'): Promise<boolean> {
+    if (!this.isAuthDiskCacheEnabled()) {
+      return false;
+    }
+
+    const entry = await this.readAuthValidationCache();
+    if (!entry || entry.method !== method) {
+      return false;
+    }
+
+    if (entry.authBase !== (this.getAuthCandidateBases()[0] ?? '')) {
+      return false;
+    }
+
+    const age = Date.now() - entry.validatedAt;
+    if (!Number.isFinite(age) || age < 0 || age >= this.AUTH_CACHE_TTL) {
+      return false;
+    }
+
+    return entry.fingerprint === this.credentialFingerprint(credential, method);
+  }
+
+  private async recordValidationSuccess(
+    credential: string,
+    method: 'token' | 'vendor_key',
+    verifiedVia?: AuthVerificationPath
+  ): Promise<void> {
+    if (!this.isAuthDiskCacheEnabled()) {
+      return;
+    }
+
+    const entry: AuthValidationCacheEntry = {
+      fingerprint: this.credentialFingerprint(credential, method),
+      method,
+      authBase: this.getAuthCandidateBases()[0] ?? '',
+      validatedAt: Date.now(),
+      ...(verifiedVia ? { verifiedVia } : {})
+    };
+
+    this.authDiskCache = entry;
+    this.authDiskCacheLoaded = true;
+
+    try {
+      await fs.mkdir(this.configDir, { recursive: true });
+      await fs.writeFile(this.getAuthCacheFile(), JSON.stringify(entry), { mode: 0o600 });
+    } catch {
+      // Best-effort cache; never fail an auth check because it could not be written.
+    }
+  }
+
+  private async clearValidationCache(): Promise<void> {
+    this.authDiskCache = null;
+    this.authDiskCacheLoaded = true;
+    this.lastSuccessfulAuthPath = undefined;
+
+    try {
+      await fs.unlink(this.getAuthCacheFile());
+    } catch {
+      // Nothing cached; nothing to clear.
+    }
+  }
+
+  /** Maps a verification endpoint URL back to the path that answered. */
+  private authPathFromEndpoint(endpoint?: string): AuthVerificationPath | undefined {
+    if (!endpoint) {
+      return undefined;
+    }
+    const paths: AuthVerificationPath[] = ['/v1/auth/verify-api-key', '/v1/auth/verify-token', '/v1/auth/verify'];
+    return paths.find(candidate => endpoint.endsWith(candidate));
+  }
+
+  /**
    * Clears the in-memory auth cache so that the next `isAuthenticated()` call
    * performs a fresh server verification rather than returning a stale cached result.
    *
@@ -986,6 +1332,7 @@ export class CLIConfig {
    */
   async invalidateAuthCache(): Promise<void> {
     this.authCheckCache = null;
+    await this.clearValidationCache();
     // Also reset the per-process vendor-key memoization so that
     // invalidateAuthCache() truly forces a fresh server verification.
     this.vendorKeyVerifiedThisProcess = null;
@@ -1005,7 +1352,8 @@ export class CLIConfig {
     delete this.config.lastManualEndpointUpdate;
 
     // Rediscover services
-    await this.discoverServices();
+    await this.discoverServices(false, true);
+    await this.save();
   }
 
   getDiscoveredApiUrl(): string {
@@ -1058,8 +1406,9 @@ export class CLIConfig {
     // (e.g. an OAuth access token being stored for MCP/API access — auth-gateway won't
     // recognise it as a vendor key even though the memory API accepts it).
     const isOAuthContext = ['oauth', 'oauth2'].includes(this.config.authMethod || '');
+    let validated = false;
     if (!options.skipServerValidation && !isOAuthContext) {
-      await this.validateVendorKeyWithServer(trimmedKey);
+      validated = await this.validateVendorKeyWithServer(trimmedKey);
     }
 
     // Initialize and store using ApiKeyStorage from @lanonasis/oauth-client
@@ -1088,8 +1437,10 @@ export class CLIConfig {
     if (!this.config.authMethod || !['oauth', 'oauth2', 'jwt'].includes(this.config.authMethod)) {
       this.config.authMethod = 'vendor_key';
     }
-    this.config.lastValidated = new Date().toISOString();
-    await this.resetFailureCount(); // Reset failure count on successful auth
+    if (validated) {
+      this.config.lastValidated = new Date().toISOString();
+      await this.resetFailureCount(); // Reset failure count on successful auth
+    }
     await this.save();
   }
 
@@ -1103,51 +1454,96 @@ export class CLIConfig {
     return true;
   }
 
-  private async validateVendorKeyWithServer(vendorKey: string): Promise<void> {
+  /**
+   * Maps a gateway rejection reason onto an actionable CLI message.
+   */
+  private describeVendorKeyRejection(reason?: string): string {
+    const text = (reason ?? '').toLowerCase();
+
+    if (text.includes('expired')) {
+      return 'Vendor key validation failed: Key has expired. Please generate a new key from your dashboard.';
+    }
+    if (text.includes('revoked')) {
+      return 'Vendor key validation failed: Key has been revoked. Please generate a new key from your dashboard.';
+    }
+    if (text.includes('too many') || text.includes('rate limit')) {
+      return 'Vendor key validation failed: Too many validation attempts. Please wait a moment before trying again.';
+    }
+    if (text.includes('permission') || text.includes('forbidden') || text.includes('access denied')) {
+      return 'Vendor key access denied. The key may not have sufficient permissions for this operation.';
+    }
+
+    return `Vendor key validation failed: ${reason
+      || 'Authentication failed. The key may be invalid, expired, or revoked.'}`;
+  }
+
+  /**
+   * Validates a vendor key against the auth gateway before it is persisted.
+   * Returns true for a confirmed key (including a trusted cache hit), false
+   * when validation is skipped.
+   *
+   * Two outcomes matter and they are no longer conflated:
+   *   - the gateway answered and rejected the key  -> throw, with its reason;
+   *   - no gateway could be reached at all         -> warn and continue.
+   *
+   * The second case is why `lanonasis mcp start --transport stdio` used to die
+   * at startup: a refused `localhost:4000` probe surfaced as
+   * "Vendor key validation failed: connect ECONNREFUSED 127.0.0.1:4000" and
+   * killed the server before it served anything. Unreachable is not invalid —
+   * `isAuthenticated()` still re-verifies on every cache miss, and the offline
+   * grace period still applies.
+   */
+  private async validateVendorKeyWithServer(vendorKey: string): Promise<boolean> {
     if (process.env.SKIP_SERVER_VALIDATION === 'true') {
-      return;
+      return false;
+    }
+
+    // Already verified this exact key against this exact gateway a moment ago
+    // (e.g. an MCP client restarting the stdio server) — don't pay for it again.
+    if (await this.hasFreshValidation(vendorKey, 'vendor_key')) {
+      return true;
     }
 
     try {
       await this.discoverServices();
-      const verification = await this.verifyVendorKeyWithAuthGateway(vendorKey);
-      if (verification.valid) {
-        return;
-      }
-
-      throw new Error(verification.reason || 'Authentication failed. The key may be invalid, expired, or revoked.');
     } catch (error: unknown) {
-      const normalizedError = this.normalizeServiceError(error);
-      // Provide specific error messages based on response
-      if (normalizedError.response?.status === 401) {
-        const errorData = normalizedError.response.data;
-        if (errorData?.error?.includes('expired') || errorData?.message?.includes('expired')) {
-          throw new Error('Vendor key validation failed: Key has expired. Please generate a new key from your dashboard.');
-        } else if (errorData?.error?.includes('revoked') || errorData?.message?.includes('revoked')) {
-          throw new Error('Vendor key validation failed: Key has been revoked. Please generate a new key from your dashboard.');
-        } else if (errorData?.error?.includes('invalid') || errorData?.message?.includes('invalid')) {
-          throw new Error('Vendor key validation failed: Key is invalid. Please check the key format and ensure it was copied correctly.');
-        } else {
-          throw new Error('Vendor key validation failed: Authentication failed. The key may be invalid, expired, or revoked.');
-        }
-      } else if (normalizedError.response?.status === 403) {
-        throw new Error('Vendor key access denied. The key may not have sufficient permissions for this operation.');
-      } else if (normalizedError.response?.status === 429) {
-        throw new Error('Too many validation attempts. Please wait a moment before trying again.');
-      } else if ((normalizedError.response?.status ?? 0) >= 500) {
-        throw new Error('Server error during validation. Please try again in a few moments.');
-      } else if (normalizedError.code === 'ECONNREFUSED') {
-        throw new Error('Cannot connect to authentication server. Please check your internet connection and try again.');
-      } else if (normalizedError.code === 'ENOTFOUND') {
-        throw new Error('Authentication server not found. Please check your internet connection.');
-      } else if (normalizedError.code === 'ETIMEDOUT') {
-        throw new Error('Validation request timed out. Please check your internet connection and try again.');
-      } else if (normalizedError.code === 'ECONNRESET') {
-        throw new Error('Connection was reset during validation. Please try again.');
-      } else {
-        throw new Error(`Vendor key validation failed: ${normalizedError.message || 'Unknown error'}`);
+      // Discovery is advisory here — verification falls back to the built-in
+      // auth candidates below rather than failing outright.
+      if (process.env.CLI_VERBOSE === 'true') {
+        console.warn(`⚠️  Service discovery unavailable: ${this.normalizeServiceError(error).message ?? 'unknown error'}`);
       }
     }
+
+    let verification: RemoteAuthVerification;
+    try {
+      verification = await this.verifyVendorKeyWithAuthGateway(vendorKey);
+    } catch (error: unknown) {
+      const normalizedError = this.normalizeServiceError(error);
+      verification = {
+        valid: false,
+        method: 'vendor_key',
+        unreachable: this.isUnreachableError(normalizedError),
+        reason: this.redactCredentials(normalizedError.message ?? 'Unknown error')
+      };
+    }
+
+    if (verification.valid) {
+      await this.recordValidationSuccess(
+        vendorKey,
+        'vendor_key',
+        this.authPathFromEndpoint(verification.endpoint)
+      );
+      return true;
+    }
+
+    if (verification.unreachable) {
+      // stderr: stdout belongs to the MCP protocol when running under `mcp start`.
+      console.error('⚠️  Could not reach the auth gateway to validate the API key — continuing without server-side validation.');
+      console.error(`   ${verification.reason ?? 'Connection failed'}`);
+      return false;
+    }
+
+    throw new Error(this.describeVendorKeyRejection(verification.reason));
   }
 
   getVendorKey(): string | undefined {
@@ -1320,6 +1716,14 @@ export class CLIConfig {
         return this.authCheckCache.isValid;
       }
 
+      // Then the short-lived on-disk cache. A separate CLI process (an editor
+      // plugin shelling out per message) gets no benefit from the in-memory
+      // cache, so without this every invocation pays an auth round trip.
+      if (await this.hasFreshValidation(vendorKey, 'vendor_key')) {
+        this.authCheckCache = { isValid: true, timestamp: Date.now() };
+        return true;
+      }
+
       // Track lastValidated for the offline grace period used in the catch block.
       // The 24-hour skip-server-validation gate has been removed: it allowed expired/revoked
       // keys to appear valid as long as they had been validated within the past day.
@@ -1329,11 +1733,23 @@ export class CLIConfig {
       try {
         const verification = await this.verifyVendorKeyWithAuthGateway(vendorKey);
         if (!verification.valid) {
+          if (verification.unreachable) {
+            // No gateway answered. Treat it as a network failure so the
+            // offline grace period below applies, exactly as it does for a
+            // thrown connection error.
+            throw Object.assign(new Error(verification.reason ?? 'Auth gateway unreachable'), {
+              code: 'ECONNREFUSED'
+            });
+          }
+
           // Auth gateway explicitly rejected the key — no grace period applies.
+          // A 429 is a transient throttle, not a rejection: keep the stored
+          // validation so the next process does not add load while limited.
           if (verification.throttled) {
             this.lastAuthFailureReason = 'throttled';
           } else {
             this.lastAuthFailureReason = 'invalid_credential';
+            await this.clearValidationCache();
           }
           this.authCheckCache = { isValid: false, timestamp: Date.now() };
           return false;
@@ -1343,6 +1759,11 @@ export class CLIConfig {
         this.config.lastValidated = new Date().toISOString();
         await this.save().catch(() => {}); // Don't fail auth check if save fails
 
+        await this.recordValidationSuccess(
+          vendorKey,
+          'vendor_key',
+          this.authPathFromEndpoint(verification.endpoint)
+        );
         this.authCheckCache = { isValid: true, timestamp: Date.now() };
         // Per-process memoization for vendor-key sessions.
         this.vendorKeyVerifiedThisProcess = true;
@@ -1415,6 +1836,13 @@ export class CLIConfig {
       return this.authCheckCache.isValid;
     }
 
+    // Then the short-lived on-disk cache, so a per-invocation CLI call does not
+    // re-verify the same token with the gateway on every single command.
+    if (await this.hasFreshValidation(token, 'token')) {
+      this.authCheckCache = { isValid: true, timestamp: Date.now() };
+      return true;
+    }
+
     // Local expiry check first (fast)
     let locallyValid = false;
 
@@ -1448,14 +1876,13 @@ export class CLIConfig {
     // If not locally valid, attempt server verification before failing
     if (!locallyValid) {
       try {
-        const endpoints = [
-          'http://localhost:4000/v1/auth/verify-token',
-          'https://auth.lanonasis.com/v1/auth/verify-token'
-        ];
-        for (const endpoint of endpoints) {
+        // Candidate order comes from getAuthCandidateBases(): explicit config,
+        // then discovery, then production, with localhost only in dev.
+        for (const endpoint of this.getAuthVerificationEndpoints('/v1/auth/verify-token')) {
           try {
             const resp = await axios.post(endpoint, { token }, { timeout: 3000 });
-            if (resp.data?.valid === true) {
+            if (resp?.data?.valid === true) {
+              await this.recordValidationSuccess(token, 'token', '/v1/auth/verify-token');
               this.authCheckCache = { isValid: true, timestamp: Date.now() };
               return true;
             }
@@ -1467,17 +1894,18 @@ export class CLIConfig {
       } catch {
         // ignore, will fall back to failure below
       }
+      await this.clearValidationCache();
       this.authCheckCache = { isValid: false, timestamp: Date.now() };
       return false;
     }
 
     // Token is locally valid - verify with server on cache miss for consistency
     try {
-      // Try auth-gateway first (port 4000), then fall back to Netlify function
-      const endpoints = [
-        'http://localhost:4000/v1/auth/verify-token',
-        'https://auth.lanonasis.com/v1/auth/verify-token'
-      ];
+      // Candidate order comes from getAuthCandidateBases(): an explicitly
+      // configured base, then service discovery, then the production gateway.
+      // localhost:4000 is only probed in a dev environment, and a refused
+      // candidate simply falls through to the next one.
+      const endpoints = this.getAuthVerificationEndpoints('/v1/auth/verify-token');
 
       let response = null;
       let networkError = false;
@@ -1526,6 +1954,7 @@ export class CLIConfig {
           if (process.env.CLI_VERBOSE === 'true') {
             console.warn('⚠️  Server validation failed with authentication error - token is invalid');
           }
+          await this.clearValidationCache();
           this.authCheckCache = { isValid: false, timestamp: Date.now() };
           return false;
         }
@@ -1562,6 +1991,7 @@ export class CLIConfig {
       this.config.lastValidated = new Date().toISOString();
       await this.save().catch(() => { }); // Don't fail auth check if save fails
 
+      await this.recordValidationSuccess(token, 'token', '/v1/auth/verify-token');
       this.authCheckCache = { isValid: true, timestamp: Date.now() };
       return true;
     } catch {
@@ -1576,6 +2006,8 @@ export class CLIConfig {
   }
 
   async logout(): Promise<void> {
+    this.authCheckCache = null;
+    await this.clearValidationCache();
     this.config.token = undefined;
     this.config.user = undefined;
     this.vendorKeyCache = undefined;
@@ -1600,6 +2032,8 @@ export class CLIConfig {
   async clear(): Promise<void> {
     this.config = {};
     this.vendorKeyCache = undefined;
+    this.authCheckCache = null;
+    await this.clearValidationCache();
     await this.save();
   }
 
@@ -1776,6 +2210,8 @@ export class CLIConfig {
   }
 
   async clearInvalidCredentials(): Promise<void> {
+    this.authCheckCache = null;
+    await this.clearValidationCache();
     this.config.token = undefined;
     this.config.vendorKey = undefined;
     this.config.user = undefined;

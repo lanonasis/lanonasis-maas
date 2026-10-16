@@ -80,7 +80,7 @@ describe('Authentication Persistence Tests', () => {
       // Verify storage
       expect(await config.getVendorKeyAsync()).toBe(testVendorKey);
       expect(config.get('authMethod')).toBe('vendor_key');
-      expect(config.get('lastValidated')).toBeDefined();
+      expect(config.get('lastValidated')).toBeUndefined();
 
       // Simulate new CLI session by creating new config instance
       const newConfig = new CLIConfig();

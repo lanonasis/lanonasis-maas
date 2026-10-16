@@ -51,6 +51,10 @@ describe('gh#190: 429 rate-limit handling and per-process memoization', () => {
   // Helper to set up vendor-key state without calling the real verification
   async function setupVendorKeyState() {
     mockStorage.__resetMockApiKeyStorage();
+    // Each case must start unauthenticated. The on-disk validation cache is
+    // keyed by credential, and every case reuses the same key, so a success in
+    // an earlier case would otherwise satisfy the next one without a probe.
+    await (config as any).invalidateAuthCache();
     process.env.SKIP_SERVER_VALIDATION = 'true';
     await config.setVendorKey('test-vendor-key-abc123');
     delete process.env.SKIP_SERVER_VALIDATION;
