@@ -1,10 +1,15 @@
 # Changelog - @lanonasis/cli
 
-## [Unreleased]
+## [3.11.5] - 2026-10-16
 
 ### 🐛 Fixed
 - **`mcp start --transport stdio` no longer dies on a refused local auth gateway.** Vendor-key validation probed a hardcoded `http://localhost:4000` candidate on every machine. Nothing listens there on a normal user install, and the resulting `ECONNREFUSED` both overwrote the auth gateway's real answer and aborted `setVendorKey()`, so the MCP server exited at startup and clients reported `-32000: Connection closed`. The candidate list is now ordered (explicit `AUTH_BASE`/`LANONASIS_AUTH_URL` → service discovery → production → local), `http://localhost:4000` is only probed when `isDevEnvironment()` says so, a loopback address left in `discoveredServices` by a dev session is ignored outside dev, and a refused candidate falls through instead of failing.
 - **Unreachable is no longer treated as invalid.** Verification now distinguishes "every candidate failed to connect" from "a gateway rejected the credential". The first warns on stderr and lets `mcp start` proceed (the existing offline grace period still applies); the second still fails, and now reports the gateway's own reason instead of a connection error from an unrelated candidate. The unreachable message names the bases that were tried and how to override them.
+
+- **A 5xx from the auth gateway is treated as unavailable, not as a rejected key.** A 502/503/504 during a gateway outage used to be recorded as `invalid_credential`, so `mcp start` failed and a valid key showed as unauthenticated. It now takes the same path as an unreachable gateway.
+- **HTTP 429 is a transient throttle, not a credential failure.** Vendor-key and token verification report `throttled` on 429, the validation cache is kept, and commands that require auth say the service is rate-limited instead of "Authentication required". A key verified once is not re-verified for the rest of that process.
+- **`auth login --vendor-key` no longer inherits a previous OAuth session.** Stale token, refresh token, expiry and cached user are cleared and the profile is refreshed, so the cached identity no longer flips between accounts (re-land of #140, reverted by #154).
+- **Clearing an endpoint override now persists**, and auth metadata is only written for keys that validated.
 
 ### ⚡ Performance
 - **Auth round trips per CLI invocation cut from two to zero on a warm cache.** API keys are now verified on `/v1/auth/verify-api-key` first; `/v1/auth/verify` requires a Bearer token and answered `401 AUTH_TOKEN_MISSING` for every API key, so probing it first cost an extra round trip on every single command. It remains a fallback.
