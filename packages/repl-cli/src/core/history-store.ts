@@ -259,9 +259,11 @@ export function rewriteHistorySync(opts: HistoryStoreOptions & { entries: string
 
 function ensureDir(file: string): void {
   const dir = dirname(file);
-  if (!existsSync(dir)) {
-    mkdirSync(dir, { recursive: true, mode: HISTORY_DIR_MODE });
-  }
+  // Only tighten a directory this code created. A pre-existing parent
+  // (e.g. /tmp, ~/Documents) belongs to the user: forcing it to 0700 would
+  // silently change permissions on a directory we do not own.
+  if (existsSync(dir)) return;
+  mkdirSync(dir, { recursive: true, mode: HISTORY_DIR_MODE });
   tryChmod(dir, HISTORY_DIR_MODE);
 }
 
