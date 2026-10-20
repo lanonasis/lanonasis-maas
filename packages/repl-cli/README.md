@@ -259,6 +259,7 @@ Location: `~/.lanonasis/repl-config.json`
   "aiRouterUrl": "https://ai.vortexcore.app",
   "useMCP": false,
   "maxHistorySize": 1000,
+  "historyPersistence": true,
   "nlMode": true
 }
 ```
@@ -276,10 +277,74 @@ export AI_ROUTER_URL="https://ai.vortexcore.app"
 export OPENAI_API_KEY="sk-xxx"
 export OPENAI_MODEL="gpt-4o-mini"
 
+# Command history
+# Set to 0 to disable writing ~/.lanonasis/repl-history.txt.
+export LANONASIS_REPL_HISTORY=1
+
 # Debug Logging
 export DEBUG=lanonasis:*
 export LOG_LEVEL=debug
 ```
+
+### Command history
+
+The REPL remembers what you typed between sessions. Press `↑` / `↓` to
+navigate to a previous command, just like in your shell.
+
+| Where | What |
+|---|---|
+| **File** | `~/.lanonasis/repl-history.txt` |
+| **Permissions** | `0600` on the file, `0700` on its parent directory (POSIX) |
+| **Capacity** | Up to `maxHistorySize` entries (default `1000`). Excess is trimmed atomically (temp + rename). |
+| **Format** | One entry per line, UTF-8, no quoting. |
+
+#### What's saved, what isn't
+
+Saved:
+
+- Recognised commands (e.g. `help`, `search TypeScript`, `create MyTitle SomeContent`).
+- Natural-language input that the orchestrator processed without error.
+
+**Never saved** (the REPL applies this filter before touching disk):
+
+- **Credentials.** OpenAI, Anthropic, GitHub, Stripe, AWS, Google,
+  LanOnasis, JWT, Bearer, Telegram tokens, SSH private-key blocks,
+  database URLs, hex secrets, and `KEY=value` env assignments — all
+  detected via the existing `local-memory/privacy.ts` pattern matcher.
+- Multi-line inputs (anything containing a literal newline).
+- Inputs longer than 2 000 characters.
+- Repeated submissions identical to the entry just persisted (no
+  point growing the file with duplicates).
+
+The in-memory history still shows the secret for the current session
+so `↑` / `↓` inside the REPL still works — the filter only governs
+what lands on disk. In-memory history is cleared when the process
+exits.
+
+#### Opting out
+
+Two ways to keep the REPL session-only:
+
+```jsonc
+// ~/.lanonasis/repl-config.json
+{ "historyPersistence": false }
+```
+
+```bash
+LANONASIS_REPL_HISTORY=0 lrepl start
+```
+
+When persistence is disabled, neither the file nor the directory is
+created and no FS writes happen at any point in the session.
+
+#### Clearing
+
+```bash
+rm ~/.lanonasis/repl-history.txt
+```
+
+The next `lrepl start` will recreate an empty file (mode `0600`).
+The in-memory history is always cleared on process exit.
 
 ## 📊 AI Fallback Flow
 
