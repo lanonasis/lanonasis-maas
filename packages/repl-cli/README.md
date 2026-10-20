@@ -334,8 +334,16 @@ Two ways to keep the REPL session-only:
 LANONASIS_REPL_HISTORY=0 lrepl start
 ```
 
-When persistence is disabled, neither the file nor the directory is
-created and no FS writes happen at any point in the session.
+`LANONASIS_REPL_HISTORY=0` always wins over the saved config: it is
+applied after `repl-config.json` is loaded, on every launch, so a
+`"historyPersistence": true` in that file cannot re-enable persistence
+while the variable is set. The variable is never written into the
+config file.
+
+When persistence is disabled, the **history file** is never created and
+no command is ever written to disk. The CLI does still create
+`~/.lanonasis/` and `repl-config.json` on first launch — the config is
+the one file that gets written regardless of this setting.
 
 #### Clearing
 
@@ -343,8 +351,11 @@ created and no FS writes happen at any point in the session.
 rm ~/.lanonasis/repl-history.txt
 ```
 
-The next `lrepl start` will recreate an empty file (mode `0600`).
-The in-memory history is always cleared on process exit.
+The history file is created on the first input that is persisted, not at
+startup — so the next `lrepl start` does **not** recreate it. The REPL
+starts with empty history, and the file reappears (mode `0600`) as soon
+as you enter a command worth saving. The in-memory history is always
+cleared on process exit.
 
 ## 📊 AI Fallback Flow
 
