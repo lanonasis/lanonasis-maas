@@ -14,18 +14,31 @@
  *     input off disk, while ordinary natural-language input lands
  *     normally.
  *   - The opt-out (`historyPersistence: false`, and env
- *     `LANONASIS_REPL_HISTORY=0`) skips all disk writes.
- *   - File permissions are 0600 / 0700 on POSIX.
+ *     `LANONASIS_REPL_HISTORY=0`) skips all disk writes, and the env
+ *     opt-out wins over a saved config on every launch.
+ *   - File permissions are 0600 / 0700 on POSIX, and a pre-existing parent
+ *     directory's mode is left alone.
  *
- * Every test points `historyFile` at a freshly-mkdtemp path so the real
- * `~/.lanonasis/repl-history.txt` is never touched.
+ * Every test points `historyFile` at a freshly-mkdtemp path and passes an
+ * explicit `configPath` to loadConfig(), so the real
+ * `~/.lanonasis/repl-history.txt` and `~/.lanonasis/repl-config.json` are
+ * never read or written. Results must not depend on the developer's machine.
  */
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { existsSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import {
+  chmodSync,
+  existsSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from 'node:fs';
+import { homedir, tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 import { ReplEngine } from '../src/core/repl-engine';
+import { getActiveConfigPath, loadConfig } from '../src/config/loader';
 import type { ReplConfig } from '../src/config/types';
 
 function baseConfig(historyFile: string): ReplConfig {
@@ -51,6 +64,32 @@ describe('ReplEngine history persistence', () => {
     const dir = mkdtempSync(join(tmpdir(), 'repl-engine-history-'));
     dirs.push(dir);
     return { file: join(dir, 'history.txt'), dir };
+  }
+  /**
+   * Isolated config path. `saved` is written to the file first when given,
+   * so a test can simulate a config left behind by an earlier launch.
+   */
+  function configWorkspace(saved?: unknown): { configPath: string; dir: string } {
+    const dir = mkdtempSync(join(tmpdir(), 'repl-loader-'));
+    dirs.push(dir);
+    const configPath = join(dir, 'repl-config.json');
+    if (saved !== undefined) {
+      writeFileSync(configPath, JSON.stringify(saved, null, 2));
+    }
+    return { configPath, dir };
+  }
+  const ENV_KEY = 'LANONASIS_REPL_HISTORY';
+  /** Run `fn` with LANONASIS_REPL_HISTORY set (or unset), then restore it. */
+  async function withEnv<T>(value: string | undefined, fn: () => Promise<T>): Promise<T> {
+    const original = process.env[ENV_KEY];
+    try {
+      if (value === undefined) delete process.env[ENV_KEY];
+      else process.env[ENV_KEY] = value;
+      return await fn();
+    } finally {
+      if (original === undefined) delete process.env[ENV_KEY];
+      else process.env[ENV_KEY] = original;
+    }
   }
   afterEach(() => {
     while (dirs.length) rmSync(dirs.pop()!, { recursive: true, force: true });
@@ -121,8 +160,14 @@ describe('ReplEngine history persistence', () => {
 
   it('caps inputHistory to maxHistorySize in memory and rewrites the on-disk file on trim', async () => {
     const { file } = workspace();
-    const cfg = { ...baseConfig(file), maxHistorySize: 3 };
+    // Authenticate + stub the orchestrator: unauthenticated NL input is
+    // deliberately not persisted (see the failure tests below), so the trim
+    // behaviour has to be exercised through successful turns.
+    const cfg: ReplConfig = { ...baseConfig(file), maxHistorySize: 3, authToken: 'test-token' };
     const engine = new ReplEngine(cfg);
+    vi.spyOn((engine as any).orchestrator, 'processNaturalLanguage').mockResolvedValue({
+      mainAnswer: 'ok',
+    });
     for (const line of ['alpha', 'beta', 'gamma', 'delta', 'epsilon']) {
       await feed(engine, line);
     }
@@ -180,26 +225,58 @@ describe('ReplEngine history persistence', () => {
     expect((engine as any).inputHistory).toEqual(['help', 'status']);
   });
 
-  it('opt-out via env LANONASIS_REPL_HISTORY=0 makes loadConfig set historyPersistence=false on the returned config', async () => {
-    const original = process.env.LANONASIS_REPL_HISTORY;
-    try {
-      // loader.ts reads process.env.LANONASIS_REPL_HISTORY once, when
-      // its top-level DEFAULT_CONFIG is first evaluated. Vitest caches
-      // modules, so re-importing without `vi.resetModules()` returns the
-      // stale module where DEFAULT_CONFIG is already frozen. Reset the
-      // module graph, mutate the env, then dynamic-import.
-      process.env.LANONASIS_REPL_HISTORY = '0';
-      vi.resetModules();
-      const loader = await import('../src/config/loader');
-      const cfg = (await loader.loadConfig({
-        historyFile: '/tmp/should-not-matter',
-        maxHistorySize: 100,
-      })) as ReplConfig;
-      expect(cfg.historyPersistence).toBe(false);
-    } finally {
-      if (original === undefined) delete process.env.LANONASIS_REPL_HISTORY;
-      else process.env.LANONASIS_REPL_HISTORY = original;
-      vi.resetModules();
+  it('env LANONASIS_REPL_HISTORY=0 wins over a saved config that says historyPersistence: true', async () => {
+    // Regression: DEFAULT_CONFIG used to be env-derived and written to disk,
+    // so the first launch stored `true` and the saved file then beat the env
+    // on every subsequent launch. The env must win on EVERY launch.
+    const { configPath } = configWorkspace({ historyPersistence: true });
+    const cfg = await withEnv('0', () =>
+      loadConfig({ historyFile: '/tmp/should-not-matter', maxHistorySize: 100 }, { configPath })
+    );
+    expect(cfg.historyPersistence).toBe(false);
+  });
+
+  it('respects a saved historyPersistence:false when the env var is unset', async () => {
+    const { configPath } = configWorkspace({ historyPersistence: false });
+    const cfg = await withEnv(undefined, () => loadConfig({}, { configPath }));
+    expect(cfg.historyPersistence).toBe(false);
+  });
+
+  it('never writes an env-derived historyPersistence into the saved config file', async () => {
+    // First launch with the opt-out set: the file must record the neutral
+    // default (true), never `false` — otherwise the opt-out becomes sticky
+    // and survives into launches where the env var is absent.
+    const { configPath } = configWorkspace();
+    await withEnv('0', () => loadConfig({}, { configPath }));
+
+    expect(existsSync(configPath)).toBe(true);
+    const saved = JSON.parse(readFileSync(configPath, 'utf-8'));
+    expect(saved.historyPersistence).toBe(true);
+
+    // Second launch without the env var must therefore be enabled.
+    const cfg = await withEnv(undefined, () => loadConfig({}, { configPath }));
+    expect(cfg.historyPersistence).toBe(true);
+  });
+
+  it('does not read or write the real ~/.lanonasis config', async () => {
+    const realDir = join(homedir(), '.lanonasis');
+    const realConfig = join(realDir, 'repl-config.json');
+    const dirExistedBefore = existsSync(realDir);
+    const configBefore = existsSync(realConfig) ? readFileSync(realConfig, 'utf-8') : undefined;
+
+    const { configPath } = configWorkspace({ historyPersistence: true });
+    await withEnv('0', () => loadConfig({}, { configPath }));
+
+    // The write went to the injected path, and the loader knows it.
+    expect(existsSync(configPath)).toBe(true);
+    expect(getActiveConfigPath()).toBe(configPath);
+
+    // The real home directory was neither created nor modified.
+    expect(existsSync(realDir)).toBe(dirExistedBefore);
+    if (configBefore === undefined) {
+      expect(existsSync(realConfig)).toBe(false);
+    } else {
+      expect(readFileSync(realConfig, 'utf-8')).toBe(configBefore);
     }
   });
 
@@ -221,5 +298,49 @@ describe('ReplEngine history persistence', () => {
     const engine = new ReplEngine(baseConfig(target));
     await feed(engine, 'help'); // triggers ensureDir → mkdirSync(mode=0o700) → tryChmod
     expect(statSync(parent).mode & 0o777).toBe(0o700);
+  });
+
+  it('leaves a pre-existing parent directory mode alone, while the file is still 0600', async () => {
+    if (process.platform === 'win32') return;
+    const { dir } = workspace();
+    // Simulate a user-owned directory (e.g. /tmp or ~/Documents) that the
+    // REPL did not create: it must not be tightened to 0700.
+    chmodSync(dir, 0o755);
+    const file = join(dir, 'history.txt');
+
+    const engine = new ReplEngine(baseConfig(file));
+    await feed(engine, 'help');
+
+    expect(statSync(dir).mode & 0o777).toBe(0o755);
+    expect(statSync(file).mode & 0o777).toBe(0o600);
+  });
+
+  it('does NOT persist natural-language input when the orchestrator fails, but does on success', async () => {
+    const { file } = workspace();
+    const engine = new ReplEngine({
+      ...baseConfig(file),
+      authToken: 'test-token',
+      nlMode: true,
+    } as ReplConfig);
+    const orchestrator = (engine as any).orchestrator;
+    const spy = vi.spyOn(orchestrator, 'processNaturalLanguage');
+
+    // Failure: the orchestrator never produced a usable response.
+    spy.mockRejectedValueOnce(new Error('router unavailable'));
+    await feed(engine, 'remember my dentist appointment');
+    expect(existsSync(file)).toBe(false);
+
+    // Success: the same path must still persist.
+    spy.mockResolvedValueOnce({ mainAnswer: 'Saved.' });
+    await feed(engine, 'remember my dentist appointment tomorrow');
+    expect(readFileSync(file, 'utf-8')).toBe('remember my dentist appointment tomorrow\n');
+  });
+
+  it('does NOT persist natural-language input when the session is unauthenticated', async () => {
+    const { file } = workspace();
+    // No authToken → the NL path bails at the auth gate without executing.
+    const engine = new ReplEngine(baseConfig(file));
+    await feed(engine, 'remember my dentist appointment');
+    expect(existsSync(file)).toBe(false);
   });
 });
