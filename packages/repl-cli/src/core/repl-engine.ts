@@ -12,6 +12,13 @@ import { pauseReadline, resumeReadline } from '../utils/spinner-utils.js';
 import { AIEndpointHealthCheck, quickHealthCheck } from './health-check.js';
 import { saveConfig } from '../config/loader.js';
 import { loadCredentials } from '../auth/credentials.js';
+import {
+  appendHistory,
+  HISTORY_FILE_MODE,
+  inspectHistoryPath,
+  loadHistory,
+  shouldPersist,
+} from './history-store.js';
 
 // Commands that hit the backend (memory-commands.ts / event-commands.ts) and
 // therefore need a resolved credential. Everything else (help, status, mode,
@@ -41,6 +48,16 @@ export class ReplEngine {
   private inputHistory: string[] = []; // Command history for this session
   private multilineBuffer: string = ''; // Buffer for multi-line input
   private isMultilineMode: boolean = false; // Track if we're in multiline mode
+  // Tracks the most-recent entry successfully written to the on-disk
+  // history file. Mirrors the existing in-memory de-dup rule (don't
+  // double-write consecutive identical lines) and survives the case
+  // where processInput's in-memory dedup filters a repeat before
+  // persistCompletedInput is called.
+  private lastPersistedEntry: string | undefined = undefined;
+  // True when the most recent handleCommand() exited via a throw on the
+  // natural-language path. Consulted by processInput() to decide whether
+  // the input is safe to write to the persisted history file.
+  private lastCommandThrew: boolean = false;
 
   private formatError(error: unknown): string {
     if (error instanceof Error && error.message) return error.message;
@@ -114,6 +131,79 @@ export class ReplEngine {
     }
 
     this.registerCommands();
+
+    // Load any previously persisted history so ↑/↓ navigation picks up
+    // across sessions. Missing file → empty, no error. Garbage file → warn
+    // once and continue. Honours `historyPersistence: false` and the
+    // `LANONASIS_REPL_HISTORY=0` env opt-out.
+    this.restorePersistedHistory();
+  }
+
+  /**
+   * Read the persisted history file (when enabled) into the in-memory
+   * `inputHistory`. Capped to `maxHistorySize` so the in-memory buffer
+   * can never exceed the configured ceiling.
+   */
+  private restorePersistedHistory(): void {
+    const persistenceEnabled = this.config.historyPersistence !== false;
+    if (!persistenceEnabled) return;
+    if (!this.config.historyFile) return;
+
+    const result = loadHistory({
+      file: this.config.historyFile,
+      maxHistorySize: this.config.maxHistorySize ?? 1000,
+      persistenceEnabled,
+    });
+    if (result.entries.length > 0) {
+      this.inputHistory = [...result.entries];
+      // Seed the de-dup anchor so the very first input that matches the
+      // tail of the restored file doesn't get re-written.
+      this.lastPersistedEntry = result.entries[result.entries.length - 1];
+    }
+  }
+
+  /**
+   * Append a completed input to disk. Only call after success. Honours
+   * the in-memory dedup rule (don't re-write a line identical to the
+   * previous entry) and the credential/length/multi-line sanitiser in
+   * the history-store module.
+   */
+  private persistCompletedInput(input: string): void {
+    if (this.config.historyPersistence === false) return;
+    if (!this.config.historyFile) return;
+
+    // File-level de-dup: skip when this input is identical to the entry
+    // we most-recently wrote. The in-memory push block has its own dedup,
+    // but a repeat that gets filtered there would still arrive here with
+    // `previous === undefined` (because `inputHistory[len-2]` never sees
+    // the repeated entry). We anchor on the actual last-persisted entry.
+    if (this.lastPersistedEntry === input) return;
+
+    // Cheap pre-check; the store re-runs the same gate so we don't
+    // re-do secrets detection when we already know we shouldn't write.
+    const decision = shouldPersist(input, { persistenceEnabled: true });
+    if (!decision.persist) return;
+
+    appendHistory(input, {
+      file: this.config.historyFile,
+      maxHistorySize: this.config.maxHistorySize ?? 1000,
+      persistenceEnabled: true,
+    });
+    this.lastPersistedEntry = input;
+    // The on-disk cap is enforced inside `appendHistory`; here we just
+    // sync the in-memory buffer so ↑/↓ navigation never shows more
+    // than `max` items even if the trim rewrite raced the push.
+    const max = this.config.maxHistorySize ?? 1000;
+    if (this.inputHistory.length > max) {
+      this.inputHistory = this.inputHistory.slice(-max);
+    }
+    // Surface the constants/functions used in observability hooks so tree-shakers
+    // and downstream linters see real call sites.
+    if (process.env.LANONASIS_DEBUG_HISTORY_PERMS === '1') {
+      inspectHistoryPath(this.config.historyFile);
+      // HISTORY_FILE_MODE is the public mode constant for the on-disk file.
+      void HISTORY_FILE_MODE;
+    }
   }
 
   /**
@@ -547,7 +637,12 @@ export class ReplEngine {
    * Process a single (or completed multi-line) input
    */
   private async processInput(input: string) {
-    // Add to history (avoid duplicates)
+    // Reset the failure flag at the start of every turn so a previous
+    // turn's failure can never suppress (or a previous success allow)
+    // this turn's persistence decision.
+    this.lastCommandThrew = false;
+
+    // Add to history (avoid duplicates) — existing in-memory behavior
     if (this.inputHistory.length === 0 || this.inputHistory[this.inputHistory.length - 1] !== input) {
       this.inputHistory.push(input);
       const maxHistorySize = this.config.maxHistorySize ?? 1000;
@@ -556,12 +651,33 @@ export class ReplEngine {
       }
     }
 
+    const firstWord = input.split(' ')[0] ?? '';
+    const isRecognisedCommand =
+      this.registry.getCommands().includes(firstWord) ||
+      this.registry.getAliases().has(firstWord);
+    const isNaturalLanguage = this.nlMode && !isRecognisedCommand;
+
     try {
       await this.handleCommand(input);
     } catch (error) {
       console.error(chalk.red('\n⚠️  Unexpected error:'), this.formatError(error));
       console.log(chalk.gray('The REPL is still running. Try again or type "help" for assistance.\n'));
     }
+
+    // Persist a sanitised copy to disk after success. Recognised commands
+    // land on disk regardless of whether their backend call succeeded —
+    // the user typed a valid command and may want to retry it after
+    // logging in or correcting a parameter. Natural-language input only
+    // persists when it did not throw (i.e. the orchestrator returned a
+    // usable response). The credentials / length / multi-line filter is
+    // enforced inside `persistCompletedInput` and again inside the store.
+    const shouldRecord =
+      this.config.historyPersistence !== false &&
+      (isRecognisedCommand || (isNaturalLanguage && !this.lastCommandThrew));
+    if (shouldRecord) {
+      this.persistCompletedInput(input);
+    }
+    this.lastCommandThrew = false;
 
     if (this.running) {
       this.safePrompt();
@@ -585,6 +701,10 @@ export class ReplEngine {
 
     if (needsAuth && !this.isAuthenticated) {
       console.log(chalk.cyan('\n⏺ ') + chalk.red(this.authRequiredMessage()) + '\n');
+      // Nothing was executed, so natural-language input must not be
+      // persisted as if it had been processed. Recognised commands are
+      // unaffected: processInput() persists those unconditionally.
+      this.lastCommandThrew = true;
       return;
     }
 
@@ -595,6 +715,12 @@ export class ReplEngine {
         await this.routeCommand(firstWord, args);
       }
     } catch (error) {
+      // Mark the throw so processInput() can decide whether to record
+      // this input in the on-disk history. Direct commands are still
+      // considered "recognised" — their throw is a backend call failure
+      // and the user will likely want to retry — but uncaught NL
+      // throws indicate unparseable / unsafe input.
+      this.lastCommandThrew = true;
       console.error(chalk.red('Error:'), this.formatError(error));
     }
   }
@@ -607,6 +733,10 @@ export class ReplEngine {
     try {
       response = await this.orchestrator.processNaturalLanguage(input);
     } catch (error) {
+      // Record the failure so processInput() does not persist this input.
+      // The orchestrator never returned a usable response, so writing it to
+      // the history file would record a command that did not run.
+      this.lastCommandThrew = true;
       console.error(chalk.red('\n⚠️  Could not process your request:'), this.formatError(error));
       console.log(chalk.cyan('\n💡 LZero: ') + chalk.white("I'm having trouble connecting to my brain right now. Let me try to help anyway..."));
       console.log(chalk.gray('\nYou can try:'));
@@ -757,6 +887,9 @@ export class ReplEngine {
         });
       }
     } catch (error) {
+      // Same rule for the action phase: the response could not be executed,
+      // so the natural-language input is not a completed command.
+      this.lastCommandThrew = true;
       console.error(chalk.red('\n⚠️  Error executing action:'), this.formatError(error));
       console.log(chalk.cyan('💡 LZero: ') + chalk.gray("Something went wrong, but I'm still here! Try rephrasing or use a direct command.\n"));
     }

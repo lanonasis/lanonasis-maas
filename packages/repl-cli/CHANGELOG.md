@@ -9,6 +9,55 @@ All notable changes to @lanonasis/repl-cli will be documented in this file.
   `tree/main/packages/repl-cli#readme` URL (was `docs.lanonasis.com/cli/repl`).
   Repository, bugs, engines, keywords, and files allowlist already canonical.
 
+## [1.1.2] - 2026-10-20
+
+Persists the in-memory command history to `~/.lanonasis/repl-history.txt`
+so `↑` / `↓` navigation picks up across REPL restarts. Defaults to enabled;
+opt-out via `historyPersistence: false` in `repl-config.json` or by setting
+`LANONASIS_REPL_HISTORY=0` before launch.
+
+### Added
+- **History persistence** (`PR P5`). On startup, the REPL now reads
+  `~/.lanonasis/repl-history.txt` back into the in-memory `inputHistory`
+  buffer (newest kept, capped at `maxHistorySize`). After a command
+  completes or is recognised, its input is appended to the file — one
+  line per entry. When the buffer exceeds `maxHistorySize`, the file is
+  rewritten (temp + rename) so the on-disk size tracks the in-memory cap.
+  Missing file → empty history, no error. Garbage or unreadable file →
+  warn once, continue with empty history. The file is created with mode
+  `0600` inside a `0700` directory.
+- **Credential filter.** Inputs that look like credentials (OpenAI,
+  Anthropic, GitHub, Stripe, AWS, LanOnasis, JWT, Bearer, AWS access
+  keys, database URLs, SSH private-key blocks, hex secrets, Telegram
+  tokens, and `KEY=value` env assignments) are detected via the existing
+  `containsSecrets()` in `src/local-memory/privacy.ts` and **never
+  written to disk**. Inputs longer than 2 000 characters and inputs
+  containing literal newlines (multi-line pastes) are likewise skipped,
+  so the file never holds anything a careful user wouldn't want logged.
+- **`historyPersistence` config field** (defaults to `true`). Set to
+  `false` in `~/.lanonasis/repl-config.json` to disable every disk
+  write. The env override `LANONASIS_REPL_HISTORY=0` is also accepted.
+- **`core/history-store.ts`.** New dedicated module owning load,
+  append, trim, permissions, and the sanitiser. ReplEngine stays
+  thin — a 25-line constructor block + a small `persistCompletedInput`
+  helper.
+
+### Changed
+- **Fail-safe persistence.** Any FS error during read, append, or
+  rewrite is caught and reported via a one-line warning. The REPL
+  continues to run; the user is never blocked from typing.
+- **De-dup rule.** The existing in-memory dedup
+  ("don't push if identical to the immediately-previous entry")
+  extends to the on-disk file via a `lastPersistedEntry` anchor — a
+  repeat submission no longer grows the file.
+
+### Tests
+- 33 new tests across `tests/history-store.test.ts` (22) and
+  `tests/history-persistence.test.ts` (11). Cover: load + chronological
+  order, missing file, garbage file, trim at the cap, de-dup,
+  credential / length / multi-line rejection, opt-out via config and
+  env, and POSIX permissions on the file and its directory.
+
 ## [1.1.1] - 2026-09-27
 
 Makes `lrepl` / `onasis-repl` work against the Onasis AI router

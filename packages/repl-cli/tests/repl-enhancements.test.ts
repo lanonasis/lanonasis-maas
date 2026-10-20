@@ -1,3 +1,4 @@
+import { existsSync, rmSync } from 'node:fs';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { ReplEngine } from '../src/core/repl-engine';
 import { ReplConfig } from '../src/config/types';
@@ -13,6 +14,12 @@ describe('ReplEngine Enhancements - History, Completion, Multi-line', () => {
       historyFile: '/tmp/test-history',
       maxHistorySize: 100
     };
+    // Wipe the shared fixture between tests so on-disk history from a
+    // previous run can't leak into a fresh ReplEngine (P5: history
+    // persistence is enabled by default and loads on startup).
+    if (existsSync(config.historyFile)) {
+      rmSync(config.historyFile, { force: true });
+    }
     engine = new ReplEngine(config);
   });
 

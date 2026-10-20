@@ -36,6 +36,12 @@ const DEFAULT_CONFIG: ReplConfig = {
   aiRouterApiKey: process.env.AI_ROUTER_API_KEY,
   historyFile: HISTORY_FILE,
   maxHistorySize: DEFAULT_MAX_HISTORY_SIZE,
+  // Constant, never env-derived: this object is written to disk on first
+  // launch, and a value derived from the environment must never be
+  // persisted as if it were user state. The env opt-out is applied in
+  // loadConfig() AFTER the saved config and CLI overrides are merged, so
+  // it wins on every launch rather than only the first.
+  historyPersistence: true,
   nlMode: true,
   // User profile defaults
   userProfile: {
@@ -107,6 +113,14 @@ export async function loadConfig(
   // Priority: aiRouterApiKey (lano_...) > aiRouterAuthToken > authToken
   if (!merged.aiRouterAuthToken && !merged.aiRouterApiKey && merged.authToken) {
     merged.aiRouterAuthToken = merged.authToken;
+  }
+
+  // Env opt-out is the FINAL authority. Applied after the saved-config merge
+  // and after CLI overrides, so it cannot be defeated by a `true` that an
+  // earlier launch wrote to repl-config.json. Read at call time (not module
+  // load) so tests and long-lived processes observe the current value.
+  if (process.env.LANONASIS_REPL_HISTORY === '0') {
+    merged.historyPersistence = false;
   }
 
   return merged;
