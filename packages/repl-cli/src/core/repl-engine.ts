@@ -637,6 +637,11 @@ export class ReplEngine {
    * Process a single (or completed multi-line) input
    */
   private async processInput(input: string) {
+    // Reset the failure flag at the start of every turn so a previous
+    // turn's failure can never suppress (or a previous success allow)
+    // this turn's persistence decision.
+    this.lastCommandThrew = false;
+
     // Add to history (avoid duplicates) — existing in-memory behavior
     if (this.inputHistory.length === 0 || this.inputHistory[this.inputHistory.length - 1] !== input) {
       this.inputHistory.push(input);
@@ -696,6 +701,10 @@ export class ReplEngine {
 
     if (needsAuth && !this.isAuthenticated) {
       console.log(chalk.cyan('\n⏺ ') + chalk.red(this.authRequiredMessage()) + '\n');
+      // Nothing was executed, so natural-language input must not be
+      // persisted as if it had been processed. Recognised commands are
+      // unaffected: processInput() persists those unconditionally.
+      this.lastCommandThrew = true;
       return;
     }
 
@@ -724,6 +733,10 @@ export class ReplEngine {
     try {
       response = await this.orchestrator.processNaturalLanguage(input);
     } catch (error) {
+      // Record the failure so processInput() does not persist this input.
+      // The orchestrator never returned a usable response, so writing it to
+      // the history file would record a command that did not run.
+      this.lastCommandThrew = true;
       console.error(chalk.red('\n⚠️  Could not process your request:'), this.formatError(error));
       console.log(chalk.cyan('\n💡 LZero: ') + chalk.white("I'm having trouble connecting to my brain right now. Let me try to help anyway..."));
       console.log(chalk.gray('\nYou can try:'));
@@ -874,6 +887,9 @@ export class ReplEngine {
         });
       }
     } catch (error) {
+      // Same rule for the action phase: the response could not be executed,
+      // so the natural-language input is not a completed command.
+      this.lastCommandThrew = true;
       console.error(chalk.red('\n⚠️  Error executing action:'), this.formatError(error));
       console.log(chalk.cyan('💡 LZero: ') + chalk.gray("Something went wrong, but I'm still here! Try rephrasing or use a direct command.\n"));
     }
