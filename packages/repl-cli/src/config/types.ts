@@ -42,6 +42,12 @@ export interface ReplConfig {
   openaiFallback?: boolean;
   historyFile: string;
   maxHistorySize: number;
+  /**
+   * Persist the in-memory command history to `historyFile` across sessions.
+   * Defaults to `true`. Disable by setting this to `false`, or by exporting
+   * `LANONASIS_REPL_HISTORY=0` before launching the REPL.
+   */
+  historyPersistence?: boolean;
   nlMode?: boolean;
   // User profile and preferences
   userProfile?: UserProfile;

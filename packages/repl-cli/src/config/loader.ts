@@ -36,6 +36,9 @@ const DEFAULT_CONFIG: ReplConfig = {
   aiRouterApiKey: process.env.AI_ROUTER_API_KEY,
   historyFile: HISTORY_FILE,
   maxHistorySize: DEFAULT_MAX_HISTORY_SIZE,
+  // Defaults to true; only the env var `LANONASIS_REPL_HISTORY=0` flips it off
+  // at startup. Explicit `false` in `repl-config.json` also disables persistence.
+  historyPersistence: process.env.LANONASIS_REPL_HISTORY === '0' ? false : true,
   nlMode: true,
   // User profile defaults
   userProfile: {
