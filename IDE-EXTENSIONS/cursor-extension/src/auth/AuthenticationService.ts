@@ -66,6 +66,23 @@ export class AuthenticationService {
         return null;
     }
 
+    /**
+     * Get the stored credential with its type, so callers can distinguish a
+     * custom API key from an OAuth token (issue #59). Returns null when no
+     * usable credential is stored.
+     */
+    async getStoredCredential(): Promise<{ type: 'oauth' | 'apiKey'; token: string } | null> {
+      try {
+        const credential = await this.secureAuth.getStoredCredentials();
+        if (credential?.token?.trim()) {
+          return { type: credential.type, token: credential.token };
+        }
+        return null;
+      } catch {
+        return null;
+      }
+    }
+
     isAuthenticated(): boolean {
     return this.status.isAuthenticated;
             }

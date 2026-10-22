@@ -15,6 +15,11 @@ import {
     MemoryStats,
     MemoryType
 } from '../types/memory';
+import {
+  formatMemoryApiError,
+  resolveCustomApiKeyAuth,
+  type CustomApiKeyAuth
+} from './memory-route-auth';
 
 export class EnhancedMemoryService {
   private authService: AuthenticationService;
@@ -209,6 +214,13 @@ export class EnhancedMemoryService {
   }
 
   async updateMemory(id: string, request: UpdateMemoryRequest): Promise<MemoryEntry> {
+    // Custom API key active: skip the CLI/OAuth path and hit the MaaS API
+    // routes directly with the key (issue #59)
+    const customAuth = await this.resolveCustomApiKeyAuth();
+    if (customAuth) {
+      return this.updateMemoryViaApiKeyRoute(id, request, customAuth.headers);
+    }
+    
     if (this.client && this.cliCapabilities?.cliAvailable) {
       const mappedRequest = {
         ...request,
@@ -230,6 +242,13 @@ export class EnhancedMemoryService {
   }
 
   async deleteMemory(id: string): Promise<void> {
+    // Custom API key active: skip the CLI/OAuth path and hit the MaaS API
+    // routes directly with the key (issue #59)
+    const customAuth = await this.resolveCustomApiKeyAuth();
+    if (customAuth) {
+      return this.deleteMemoryViaApiKeyRoute(id, customAuth.headers);
+    }
+    
     if (this.client && this.cliCapabilities?.cliAvailable) {
       const result = await this.client.deleteMemory(id);
       
@@ -450,6 +469,23 @@ export class EnhancedMemoryService {
     return await response.json() as MemoryEntry;
   }
 
+  /**
+   * Update a memory via the MaaS API routes using a custom API key (issue #59)
+   */
+  private async updateMemoryViaApiKeyRoute(id: string, request: UpdateMemoryRequest, authHeaders: Record<string, string>): Promise<MemoryEntry> {
+    const response = await this.makeApiKeyRequest(`/api/v1/memory/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(request)
+    }, authHeaders);
+
+    if (!response.ok) {
+      const error = await response.text();
+      throw new Error(formatMemoryApiError('update', response.status, error));
+    }
+
+    return await response.json() as MemoryEntry;
+  }
+
   private async deleteMemoryViaAPI(id: string): Promise<void> {
     const response = await this.makeAuthenticatedRequest(`/api/v1/memories/${id}`, {
       method: 'DELETE'
@@ -458,6 +494,20 @@ export class EnhancedMemoryService {
     if (!response.ok) {
       const error = await response.text();
       throw new Error(`Failed to delete memory: ${response.status} ${error}`);
+    }
+  }
+
+  /**
+   * Delete a memory via the MaaS API routes using a custom API key (issue #59)
+   */
+  private async deleteMemoryViaApiKeyRoute(id: string, authHeaders: Record<string, string>): Promise<void> {
+    const response = await this.makeApiKeyRequest(`/api/v1/memory/${id}`, {
+      method: 'DELETE'
+    }, authHeaders);
+
+    if (!response.ok) {
+      const error = await response.text();
+      throw new Error(formatMemoryApiError('delete', response.status, error));
     }
   }
 
@@ -598,6 +648,44 @@ export class EnhancedMemoryService {
     }
 
     return response;
+  }
+
+  /**
+   * Resolve a custom API key from secure storage (issue #59). Returns null
+   * when the active credential is OAuth or no usable key is stored.
+   */
+  private async resolveCustomApiKeyAuth(): Promise<CustomApiKeyAuth | null> {
+    try {
+      const credential = await this.authService.getStoredCredential();
+      return resolveCustomApiKeyAuth(credential);
+    } catch (error) {
+      console.warn('Failed to resolve custom API key, falling back to authenticated path:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Perform a request authenticated with a custom API key (headers are
+   * built by resolveCustomApiKeyAuth — X-API-Key based, never Bearer for
+   * platform keys).
+   */
+  private async makeApiKeyRequest(
+    endpoint: string,
+    options: RequestInit = {},
+    authHeaders: Record<string, string>
+  ): Promise<globalThis.Response> {
+    const url = `${this.baseUrl}${endpoint}`;
+    const headers = {
+      'Content-Type': 'application/json',
+      'User-Agent': 'Cursor LanOnasis-Memory/1.4.5',
+      ...authHeaders,
+      ...options.headers
+    };
+
+    return await fetch(url, {
+      ...options,
+      headers
+    });
   }
 
   public async refreshClient(): Promise<void> {
