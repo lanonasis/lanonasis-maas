@@ -184,31 +184,51 @@ export class MemorySidebarProvider implements vscode.WebviewViewProvider {
             vscode.window.showErrorMessage(`Memory not updated: ${msg}`);
             return;
         }
-        await this.memoryService.updateMemory(id, parsed.data);
-        await this.refresh();
+        try {
+            await this.memoryService.updateMemory(id, parsed.data);
+            await this.refresh();
+        } catch (error) {
+            const message = error instanceof Error ? error.message : 'Failed to update memory';
+            this._view?.webview.postMessage({ type: 'error', message });
+        }
     }
 
     private async handleDeleteFromWebview(id: string) {
-        await this.memoryService.deleteMemory(id);
-        await this.refresh();
+        try {
+            await this.memoryService.deleteMemory(id);
+            await this.refresh();
+        } catch (error) {
+            const message = error instanceof Error ? error.message : 'Failed to delete memory';
+            this._view?.webview.postMessage({ type: 'error', message });
+        }
     }
 
     private async handleBulkDeleteFromWebview(ids: string[]) {
         if (!ids?.length) return;
-        await Promise.all(ids.map((id) => this.memoryService.deleteMemory(id)));
-        await this.refresh();
+        try {
+            await Promise.all(ids.map((id) => this.memoryService.deleteMemory(id)));
+            await this.refresh();
+        } catch (error) {
+            const message = error instanceof Error ? error.message : 'Failed to delete memories';
+            this._view?.webview.postMessage({ type: 'error', message });
+        }
     }
 
     private async handleBulkTagFromWebview(ids: string[], tags: string[]) {
         if (!ids?.length || !tags?.length) return;
-        await Promise.all(
-            ids.map(async (id) => {
-                const mem = await this.memoryService.getMemory(id);
-                const nextTags = Array.from(new Set([...(mem.tags || []), ...tags]));
-                await this.memoryService.updateMemory(id, { tags: nextTags });
-            }),
-        );
-        await this.refresh();
+        try {
+            await Promise.all(
+                ids.map(async (id) => {
+                    const mem = await this.memoryService.getMemory(id);
+                    const nextTags = Array.from(new Set([...(mem.tags || []), ...tags]));
+                    await this.memoryService.updateMemory(id, { tags: nextTags });
+                }),
+            );
+            await this.refresh();
+        } catch (error) {
+            const message = error instanceof Error ? error.message : 'Failed to tag memories';
+            this._view?.webview.postMessage({ type: 'error', message });
+        }
     }
 
     // ──────────────────────────────────────────────────
