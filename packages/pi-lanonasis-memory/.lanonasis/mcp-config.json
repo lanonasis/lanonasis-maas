@@ -1,0 +1,8 @@
+{
+  "localServerPath": "/Users/seyederick/.nvm/versions/node/v22.23.1/lib/node_modules/@lanonasis/cli/dist/mcp-server-entry.js",
+  "serverPort": 3000,
+  "autoStart": true,
+  "connectionTimeout": 10000,
+  "retryAttempts": 3,
+  "logLevel": "info"
+}
