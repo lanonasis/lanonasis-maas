@@ -145,21 +145,10 @@ export async function buildRuntime(opts: BuildRuntimeOptions = {}): Promise<Runt
   const maasAdapter: MaaSAdapter = maasClient
     ? {
         enabled: true,
-        async search(query, limit): Promise<MaasSearchHit[]> {
+        async search(query, limit, filters): Promise<MaasSearchHit[]> {
           try {
-            const client = maasClient as MaasClient & {
-              searchMemories?: (q: string, l: number) => Promise<unknown>;
-            };
-            if (typeof client.searchMemories !== "function") return [];
-            const res = await client.searchMemories(query, limit);
-            if (!Array.isArray(res)) return [];
-            return (res as Array<Record<string, unknown>>).map((r) => ({
-              id: String(r.id ?? ""),
-              title: String(r.title ?? ""),
-              content: String(r.content ?? ""),
-              tags: Array.isArray(r.tags) ? (r.tags as string[]) : null,
-              score: typeof r.score === "number" ? r.score : 0,
-            }));
+            if (typeof maasClient.search !== "function") return [];
+            return await maasClient.search(query, limit, filters);
           } catch (err) {
             // Remote enrichment is optional; local results still stand.
             debugLog("runtime.maas.search", err);

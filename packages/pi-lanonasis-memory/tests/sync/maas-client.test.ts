@@ -30,6 +30,7 @@ import { describe, it, expect, vi } from "vitest";
 
 import {
   createMaasClient,
+  mapMemoryTypeToTarget,
   mapTargetToMemoryType,
   type MaasClient,
   type MaaSCreatePayload,
@@ -166,6 +167,92 @@ describe("sync/maas-client — real wrapper (no network)", () => {
     // a normalised failure. Either way, it must NOT be a thrown error.
     expect(result).toBeDefined();
     expect(result.ok).toBe(false);
+  });
+});
+
+describe("sync/maas-client — search()", () => {
+  it("maps MaaS memory_type back to the local target", () => {
+    expect(mapMemoryTypeToTarget("personal")).toBe("user");
+    expect(mapMemoryTypeToTarget("project")).toBe("project");
+    expect(mapMemoryTypeToTarget("context")).toBe("memory");
+    expect(mapMemoryTypeToTarget("knowledge")).toBe("failure");
+    // Types only other clients write fall back to the general target.
+    expect(mapMemoryTypeToTarget("workflow")).toBe("memory");
+    expect(mapMemoryTypeToTarget(undefined)).toBe("memory");
+  });
+
+  it("sends a request-object search with filters and normalises results", async () => {
+    const bodies: Array<Record<string, unknown>> = [];
+    vi.stubGlobal("fetch", vi.fn(async (url: string | URL, init?: RequestInit) => {
+      if (String(url).includes("/search")) {
+        bodies.push(JSON.parse(String(init?.body ?? "{}")));
+        return new Response(
+          JSON.stringify({
+            results: [
+              {
+                id: "remote-1",
+                title: "remote title",
+                content: "remote content",
+                memory_type: "personal",
+                tags: ["pinned"],
+                similarity_score: 0.83,
+                created_at: "2026-01-02T03:04:05.000Z",
+              },
+            ],
+            total_results: 1,
+            search_time_ms: 4,
+          }),
+          { status: 200, headers: { "content-type": "application/json" } },
+        );
+      }
+      return new Response("{}", { status: 404 });
+    }));
+    try {
+      const client = (await createMaasClient({ LANONASIS_API_KEY: "sk-fixture" }))!;
+      const hits = await client.search!("fox", 5, { target: "user", tags: ["pinned"] });
+      expect(bodies[0]).toMatchObject({
+        query: "fox",
+        limit: 5,
+        status: "active",
+        memory_types: ["personal"],
+        tags: ["pinned"],
+      });
+      expect(hits).toEqual([
+        {
+          id: "remote-1",
+          title: "remote title",
+          content: "remote content",
+          tags: ["pinned"],
+          score: 0.83,
+          target: "user",
+          created_at: "2026-01-02T03:04:05.000Z",
+        },
+      ]);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it("returns [] within the deadline when the API hangs, then skips remote during cool-down", async () => {
+    const fetchMock = vi.fn(() => new Promise<Response>(() => {}));
+    vi.stubGlobal("fetch", fetchMock);
+    try {
+      const client = (await createMaasClient({
+        LANONASIS_API_KEY: "sk-fixture",
+        LANONASIS_REMOTE_SEARCH_TIMEOUT_MS: "100",
+      }))!;
+      const t0 = Date.now();
+      await expect(client.search!("fox", 5)).resolves.toEqual([]);
+      expect(Date.now() - t0).toBeLessThan(1_000);
+
+      const callsAfterFirst = fetchMock.mock.calls.length;
+      const t1 = Date.now();
+      await expect(client.search!("fox", 5)).resolves.toEqual([]);
+      expect(Date.now() - t1).toBeLessThan(50);
+      expect(fetchMock.mock.calls.length).toBe(callsAfterFirst);
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 });
 

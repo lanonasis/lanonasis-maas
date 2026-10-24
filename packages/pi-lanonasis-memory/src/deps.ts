@@ -14,7 +14,7 @@
  */
 
 import type { SyncOrigin } from "./sync/policy.js";
-import type { MemoryStoreLike } from "./store/memory.js";
+import type { MemoryStoreLike, MemoryTarget } from "./store/memory.js";
 
 export type { MemoryStoreLike };
 
@@ -76,12 +76,21 @@ export interface MaasSearchHit {
   content: string;
   tags: string[] | null;
   score: number;
+  /** Local target mapped back from MaaS memory_type, when known. */
+  target?: MemoryTarget;
+  created_at?: string;
+}
+
+/** Optional filters forwarded to MaaS so remote hits honour them. */
+export interface MaasSearchFilters {
+  target?: MemoryTarget;
+  tags?: string[];
 }
 
 /** Best-effort MaaS search used by memory_search. Never throws. */
 export interface MaaSAdapter {
   enabled: boolean;
-  search(query: string, limit: number): Promise<MaasSearchHit[]>;
+  search(query: string, limit: number, filters?: MaasSearchFilters): Promise<MaasSearchHit[]>;
 }
 
 /** Disabled adapters — used before session_start and when sync is unavailable. */

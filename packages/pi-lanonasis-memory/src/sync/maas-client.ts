@@ -30,6 +30,7 @@ import type {
 } from "@lanonasis/memory-client/node";
 
 import type { MemoryTarget } from "../store/memory.js";
+import type { MaasSearchFilters, MaasSearchHit } from "../deps.js";
 import { redactContent } from "../scanner/redactor.js";
 import { debugLog } from "../debug.js";
 
@@ -47,6 +48,35 @@ export type MaaSMemoryType = CreateMemoryRequest["memory_type"];
 export function mapTargetToMemoryType(target: MemoryTarget): MaaSMemoryType {
   return TARGET_TO_MEMORY_TYPE[target] ?? "context";
 }
+
+/**
+ * MaaS -> local target. Inverse of TARGET_TO_MEMORY_TYPE; MaaS types we
+ * never write (reference, workflow — created by other clients) land in
+ * the general "memory" target.
+ */
+export function mapMemoryTypeToTarget(type: string | undefined): MemoryTarget {
+  for (const [target, mapped] of Object.entries(TARGET_TO_MEMORY_TYPE)) {
+    if (mapped === type) return target as MemoryTarget;
+  }
+  return "memory";
+}
+
+/**
+ * Minimum similarity for a remote hit. Matches the SDK's schema default;
+ * stated here so the request is explicit rather than relying on it.
+ */
+const REMOTE_SEARCH_THRESHOLD = 0.7;
+
+/**
+ * Remote search sits on the interactive path, but the SDK's request
+ * defaults (30s timeout, 3 retries with backoff, then a second endpoint)
+ * can hold a call for minutes when offline. Search gets its own deadline
+ * (override: LANONASIS_REMOTE_SEARCH_TIMEOUT_MS) and, after a failure,
+ * skips the remote tier for a cool-down so later searches answer from
+ * local immediately instead of each paying the deadline again.
+ */
+const DEFAULT_REMOTE_SEARCH_DEADLINE_MS = 2_000;
+const REMOTE_SEARCH_COOLDOWN_MS = 60_000;
 
 /** Tag automatically appended to every synced memory for traceability. */
 export const SOURCE_TAG = "source:pi-lanonasis-memory" as const;
@@ -90,6 +120,11 @@ export interface MaasClient {
     | { ok: true; maasId: string }
     | { ok: false; status?: number; error: string }
   >;
+  /**
+   * Semantic search. Never throws — any failure returns []. Optional
+   * so sync-only fakes don't have to implement it.
+   */
+  search?(query: string, limit: number, filters?: MaasSearchFilters): Promise<MaasSearchHit[]>;
 }
 
 const DEFAULT_API_URL = "https://api.lanonasis.com";
@@ -130,10 +165,24 @@ export async function createMaasClient(
     verbose: false,
   });
 
-  return createRealMaasClient(sdk);
+  const deadline = Number(env?.LANONASIS_REMOTE_SEARCH_TIMEOUT_MS);
+  return createRealMaasClient(sdk, {
+    searchDeadlineMs:
+      Number.isFinite(deadline) && deadline > 0 ? deadline : DEFAULT_REMOTE_SEARCH_DEADLINE_MS,
+  });
 }
 
-function createRealMaasClient(sdk: EnhancedMemoryClient): MaasClient {
+function createRealMaasClient(
+  sdk: EnhancedMemoryClient,
+  opts: { searchDeadlineMs: number },
+): MaasClient {
+  let searchSkipUntil = 0;
+  const failSearch = (reason: unknown): MaasSearchHit[] => {
+    searchSkipUntil = Date.now() + REMOTE_SEARCH_COOLDOWN_MS;
+    debugLog("sync.maas.search", reason);
+    return [];
+  };
+
   return {
     async health(): Promise<boolean> {
       try {
@@ -184,6 +233,48 @@ function createRealMaasClient(sdk: EnhancedMemoryClient): MaasClient {
         return { ok: true as const, maasId };
       } catch (err) {
         return normaliseThrown(err);
+      }
+    },
+
+    async search(query: string, limit: number, filters?: MaasSearchFilters) {
+      if (Date.now() < searchSkipUntil) return [];
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      try {
+        const timeout = new Promise<"timeout">((resolve) => {
+          timer = setTimeout(() => resolve("timeout"), opts.searchDeadlineMs);
+          (timer as { unref?: () => void }).unref?.();
+        });
+        const request = sdk.searchMemories({
+          query,
+          limit,
+          threshold: REMOTE_SEARCH_THRESHOLD,
+          status: "active",
+          ...(filters?.target !== undefined
+            ? { memory_types: [mapTargetToMemoryType(filters.target)] }
+            : {}),
+          ...(filters?.tags && filters.tags.length > 0 ? { tags: filters.tags } : {}),
+        });
+        // The abandoned request settles on its own; swallow its outcome.
+        request.catch(() => {});
+        const result = await Promise.race([request, timeout]);
+        if (result === "timeout") {
+          return failSearch(`search exceeded ${opts.searchDeadlineMs}ms`);
+        }
+        if (result.error) return failSearch(result.error.message);
+        if (!Array.isArray(result.data?.results)) return [];
+        return result.data.results.map((r) => ({
+          id: r.id,
+          title: r.title ?? "",
+          content: r.content ?? "",
+          tags: Array.isArray(r.tags) ? r.tags : null,
+          score: typeof r.similarity_score === "number" ? r.similarity_score : 0,
+          target: mapMemoryTypeToTarget(r.memory_type),
+          created_at: r.created_at,
+        }));
+      } catch (err) {
+        return failSearch(err);
+      } finally {
+        clearTimeout(timer);
       }
     },
   };
