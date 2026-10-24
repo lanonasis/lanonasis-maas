@@ -23,7 +23,7 @@ import {
   addMemory,
   type MemoryAddParams,
 } from "../../src/tools/memory_add.js";
-import type { MaaSAdapter } from "../../src/deps.js";
+import type { MaaSAdapter, MaasSearchFilters, MaasSearchHit } from "../../src/deps.js";
 import {
   openTempStore,
   RecordingSyncAdapter,
@@ -32,10 +32,12 @@ import {
 
 class StubMaas implements MaaSAdapter {
   public enabled = true;
-  public hits: Array<{ id: string; title: string; content: string; tags: string[] | null; score: number }> = [];
+  public hits: MaasSearchHit[] = [];
   public throwOnCall = false;
-  async search(_query: string, limit: number) {
+  public lastFilters: MaasSearchFilters | undefined;
+  async search(_query: string, limit: number, filters?: MaasSearchFilters) {
     if (this.throwOnCall) throw new Error("maas down");
+    this.lastFilters = filters;
     return this.hits.slice(0, limit);
   }
 }
@@ -194,5 +196,55 @@ describe("memory_search", () => {
     expect(r.hits.length).toBe(1);
     expect(r.hits[0]!.target).toBe("user");
     expect(r.hits[0]!.tags).toContain("pinned");
+  });
+
+  it("drops the remote copy of a synced local memory (matched via maas_id)", async () => {
+    const a = addMemory(h.store, { target: "memory", content: "fox synced" }, sync);
+    h.store.markSynced(a.details.id!, "maas-abc");
+    const maas = new StubMaas();
+    maas.hits = [
+      { id: "maas-abc", title: "synced", content: "fox synced", tags: null, score: 0.99 },
+      { id: "maas-other", title: "other", content: "other fox", tags: null, score: 0.4 },
+    ];
+    const r = await searchMemory(h.store, maas, { query: "fox", limit: 10 });
+    const ids = r.hits.map((hit) => hit.id);
+    expect(ids).toEqual([a.details.id, "maas-other"]);
+  });
+
+  it("ranks local hits ahead of remote ones and tags each hit's source", async () => {
+    seed(["fox local"]);
+    const maas = new StubMaas();
+    // Higher raw score than any local hit — must still rank after local.
+    maas.hits = [{ id: "remote-1", title: "r", content: "remote fox", tags: null, score: 1 }];
+    const r = await searchMemory(h.store, maas, { query: "fox", limit: 5 });
+    expect(r.hits.map((hit) => hit.source)).toEqual(["local", "remote"]);
+  });
+
+  it("forwards target/tag filters and drops remote hits that violate them", async () => {
+    const maas = new StubMaas();
+    maas.hits = [
+      { id: "ok", title: "t", content: "fox", tags: ["pinned"], score: 0.9, target: "user" },
+      { id: "wrong-target", title: "t", content: "fox", tags: ["pinned"], score: 0.9, target: "project" },
+      { id: "no-target", title: "t", content: "fox", tags: ["pinned"], score: 0.9 },
+      { id: "missing-tag", title: "t", content: "fox", tags: [], score: 0.9, target: "user" },
+    ];
+    const r = await searchMemory(h.store, maas, {
+      query: "fox",
+      target: "user",
+      tags: ["pinned"],
+      limit: 10,
+    });
+    expect(maas.lastFilters).toEqual({ target: "user", tags: ["pinned"] });
+    expect(r.hits.map((hit) => hit.id)).toEqual(["ok"]);
+    expect(r.hits[0]!.target).toBe("user");
+  });
+
+  it("reports source='local' when every remote hit was filtered or deduped", async () => {
+    seed(["fox local"]);
+    const maas = new StubMaas();
+    maas.hits = [{ id: "x", title: "t", content: "fox", tags: null, score: 0.9, target: "project" }];
+    const r = await searchMemory(h.store, maas, { query: "fox", target: "memory", limit: 5 });
+    expect(r.source).toBe("local");
+    expect(r.hits.every((hit) => hit.source === "local")).toBe(true);
   });
 });

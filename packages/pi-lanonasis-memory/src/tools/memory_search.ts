@@ -7,14 +7,19 @@
  *               tags?: string[] }
  *   - details: { hits: MemoryHit[] }
  *
- * Lookup order: MemoryStore.search first. If local matches are fewer than
- * `limit` AND the MaaS sync adapter is enabled, also query MaaS. Merge and
- * dedupe by id; sort by score descending. MaaS calls are best-effort — they
- * NEVER throw to the caller; on failure we silently return the local hits.
+ * Dual-tier lookup (Phase 6):
+ *   1. Local — MemoryStore.search. If it fills `limit`, return immediately.
+ *   2. Remote — if the MaaS adapter is enabled, ask it for the remaining
+ *      slots with the same target/tag filters, re-check those filters on
+ *      the hits, and drop any remote hit that is a synced copy of a local
+ *      one (matched by local id OR the local row's maas_id).
+ *   3. Offline / failure — MaaS calls are best-effort and NEVER throw to
+ *      the caller; we return whatever the local tier found, possibly [].
+ *      No fallback guessing: an empty result is reported as empty.
  *
- * Post-merge PR5 will fill in `createMaasClient`. Until then the adapter
- * returns `enabled: false` and the MaaS branch is unreachable in the
- * stand-alone build.
+ * Local hits rank ahead of remote ones. Local scores are bucketed BM25 and
+ * remote scores are cosine similarity, so sorting across tiers by raw score
+ * would compare unlike quantities. Each hit carries `source`.
  */
 
 import { Type, type Static } from "typebox";
@@ -94,29 +99,40 @@ export async function searchMemory(
   const remaining = limit - filtered.length;
   let remote: Awaited<ReturnType<typeof maas.search>> = [];
   try {
-    remote = await maas.search(params.query, remaining);
+    remote = await maas.search(params.query, remaining, {
+      ...(params.target !== undefined
+        ? { target: params.target as MemoryHit["target"] }
+        : {}),
+      ...(params.tags ? { tags: params.tags } : {}),
+    });
   } catch (e) {
     // Best-effort path: never let MaaS failures surface to the caller.
     debugLog("tools.memory_search.remote", e);
     remote = [];
   }
 
-  const remoteAsHits: MemoryHit[] = remote.map((r) => ({
-    id: r.id,
-    target: "memory",
-    category: null,
-    title: r.title,
-    content: r.content,
-    score: r.score,
-    tags: r.tags,
-    created_at: new Date().toISOString(),
-    matched_snippet: null,
-  }));
+  const remoteAsHits: MemoryHit[] = remote
+    // MaaS may ignore filters; re-check them so remote hits can't
+    // smuggle in results the caller excluded.
+    .filter((r) => params.target === undefined || r.target === params.target)
+    .filter((r) => !params.tags || params.tags.every((t) => r.tags?.includes(t)))
+    .map((r) => ({
+      id: r.id,
+      target: r.target ?? "memory",
+      category: null,
+      title: r.title,
+      content: r.content,
+      score: r.score,
+      tags: r.tags,
+      created_at: r.created_at ?? new Date().toISOString(),
+      matched_snippet: null,
+      source: "remote" as const,
+    }));
 
-  // Merge + dedupe on id; sort by score desc.
-  const merged = mergeAndDedupe(filtered, remoteAsHits);
-  const source: "local" | "local+maas" =
-    remoteAsHits.length > 0 ? "local+maas" : "local";
+  const merged = mergeLocalFirst(filtered, remoteAsHits);
+  const source: "local" | "local+maas" = merged.some((h) => h.source === "remote")
+    ? "local+maas"
+    : "local";
 
   return {
     hits: merged.slice(0, limit),
@@ -125,12 +141,16 @@ export async function searchMemory(
   };
 }
 
-function mergeAndDedupe(a: MemoryHit[], b: MemoryHit[]): MemoryHit[] {
+function mergeLocalFirst(local: MemoryHit[], remote: MemoryHit[]): MemoryHit[] {
+  // A synced memory exists on both tiers under different ids; the local
+  // row's maas_id is the link between them.
   const seen = new Set<string>();
-  const out: MemoryHit[] = [];
-  // Sort each side by score desc first.
-  const sorted = [...a, ...b].sort((x, y) => y.score - x.score);
-  for (const hit of sorted) {
+  for (const hit of local) {
+    seen.add(hit.id);
+    if (hit.maas_id) seen.add(hit.maas_id);
+  }
+  const out = [...local].sort((x, y) => y.score - x.score);
+  for (const hit of [...remote].sort((x, y) => y.score - x.score)) {
     if (!seen.has(hit.id)) {
       seen.add(hit.id);
       out.push(hit);

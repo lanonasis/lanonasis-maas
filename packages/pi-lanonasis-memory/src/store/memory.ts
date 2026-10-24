@@ -94,6 +94,14 @@ export interface MemoryHit {
   tags: string[] | null;
   created_at: string;
   matched_snippet: string | null;
+  /** Which tier produced the hit. Absent on hits built before Phase 6. */
+  source?: "local" | "remote";
+  /**
+   * MaaS id of a local hit that has been synced (null when never
+   * synced). memory_search uses it to drop the remote copy of the
+   * same memory when merging tiers.
+   */
+  maas_id?: string | null;
 }
 
 export interface ListOptions {
@@ -361,7 +369,7 @@ export class MemoryStore {
 
     const sql = `
       SELECT m.id, m.target, m.category, m.title, m.content, m.tags,
-             m.created_at, snippet(memories_fts, 2, '<', '>', '…', 8) AS matched_snippet,
+             m.created_at, m.maas_id, snippet(memories_fts, 2, '<', '>', '…', 8) AS matched_snippet,
              rank AS fts_rank
       FROM memories_fts
       JOIN memories m ON m.rowid = memories_fts.rowid
@@ -394,6 +402,8 @@ export class MemoryStore {
       created_at: row.created_at,
       matched_snippet: row.matched_snippet,
       score: rankToScore(row.fts_rank),
+      source: "local" as const,
+      maas_id: row.maas_id,
     }));
   }
 
