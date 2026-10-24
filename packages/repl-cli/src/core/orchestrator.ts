@@ -22,6 +22,11 @@ function joinLocalMemoryRoot(): string {
   return join(homedir(), '.lanonasis', 'repl-cli');
 }
 
+/** One memory as a line in the "[Relevant context ...]" prompt block. */
+function formatContextLine(title: string, content: string): string {
+  return `📌 ${title}: ${content.substring(0, 150)}${content.length > 150 ? '...' : ''}`;
+}
+
 // VortexAI L0 Integration - Universal Work Orchestrator
 import {
   L0Orchestrator,
@@ -417,6 +422,21 @@ export class NaturalLanguageOrchestrator {
    * Fetch relevant context for a specific query from user's memories
    */
   async fetchRelevantContext(query: string, limit: number = 3): Promise<string[]> {
+    // Local-first: the router answers from SQLite and only enriches from
+    // MaaS within its own timeout/offline-grace budget, so an unreachable
+    // MaaS can't stall every prompt. The direct client call below is the
+    // LANONASIS_LOCAL_MEMORY=0 path.
+    if (this.memoryRouter) {
+      try {
+        const hits = await this.memoryRouter.search(query, { limit });
+        return hits
+          .filter((h) => h && h.title && h.content)
+          .slice(0, limit)
+          .map((h) => formatContextLine(h.title, h.content));
+      } catch {
+        return [];
+      }
+    }
     try {
       const result = await this.client.searchMemories({
         query,
@@ -428,11 +448,7 @@ export class NaturalLanguageOrchestrator {
       if (result.data?.results && result.data.results.length > 0) {
         return result.data.results
           .filter((r: any) => r && r.title && r.content) // Filter out invalid results
-          .map((r: any) => {
-            const content = r.content || '';
-            const title = r.title || 'Untitled';
-            return `📌 ${title}: ${content.substring(0, 150)}${content.length > 150 ? '...' : ''}`;
-          });
+          .map((r: any) => formatContextLine(r.title || 'Untitled', r.content || ''));
       }
     } catch (error) {
       // Silently fail - context fetching is optional
