@@ -250,11 +250,22 @@ function createRealMaasClient(
           threshold: REMOTE_SEARCH_THRESHOLD,
           status: "active",
           ...(filters?.target !== undefined
-            ? { memory_types: [mapTargetToMemoryType(filters.target)] }
+            ? {
+                memory_types:
+                  filters.target === "memory"
+                    ? ["context", "reference", "workflow"]
+                    : [mapTargetToMemoryType(filters.target)],
+              }
             : {}),
           ...(filters?.tags && filters.tags.length > 0 ? { tags: filters.tags } : {}),
         });
-        // The abandoned request settles on its own; swallow its outcome.
+        // NOTE: the timeout does NOT cancel this SDK request.
+        // The `request` promise keeps running (the SDK may retry on the
+        // primary endpoint, then fall back to a secondary endpoint).
+        // We attach a no-op catch to prevent unhandled-rejection noise,
+        // and race the timer only for *our* waiting — the abandoned
+        // request settles on its own.  There is no cancellation contract
+        // in place to stop fetches, retry delays, or fallbacks.
         request.catch(() => {});
         const result = await Promise.race([request, timeout]);
         if (result === "timeout") {
