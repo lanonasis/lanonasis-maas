@@ -36,8 +36,8 @@ serve(async (req) => {
 
     // Initialize Supabase client with service role
     const supabase = createClient(
-      Deno.env.get('SUPABASE_URL')
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
     // Check if profile already exists
@@ -100,28 +100,12 @@ serve(async (req) => {
 
     console.log('👤 Created profile for user:', user.email)
 
-    // Create default API key for new user
-    const { error: keyError } = await supabase
-      .from('api_keys')
-      .insert({
-        user_id: user.id,
-        organization_id: organization.id,
-        name: 'Default API Key',
-        description: 'Automatically generated API key for new user',
-        service: 'all',
-        rate_limited: true,
-        is_active: true,
-        access_level: 'authenticated',
-        key: `sk_live_${user.id.replace(/-/g, '').substring(0, 20)}_${Date.now()}`,
-        created_at: new Date().toISOString()
-      })
-
-    if (keyError) {
-      console.error('⚠️ Failed to create default API key:', keyError)
-      // Don't throw - API key creation is optional
-    } else {
-      console.log('🔑 Created default API key for user:', user.email)
-    }
+    // No default API key is created here any more. The old insert wrote a
+    // predictable plaintext key (sk_live_<user id prefix>_<ms timestamp>) into
+    // public.api_keys.key and named a column that does not exist
+    // (rate_limited), so it never succeeded. Users create keys through the
+    // api-key-create edge function or the auth-gateway, which store only
+    // key_hash.
 
     // Log successful user onboarding
     await supabase
@@ -155,7 +139,7 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         error: 'Internal server error', 
-        message: error.message 
+        message: error instanceof Error ? error.message : String(error)
       }), 
       { 
         status: 500, 
