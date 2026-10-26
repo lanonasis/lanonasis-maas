@@ -1,0 +1,44 @@
+# gitleaks configuration, used by .github/workflows/gitleaks.yml.
+# Default gitleaks rules (incl. `jwt`) plus project-specific credential shapes.
+# Run locally:  gitleaks git . --config .gitleaks.toml --redact --log-opts="origin/main..HEAD"
+
+[extend]
+useDefault = true
+
+[[rules]]
+id = "supabase-secret-key"
+description = "Supabase secret API key (sb_secret_...)"
+regex = '''\bsb_secret_[A-Za-z0-9_-]{20,}'''
+keywords = ["sb_secret_"]
+
+[[rules]]
+id = "lanonasis-api-key"
+description = "Lanonasis API key (lano_...)"
+regex = '''\blano_[A-Za-z0-9_-]{24,}'''
+keywords = ["lano_"]
+
+# Allowlist: ONLY known test fixtures whose values were checked to be fake
+# (placeholder strings such as test-*, pk_test_*, sk-test-*, 1234abcd...).
+# Do not add documentation, scripts, or .env files here; fix them instead.
+[[allowlists]]
+description = "Known fake test fixtures"
+paths = [
+  '''^IDE-EXTENSIONS/cursor-extension/src/services/memory-route-auth\.test\.ts$''',
+  '''^cli/src/__tests__/hash-utils-sdk\.test\.ts$''',
+  '''^cli/src/__tests__/hash-utils\.test\.ts$''',
+  '''^cli/src/__tests__/mcp-connection-reliability\.test\.ts$''',
+  '''^cli/src/__tests__/auth-integration-mocked\.test\.ts$''',
+  '''^cli/src/__tests__/auth-persistence\.test\.ts$''',
+  '''^cli/src/__tests__/auth-429-rate-limit\.test\.ts$''',
+  '''^cli/test/commands\.test\.ts$''',
+  '''^cli/test/command-contract\.fixtures\.ts$''',
+  '''^packages/hermes-lanonasis-memory/tests/test_security\.py$''',
+  '''^packages/pi-lanonasis-memory/tests/scanner/content-scanner\.test\.ts$''',
+  '''^packages/pi-lanonasis-memory/tests/integration/runtime-wiring\.test\.ts$''',
+  '''^packages/repl-cli/tests/local-memory/local-backend\.test\.ts$''',
+  '''^packages/repl-cli/tests/history-store\.test\.ts$''',
+  '''^packages/recall-forge/extraction/secret-redactor\.test\.ts$''',
+  '''^tests/conformance/auth-headers\.test\.ts$''',
+  '''^tests/setup\.ts$''',
+  '''^tests/unit/middleware/auth\.test\.ts$''',
+]
