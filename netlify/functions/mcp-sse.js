@@ -195,11 +195,12 @@ exports.handler = async (event) => {
       
       console.log('🔑 Attempting direct database authentication with fresh client...');
       
-      // Direct database lookup for raw keys (primary method)
+      // Direct database lookup by sha256 hash. The plaintext `key` column is
+      // no longer written and is being nulled; never select or filter on it.
       const { data: dbKeyData, error: dbError } = await authSupabase
         .from('api_keys')
-        .select('user_id, organization_id, is_active, rate_limit, access_level, key, key_hash')
-        .eq('key', apiKey)
+        .select('user_id, organization_id, is_active, access_level')
+        .eq('key_hash', crypto.createHash('sha256').update(apiKey).digest('hex'))
         .eq('is_active', true)
         .single();
 
@@ -216,7 +217,7 @@ exports.handler = async (event) => {
           user_id: dbKeyData.user_id,
           organization_id: dbKeyData.organization_id,
           access_level: dbKeyData.access_level,
-          rate_limit: dbKeyData.rate_limit
+          rate_limit: null
         };
         console.log('✅ Direct database authentication successful');
       } else {

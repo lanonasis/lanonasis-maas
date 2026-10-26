@@ -94,14 +94,21 @@ app.get('/', authRateLimit, async (req, res) => {
     // Validate API key
     console.log('🔍 Starting API key authentication for MCP SSE...');
     
+    // Look the key up by sha256 hash only. public.api_keys.key (plaintext)
+    // is no longer written and is being nulled, and `rate_limit` is not a
+    // column on that table, so the old query could never succeed.
+    const apiKeyHash = require('crypto').createHash('sha256').update(apiKey).digest('hex');
     const { data: keyData, error } = await supabase
       .from('api_keys')
-      .select('user_id, organization_id, is_active, rate_limit, access_level')
-      .eq('key', apiKey)
+      .select('user_id, organization_id, is_active, access_level, expires_at')
+      .eq('key_hash', apiKeyHash)
       .eq('is_active', true)
       .single();
 
-    if (error || !keyData?.is_active) {
+    const keyExpired = keyData?.expires_at
+      ? !(Date.parse(keyData.expires_at) > Date.now())
+      : false;
+    if (error || !keyData?.is_active || keyExpired) {
       console.log('❌ API key validation failed:', error?.message);
       res.write('data: {"error":"Invalid or inactive API key"}\n\n');
       res.end();
@@ -138,7 +145,7 @@ app.get('/', authRateLimit, async (req, res) => {
       user_id: keyData.user_id,
       organization_id: keyData.organization_id,
       access_level: keyData.access_level,
-      rate_limit: keyData.rate_limit,
+      rate_limit: null,
       message: "MCP SSE connection established successfully",
       services: {
         memory: {
