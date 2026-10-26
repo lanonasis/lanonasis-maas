@@ -13,8 +13,8 @@ Operating guide for the published `@lanonasis/cli`. Prefer live command output o
 
 | Fact | Value |
 |---|---|
-| Verified against | `@lanonasis/cli` **3.11.2**, global bin `/usr/bin/lanonasis` → `../lib/node_modules/@lanonasis/cli/dist/index.js` |
-| Verified on | 2026-09-30 |
+| Verified against | `@lanonasis/cli` **3.11.5**, global bin `/usr/bin/lanonasis` → `../lib/node_modules/@lanonasis/cli/dist/index.js` |
+| Verified on | 2026-10-22 — command surface, global options, and `mcp start` options re-verified against the live binary; the dated live-route and defect claims below keep their original dates and were not re-measured |
 | Config file | `~/.maas/config.json` |
 | REPL binaries installed | `lrepl`, `onasis-repl` |
 | Rule | Any live-behaviour claim below carries a date. Re-verify before trusting it; re-stamp when you do. |
@@ -51,7 +51,7 @@ lanonasis whoami                                   # identity + role + provider
 
 Never echo the vendor key, token, or password into logs or reports.
 
-## 2. Global options (correct as of 3.11.2)
+## 2. Global options (verified 3.11.5, 2026-10-22)
 
 | Flag | Meaning |
 |---|---|
@@ -77,9 +77,9 @@ lanonasis memory create --content-file ./notes.md -t "Title"
 lanonasis memory create --json '{"title":"T","content":"C","memory_type":"project","tags":["a"]}'
 lanonasis memory create -i                       # interactive
 
-# list  (page/limit/sort/order)
+# list  (limit/sort/order — see the -p defect note below)
 lanonasis memory list -l 5 --output json
-lanonasis memory list -p 2 -l 20 --sort updated_at --order desc
+lanonasis memory list -l 20 --sort updated_at --order desc
 
 # search (semantic; threshold default 0.55)
 lanonasis memory search "query terms" -l 5 --json
@@ -104,7 +104,9 @@ lanonasis memory load-session <id>
 
 > ⚠️ **Known defect — `memory list --type <x>` is a silent no-op.** Verified 2026-09-30 on 3.11.2: `--type project` returns rows of every type, and a nonsense value returns the full unfiltered set with no error. Do not rely on `--type` for `list`; filter client-side or use `search --type`.
 
-## 4. Command surface (verified 3.11.2)
+> ⚠️ **Known defect — `memory list -p N` is a silent no-op.** Verified 2026-10-22 on 3.11.5: pages 1 and 2 return the identical rows (with and without `--sort`/`--order`, with and without `--tags`). To enumerate beyond one page, raise `-l` (200 is accepted) or narrow with `--tags`/`--type`. Do not page with `-p` until re-verified.
+
+## 4. Command surface (verified 3.11.5, 2026-10-22)
 
 **Top level:** `init`, `auth`, `mcp`, `mcp-server`, `memory`, `repl`, `topic`, `config`, `org`, `api-keys`, `prescan`, `completion`, `dashboard`, `documentation`, `sdk`, `api`, `deploy`, `service`, `status`, `whoami`, `health`, `docs`.
 
@@ -133,15 +135,26 @@ Binaries from `package.json`: `lanonasis`, `onasis`, `lanonasis-mcp`. `memory`/`
 - `--json` output is preceded by a spinner line (`- Detecting duplicates...`); strip everything before the first `{`.
 - The MCP **tools** of the same name (`intelligence_suggest_tags`, `intelligence_find_related`, …, called by an MCP client rather than this CLI) are a different implementation in mcp-core with different defects: as of 2026-10-04 `suggest_tags` by id and `find_related` fail with `organization_id is required for non-master memory reads` (fix in mcp-core #48, not deployed).
 
-**`mcp`:** `connect`, `disconnect`, `status`, `tools`, `call <tool>`, `memory`, `config`, `start`, `diagnose`.
+**`mcp`:** `connect`, `disconnect`, `status`, `tools`, `call <tool>`, `memory`, `config`, `start` (`--transport stdio|ws|http|sse`, `--port` (default `3009`), `--host` (default `127.0.0.1`), `--allow-public-bind`), `diagnose`.
+
+⚠️ **`mcp start` refuses a non-loopback `--host` unless `--allow-public-bind` is passed** (3.11.4, VERA C-1). Default `127.0.0.1` unchanged.
+
 **`mcp-server`:** `init`.
 **`config`:** `set`, `get`, `show`, `list`, `set-url`, `test`, `discover`, `endpoints`, `set-endpoint <type> <url>` (`auth|memory|mcp-http|mcp-ws|mcp-sse`), `clear-overrides`, `validate`, `backup`, `restore`, `reset`.
 **`prescan`:** `run <path>` (`--exclude`, `--json`, `--save`, `--fail-on none|quarantined|flagged`, `--ci`), `status`. Reports are value-stripped by design.
 **`auth`:** `login` (`-e/--email`, `-p/--password`, `-k/--vendor-key`), `logout`, `status`, `diagnose`.
 
+### 3.11.3 → 3.11.5 deltas (per release notes; live behaviour not re-verified on this host)
+
+- **3.11.3** — documentation/metadata only; no command, flag, or wire-contract changes.
+- **3.11.4** — `X-Auth-Method` header now attached only when `CLI_VERBOSE=true` (VERA C-2). Memory `list`/`get`/`search` use the direct `api/v1` path when an `api_key` is configured, skipping the auth-gateway hop, with transparent fallback to the gateway route on 401/403/404 (see §5). The MCP server honours `LANONASIS_API_KEY` / `LANONASIS_USER_KEY` env credentials, so headless/CI invocations need not write the config file.
+- **3.11.5** — successful auth verifications are cached on disk for 5 minutes in `~/.maas/auth-cache.json` (salted SHA-256 digest only, never the credential); `LANONASIS_DISABLE_AUTH_CACHE=true` disables. Service-discovery results are cached 24h — `config discover` and `mcp diagnose` force a refresh. HTTP 429 is reported as `throttled`, not a credential failure; a 5xx from the auth gateway is unavailable, not `invalid_credential`. `mcp start --transport stdio` no longer dies on a refused `localhost:4000` probe (loopback is probed only in dev environments; unreachable is no longer conflated with rejected). `auth login --vendor-key` clears any stale OAuth session state. Clearing an endpoint override now persists.
+
 ## 5. Which route are you on? (the dataset differs)
 
 Memory ops default to the MCP route; `--no-mcp` forces the direct API. **The two routes do not return the same rows.**
+
+3.11.4+ (per release notes): when an `api_key` is configured, `list`/`get`/`search` go direct `api/v1` even without `--no-mcp`, falling back to the gateway route on 401/403/404 — so route selection depends on which credential you configured, not only on `--no-mcp`.
 
 | Route | Endpoint | `memory list` total (measured 2026-09-30) |
 |---|---|---|
