@@ -1,4 +1,4 @@
-import { describe, it, expect, jest, beforeEach } from '@jest/globals';
+import { describe, it, expect, jest, beforeEach, afterEach } from '@jest/globals';
 
 // Capture the request interceptor the API client registers so we can invoke it manually
 const requestHandlers: Array<(config: any) => any> = [];
@@ -30,12 +30,20 @@ jest.unstable_mockModule('axios', () => ({
 const { APIClient } = await import('../utils/api.js');
 
 describe('APIClient authentication headers', () => {
+  const originalEnv = { ...process.env };
+
   beforeEach(() => {
+    delete process.env.SUPABASE_URL;
+    delete process.env.LANONASIS_SUPABASE_URL;
     requestHandlers.length = 0;
     mockAxiosInstance.interceptors.request.use.mockClear();
     mockAxiosInstance.interceptors.response.use.mockClear();
     mockAxiosInstance.get.mockReset();
     mockAxiosInstance.post.mockReset();
+  });
+
+  afterEach(() => {
+    process.env = { ...originalEnv };
   });
 
   it('prefers vendor key from secure storage when configuring requests', async () => {

@@ -1,5 +1,11 @@
 # Changelog - @lanonasis/cli
 
+## [3.11.6] - 2026-10-26
+
+### 🐛 Fixed
+- **Eliminated `punycode` DEP0040 deprecation warning on Node 21+.** Lazy-loaded `@lanonasis/oauth-client` via dynamic `import()` in `CLIConfig.getApiKeyStorage()` so the heavy `cross-fetch` → `node-fetch` → `whatwg-url` dependency tree is not evaluated on startup. Commands that do not touch encrypted vendor-key storage (such as `whoami`, `health`, `status`, and memory subcommands) no longer trigger Node's deprecated builtin `punycode` warning.
+- **Added `whatwg-url` override for dev environments.** Added `"whatwg-url": "^13.0.0"` to `overrides` in `package.json` to guarantee modern `tr46` userland punycode resolution during development and CI installs.
+
 ## [3.11.5] - 2026-10-16
 
 ### 🐛 Fixed

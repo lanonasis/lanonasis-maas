@@ -3,7 +3,7 @@ import * as path from 'path';
 import * as os from 'os';
 import { jwtDecode } from 'jwt-decode';
 import { createHash, randomUUID } from 'crypto';
-import { ApiKeyStorage } from '@lanonasis/oauth-client';
+import type { ApiKeyStorage } from '@lanonasis/oauth-client';
 import axios from 'axios';
 import type { AxiosInstance, AxiosRequestConfig } from 'axios';
 import { createRequire } from 'module';
@@ -224,9 +224,10 @@ export class CLIConfig {
     this.lockFile = path.join(this.configDir, 'config.lock');
   }
 
-  private getApiKeyStorage(): ApiKeyStorage {
+  private async getApiKeyStorage(): Promise<ApiKeyStorage> {
     if (!this.apiKeyStorage) {
-      this.apiKeyStorage = new ApiKeyStorage();
+      const { ApiKeyStorage: ApiKeyStorageCtor } = await import('@lanonasis/oauth-client');
+      this.apiKeyStorage = new ApiKeyStorageCtor();
     }
 
     return this.apiKeyStorage;
@@ -1413,7 +1414,7 @@ export class CLIConfig {
 
     // Initialize and store using ApiKeyStorage from @lanonasis/oauth-client
     // This handles encryption automatically (AES-256-GCM with machine-derived key)
-    const apiKeyStorage = this.getApiKeyStorage();
+    const apiKeyStorage = await this.getApiKeyStorage();
     await apiKeyStorage.initialize();
     await apiKeyStorage.store({
       apiKey: trimmedKey,
@@ -1586,7 +1587,7 @@ export class CLIConfig {
    */
   async getVendorKeyAsync(): Promise<string | undefined> {
     try {
-      const apiKeyStorage = this.getApiKeyStorage();
+      const apiKeyStorage = await this.getApiKeyStorage();
       await apiKeyStorage.initialize();
       const stored = await apiKeyStorage.retrieve();
       if (stored) {
@@ -2016,7 +2017,7 @@ export class CLIConfig {
     this.config.refresh_token = undefined;
     this.config.token_expires_at = undefined;
     try {
-      const apiKeyStorage = this.getApiKeyStorage();
+      const apiKeyStorage = await this.getApiKeyStorage();
       await apiKeyStorage.initialize();
       // ApiKeyStorage may implement clear() to remove encrypted secrets
       const storage: any = apiKeyStorage;
@@ -2224,7 +2225,7 @@ export class CLIConfig {
     this.config.lastAuthFailure = undefined;
     this.vendorKeyCache = undefined;
     try {
-      const apiKeyStorage = this.getApiKeyStorage();
+      const apiKeyStorage = await this.getApiKeyStorage();
       await apiKeyStorage.initialize();
       const storage: any = apiKeyStorage;
       if (typeof storage.clear === 'function') {
