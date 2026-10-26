@@ -1,4 +1,4 @@
-# @lanonasis/cli v3.11.5 - Advanced CLI Suite
+# @lanonasis/cli v3.11.6 - Advanced CLI Suite
 
 [![NPM Version](https://img.shields.io/npm/v/@lanonasis/cli)](https://www.npmjs.com/package/@lanonasis/cli)
 [![Downloads](https://img.shields.io/npm/dt/@lanonasis/cli)](https://www.npmjs.com/package/@lanonasis/cli)
@@ -689,7 +689,12 @@ onasis health
 
 ## 📝 Version History
 
-### v3.11.5 (Current)
+### v3.11.6 (Current)
+
+- ⚡ **Lazy `@lanonasis/oauth-client` loading**: Defers loading auth/secure storage dependencies until needed, eliminating Node's `DEP0040` punycode deprecation warning on standard CLI invocations (`whoami`, `health`, etc.)
+- 📦 **Dependency override**: Enforces `whatwg-url@^13.0.0` in dev/CI to use modern userland `punycode`
+
+### v3.11.5
 
 - 🔌 **`mcp start` survives a missing local gateway**: `http://localhost:4000` is only probed in dev, and a refused candidate no longer aborts startup with `-32000: Connection closed`
 - 🌐 **Unavailable ≠ invalid**: an unreachable gateway or a 5xx warns and lets `mcp start` proceed; only a real rejection fails the key. HTTP 429 is reported as rate-limited, not "Authentication required"
