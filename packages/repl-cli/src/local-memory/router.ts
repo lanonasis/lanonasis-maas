@@ -319,14 +319,19 @@ export class MemoryBackendRouter implements MemoryBackend {
         this.debugLog('remote.update failed; will retry via queue', id, err);
         this.consecutiveProbeFailures++;
         this.lastHealthProbeAt = 0;
-        // Enqueue the failed update for retry so MaaS eventually converges.
-        if (this.local && 'enqueueUpdate' in this.local) {
-          try {
-            (this.local as unknown as {
-              enqueueUpdate(id: string, updates: Partial<MemoryRecord>): void;
-            }).enqueueUpdate(remoteId, remotePayload);
-          } catch { /* best effort */ }
-        }
+        // When localResult?.maas_id is null, the pending 'save' row in
+        // sync_queue carries stale content. Merge the redacted fields into
+        // that save payload first — if merge succeeds the update row is
+        // not enqueued. This prevents the sync runner from draining the
+        // stale save first and leaving MaaS with outdated content.
+        const q = this.local as unknown as {
+          mergeIntoQueuedSave?(id: string, fields: Partial<MemoryRecord>): boolean;
+          enqueueUpdate?(id: string, updates: Partial<MemoryRecord>): void;
+        };
+        try {
+          const merged = !localResult?.maas_id && q.mergeIntoQueuedSave?.(id, remotePayload);
+          if (!merged) q.enqueueUpdate?.(remoteId, remotePayload);
+        } catch { /* best effort */ }
       }
     }
 

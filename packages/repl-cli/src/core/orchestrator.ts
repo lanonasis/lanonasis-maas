@@ -307,7 +307,10 @@ export class NaturalLanguageOrchestrator {
               const errMsg = typeof (res.error as { message?: unknown }).message === 'string'
                 ? (res.error as { message: string }).message
                 : JSON.stringify(res.error);
-              if (!/not found|404/i.test(errMsg)) throw new Error(errMsg);
+              // Delete silently ignores 404 (record already gone), but
+              // update must treat 404 as failure — the record does not exist
+              // so MaaS cannot converge with local state.
+              throw new Error(errMsg);
             }
           },
         };

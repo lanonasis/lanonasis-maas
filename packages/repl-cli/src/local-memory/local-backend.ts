@@ -758,6 +758,51 @@ export class LocalMemoryBackend implements MemoryBackend {
   }
 
   /**
+   * Merge supplied fields into the pending 'save' sync row for a record.
+   *
+   * When a record has not yet been synced to MaaS (maas_id is null), the
+   * pending `save` row in sync_queue carries stale content — the state at
+   * the time of the original save.  Subsequent calls to `update()` would
+   * normally enqueue a separate `update` row, but the sync runner would
+   * drain the stale `save` row first, leaving MaaS out of sync.
+   *
+   * This helper overwrites the stale payload so that when the runner
+   * eventually succeeds, MaaS receives the latest content.
+   *
+   * Returns `true` if a save row was merged into (the caller should skip
+   * enqueueing a separate update), `false` otherwise.
+   */
+  mergeIntoQueuedSave(recordId: string, fields: Partial<MemoryRecord>): boolean {
+    if (!this.initialized) return false;
+    try {
+      const row = this.requireDb()
+        .prepare(
+          `SELECT payload FROM sync_queue WHERE op = 'save' AND payload LIKE ? ORDER BY id DESC LIMIT 1`,
+        )
+        .get(`%"id":"${recordId}"%`) as { payload: string } | undefined;
+      if (!row) return false;
+
+      const parsed: Record<string, unknown> = JSON.parse(row.payload);
+      // Merge only the fields that were supplied (partial update contract).
+      if (fields.title !== undefined) parsed.title = fields.title;
+      if (fields.content !== undefined) parsed.content = fields.content;
+      if (fields.memory_type !== undefined) parsed.memory_type = fields.memory_type;
+      if (fields.status !== undefined) parsed.status = fields.status;
+      if (fields.tags !== undefined) parsed.tags = fields.tags;
+      if (fields.metadata !== undefined) parsed.metadata = fields.metadata;
+
+      this.requireDb().prepare(
+        `UPDATE sync_queue SET payload = ? WHERE op = 'save' AND payload LIKE ? AND id = (
+           SELECT id FROM sync_queue WHERE op = 'save' AND payload LIKE ? ORDER BY id DESC LIMIT 1
+         )`,
+      ).run(JSON.stringify(parsed), `%"id":"${recordId}"%`, `%"id":"${recordId}"%`);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  /**
    * One-shot import of any pre-existing openclaw-format markdown files at
    * <rootDir>/memory/*.md. Preserves legacy record identity (uses the id
    * embedded in the mirror's HTML comment when present), replaces title-only
