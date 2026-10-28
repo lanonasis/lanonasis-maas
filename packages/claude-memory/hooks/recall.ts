@@ -13,7 +13,13 @@ type RecallOptions = {
   gitBranch?: string;
 };
 
+// Long prompts are cut to what the search needs; the stop-gap hook used 200 too.
+const PROMPT_QUERY_CHARS = 200;
+
 function buildRecallQuery(input: PreToolInput, opts: RecallOptions): string {
+  const prompt = input.prompt?.trim();
+  if (prompt) return prompt.slice(0, PROMPT_QUERY_CHARS);
+
   const parts: string[] = [];
   const projectName = basename(opts.cwd);
   if (projectName) parts.push(projectName);
@@ -51,7 +57,8 @@ export async function handleRecall(
     const formatted = formatRecalledMemories(
       filtered.map((m) => ({
         title: m.title,
-        type: m.type,
+        // The search API names this field memory_type.
+        type: m.type ?? (m as { memory_type?: string }).memory_type ?? "memory",
         content: m.content,
         similarity: m.similarity,
       })),
@@ -92,33 +99,54 @@ export function detectGitBranch(cwd: string): string | undefined {
   }
 }
 
-// Hook entry point — Claude Code pipes PreToolUse JSON to stdin
-if (process.stdin.isTTY === false) {
+type RecallHookDeps = {
+  makeClient?: (config: ReturnType<typeof parseConfig>) => LanonasisClient;
+  cwd?: string;
+};
+
+/**
+ * Runs one hook invocation and returns what to print. No exported key is
+ * required: the client falls back to the `lanonasis auth login` session.
+ * On UserPromptSubmit it searches with the prompt, every prompt; on
+ * PreToolUse (older installs) it keeps the once-per-session lock.
+ */
+export async function runRecallHook(raw: string, deps: RecallHookDeps = {}): Promise<string> {
+  const input: PreToolInput = JSON.parse(raw);
+  const config = parseConfig({
+    apiKey: process.env.LANONASIS_API_KEY ?? "",
+    orgId: process.env.LANONASIS_ORG_ID ?? "",
+    projectId: process.env.LANONASIS_PROJECT_ID ?? "",
+  });
+  const client = deps.makeClient ? deps.makeClient(config) : new LanonasisClient(config);
+  const cwd = deps.cwd ?? process.env.CLAUDE_CWD ?? process.cwd();
+  const opts = {
+    searchThreshold: config.searchThreshold ?? 0.55,
+    maxRecallResults: config.maxRecallResults ?? 5,
+    cwd,
+    gitBranch: detectGitBranch(cwd),
+  };
+
+  const event = input.hook_event_name ?? (input.prompt ? "UserPromptSubmit" : "PreToolUse");
+  const result = event === "UserPromptSubmit"
+    ? await handleRecall(input, client, opts)
+    : await handleRecallWithSessionLock(input, client, opts);
+  if (!result.result) return "";
+
+  return JSON.stringify({
+    hookSpecificOutput: { hookEventName: event, additionalContext: result.result },
+  });
+}
+
+// Hook entry point — Claude Code pipes the hook JSON to stdin
+// import.meta.main, not stdin.isTTY: bun leaves isTTY undefined for piped stdin.
+if ((import.meta as { main?: boolean }).main) {
   let raw = "";
   process.stdin.setEncoding("utf8");
   process.stdin.on("data", (chunk) => { raw += chunk; });
   process.stdin.on("end", async () => {
     try {
-      const input: PreToolInput = JSON.parse(raw);
-      const config = parseConfig({
-        apiKey: process.env.LANONASIS_API_KEY ?? "",
-        orgId: process.env.LANONASIS_ORG_ID ?? "",
-        projectId: process.env.LANONASIS_PROJECT_ID ?? "",
-      });
-      if (!config.apiKey) {
-        process.exit(0); // No key — skip recall silently
-      }
-      const client = new LanonasisClient(config);
-      const cwd = process.env.CLAUDE_CWD ?? process.cwd();
-      const result = await handleRecallWithSessionLock(input, client, {
-        searchThreshold: config.searchThreshold ?? 0.55,
-        maxRecallResults: config.maxRecallResults ?? 5,
-        cwd,
-        gitBranch: detectGitBranch(cwd),
-      });
-      if (result.result) {
-        process.stdout.write(JSON.stringify(result));
-      }
+      const out = await runRecallHook(raw);
+      if (out) process.stdout.write(out);
     } catch (err) {
       process.stderr.write(`[claude-memory] recall hook error: ${err}\n`);
     }

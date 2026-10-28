@@ -46,7 +46,8 @@ describe("installHooks", () => {
     expect(Array.isArray(settings.hooks.Stop)).toBe(true);
     expect(Array.isArray(settings.hooks.SubagentStop)).toBe(true);
     expect(Array.isArray(settings.hooks.PreCompact)).toBe(true);
-    expect(Array.isArray(settings.hooks.PreToolUse)).toBe(true);
+    expect(Array.isArray(settings.hooks.UserPromptSubmit)).toBe(true);
+    expect(settings.hooks.PreToolUse).toBeUndefined();
   });
 
   it("writes correct hook commands in array-of-matchers format", () => {
@@ -59,7 +60,7 @@ describe("installHooks", () => {
     expect(stopCommand).toBe(join(paths.hooksDir, "stop.sh"));
     const precompactCommand = settings.hooks.PreCompact[0].hooks[0].command;
     expect(precompactCommand).toBe(join(paths.hooksDir, "precompact.sh"));
-    const recallCommand = settings.hooks.PreToolUse[0].hooks[0].command;
+    const recallCommand = settings.hooks.UserPromptSubmit[0].hooks[0].command;
     expect(recallCommand).toBe(join(paths.hooksDir, "recall.sh"));
   });
 
@@ -151,6 +152,33 @@ describe("installHooks", () => {
     // Each event should only have ONE claude-memory entry
     expect(settings.hooks.Stop).toHaveLength(1);
     expect(settings.hooks.PreCompact).toHaveLength(1);
-    expect(settings.hooks.PreToolUse).toHaveLength(1);
+    expect(settings.hooks.UserPromptSubmit).toHaveLength(1);
+  });
+
+  it("gives every hook a timeout so a slow network cannot hold up a prompt", () => {
+    const paths = createPaths();
+    installHooks(paths);
+    const settings = JSON.parse(readFileSync(paths.settingsPath, "utf-8"));
+    for (const event of ["Stop", "SubagentStop", "PreCompact", "UserPromptSubmit"]) {
+      expect(settings.hooks[event][0].hooks[0].timeout).toBeGreaterThan(0);
+    }
+    expect(settings.hooks.UserPromptSubmit[0].hooks[0].timeout).toBeLessThanOrEqual(5);
+  });
+
+  it("moves a recall hook left under PreToolUse by an older install", () => {
+    const paths = createPaths();
+    mkdirSync(join(paths.root, ".claude"), { recursive: true });
+    const other = { matcher: "Bash", hooks: [{ type: "command", command: "/tmp/guard.sh" }] };
+    writeFileSync(
+      paths.settingsPath,
+      JSON.stringify({ hooks: { PreToolUse: [other, { hooks: [{ type: "command", command: join(paths.hooksDir, "recall.sh") }] }] } }),
+      "utf-8",
+    );
+
+    installHooks(paths);
+
+    const settings = JSON.parse(readFileSync(paths.settingsPath, "utf-8"));
+    expect(settings.hooks.PreToolUse).toEqual([other]);
+    expect(settings.hooks.UserPromptSubmit[0].hooks[0].command).toBe(join(paths.hooksDir, "recall.sh"));
   });
 });

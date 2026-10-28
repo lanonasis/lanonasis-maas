@@ -208,8 +208,23 @@ export async function handleStop(
   }
 }
 
+/**
+ * Runs one Stop/SubagentStop invocation. No exported key is required: the
+ * client falls back to the `lanonasis auth login` session, and with no
+ * credential at all handleStop spools the captures for a later drain.
+ */
+export async function runStopHook(
+  raw: string,
+  deps: { handle?: typeof handleStop } = {},
+): Promise<void> {
+  const input: StopInput = JSON.parse(raw);
+  const hook = (process.env.CLAUDE_MEMORY_HOOK as StopHookName) ?? "stop";
+  await (deps.handle ?? handleStop)(input, undefined, undefined, { hook });
+}
+
 // Hook entry point — Claude Code calls this via stdin JSON
-if (process.stdin.isTTY === false) {
+// import.meta.main, not stdin.isTTY: bun leaves isTTY undefined for piped stdin.
+if ((import.meta as { main?: boolean }).main) {
   let raw = "";
   process.stdin.setEncoding("utf8");
   process.stdin.on("data", (chunk) => {
@@ -217,13 +232,7 @@ if (process.stdin.isTTY === false) {
   });
   process.stdin.on("end", async () => {
     try {
-      const input: StopInput = JSON.parse(raw);
-      if (!(process.env.LANONASIS_API_KEY ?? "").trim()) {
-        clearRecallLock(input.session_id);
-        process.exit(0);
-      }
-      const hook = (process.env.CLAUDE_MEMORY_HOOK as StopHookName) ?? "stop";
-      await handleStop(input, undefined, undefined, { hook });
+      await runStopHook(raw);
     } catch (err) {
       // Never crash Claude Code
       process.stderr.write(`[claude-memory] hook error: ${err}\n`);

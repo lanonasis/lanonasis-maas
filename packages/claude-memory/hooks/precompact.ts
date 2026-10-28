@@ -184,7 +184,8 @@ export async function handlePreCompact(
 }
 
 // Hook entry point
-if (process.stdin.isTTY === false) {
+// import.meta.main, not stdin.isTTY: bun leaves isTTY undefined for piped stdin.
+if ((import.meta as { main?: boolean }).main) {
   let raw = "";
   process.stdin.setEncoding("utf8");
   process.stdin.on("data", (chunk) => {

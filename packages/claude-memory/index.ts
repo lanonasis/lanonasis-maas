@@ -24,8 +24,11 @@ export type PreCompactInput = {
 
 export type PreToolInput = {
   session_id: string;
-  tool_name: string;
-  tool_input: Record<string, unknown>;
+  tool_name?: string;
+  tool_input?: Record<string, unknown>;
+  /** Set on UserPromptSubmit: the text the user just sent. */
+  prompt?: string;
+  hook_event_name?: string;
 };
 
 export type HookResult = {
