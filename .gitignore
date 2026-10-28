@@ -176,3 +176,6 @@ packages/hermes-lanonasis-memory/hermes_lanonasis_memory/config.json
 # Dashboard Playwright transient results — keep specs, drop the run JSON.
 dashboard/test-results/
 dashboard/playwright-report/
+
+# CLI test-run artifacts (tmp-config-* dirs) — never commit
+cli/test/tmp-config-*/

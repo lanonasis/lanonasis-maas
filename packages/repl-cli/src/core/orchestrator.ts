@@ -1,6 +1,7 @@
 import { routerCredentials } from '../config/loader.js';
 import { MemoryClient, createMemoryClient } from '@lanonasis/memory-client';
 import { join } from 'path';
+import { randomUUID } from 'node:crypto';
 import { homedir } from 'os';
 import chalk from 'chalk';
 import ora from 'ora';
@@ -286,6 +287,33 @@ export class NaturalLanguageOrchestrator {
               if (!/not found|404/i.test(errMsg)) throw new Error(errMsg);
             }
           },
+          submitUpdate: async (payload) => {
+            const { id, ...updates } = payload;
+            const res = await this.client.updateMemory(String(id), {
+              title: updates.title as string | undefined,
+              content: updates.content as string | undefined,
+              memory_type: updates.memory_type as
+                | 'context'
+                | 'project'
+                | 'knowledge'
+                | 'reference'
+                | 'personal'
+                | 'workflow'
+                | undefined,
+              status: updates.status as 'active' | 'archived' | 'deleted' | 'draft' | undefined,
+              tags: Array.isArray(updates.tags) ? (updates.tags as string[]) : undefined,
+              metadata: (updates.metadata ?? undefined) as Record<string, unknown> | undefined,
+            });
+            if (res.error) {
+              const errMsg = typeof (res.error as { message?: unknown }).message === 'string'
+                ? (res.error as { message: string }).message
+                : JSON.stringify(res.error);
+              // Delete silently ignores 404 (record already gone), but
+              // update must treat 404 as failure — the record does not exist
+              // so MaaS cannot converge with local state.
+              throw new Error(errMsg);
+            }
+          },
         };
         this.syncRunner = new AsyncSyncQueueRunner(this.localBackend.getSyncQueueDeps(), {
           batchSize: 5,
@@ -357,31 +385,57 @@ export class NaturalLanguageOrchestrator {
     if (this.contextInitialized) return;
 
     try {
-      // Search for user preferences and profile information
-      // Hard-timeout the search so it can't block startup indefinitely.
-      const preferencesSearch = await Promise.race([
-        this.client.searchMemories({
-          query: 'user preferences settings profile configuration style',
-          status: 'active',
-          limit: 5,
-          threshold: 0.6
-        }),
-        new Promise<never>((_, reject) =>
-          setTimeout(() => reject(new Error('searchMemories timeout')), 3000)
-        )
-      ]);
+      // Search for user preferences and profile information via router
+      // (local-first → remote enrich → offline degrade) with a hard timeout.
+      const router = this.memoryRouter;
 
-      if (preferencesSearch.data?.results && preferencesSearch.data.results.length > 0) {
-        this.cachedUserPreferences = preferencesSearch.data.results
-          .filter((r: any) => r && r.title && r.content)
-          .map((r: any) => {
-            const content = r.content || '';
-            const title = r.title || 'Untitled';
-            return `[${title}]: ${content.substring(0, 200)}`;
-          });
+      if (router) {
+        const preferencesSearch = await Promise.race([
+          router.search(
+            'user preferences settings profile configuration style',
+            { limit: 5, status: 'active' },
+          ),
+          new Promise<never>((_, reject) =>
+            setTimeout(() => reject(new Error('router search timeout')), 3000),
+          ),
+        ]);
 
-        // Update the system prompt with user context
-        this.updateSystemPromptWithContext();
+        if (preferencesSearch.length > 0) {
+          this.cachedUserPreferences = preferencesSearch
+            .filter((h) => h && h.title && h.content)
+            .map((h) => {
+              const content = h.content || '';
+              const title = h.title || 'Untitled';
+              return `[${title}]: ${content.substring(0, 200)}`;
+            });
+
+          this.updateSystemPromptWithContext();
+        }
+      } else {
+        // Fallback: direct MaaS (router unavailable)
+        const fallback = await Promise.race([
+          this.client.searchMemories({
+            query: 'user preferences settings profile configuration style',
+            status: 'active',
+            limit: 5,
+            threshold: 0.6,
+          }),
+          new Promise<never>((_, reject) =>
+            setTimeout(() => reject(new Error('searchMemories timeout')), 3000),
+          ),
+        ]);
+
+        if (fallback.data?.results && fallback.data.results.length > 0) {
+          this.cachedUserPreferences = fallback.data.results
+            .filter((r: any) => r && r.title && r.content)
+            .map((r: any) => {
+              const content = r.content || '';
+              const title = r.title || 'Untitled';
+              return `[${title}]: ${content.substring(0, 200)}`;
+            });
+
+          this.updateSystemPromptWithContext();
+        }
       }
 
       this.contextInitialized = true;
@@ -431,7 +485,7 @@ export class NaturalLanguageOrchestrator {
     // LANONASIS_LOCAL_MEMORY=0 path.
     if (this.memoryRouter) {
       try {
-        const hits = await this.memoryRouter.search(query, { limit });
+        const hits = await this.memoryRouter.search(query, { limit, status: 'active' });
         return hits
           .filter((h) => h && h.title && h.content)
           .slice(0, limit)
@@ -1116,88 +1170,153 @@ Remember: You are LZero - be helpful, conversational, and make the experience fe
   }
 
   async executeAction(action: OrchestratorResponse['action']): Promise<any> {
-    if (!action) return null;
+      if (!action) return null;
 
-    try {
-      switch (action.type) {
-        case 'create':
-          return await this.client.createMemory({
-            title: action.params.title || '',
-            content: action.params.content || '',
-            memory_type: (action.params.memory_type || 'context') as 'context' | 'project' | 'knowledge' | 'reference' | 'personal' | 'workflow',
-            tags: action.params.tags || []
-          });
+      const router = this.memoryRouter;
 
-        case 'update': {
-          const { id, ...updates } = action.params;
-          if (!id) {
-            return { error: 'Missing memory id for update action.' };
+      try {
+        switch (action.type) {
+          case 'create': {
+            if (router) {
+              // Wrap in the response envelope repl-engine.ts expects: result.data.
+              return { data: await router.save({
+                id: action.params.id || randomUUID(),
+                title: action.params.title || '',
+                content: action.params.content || '',
+                memory_type: (action.params.memory_type || 'context') as 'context' | 'project' | 'knowledge' | 'reference' | 'personal' | 'workflow',
+                tags: action.params.tags || [],
+                status: 'active',
+              }) };
+            }
+            return await this.client.createMemory({
+              title: action.params.title || '',
+              content: action.params.content || '',
+              memory_type: (action.params.memory_type || 'context') as 'context' | 'project' | 'knowledge' | 'reference' | 'personal' | 'workflow',
+              tags: action.params.tags || [],
+            });
           }
-          return await this.client.updateMemory(id, updates);
+
+          case 'update': {
+            const { id, ...updates } = action.params;
+            if (!id) {
+              return { error: 'Missing memory id for update action.' };
+            }
+            if (router) {
+              const updated = await router.update(id, updates);
+              if (!updated) {
+                return { error: `Memory not found: ${id}` };
+              }
+              return { data: updated };
+            }
+            return await this.client.updateMemory(id, updates);
+          }
+
+          case 'search': {
+            if (router) {
+              const hits = await router.search(action.params.query || '', {
+                limit: action.params.limit || 10,
+                status: 'active',
+                type: action.params.memory_type,
+              });
+              // Convert MemoryHit[] to response shape expected by caller
+              return {
+                data: {
+                  results: hits.map(h => ({
+                    id: h.id,
+                    title: h.title,
+                    content: h.content,
+                    memory_type: h.memory_type,
+                    status: 'active',
+                    tags: h.tags,
+                    similarity: h.score,
+                    similarity_score: h.score,
+                    created_at: h.created_at,
+                  })),
+                },
+              };
+            }
+            const searchResult = await this.client.searchMemories({
+              query: action.params.query || '',
+              status: 'active',
+              limit: action.params.limit || 10,
+              threshold: action.params.threshold || 0.7,
+              memory_types: action.params.memory_type ? [action.params.memory_type] : undefined,
+            });
+
+            // Enhance search results with structured response
+            if (searchResult.data?.results && searchResult.data.results.length > 0) {
+              const results = searchResult.data.results;
+              const mainResult = results[0]; // Most relevant result
+              const additionalResults = results.slice(1); // Other relevant results
+
+              return {
+                ...searchResult,
+                enhanced: {
+                  mainResult,
+                  additionalResults: additionalResults.map((r: any) => ({
+                    title: r.title,
+                    content: r.content.substring(0, 200),
+                    relevance: r.similarity ? r.similarity * 100 : undefined,
+                  })),
+                },
+              };
+            }
+            return searchResult;
+          }
+
+          case 'list': {
+            if (router) {
+              // repl-engine.ts reads result.data.data for list.
+              return { data: { data: await router.list({ limit: action.params.limit || 10 }) } };
+            }
+            return await this.client.listMemories({
+              limit: action.params.limit || 10,
+            });
+          }
+
+          case 'get': {
+            if (router) {
+              const record = await router.get(action.params.id);
+              if (!record) {
+                return { error: `Memory not found: ${action.params.id}` };
+              }
+              return { data: record };
+            }
+            return await this.client.getMemory(action.params.id);
+          }
+
+          case 'delete': {
+            if (router) {
+              await router.delete(action.params.id);
+              // Return a truthy envelope so repl-engine.ts shows the success message.
+              return { data: { id: action.params.id, deleted: true } };
+            }
+            return await this.client.deleteMemory(action.params.id);
+          }
+
+          case 'optimize_prompt':
+            // Optimize prompt using OpenAI
+            return await this.optimizePrompt(action.params.original_prompt, action.params.context);
+
+          default:
+            return { error: `Unknown action type: ${action.type}` };
+        }
+      } catch (error) {
+        // Return error object instead of throwing - keeps REPL alive
+        const errorMessage = this.formatError(error);
+
+        // Provide helpful context based on error type
+        if (errorMessage.includes('401') || errorMessage.includes('Unauthorized')) {
+          return { error: 'Authentication failed. Try running: onasis-repl login' };
+        } else if (errorMessage.includes('404') || errorMessage.includes('not found')) {
+          return { error: 'Memory not found. It may have been deleted.' };
+        } else if (errorMessage.includes('timeout') || errorMessage.includes('ECONNREFUSED')) {
+          return { error: 'Could not connect to the memory service. Check your network or API URL.' };
         }
 
-        case 'search':
-          const searchResult = await this.client.searchMemories({
-            query: action.params.query || '',
-            status: 'active',
-            limit: action.params.limit || 10,
-            threshold: action.params.threshold || 0.7
-          });
-
-          // Enhance search results with structured response
-          if (searchResult.data?.results && searchResult.data.results.length > 0) {
-            const results = searchResult.data.results;
-            const mainResult = results[0]; // Most relevant result
-            const additionalResults = results.slice(1); // Other relevant results
-
-            return {
-              ...searchResult,
-              enhanced: {
-                mainResult,
-                additionalResults: additionalResults.map((r: any) => ({
-                  title: r.title,
-                  content: r.content.substring(0, 200),
-                  relevance: r.similarity ? r.similarity * 100 : undefined
-                }))
-              }
-            };
-          }
-          return searchResult;
-
-        case 'list':
-          return await this.client.listMemories({
-            limit: action.params.limit || 10
-          });
-
-        case 'get':
-          return await this.client.getMemory(action.params.id);
-
-        case 'delete':
-          return await this.client.deleteMemory(action.params.id);
-
-        case 'optimize_prompt':
-          // Optimize prompt using OpenAI
-          return await this.optimizePrompt(action.params.original_prompt, action.params.context);
-
-        default:
-          return { error: `Unknown action type: ${action.type}` };
+        return { error: errorMessage };
       }
-    } catch (error) {
-      // Return error object instead of throwing - keeps REPL alive
-      const errorMessage = this.formatError(error);
-
-      // Provide helpful context based on error type
-      if (errorMessage.includes('401') || errorMessage.includes('Unauthorized')) {
-        return { error: 'Authentication failed. Try running: onasis-repl login' };
-      } else if (errorMessage.includes('404') || errorMessage.includes('not found')) {
-        return { error: 'Memory not found. It may have been deleted.' };
-      } else if (errorMessage.includes('timeout') || errorMessage.includes('ECONNREFUSED')) {
-        return { error: 'Could not connect to the memory service. Check your network or API URL.' };
-      }
-
-      return { error: errorMessage };
     }
-  }
 
   private async optimizePrompt(originalPrompt: string, context?: string): Promise<any> {
     // If neither AI Router nor OpenAI is configured, return error

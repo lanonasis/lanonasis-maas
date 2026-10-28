@@ -85,14 +85,26 @@ interface MemoryClientLike {
     error?: string;
   }>;
   createMemory(args: {
-    title: string;
-    content: string;
-    type?: string;
-    tags?: string[];
-    metadata?: Record<string, unknown>;
-  }): Promise<{ data?: { id: string }; error?: string }>;
-  deleteMemory(id: string): Promise<{ error?: string }>;
-}
+      title: string;
+      content: string;
+      type?: string;
+      tags?: string[];
+      metadata?: Record<string, unknown>;
+    }): Promise<{ data?: { id: string }; error?: string }>;
+    deleteMemory(id: string): Promise<{ error?: string }>;
+    /** Optional — only present on clients that support the updateMemory contract. */
+    updateMemory?(
+      id: string,
+      updates: {
+        title?: string;
+        content?: string;
+        memory_type?: string;
+        status?: string;
+        tags?: string[];
+        metadata?: Record<string, unknown>;
+      },
+    ): Promise<{ data?: { id: string }; error?: string }>;
+  }
 
 export class MaaSClientAdapter implements MemoryBackend {
   constructor(private readonly client: MemoryClientLike) {}
@@ -189,6 +201,58 @@ export class MaaSClientAdapter implements MemoryBackend {
     if (res.error && !/not found|404/i.test(res.error)) {
       throw new MemoryBackendError(res.error, 'transport');
     }
+  }
+
+  async update(id: string, updates: Partial<MemoryRecord>): Promise<MemoryRecord | null> {
+      // Try updateMemory first if the client supports it.
+      if (this.client.updateMemory) {
+        const res = await this.client.updateMemory(id, {
+          title: updates.title,
+          content: updates.content,
+          memory_type: updates.memory_type,
+          status: updates.status,
+          tags: updates.tags,
+          metadata: updates.metadata,
+        });
+      if (res.error) {
+        // A 404 means MaaS does not know this record. It must NOT be
+        // swallowed: the router treats a rejected update as a failed sync
+        // and enqueues it for retry. Suppressing it here made the update
+        // look applied while MaaS never received it.
+        throw new MemoryBackendError(
+          res.error,
+          /not found|404/i.test(res.error) ? 'not_found' : 'transport',
+        );
+      }
+      if (!res.data) {
+        // update returned no data — fall back to getMemory.
+        const fetched = await this.get(id);
+        if (!fetched) {
+          throw new MemoryBackendError(`Memory not found: ${id}`, 'not_found');
+        }
+        return fetched;
+      }
+      // Return the partial record.
+      return {
+        id: res.data.id ?? id,
+        title: updates.title ?? '',
+        content: updates.content ?? '',
+        memory_type: (updates.memory_type ?? 'context') as MemoryType,
+        status: (updates.status ?? 'active') as MemoryStatus,
+        tags: updates.tags ?? [],
+        source: 'maas-sync',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+    }
+
+    // Clients without updateMemory cannot perform partial updates safely:
+    // the createMemory fallback would upsert with empty title/content and
+    // create garbage records. Fail loudly instead of corrupting data.
+    throw new MemoryBackendError(
+      'Partial updates are unsupported by this MaaS client (no updateMemory contract).',
+      'schema',
+    );
   }
 
   async health(): Promise<BackendHealth> {

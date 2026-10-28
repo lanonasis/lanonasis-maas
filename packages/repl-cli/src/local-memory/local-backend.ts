@@ -552,6 +552,148 @@ export class LocalMemoryBackend implements MemoryBackend {
     } catch { /* best effort */ }
   }
 
+  async update(id: string, updates: Partial<MemoryRecord>): Promise<MemoryRecord | null> {
+    if (!this.initialized) await this.init();
+    const db = this.requireDb();
+
+    // Fetch existing record to get unchanged fields.
+    const existing = db.prepare('SELECT * FROM memory_entries WHERE id = ?').get(id) as RawRow | undefined;
+    if (!existing) return null;
+
+    // Build a partial UPDATE: only set fields that were supplied.
+    const sets: string[] = [];
+    const params: unknown[] = [];
+
+    // Run supplied fields through the same redaction pipeline as save() so a
+    // secret pattern never reaches SQLite or the FTS index via update().
+    if (updates.title !== undefined) { sets.push('title = ?'); params.push(redactSecrets(updates.title).text); }
+    if (updates.content !== undefined) { sets.push('content = ?'); params.push(redactSecrets(updates.content).text); }
+    if (updates.memory_type !== undefined) { sets.push('memory_type = ?'); params.push(updates.memory_type); }
+    if (updates.status !== undefined) { sets.push('status = ?'); params.push(updates.status); }
+    if (updates.tags !== undefined) { sets.push('tags = ?'); params.push(JSON.stringify(updates.tags.map((t) => redactSecrets(t).text))); }
+    if (updates.subject_id !== undefined) { sets.push('subject_id = ?'); params.push(updates.subject_id); }
+    if (updates.maas_synced_at !== undefined) { sets.push('maas_synced_at = ?'); params.push(updates.maas_synced_at); }
+    if (updates.maas_id !== undefined) { sets.push('maas_id = ?'); params.push(updates.maas_id); }
+    if (updates.metadata !== undefined) {
+      sets.push('metadata = ?');
+      params.push(JSON.stringify(JSON.parse(redactSecrets(JSON.stringify(updates.metadata)).text)));
+    }
+
+    // Always update the timestamp.
+    const now = new Date().toISOString();
+    sets.push('updated_at = ?');
+    params.push(now);
+    params.push(id);
+
+    if (sets.length === 1) {
+      // Only updated_at was set — nothing meaningful changed; still update the
+      // timestamp to record that the record was touched.
+      db.prepare('UPDATE memory_entries SET updated_at = ? WHERE id = ?').run(now, id);
+    } else {
+      db.prepare(`UPDATE memory_entries SET ${sets.join(', ')} WHERE id = ?`).run(...params);
+    }
+
+    // Re-read and return the updated record.
+    const updatedRow = db.prepare('SELECT * FROM memory_entries WHERE id = ?').get(id) as RawRow | undefined;
+    return updatedRow ? rowToRecord(updatedRow) : null;
+  }
+
+  /**
+   * Import a record that already exists on MaaS into the local store
+   * WITHOUT enqueueing a sync operation.
+   *
+   * The router's read-through cache uses this for remote-only records:
+   * `save()` always enqueues a 'save' op, which the sync runner would
+   * submit to MaaS as a *new* memory — creating a duplicate of the record
+   * we just read. Imported records are already on MaaS, so they are stored
+   * with `maas_id` / `maas_synced_at` set and no queue row.
+   *
+   * If a local row already tracks this MaaS record (same `maas_id`), that
+   * row is refreshed instead of creating a second local copy.
+   */
+  async importSyncedRecord(record: MemoryRecord): Promise<MemoryRecord | null> {
+    if (!this.initialized) await this.init();
+    const db = this.requireDb();
+
+    const maasId = record.id || randomUUID();
+    const now = new Date().toISOString();
+    const redactedTitle = redactSecrets(record.title).text;
+    const redactedContent = redactSecrets(record.content).text;
+    const redactedTags = (record.tags ?? []).map((t) => redactSecrets(t).text);
+    let redactedMetadata: string | null = null;
+    if (record.metadata != null) {
+      try {
+        redactedMetadata = JSON.stringify(
+          JSON.parse(redactSecrets(JSON.stringify(record.metadata)).text),
+        );
+      } catch {
+        // Unparseable metadata — store it without the metadata column.
+        redactedMetadata = null;
+      }
+    }
+
+    // Reuse the local row that already tracks this MaaS record, if any.
+    const existing = db
+      .prepare('SELECT id FROM memory_entries WHERE maas_id = ? LIMIT 1')
+      .get(maasId) as { id: string } | undefined;
+    const targetId = existing?.id ?? maasId;
+
+    db.prepare(
+      `INSERT INTO memory_entries (id, title, content, memory_type, status, tags, subject_id, source, maas_id, maas_synced_at, metadata, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, 'maas-sync', ?, ?, ?, ?, ?)
+       ON CONFLICT(id) DO UPDATE SET
+         title = excluded.title,
+         content = excluded.content,
+         memory_type = excluded.memory_type,
+         status = excluded.status,
+         tags = excluded.tags,
+         subject_id = excluded.subject_id,
+         source = excluded.source,
+         maas_id = excluded.maas_id,
+         maas_synced_at = excluded.maas_synced_at,
+         metadata = excluded.metadata,
+         updated_at = excluded.updated_at`,
+    ).run(
+      targetId,
+      redactedTitle,
+      redactedContent,
+      record.memory_type,
+      record.status ?? 'active',
+      JSON.stringify(redactedTags),
+      record.subject_id ?? null,
+      maasId,
+      now,
+      redactedMetadata == null ? null : JSON.stringify(redactedMetadata),
+      now,
+      now,
+    );
+
+    return this.get(targetId);
+  }
+
+  /**
+   * Enqueue an 'update' sync op so a failed direct remote update is retried
+   * by AsyncSyncQueueRunner. The payload is the redacted partial update.
+   * Best-effort — a queue failure is non-fatal.
+   */
+  enqueueUpdate(id: string, updates: Partial<MemoryRecord>): void {
+    if (!this.initialized) return;
+    try {
+      this.requireDb().prepare(
+        `INSERT INTO sync_queue (op, payload) VALUES (?, ?)`,
+      ).run('update', JSON.stringify({
+        id,
+        title: updates.title,
+        content: updates.content,
+        memory_type: updates.memory_type,
+        status: updates.status,
+        tags: updates.tags,
+        metadata: updates.metadata,
+      }));
+      this.pendingSync = this.readPendingSyncCount();
+    } catch { /* best effort */ }
+  }
+
   async health(): Promise<BackendHealth> {
     if (!this.initialized) {
       try {
@@ -666,25 +808,97 @@ export class LocalMemoryBackend implements MemoryBackend {
   removeQueuedForRecord(recordId: string): number {
     if (!this.initialized) return 0;
     try {
-      const result = this.requireDb()
-        .prepare(
-          `DELETE FROM sync_queue
-           WHERE id IN (
-             SELECT id FROM sync_queue
-             WHERE op = 'save' AND payload LIKE ?
-             ORDER BY id DESC
-             LIMIT 1
-           )`,
-        )
-        .run(`%"id":"${recordId}"%`);
-      const removed =
-        typeof result === 'object' && result !== null && 'changes' in result
-          ? Number((result as { changes?: number | bigint }).changes ?? 0)
-          : 0;
+      const db = this.requireDb();
+      // Match the payload's top-level id only (same rule as
+      // mergeIntoQueuedSave) so an id that merely appears inside the
+      // metadata blob cannot select another record's queued save.
+      const row = this.findQueuedSaveRow(db, recordId);
+      if (!row) return 0;
+      db.prepare('DELETE FROM sync_queue WHERE id = ?').run(row.id);
       this.pendingSync = this.readPendingSyncCount();
-      return removed;
+      return 1;
     } catch {
       return 0;
+    }
+  }
+
+  /**
+   * Merge supplied fields into the pending 'save' sync row for a record.
+   *
+   * When a record has not yet been synced to MaaS (maas_id is null), the
+   * pending `save` row in sync_queue carries stale content — the state at
+   * the time of the original save.  Subsequent calls to `update()` would
+   * normally enqueue a separate `update` row, but the sync runner would
+   * drain the stale `save` row first, leaving MaaS out of sync.
+   *
+   * This helper overwrites the stale payload so that when the runner
+   * eventually succeeds, MaaS receives the latest content.
+   *
+   * Returns `true` if a save row was merged into (the caller should skip
+   * enqueueing a separate update), `false` otherwise.
+   */
+  mergeIntoQueuedSave(recordId: string, fields: Partial<MemoryRecord>): boolean {
+    if (!this.initialized) return false;
+    try {
+      const db = this.requireDb();
+      const row = this.findQueuedSaveRow(db, recordId);
+      if (!row) return false;
+
+      const parsed: Record<string, unknown> = JSON.parse(row.payload);
+      // Merge only the fields that were supplied (partial update contract).
+      if (fields.title !== undefined) parsed.title = fields.title;
+      if (fields.content !== undefined) parsed.content = fields.content;
+      if (fields.memory_type !== undefined) parsed.memory_type = fields.memory_type;
+      if (fields.status !== undefined) parsed.status = fields.status;
+      if (fields.tags !== undefined) parsed.tags = fields.tags;
+      if (fields.metadata !== undefined) parsed.metadata = fields.metadata;
+
+      // Update the row we selected (by its numeric id) — the payload no
+      // longer contains the original LIKE pattern once it has been rewritten.
+      db.prepare('UPDATE sync_queue SET payload = ? WHERE id = ?')
+        .run(JSON.stringify(parsed), row.id);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Find the most recent queued 'save' row that belongs to `recordId`.
+   *
+   * The record id is compared against the payload's TOP-LEVEL `id` field.
+   * A substring (LIKE) search would also match an id that merely appears
+   * inside the metadata blob, which could select — and rewrite — another
+   * record's queued save.
+   */
+  private findQueuedSaveRow(
+    db: SqliteDb,
+    recordId: string,
+  ): { id: number; payload: string } | undefined {
+    try {
+      const row = db
+        .prepare(
+          `SELECT id, payload FROM sync_queue
+           WHERE op = 'save' AND json_valid(payload) AND json_extract(payload, '$.id') = ?
+           ORDER BY id DESC LIMIT 1`,
+        )
+        .get(recordId) as { id: number; payload: string } | undefined;
+      return row;
+    } catch {
+      // SQLite build without JSON1 — fall back to a JS scan that compares
+      // the parsed top-level id.
+      const rows = db
+        .prepare(`SELECT id, payload FROM sync_queue WHERE op = 'save' ORDER BY id DESC`)
+        .all() as Array<{ id: number; payload: string }>;
+      for (const candidate of rows) {
+        try {
+          const parsed = JSON.parse(candidate.payload) as { id?: unknown };
+          if (parsed && parsed.id === recordId) return candidate;
+        } catch {
+          // malformed payload — skip it
+        }
+      }
+      return undefined;
     }
   }
 

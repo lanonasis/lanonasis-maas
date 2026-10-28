@@ -309,3 +309,124 @@ describe('MemoryBackendRouter', () => {
     expect(remoteCalls).toBe(beforeCount); // cached, no new remote call
   });
 });
+
+/** Remote that always fails to update (mimics a MaaS 404 after the fix). */
+class FailingUpdateRemote extends FakeRemote {
+  async update(): Promise<MemoryRecord | null> {
+    throw new MemoryBackendError('Memory not found: maas-1', 'not_found');
+  }
+}
+
+describe('MemoryBackendRouter — combined result handling', () => {
+  let local: LocalMemoryBackend;
+  let remote: FakeRemote;
+  let router: MemoryBackendRouter;
+
+  beforeEach(async () => {
+    const root = await freshDir();
+    local = new LocalMemoryBackend({ rootDir: root, mirrorToMarkdown: false });
+    await local.init();
+    remote = new FakeRemote();
+    router = new MemoryBackendRouter(local, remote, {
+      remoteTimeoutMs: 50,
+      offlineGracePeriodMs: 100,
+      healthProbeIntervalMs: 50,
+    });
+  });
+
+  it('applies the requested limit once to the combined local + remote results', async () => {
+    await local.save({
+      id: 'lim-local', title: 'Shared', content: 'sharedtoken',
+      memory_type: 'context', status: 'active', tags: [],
+    });
+    remote.hits = [
+      { id: 'lim-r1', title: 'Remote one', content: 'sharedtoken', score: 0.9, source: 'maas' },
+      { id: 'lim-r2', title: 'Remote two', content: 'sharedtoken', score: 0.8, source: 'maas' },
+    ];
+
+    const hits = await router.search('sharedtoken', { limit: 1 });
+    // Local and remote each honour the limit, but the caller asked for one
+    // result in total — the merged list must not be longer than that.
+    expect(hits).toHaveLength(1);
+  });
+
+  it('lists a synced memory once (local UUID and MaaS id)', async () => {
+    await local.save({
+      id: 'local-uuid', title: 'Synced memory', content: 'body',
+      memory_type: 'context', status: 'active', tags: [],
+    });
+    local.markSynced('local-uuid', 'maas-1');
+    remote.list = async () => ([
+      {
+        id: 'maas-1', title: 'Synced memory', content: 'body',
+        memory_type: 'context' as const, status: 'active' as const, tags: [],
+        source: 'maas-sync' as const, created_at: '', updated_at: '',
+      },
+    ]);
+
+    const records = await router.list();
+    expect(records.filter((r) => r.title === 'Synced memory')).toHaveLength(1);
+  });
+
+  it('caches a remote-only record locally without scheduling a MaaS create', async () => {
+    remote.hits = [{
+      id: 'remote-only', title: 'Remote only', content: 'body',
+      score: 0.5, source: 'maas',
+    }];
+
+    const record = await router.get('remote-only');
+    expect(record).not.toBeNull();
+
+    // The record is cached locally...
+    const cached = await local.get('remote-only');
+    expect(cached).not.toBeNull();
+    expect(cached!.title).toBe(record!.title);
+    expect(cached!.source).toBe('maas-sync');
+
+    // ...without queuing a 'save' op that would create a duplicate on MaaS.
+    const rows = local.getSyncQueueDeps().readReady(10);
+    expect(rows.filter((r) => r.op === 'save')).toHaveLength(0);
+  });
+
+  it('enqueues the failed update when the remote update rejects', async () => {
+    await local.save({
+      id: 'fail-up', title: 'Before', content: 'body',
+      memory_type: 'context', status: 'active', tags: [],
+    });
+    local.markSynced('fail-up', 'maas-1');
+
+    const failing = new MemoryBackendRouter(local, new FailingUpdateRemote(), {
+      remoteTimeoutMs: 50,
+    });
+    const updated = await failing.update('fail-up', { title: 'After' });
+    expect(updated).not.toBeNull();
+    expect(updated!.title).toBe('After');
+
+    const rows = local.getSyncQueueDeps().readReady(10);
+    const updateRow = rows.find((r) => r.op === 'update');
+    expect(updateRow).toBeDefined();
+    expect(JSON.parse(updateRow!.payload)).toMatchObject({ id: 'maas-1', title: 'After' });
+  });
+
+  it('merges the current local value into the queued save, not the captured payload', async () => {
+    await local.save({
+      id: 'merge-current', title: 'Original', content: 'body',
+      memory_type: 'context', status: 'active', tags: [],
+    });
+    // The local record changes after the queued save was written.
+    await local.update('merge-current', { status: 'archived' });
+
+    const failing = new MemoryBackendRouter(local, new FailingUpdateRemote(), {
+      remoteTimeoutMs: 50,
+    });
+    await failing.update('merge-current', { title: 'Updated' });
+
+    const rows = local.getSyncQueueDeps().readReady(10);
+    const saveRow = rows.find((r) => r.op === 'save');
+    expect(saveRow).toBeDefined();
+    const payload = JSON.parse(saveRow!.payload) as Record<string, unknown>;
+    expect(payload.title).toBe('Updated');
+    // The current local status must win over the stale queued value.
+    expect(payload.status).toBe('archived');
+  });
+});

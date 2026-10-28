@@ -100,6 +100,8 @@ export interface MemoryBackend {
   get(id: string): Promise<MemoryRecord | null>;
   list(opts?: ListOptions): Promise<MemoryRecord[]>;
   save(record: Omit<MemoryRecord, 'created_at' | 'updated_at' | 'source'> & { source?: MemorySource }): Promise<SaveResult>;
+  /** Partial merge: only the provided fields change; everything else is preserved. Returns the updated record, or null if id is missing. */
+  update(id: string, updates: Partial<MemoryRecord>): Promise<MemoryRecord | null>;
   delete(id: string): Promise<void>;
   health(): Promise<BackendHealth>;
   /** Close any open handles (DB, fetch agent). Idempotent. */

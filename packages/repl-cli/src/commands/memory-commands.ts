@@ -6,6 +6,7 @@ import {
   type InferredConclusion,
   createMemoryClient
 } from '@lanonasis/memory-client';
+import { randomUUID } from 'node:crypto';
 import chalk from 'chalk';
 import ora from 'ora';
 import { CommandContext } from '../config/types.js';
@@ -18,6 +19,7 @@ import {
   TAG_BACKFILLED,
   type EventType,
 } from '../events/index.js';
+import type { MemoryBackendRouter, MemoryRecord, MemoryHit } from '../local-memory/index.js';
 
 const VALID_MEMORY_TYPES = [
   'context',
@@ -71,18 +73,35 @@ interface ConvergedEvent {
 
 export class MemoryCommands {
   private client: MemoryClient | null = null;
-  
+  private router: MemoryBackendRouter | null = null;
+
+  /**
+   * Get the local-first memory router from context, or null if not available.
+   * Used by create/update/search/list/get/delete. Always reads the current
+   * context so a router that becomes available later (or is disabled) is
+   * reflected immediately — we do not cache the first context's value.
+   */
+  private getRouter(context: CommandContext): MemoryBackendRouter | null {
+    return context.memoryRouter ?? null;
+  }
+
+  /**
+   * Lazily create a direct MaaS client.
+   * Used by methods that have no router equivalent:
+   * listConclusions, getJobStatus, flushQueue, contextConverge,
+   * profileShow, profileHistory, profileAsk.
+   */
   private getClient(context: CommandContext): MemoryClient {
     if (!this.client) {
       this.client = createMemoryClient({
         apiUrl: context.config.apiUrl,
         authToken: context.config.authToken,
-        timeout: 30000
+        timeout: 30000,
       });
     }
     return this.client;
   }
-  
+
   async create(args: string[], context: CommandContext) {
     if (args.length < 2) {
       console.log(chalk.yellow('Usage: create <title> <content> [--type=<type>] [--tags=tag1,tag2] [--event=<event-type>]'));
@@ -155,20 +174,34 @@ export class MemoryCommands {
     pauseReadline();
     const spinner = ora('Creating memory...').start();
     try {
-      const client = this.getClient(context);
-      const result = await client.createMemory({ 
-        title, 
-        content,
-        memory_type,
-        tags
-      });
-      if (result.error) {
-        spinner.fail(chalk.red(`Failed: ${result.error}`));
-        return;
-      }
-      if (result.data) {
-        spinner.succeed(chalk.green(`Memory created: ${result.data.id}`));
-        context.lastResult = result.data;
+      const router = this.getRouter(context);
+      if (router) {
+        const result = await router.save({
+          id: randomUUID(),
+          title,
+          content,
+          memory_type,
+          status: 'active',
+          tags,
+          source: 'local',
+        });
+        spinner.succeed(chalk.green(`Memory created: ${result.id}`));
+        context.lastResult = result;
+      } else {
+        const result = await this.getClient(context).createMemory({
+          title,
+          content,
+          memory_type,
+          tags,
+        });
+        if (result.error) {
+          spinner.fail(chalk.red(`Failed: ${result.error}`));
+          return;
+        }
+        if (result.data) {
+          spinner.succeed(chalk.green(`Memory created: ${result.data.id}`));
+          context.lastResult = result.data;
+        }
       }
     } catch (error) {
       spinner.fail(chalk.red(`Failed: ${error instanceof Error && error.message ? error.message : String(error)}`));
@@ -238,15 +271,25 @@ export class MemoryCommands {
     pauseReadline();
     const spinner = ora('Updating memory...').start();
     try {
-      const client = this.getClient(context);
-      const result = await client.updateMemory(id, updates);
-      if (result.error) {
-        spinner.fail(chalk.red(`Update failed: ${result.error}`));
-        return;
-      }
-      if (result.data) {
-        spinner.succeed(chalk.green(`Memory updated: ${result.data.id}`));
-        context.lastResult = result.data;
+      const router = this.getRouter(context);
+      if (router) {
+        const result = await router.update(id, updates as MemoryRecord);
+        if (result) {
+          spinner.succeed(chalk.green(`Memory updated: ${result.id}`));
+          context.lastResult = result;
+        } else {
+          spinner.fail(chalk.red(`Memory not found: ${id}`));
+        }
+      } else {
+        const result = await this.getClient(context).updateMemory(id, updates);
+        if (result.error) {
+          spinner.fail(chalk.red(`Update failed: ${result.error}`));
+          return;
+        }
+        if (result.data) {
+          spinner.succeed(chalk.green(`Memory updated: ${result.data.id}`));
+          context.lastResult = result.data;
+        }
       }
     } catch (error) {
       spinner.fail(chalk.red(`Update failed: ${error instanceof Error && error.message ? error.message : String(error)}`));
@@ -286,31 +329,49 @@ export class MemoryCommands {
     pauseReadline();
     const spinner = ora('Searching...').start();
     try {
-      const client = this.getClient(context);
-      const result = await client.searchMemories({
-        query,
-        memory_types: memoryTypeFilter ? [memoryTypeFilter] : undefined,
-        status: 'active',
-        limit: 20,
-        threshold: 0.7
-      });
-
-      if (result.error) {
-        spinner.fail(chalk.red(`Search failed: ${result.error}`));
-        return;
-      }
-
-      const results = (result.data?.results || []) as MemorySearchResult[];
-      if (results.length === 0) {
-        spinner.succeed(chalk.gray('No results found'));
-      } else {
-        spinner.succeed(chalk.green(`Found ${results.length} result(s)`));
-        results.forEach((r: MemorySearchResult, i: number) => {
-          console.log(chalk.cyan(`[${i + 1}] ${r.title}`));
-          console.log(chalk.gray(`    ${r.content.substring(0, 80)}...`));
+      const router = this.getRouter(context);
+      if (router) {
+        const results = await router.search(query, {
+          limit: 20,
+          status: 'active',
+          type: memoryTypeFilter,
         });
+
+        if (results.length === 0) {
+          spinner.succeed(chalk.gray('No results found'));
+        } else {
+          spinner.succeed(chalk.green(`Found ${results.length} result(s)`));
+          results.forEach((r: MemoryHit, i: number) => {
+            console.log(chalk.cyan(`[${i + 1}] ${r.title}`));
+            console.log(chalk.gray(`    ${r.content.substring(0, 80)}...`));
+          });
+        }
+        context.lastResult = results;
+      } else {
+        const client = this.getClient(context);
+        const searchResult = await client.searchMemories({
+                  query,
+                  status: 'active',
+                  limit: 20,
+                  threshold: 0.7,
+                  memory_types: memoryTypeFilter ? [memoryTypeFilter] : undefined,
+                });
+                if (searchResult.error) {
+                  spinner.fail(chalk.red(`Search failed: ${searchResult.error}`));
+                  return;
+                }
+                const results = searchResult.data?.results ?? [];
+        if (results.length === 0) {
+          spinner.succeed(chalk.gray('No results found'));
+        } else {
+          spinner.succeed(chalk.green(`Found ${results.length} result(s)`));
+          (results as MemoryEntry[]).forEach((r: MemoryEntry, i: number) => {
+            console.log(chalk.cyan(`[${i + 1}] ${r.title}`));
+            console.log(chalk.gray(`    ${r.content?.substring(0, 80)}...`));
+          });
+        }
+        context.lastResult = results;
       }
-      context.lastResult = results;
     } catch (error) {
       spinner.fail(chalk.red(`Search failed: ${error instanceof Error && error.message ? error.message : String(error)}`));
     } finally {
@@ -324,23 +385,36 @@ export class MemoryCommands {
     pauseReadline();
     const spinner = ora('Fetching memories...').start();
     try {
-      const client = this.getClient(context);
-      const result = await client.listMemories({ limit });
+      const router = this.getRouter(context);
+      if (router) {
+        const items = await router.list({ limit });
 
-      if (result.error) {
-        spinner.fail(chalk.red(`List failed: ${result.error}`));
-        return;
-      }
-
-      const items = (result.data?.data || []) as MemoryEntry[];
-      if (items.length > 0) {
-        spinner.succeed(chalk.green(`Showing ${items.length} memories`));
-        items.forEach((r: MemoryEntry, i: number) => {
-          console.log(chalk.cyan(`[${i + 1}] ${r.title} (${r.id})`));
-        });
-        context.lastResult = items;
+        if (items.length > 0) {
+          spinner.succeed(chalk.green(`Showing ${items.length} memories`));
+          items.forEach((r: MemoryRecord, i: number) => {
+            console.log(chalk.cyan(`[${i + 1}] ${r.title} (${r.id})`));
+          });
+          context.lastResult = items;
+        } else {
+          spinner.succeed(chalk.gray('No memories found'));
+        }
       } else {
-        spinner.succeed(chalk.gray('No memories found'));
+        const client = this.getClient(context);
+        const listResult = await client.listMemories({ limit });
+        if (listResult.error) {
+          spinner.fail(chalk.red(`List failed: ${listResult.error}`));
+          return;
+        }
+        const items = listResult.data?.data ?? [];
+        if (items.length > 0) {
+          spinner.succeed(chalk.green(`Showing ${items.length} memories`));
+          (items as MemoryEntry[]).forEach((r: MemoryEntry, i: number) => {
+            console.log(chalk.cyan(`[${i + 1}] ${r.title} (${r.id})`));
+          });
+          context.lastResult = items;
+        } else {
+          spinner.succeed(chalk.gray('No memories found'));
+        }
       }
     } catch (error) {
       spinner.fail(chalk.red(`List failed: ${error instanceof Error && error.message ? error.message : String(error)}`));
@@ -359,22 +433,36 @@ export class MemoryCommands {
     pauseReadline();
     const spinner = ora('Fetching memory...').start();
     try {
-      const client = this.getClient(context);
-      const result = await client.getMemory(id);
+      const router = this.getRouter(context);
+      if (router) {
+        const record = await router.get(id);
 
-      if (result.error) {
-        spinner.fail(chalk.red(`Get failed: ${result.error}`));
-        return;
-      }
-
-      if (result.data) {
-        spinner.succeed(chalk.green(`Memory found`));
-        console.log(chalk.cyan(`Title: ${result.data.title}`));
-        console.log(chalk.gray(`ID: ${result.data.id}`));
-        console.log(chalk.white(`\n${result.data.content}`));
-        context.lastResult = result.data;
+        if (record) {
+          spinner.succeed(chalk.green(`Memory found`));
+          console.log(chalk.cyan(`Title: ${record.title}`));
+          console.log(chalk.gray(`ID: ${record.id}`));
+          console.log(chalk.white(`\n${record.content}`));
+          context.lastResult = record;
+        } else {
+          spinner.fail(chalk.yellow(`Memory not found: ${id}`));
+        }
       } else {
-        spinner.fail(chalk.yellow(`Memory not found: ${id}`));
+        const client = this.getClient(context);
+        const result = await client.getMemory(id);
+        if (result.error) {
+          spinner.fail(chalk.red(`Get failed: ${result.error}`));
+        } else {
+          const record = result.data;
+          if (record) {
+            spinner.succeed(chalk.green(`Memory found`));
+            console.log(chalk.cyan(`Title: ${record.title}`));
+            console.log(chalk.gray(`ID: ${record.id}`));
+            console.log(chalk.white(`\n${record.content ?? record.content}`));
+            context.lastResult = record;
+          } else {
+            spinner.fail(chalk.yellow(`Memory not found: ${id}`));
+          }
+        }
       }
     } catch (error) {
       spinner.fail(chalk.red(`Get failed: ${error instanceof Error && error.message ? error.message : String(error)}`));
@@ -393,14 +481,20 @@ export class MemoryCommands {
     pauseReadline();
     const spinner = ora('Deleting memory...').start();
     try {
-      const client = this.getClient(context);
-      const result = await client.deleteMemory(id);
-      if (result.error) {
-        spinner.fail(chalk.red(`Failed: ${result.error}`));
-        return;
+      const router = this.getRouter(context);
+      if (router) {
+        await router.delete(id);
+        spinner.succeed(chalk.green('Memory deleted'));
+        context.lastResult = { deleted: id };
+      } else {
+        const result = await this.getClient(context).deleteMemory(id);
+        if (result.error) {
+          spinner.fail(chalk.red(`Failed: ${result.error}`));
+        } else {
+          spinner.succeed(chalk.green('Memory deleted'));
+          context.lastResult = { deleted: id };
+        }
       }
-      spinner.succeed(chalk.green('Memory deleted'));
-      context.lastResult = { deleted: id };
     } catch (error) {
       spinner.fail(chalk.red(`Failed: ${error instanceof Error && error.message ? error.message : String(error)}`));
     } finally {

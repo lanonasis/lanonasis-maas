@@ -63,13 +63,13 @@ describe('router credential fallback', () => {
     expect(calls).toHaveLength(1);
   });
 
-  it('lrepl health reports chat working but names the refused stored key', async () => {
+  it('repl health reports chat working with a refused stored credential', async () => {
     stubRouter(onlySession);
     const results = await quickHealthCheck({ aiRouterUrl: BASE, aiRouterAuthTokens: ['lano_dead', 'session-token'] });
     const chat = results.find((r) => r.endpoint === ROUTER_CHAT)!;
     expect(chat.status).toBe('degraded');
     expect(chat.message).toMatch(/Chat OK/);
-    expect(chat.message).toMatch(/aiRouterApiKey \(lano_…dead\) was refused/);
+    expect(chat.message).toMatch(/a stored router credential \(lano_…dead\) was refused/);
   });
 });
 
@@ -78,5 +78,43 @@ describe('routerCredentials', () => {
     expect(routerCredentials({ aiRouterApiKey: 'lano_k', aiRouterAuthToken: 'lano_k', authToken: 'session' } as never)).toEqual(['lano_k', 'session']);
     expect(routerCredentials({ authToken: ' session ' } as never)).toEqual(['session']);
     expect(routerCredentials({} as never)).toEqual([]);
+  });
+});
+
+describe('router use case resolution', () => {
+  function stubCapturing() {
+    const seen: Array<{ headers: Record<string, string>; body: any }> = [];
+    vi.stubGlobal('fetch', vi.fn(async (_url: unknown, init: RequestInit) => {
+      seen.push({ headers: init.headers as Record<string, string>, body: JSON.parse(String(init.body)) });
+      return {
+        ok: true, status: 200, statusText: 'OK', headers: new Headers(),
+        json: async () => ({ response: 'OK' }), text: async () => '{"response":"OK"}',
+      } as unknown as Response;
+    }));
+    return seen;
+  }
+
+  it('ships the configured default use_case when the request omits one', async () => {
+    const seen = stubCapturing();
+    const client = new AIRouterClient({ baseUrl: BASE, authToken: 'lano_x', defaultUseCase: 'repl-nlp' });
+    await client.chat(msg);
+    expect(seen[0].headers['X-Use-Case']).toBe('repl-nlp');
+    expect(seen[0].body.use_case).toBe('repl-nlp');
+  });
+
+  it('lets an explicit request use_case win over the default', async () => {
+    const seen = stubCapturing();
+    const client = new AIRouterClient({ baseUrl: BASE, authToken: 'lano_x', defaultUseCase: 'repl-nlp' });
+    await client.chat({ ...msg, use_case: 'content-generation' });
+    expect(seen[0].headers['X-Use-Case']).toBe('content-generation');
+    expect(seen[0].body.use_case).toBe('content-generation');
+  });
+
+  it('sends no use_case when neither is set (router default applies)', async () => {
+    const seen = stubCapturing();
+    const client = new AIRouterClient({ baseUrl: BASE, authToken: 'lano_x' });
+    await client.chat(msg);
+    expect(seen[0].headers['X-Use-Case']).toBeUndefined();
+    expect(seen[0].body.use_case).toBeUndefined();
   });
 });

@@ -209,8 +209,8 @@ export class AIEndpointHealthCheck {
         status: latency < 20000 && !refused ? 'healthy' : 'degraded',
         latency,
         message: refused
-          ? `Chat OK (${latency}ms), but the stored aiRouterApiKey (${refused}) was refused and your login session was used. ` +
-            'Remove aiRouterApiKey from ~/.lanonasis/repl-config.json or replace it with a live key.'
+          ? `Chat OK (${latency}ms), but a stored router credential (${refused}) was refused and a lower-ranked credential was used. ` +
+            'Remove the stale aiRouterApiKey or aiRouterAuthToken from ~/.lanonasis/repl-config.json, or replace it with a live key.'
           : `Chat OK (${latency}ms)`,
         lastChecked: new Date(),
       };

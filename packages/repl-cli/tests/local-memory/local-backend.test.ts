@@ -303,4 +303,49 @@ describe('LocalMemoryBackend', () => {
     expect(titles).toContain('OAuth notes');
     expect(items.every((r) => r.source === 'import')).toBe(true);
   });
+
+  it('merges into the queued save of the matching top-level id only', async () => {
+    await backend.save({
+      id: 'merge-target', title: 'Target', content: 'c',
+      memory_type: 'context', status: 'active', tags: [],
+    });
+    // A different record whose metadata merely *mentions* the target id.
+    await backend.save({
+      id: 'merge-other', title: 'Other', content: 'c',
+      memory_type: 'context', status: 'active', tags: [],
+      metadata: { id: 'merge-target' },
+    });
+
+    const merged = backend.mergeIntoQueuedSave('merge-target', { title: 'Merged' });
+    expect(merged).toBe(true);
+
+    const rows = backend.getSyncQueueDeps().readReady(10);
+    const payloads = rows.map((r) => JSON.parse(r.payload) as Record<string, unknown>);
+    const target = payloads.find((p) => p.id === 'merge-target');
+    const other = payloads.find((p) => p.id === 'merge-other');
+    expect(target?.title).toBe('Merged');
+    // The other record's queued save must be untouched — an id inside the
+    // metadata blob must never select it.
+    expect(other?.title).toBe('Other');
+  });
+
+  it('imports a synced record without queueing a MaaS create', async () => {
+    const imported = await backend.importSyncedRecord({
+      id: 'maas-42', title: 'From MaaS', content: 'remote body',
+      memory_type: 'knowledge', status: 'active', tags: ['x'],
+      source: 'maas-sync', created_at: '2026-01-01T00:00:00Z', updated_at: '2026-01-01T00:00:00Z',
+    });
+    expect(imported).not.toBeNull();
+    expect(imported!.title).toBe('From MaaS');
+    expect(imported!.maas_id).toBe('maas-42');
+    expect(imported!.source).toBe('maas-sync');
+
+    const cached = await backend.get('maas-42');
+    expect(cached).not.toBeNull();
+    expect(cached!.title).toBe('From MaaS');
+
+    // No sync op was queued — the record already exists on MaaS.
+    const rows = backend.getSyncQueueDeps().readReady(10);
+    expect(rows.filter((r) => r.op === 'save')).toHaveLength(0);
+  });
 });
