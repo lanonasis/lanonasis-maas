@@ -1,3 +1,4 @@
+import { routerCredentials } from '../config/loader.js';
 import { MemoryClient, createMemoryClient } from '@lanonasis/memory-client';
 import { join } from 'path';
 import { randomUUID } from 'node:crypto';
@@ -356,12 +357,14 @@ export class NaturalLanguageOrchestrator {
     this.userContext = config.userContext;
 
     // Initialize AI Router client if URL provided
-    // Priority: aiRouterApiKey (lano_...) > aiRouterAuthToken
+    // Ranked: aiRouterApiKey (lano_...) > aiRouterAuthToken > login session;
+    // a 401 moves to the next one.
     if (config.aiRouterUrl) {
-      const routerKey = config.aiRouterApiKey || config.aiRouterAuthToken;
+      const [routerKey, ...fallbackAuthTokens] = routerCredentials(config);
       this.aiRouterClient = new AIRouterClient({
         baseUrl: config.aiRouterUrl,
         authToken: routerKey,
+        fallbackAuthTokens,
         defaultUseCase: 'repl-nlp',
       });
     }
