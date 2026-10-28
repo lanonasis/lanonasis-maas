@@ -92,6 +92,25 @@ describe("handleRecall", () => {
     expect(searchCall.limit).toBe(5);
   });
 
+  it("redacts secrets from the prompt before searching, then truncates", async () => {
+    const client = mockClient([]);
+    const token = `lano_${"a".repeat(32)}`;
+
+    await handleRecall(
+      {
+        session_id: "test",
+        prompt: `api_key: ${token} ${"context ".repeat(40)}`,
+      },
+      client,
+      { searchThreshold: 0.7, maxRecallResults: 5, cwd: "/tmp" },
+    );
+
+    const searchCall = (client.searchMemories as any).mock.calls[0][0];
+    expect(searchCall.query).toContain("api_key: [REDACTED]");
+    expect(searchCall.query).not.toContain(token);
+    expect(searchCall.query.length).toBeLessThanOrEqual(200);
+  });
+
   it("runs recall once per session id and then short-circuits", async () => {
     useTempHome();
     const input: PreToolInput = {

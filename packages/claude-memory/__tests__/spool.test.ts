@@ -44,6 +44,17 @@ describe("SpoolQueue", () => {
     expect(remaining.length).toBe(0);
   });
 
+  it("removes a specific session entry and tolerates a missing one", async () => {
+    await spool.write("session-1", [{ title: "A", content: "a", type: "knowledge" }]);
+    await spool.write("session-2", [{ title: "B", content: "b", type: "context" }]);
+
+    await spool.remove("session-1");
+    await expect(spool.remove("session-1")).resolves.toBeUndefined();
+
+    const entries = await spool.list();
+    expect(entries.map((entry) => entry.sessionId)).toEqual(["session-2"]);
+  });
+
   it("keeps entry if processor throws", async () => {
     await spool.write("session-1", [{ title: "A", content: "a", type: "knowledge" }]);
     await spool.drain(async () => {

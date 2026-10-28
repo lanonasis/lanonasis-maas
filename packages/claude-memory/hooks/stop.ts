@@ -21,7 +21,7 @@ export type StopOptions = {
 };
 
 type StopClient = Pick<LanonasisClient, "createMemory">;
-type StopSpool = Pick<SpoolQueue, "write" | "drain">;
+type StopSpool = Pick<SpoolQueue, "write" | "drain" | "remove">;
 type TranscriptMessage = {
   role: string;
   content: string | Array<{ type: string; text?: string }>;
@@ -125,6 +125,7 @@ async function drainSpool(client: StopClient, spool: StopSpool): Promise<void> {
         type: memory.type as LanCreateParams["type"],
         tags: memory.tags,
         metadata: memory.metadata,
+        idempotency_key: memory.idempotency_key,
       });
     }
   });
@@ -176,24 +177,34 @@ export async function handleStop(
     }
 
     const memories = buildMemories(input, resolvedOptions);
-    let directWriteFailed = false;
 
+    // Spool before the network: a hook deadline can kill the process while
+    // createMemory retries. Successful writes are removed from the spool below.
+    try {
+      await resolvedSpool.write(input.session_id, memories);
+    } catch (spoolErr) {
+      process.stderr.write(`[claude-memory] spool write error: ${spoolErr}\n`);
+    }
+
+    const failed: LanCreateParams[] = [];
     for (const memory of memories) {
       try {
         await resolvedClient.createMemory(memory);
       } catch {
-        directWriteFailed = true;
-        break;
+        failed.push(memory);
       }
     }
 
-    if (directWriteFailed) {
-      try {
-        await resolvedSpool.write(input.session_id, memories);
-      } catch (spoolErr) {
-        process.stderr.write(`[claude-memory] spool write error: ${spoolErr}\n`);
-        return;
+    try {
+      if (failed.length === 0) {
+        await resolvedSpool.remove(input.session_id);
+      } else {
+        // Keep only captures that still need a write, so draining cannot
+        // replay ones that already succeeded in this run.
+        await resolvedSpool.write(input.session_id, failed);
       }
+    } catch (spoolErr) {
+      process.stderr.write(`[claude-memory] spool update error: ${spoolErr}\n`);
     }
 
     try {
@@ -208,8 +219,23 @@ export async function handleStop(
   }
 }
 
+/**
+ * Runs one Stop/SubagentStop invocation. No exported key is required: the
+ * client falls back to the `lanonasis auth login` session, and with no
+ * credential at all handleStop spools the captures for a later drain.
+ */
+export async function runStopHook(
+  raw: string,
+  deps: { handle?: typeof handleStop } = {},
+): Promise<void> {
+  const input: StopInput = JSON.parse(raw);
+  const hook = (process.env.CLAUDE_MEMORY_HOOK as StopHookName) ?? "stop";
+  await (deps.handle ?? handleStop)(input, undefined, undefined, { hook });
+}
+
 // Hook entry point — Claude Code calls this via stdin JSON
-if (process.stdin.isTTY === false) {
+// import.meta.main, not stdin.isTTY: bun leaves isTTY undefined for piped stdin.
+if ((import.meta as { main?: boolean }).main) {
   let raw = "";
   process.stdin.setEncoding("utf8");
   process.stdin.on("data", (chunk) => {
@@ -217,13 +243,7 @@ if (process.stdin.isTTY === false) {
   });
   process.stdin.on("end", async () => {
     try {
-      const input: StopInput = JSON.parse(raw);
-      if (!(process.env.LANONASIS_API_KEY ?? "").trim()) {
-        clearRecallLock(input.session_id);
-        process.exit(0);
-      }
-      const hook = (process.env.CLAUDE_MEMORY_HOOK as StopHookName) ?? "stop";
-      await handleStop(input, undefined, undefined, { hook });
+      await runStopHook(raw);
     } catch (err) {
       // Never crash Claude Code
       process.stderr.write(`[claude-memory] hook error: ${err}\n`);

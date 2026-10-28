@@ -93,6 +93,7 @@ describe("handlePreCompact", () => {
     };
     const spool = {
       write: vi.fn().mockResolvedValue(undefined),
+      remove: vi.fn().mockResolvedValue(undefined),
     };
 
     await handlePreCompact(buildInput(transcriptPath), client as any, spool as any, {
@@ -114,6 +115,7 @@ describe("handlePreCompact", () => {
     };
     const spool = {
       write: vi.fn().mockResolvedValue(undefined),
+      remove: vi.fn().mockResolvedValue(undefined),
     };
 
     await handlePreCompact(buildInput(transcriptPath), client as any, spool as any, {
@@ -131,6 +133,7 @@ describe("handlePreCompact", () => {
     };
     const spool = {
       write: vi.fn().mockResolvedValue(undefined),
+      remove: vi.fn().mockResolvedValue(undefined),
     };
 
     await handlePreCompact(buildInput(transcriptPath), client as any, spool as any, {
@@ -160,6 +163,7 @@ describe("handlePreCompact", () => {
     };
     const spool = {
       write: vi.fn().mockResolvedValue(undefined),
+      remove: vi.fn().mockResolvedValue(undefined),
     };
 
     await handlePreCompact(buildInput(transcriptPath), client as any, spool as any, {
@@ -171,6 +175,49 @@ describe("handlePreCompact", () => {
     expect(createdTypes.slice(0, 2).sort()).toEqual(["knowledge", "project"]);
   });
 
+  it("keeps only failed captures in the spool so successful writes are not replayed", async () => {
+    const transcriptPath = writeTranscript(sampleTranscript());
+    const client = {
+      createMemory: vi.fn()
+        .mockResolvedValueOnce({ id: "memory-1" })
+        .mockRejectedValueOnce(new Error("LanOnasis down"))
+        .mockResolvedValue({ id: "memory-2" }),
+    };
+    const spool = {
+      write: vi.fn().mockResolvedValue(undefined),
+      remove: vi.fn().mockResolvedValue(undefined),
+    };
+
+    await handlePreCompact(buildInput(transcriptPath), client as any, spool as any, {
+      maxMemoriesPerCompaction: 3,
+      projectId: "proj-1",
+    });
+
+    const failedWrite = spool.write.mock.calls[1];
+    expect(failedWrite[0]).toBe("session-456");
+    expect(failedWrite[1]).toHaveLength(1);
+    expect(failedWrite[1][0]).toBe(client.createMemory.mock.calls[1][0]);
+    expect(spool.remove).not.toHaveBeenCalled();
+  });
+
+  it("removes the spool entry once every capture is written", async () => {
+    const transcriptPath = writeTranscript(sampleTranscript());
+    const client = {
+      createMemory: vi.fn().mockResolvedValue({ id: "memory-1" }),
+    };
+    const spool = {
+      write: vi.fn().mockResolvedValue(undefined),
+      remove: vi.fn().mockResolvedValue(undefined),
+    };
+
+    await handlePreCompact(buildInput(transcriptPath), client as any, spool as any, {
+      maxMemoriesPerCompaction: 3,
+      projectId: "proj-1",
+    });
+
+    expect(spool.remove).toHaveBeenCalledWith("session-456");
+  });
+
   it("never throws even when persistence fails", async () => {
     const transcriptPath = writeTranscript(sampleTranscript());
     const client = {
@@ -178,6 +225,7 @@ describe("handlePreCompact", () => {
     };
     const spool = {
       write: vi.fn().mockRejectedValue(new Error("disk full")),
+      remove: vi.fn().mockResolvedValue(undefined),
     };
     const stderrSpy = vi
       .spyOn(process.stderr, "write")
