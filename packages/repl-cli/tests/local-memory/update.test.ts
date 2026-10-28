@@ -207,33 +207,19 @@ describe('MaaSClientAdapter.update', () => {
     expect(result!.title).toBe('title');
   });
 
-  it('falls back to createMemory when updateMemory is not available', async () => {
+  it('throws when updateMemory is not available (no createMemory fallback)', async () => {
     const client = createClient();
-    // Remove updateMemory — simulate an older MaaS version
+    // Remove updateMemory — simulate an older MaaS version.
     delete (client as any).updateMemory;
     const fallbackCreate = vi.fn().mockResolvedValue({ data: { id: 'fallback-id' } });
     client.createMemory = fallbackCreate;
-    (client.getMemory as ReturnType<typeof vi.fn>).mockResolvedValue({
-      data: {
-        id: 'fallback-id',
-        title: 'via fallback',
-        content: 'content',
-        memory_type: 'context',
-        status: 'active',
-        tags: [],
-        created_at: '2026-01-01T00:00:00Z',
-        updated_at: '2026-01-01T00:00:00Z',
-      },
-    });
 
     const adapter = new MaaSClientAdapter(client);
-    const result = await adapter.update('fallback-id', { title: 'via fallback' });
+    await expect(adapter.update('fallback-id', { title: 'via fallback' }))
+      .rejects.toBeInstanceOf(MemoryBackendError);
 
-    expect(fallbackCreate).toHaveBeenCalledWith({
-      title: 'via fallback',
-      content: '',
-    });
-    expect(result).not.toBeNull();
+    // The createMemory fallback must not be used — it would upsert garbage.
+    expect(fallbackCreate).not.toHaveBeenCalled();
   });
 
   it('returns null when both updateMemory and getMemory fail with 404', async () => {

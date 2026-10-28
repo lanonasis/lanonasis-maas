@@ -285,6 +285,30 @@ export class NaturalLanguageOrchestrator {
               if (!/not found|404/i.test(errMsg)) throw new Error(errMsg);
             }
           },
+          submitUpdate: async (payload) => {
+            const { id, ...updates } = payload;
+            const res = await this.client.updateMemory(String(id), {
+              title: updates.title as string | undefined,
+              content: updates.content as string | undefined,
+              memory_type: updates.memory_type as
+                | 'context'
+                | 'project'
+                | 'knowledge'
+                | 'reference'
+                | 'personal'
+                | 'workflow'
+                | undefined,
+              status: updates.status as 'active' | 'archived' | 'deleted' | 'draft' | undefined,
+              tags: Array.isArray(updates.tags) ? (updates.tags as string[]) : undefined,
+              metadata: (updates.metadata ?? undefined) as Record<string, unknown> | undefined,
+            });
+            if (res.error) {
+              const errMsg = typeof (res.error as { message?: unknown }).message === 'string'
+                ? (res.error as { message: string }).message
+                : JSON.stringify(res.error);
+              if (!/not found|404/i.test(errMsg)) throw new Error(errMsg);
+            }
+          },
         };
         this.syncRunner = new AsyncSyncQueueRunner(this.localBackend.getSyncQueueDeps(), {
           batchSize: 5,
@@ -1245,7 +1269,11 @@ Remember: You are LZero - be helpful, conversational, and make the experience fe
 
           case 'get': {
             if (router) {
-              return { data: await router.get(action.params.id) };
+              const record = await router.get(action.params.id);
+              if (!record) {
+                return { error: `Memory not found: ${action.params.id}` };
+              }
+              return { data: record };
             }
             return await this.client.getMemory(action.params.id);
           }

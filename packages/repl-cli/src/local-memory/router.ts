@@ -242,7 +242,7 @@ export class MemoryBackendRouter implements MemoryBackend {
         if (this.local && 'removeQueuedForRecord' in this.local) {
           (this.local as unknown as {
             removeQueuedForRecord(id: string): number;
-          }).removeQueuedForRecord(record.id);
+          }).removeQueuedForRecord(result.id);
         }
         this.invalidateCache();
         return {
@@ -281,30 +281,66 @@ export class MemoryBackendRouter implements MemoryBackend {
   }
 
   async update(id: string, updates: Partial<MemoryRecord>): Promise<MemoryRecord | null> {
-    // Local-first update (immediate, durable).
+    // Local-first update (immediate, durable). A null result means the record
+    // does not exist locally — we still try the remote so a record that only
+    // lives on MaaS can be updated.
     const localResult = await this.local.update(id, updates).catch(() => null);
     this.invalidateCache();
+    const remoteId = localResult?.maas_id ?? id;
 
     // Best-effort: also push to remote so MaaS stays in sync. Use the
     // MaaS-assigned id when present (delete() maps the same way), and send
     // the redacted values from localResult (local.update() runs the
     // redaction pipeline) so a secret never reaches MaaS via update().
-    if (this.remote && localResult) {
+    if (this.remote) {
+      // Redact any supplied fallback values (used when there is no local
+      // record to read redacted values from).
+      const redactedTitle = updates.title === undefined ? undefined : redactSecrets(updates.title).text;
+      const redactedContent = updates.content === undefined ? undefined : redactSecrets(updates.content).text;
+      const redactedTags = updates.tags === undefined ? undefined : updates.tags.map((t) => redactSecrets(t).text);
+      const redactedMetadata = updates.metadata === undefined
+        ? undefined
+        : JSON.parse(redactSecrets(JSON.stringify(updates.metadata)).text);
+
+      const remotePayload = {
+        title: updates.title === undefined ? undefined : (localResult?.title ?? redactedTitle),
+        content: updates.content === undefined ? undefined : (localResult?.content ?? redactedContent),
+        memory_type: updates.memory_type,
+        status: updates.status,
+        tags: updates.tags === undefined ? undefined : (localResult?.tags ?? redactedTags),
+        metadata: updates.metadata === undefined ? undefined : (localResult?.metadata ?? redactedMetadata),
+      };
       try {
         await withTimeout(
-          this.remote.update(localResult.maas_id ?? id, {
-            title: updates.title === undefined ? undefined : localResult.title,
-            content: updates.content === undefined ? undefined : localResult.content,
-            memory_type: updates.memory_type,
-            status: updates.status,
-            tags: updates.tags === undefined ? undefined : localResult.tags,
-            metadata: updates.metadata === undefined ? undefined : localResult.metadata,
-          }),
+          this.remote.update(remoteId, remotePayload),
           this.options.remoteTimeoutMs,
         );
-      } catch {
-        this.debugLog('remote.update failed', id);
+      } catch (err) {
+        this.debugLog('remote.update failed; will retry via queue', id, err);
+        this.consecutiveProbeFailures++;
+        this.lastHealthProbeAt = 0;
+        // Enqueue the failed update for retry so MaaS eventually converges.
+        if (this.local && 'enqueueUpdate' in this.local) {
+          try {
+            (this.local as unknown as {
+              enqueueUpdate(id: string, updates: Partial<MemoryRecord>): void;
+            }).enqueueUpdate(remoteId, remotePayload);
+          } catch { /* best effort */ }
+        }
       }
+    }
+
+    // When no local record exists, return the remote result (or null if the
+    // remote also had nothing to return).
+    if (!localResult) {
+      if (this.remote) {
+        try {
+          return await withTimeout(this.remote.get(remoteId ?? id), this.options.remoteTimeoutMs);
+        } catch {
+          return null;
+        }
+      }
+      return null;
     }
 
     return localResult;

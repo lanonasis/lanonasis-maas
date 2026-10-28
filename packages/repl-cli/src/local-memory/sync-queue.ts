@@ -15,7 +15,7 @@
  *   - On timeout: same as 5xx.
  */
 
-export type SyncOp = 'save' | 'delete';
+export type SyncOp = 'save' | 'delete' | 'update';
 
 export interface SyncQueueRow {
   id: number;
@@ -45,6 +45,8 @@ export interface SyncSubmitter {
   submitSave(payload: Record<string, unknown>): Promise<{ maas_id: string }>;
   /** Submit a 'delete' operation. Resolves on success, throws on failure. */
   submitDelete(payload: { id: string }): Promise<void>;
+  /** Submit an 'update' operation. Resolves on success, throws on failure. */
+  submitUpdate(payload: { id: string } & Record<string, unknown>): Promise<void>;
 }
 
 export type SyncErrorKind = 'retryable' | 'fatal' | 'auth';
@@ -142,7 +144,7 @@ export class AsyncSyncQueueRunner {
       attempted = ready.length;
       for (const row of ready) {
         try {
-          if (row.op !== 'save' && row.op !== 'delete') {
+          if (row.op !== 'save' && row.op !== 'delete' && row.op !== 'update') {
             throw new FatalSyncError(`Unknown sync operation: ${row.op}`);
           }
           const payload = JSON.parse(row.payload);
@@ -154,6 +156,11 @@ export class AsyncSyncQueueRunner {
           } else if (row.op === 'delete') {
             await withTimeout(
               submitter.submitDelete(payload),
+              this.options.submitTimeoutMs,
+            );
+          } else if (row.op === 'update') {
+            await withTimeout(
+              submitter.submitUpdate(payload),
               this.options.submitTimeoutMs,
             );
           }

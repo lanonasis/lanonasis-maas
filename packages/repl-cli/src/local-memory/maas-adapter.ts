@@ -236,34 +236,13 @@ export class MaaSClientAdapter implements MemoryBackend {
       };
     }
 
-    // Fallback for v1 contracts that don't have updateMemory: use createMemory
-    // (upsert by idempotency_key) for the fields that were provided.
-    // createMemory requires title and content even if not being updated.
-    const payload = {
-      title: updates.title ?? '',
-      content: updates.content ?? '',
-      type: updates.memory_type,
-      tags: updates.tags,
-      metadata: updates.metadata,
-    };
-
-    const res = await this.client.createMemory(payload);
-    if (res.error && !/not found|404/i.test(res.error)) {
-      throw new MemoryBackendError(res.error, 'transport');
-    }
-    // Best-effort: if we can't fetch back, return the partial record.
-    const fetched = await this.get(id);
-    return fetched || {
-      id,
-      title: updates.title ?? '',
-      content: updates.content ?? '',
-      memory_type: (updates.memory_type ?? 'context') as MemoryType,
-      status: (updates.status ?? 'active') as MemoryStatus,
-      tags: updates.tags ?? [],
-      source: 'maas-sync',
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    };
+    // Clients without updateMemory cannot perform partial updates safely:
+    // the createMemory fallback would upsert with empty title/content and
+    // create garbage records. Fail loudly instead of corrupting data.
+    throw new MemoryBackendError(
+      'Partial updates are unsupported by this MaaS client (no updateMemory contract).',
+      'schema',
+    );
   }
 
   async health(): Promise<BackendHealth> {

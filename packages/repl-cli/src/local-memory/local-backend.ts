@@ -598,6 +598,29 @@ export class LocalMemoryBackend implements MemoryBackend {
     return updatedRow ? rowToRecord(updatedRow) : null;
   }
 
+  /**
+   * Enqueue an 'update' sync op so a failed direct remote update is retried
+   * by AsyncSyncQueueRunner. The payload is the redacted partial update.
+   * Best-effort — a queue failure is non-fatal.
+   */
+  enqueueUpdate(id: string, updates: Partial<MemoryRecord>): void {
+    if (!this.initialized) return;
+    try {
+      this.requireDb().prepare(
+        `INSERT INTO sync_queue (op, payload) VALUES (?, ?)`,
+      ).run('update', JSON.stringify({
+        id,
+        title: updates.title,
+        content: updates.content,
+        memory_type: updates.memory_type,
+        status: updates.status,
+        tags: updates.tags,
+        metadata: updates.metadata,
+      }));
+      this.pendingSync = this.readPendingSyncCount();
+    } catch { /* best effort */ }
+  }
+
   async health(): Promise<BackendHealth> {
     if (!this.initialized) {
       try {
