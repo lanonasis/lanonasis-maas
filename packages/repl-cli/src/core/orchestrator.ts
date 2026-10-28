@@ -354,31 +354,57 @@ export class NaturalLanguageOrchestrator {
     if (this.contextInitialized) return;
 
     try {
-      // Search for user preferences and profile information
-      // Hard-timeout the search so it can't block startup indefinitely.
-      const preferencesSearch = await Promise.race([
-        this.client.searchMemories({
-          query: 'user preferences settings profile configuration style',
-          status: 'active',
-          limit: 5,
-          threshold: 0.6
-        }),
-        new Promise<never>((_, reject) =>
-          setTimeout(() => reject(new Error('searchMemories timeout')), 3000)
-        )
-      ]);
+      // Search for user preferences and profile information via router
+      // (local-first → remote enrich → offline degrade) with a hard timeout.
+      const router = this.memoryRouter;
 
-      if (preferencesSearch.data?.results && preferencesSearch.data.results.length > 0) {
-        this.cachedUserPreferences = preferencesSearch.data.results
-          .filter((r: any) => r && r.title && r.content)
-          .map((r: any) => {
-            const content = r.content || '';
-            const title = r.title || 'Untitled';
-            return `[${title}]: ${content.substring(0, 200)}`;
-          });
+      if (router) {
+        const preferencesSearch = await Promise.race([
+          router.search(
+            'user preferences settings profile configuration style',
+            { limit: 5, status: 'active' },
+          ),
+          new Promise<never>((_, reject) =>
+            setTimeout(() => reject(new Error('router search timeout')), 3000),
+          ),
+        ]);
 
-        // Update the system prompt with user context
-        this.updateSystemPromptWithContext();
+        if (preferencesSearch.length > 0) {
+          this.cachedUserPreferences = preferencesSearch
+            .filter((h) => h && h.title && h.content)
+            .map((h) => {
+              const content = h.content || '';
+              const title = h.title || 'Untitled';
+              return `[${title}]: ${content.substring(0, 200)}`;
+            });
+
+          this.updateSystemPromptWithContext();
+        }
+      } else {
+        // Fallback: direct MaaS (router unavailable)
+        const fallback = await Promise.race([
+          this.client.searchMemories({
+            query: 'user preferences settings profile configuration style',
+            status: 'active',
+            limit: 5,
+            threshold: 0.6,
+          }),
+          new Promise<never>((_, reject) =>
+            setTimeout(() => reject(new Error('searchMemories timeout')), 3000),
+          ),
+        ]);
+
+        if (fallback.data?.results && fallback.data.results.length > 0) {
+          this.cachedUserPreferences = fallback.data.results
+            .filter((r: any) => r && r.title && r.content)
+            .map((r: any) => {
+              const content = r.content || '';
+              const title = r.title || 'Untitled';
+              return `[${title}]: ${content.substring(0, 200)}`;
+            });
+
+          this.updateSystemPromptWithContext();
+        }
       }
 
       this.contextInitialized = true;
@@ -428,7 +454,7 @@ export class NaturalLanguageOrchestrator {
     // LANONASIS_LOCAL_MEMORY=0 path.
     if (this.memoryRouter) {
       try {
-        const hits = await this.memoryRouter.search(query, { limit });
+        const hits = await this.memoryRouter.search(query, { limit, status: 'active' });
         return hits
           .filter((h) => h && h.title && h.content)
           .slice(0, limit)
@@ -1115,14 +1141,21 @@ Remember: You are LZero - be helpful, conversational, and make the experience fe
   async executeAction(action: OrchestratorResponse['action']): Promise<any> {
     if (!action) return null;
 
+    const router = this.memoryRouter;
+    if (!router) {
+      return { error: 'Memory router not available. Check LANONASIS_LOCAL_MEMORY env var.' };
+    }
+
     try {
       switch (action.type) {
         case 'create':
-          return await this.client.createMemory({
+          return await router.save({
+            id: action.params.id || undefined,
             title: action.params.title || '',
             content: action.params.content || '',
             memory_type: (action.params.memory_type || 'context') as 'context' | 'project' | 'knowledge' | 'reference' | 'personal' | 'workflow',
-            tags: action.params.tags || []
+            tags: action.params.tags || [],
+            status: 'active',
           });
 
         case 'update': {
@@ -1130,47 +1163,49 @@ Remember: You are LZero - be helpful, conversational, and make the experience fe
           if (!id) {
             return { error: 'Missing memory id for update action.' };
           }
-          return await this.client.updateMemory(id, updates);
+          // Read current record, merge updates, save
+          const existing = await router.get(id);
+          if (!existing) {
+            return { error: `Memory not found: ${id}` };
+          }
+          return await router.save({
+            ...existing,
+            ...updates,
+            id: existing.id, // preserve ID
+          });
         }
 
-        case 'search':
-          const searchResult = await this.client.searchMemories({
-            query: action.params.query || '',
-            status: 'active',
+        case 'search': {
+          const hits = await router.search(action.params.query || '', {
             limit: action.params.limit || 10,
-            threshold: action.params.threshold || 0.7
+            status: 'active',
           });
-
-          // Enhance search results with structured response
-          if (searchResult.data?.results && searchResult.data.results.length > 0) {
-            const results = searchResult.data.results;
-            const mainResult = results[0]; // Most relevant result
-            const additionalResults = results.slice(1); // Other relevant results
-
-            return {
-              ...searchResult,
-              enhanced: {
-                mainResult,
-                additionalResults: additionalResults.map((r: any) => ({
-                  title: r.title,
-                  content: r.content.substring(0, 200),
-                  relevance: r.similarity ? r.similarity * 100 : undefined
-                }))
-              }
-            };
-          }
-          return searchResult;
+          // Convert MemoryHit[] to response shape expected by caller
+          return {
+            data: {
+              results: hits.map(h => ({
+                id: h.id,
+                title: h.title,
+                content: h.content,
+                memory_type: h.memory_type,
+                status: 'active',
+                tags: h.tags,
+                similarity: h.score,
+                similarity_score: h.score,
+                created_at: h.created_at,
+              })),
+            },
+          };
+        }
 
         case 'list':
-          return await this.client.listMemories({
-            limit: action.params.limit || 10
-          });
+          return await router.list({ limit: action.params.limit || 10 });
 
         case 'get':
-          return await this.client.getMemory(action.params.id);
+          return await router.get(action.params.id);
 
         case 'delete':
-          return await this.client.deleteMemory(action.params.id);
+          return await router.delete(action.params.id);
 
         case 'optimize_prompt':
           // Optimize prompt using OpenAI
@@ -1188,8 +1223,8 @@ Remember: You are LZero - be helpful, conversational, and make the experience fe
         return { error: 'Authentication failed. Try running: onasis-repl login' };
       } else if (errorMessage.includes('404') || errorMessage.includes('not found')) {
         return { error: 'Memory not found. It may have been deleted.' };
-      } else if (errorMessage.includes('timeout') || errorMessage.includes('ECONNREFUSED')) {
-        return { error: 'Could not connect to the memory service. Check your network or API URL.' };
+      } else if (errorMessage.includes('timeout')) {
+        return { error: 'Request timed out. Please try again.' };
       }
 
       return { error: errorMessage };

@@ -360,3 +360,151 @@ describe('MemoryCommands', () => {
     expect(ids).not.toContain('mem-intruder-i');
   });
 });
+
+describe('MemoryCommands — router integration', () => {
+  let commands: MemoryCommands;
+  let context: CommandContext;
+  let mockRouter: {
+    save: ReturnType<typeof vi.fn>;
+    update: ReturnType<typeof vi.fn>;
+    search: ReturnType<typeof vi.fn>;
+    get: ReturnType<typeof vi.fn>;
+    list: ReturnType<typeof vi.fn>;
+    delete: ReturnType<typeof vi.fn>;
+    health: ReturnType<typeof vi.fn>;
+    close: ReturnType<typeof vi.fn>;
+  };
+
+  beforeEach(() => {
+    commands = new MemoryCommands();
+    mockRouter = {
+      save: vi.fn(),
+      update: vi.fn(),
+      search: vi.fn(),
+      get: vi.fn(),
+      list: vi.fn(),
+      delete: vi.fn(),
+      health: vi.fn().mockResolvedValue({ maas: true, local: true, pendingSync: 0 }),
+      close: vi.fn().mockResolvedValue(undefined),
+    };
+    context = {
+      mode: 'remote',
+      aliases: new Map(),
+      config: {
+        apiUrl: 'http://localhost:3000',
+        useMCP: false,
+        historyFile: '/tmp/repl-history',
+        maxHistorySize: 100,
+      },
+      memoryRouter: mockRouter as any,
+    };
+  });
+
+  it('delegates create to router.save()', async () => {
+    mockRouter.save.mockResolvedValue({ id: 'new-id', syncedToMaaS: true });
+
+    await commands.create(['Hello World', 'Some content', '--type=project'], context);
+
+    expect(mockRouter.save).toHaveBeenCalledTimes(1);
+    expect(mockRouter.save).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: 'Hello World',
+        content: 'Some content',
+        memory_type: 'project',
+        tags: [],
+        source: 'local',
+        status: 'active',
+      }),
+    );
+  });
+
+  it('delegates update to router.update() with id', async () => {
+    const memoryId = '11111111-2222-3333-4444-555555555555';
+    mockRouter.update.mockResolvedValue({ id: memoryId, title: 'New Title', content: 'Updated body', memory_type: 'project', tags: ['alpha', 'beta'], source: 'local', status: 'active', created_at: '', updated_at: '' });
+
+    await commands.update(
+      [memoryId, '--title=New Title', '--content=Updated body', '--tags=alpha,beta'],
+      context,
+    );
+
+    expect(mockRouter.update).toHaveBeenCalledTimes(1);
+    expect(mockRouter.update).toHaveBeenCalledWith(memoryId, expect.objectContaining({
+      title: 'New Title',
+      content: 'Updated body',
+      tags: ['alpha', 'beta'],
+    }));
+  });
+
+  it('delegates search to router.search()', async () => {
+    mockRouter.search.mockResolvedValue([
+      { id: 'r1', title: 'Result A', content: 'Content A', score: 0.9, source: 'local' },
+      { id: 'r2', title: 'Result B', content: 'Content B', score: 0.7, source: 'local' },
+    ]);
+
+    await commands.search(['project plan', '--type=project'], context);
+
+    expect(mockRouter.search).toHaveBeenCalledWith('project plan', {
+      limit: 20,
+      status: 'active',
+      type: 'project',
+    });
+  });
+
+  it('delegates list to router.list()', async () => {
+    mockRouter.list.mockResolvedValue([
+      { id: 'l1', title: 'Mem 1', content: '', memory_type: 'context', status: 'active', tags: [], source: 'local', created_at: '', updated_at: '' },
+    ]);
+
+    await commands.list(['5'], context);
+
+    expect(mockRouter.list).toHaveBeenCalledWith({ limit: 5 });
+  });
+
+  it('delegates get to router.get()', async () => {
+    const memId = 'get-id-001';
+    mockRouter.get.mockResolvedValue({
+      id: memId,
+      title: 'Test Title',
+      content: 'Test content body',
+      memory_type: 'knowledge',
+      status: 'active',
+      tags: ['test'],
+      source: 'local',
+      created_at: '2026-01-01T00:00:00Z',
+      updated_at: '2026-01-01T00:00:00Z',
+    });
+
+    await commands.get([memId], context);
+
+    expect(mockRouter.get).toHaveBeenCalledWith(memId);
+  });
+
+  it('delegates delete to router.delete()', async () => {
+    mockRouter.delete.mockResolvedValue(undefined);
+
+    await commands.delete(['del-id-001'], context);
+
+    expect(mockRouter.delete).toHaveBeenCalledWith('del-id-001');
+  });
+
+  it('falls back to MaaS client when no router is available', async () => {
+    // Remove memoryRouter so the class falls back to createMemoryClient path
+    (context as any).memoryRouter = undefined;
+
+    const mockClient = {
+      createMemory: vi.fn().mockResolvedValue({
+        data: { id: 'fallback-id' },
+      }),
+    };
+    (commands as any).client = mockClient;
+
+    await commands.create(['Test', 'Content'], context);
+
+    expect(mockClient.createMemory).toHaveBeenCalledWith({
+      title: 'Test',
+      content: 'Content',
+      memory_type: 'context',
+      tags: [],
+    });
+  });
+});

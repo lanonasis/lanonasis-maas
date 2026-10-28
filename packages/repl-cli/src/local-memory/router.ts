@@ -280,6 +280,33 @@ export class MemoryBackendRouter implements MemoryBackend {
     this.invalidateCache();
   }
 
+  async update(id: string, updates: Partial<MemoryRecord>): Promise<MemoryRecord | null> {
+    // Local-first update (immediate, durable).
+    const localResult = await this.local.update(id, updates).catch(() => null);
+    this.invalidateCache();
+
+    // Best-effort: also push to remote so MaaS stays in sync.
+    if (this.remote && localResult) {
+      try {
+        await withTimeout(
+          this.remote.update(id, {
+            title: updates.title,
+            content: updates.content,
+            memory_type: updates.memory_type,
+            status: updates.status,
+            tags: updates.tags,
+            metadata: updates.metadata,
+          }),
+          this.options.remoteTimeoutMs,
+        );
+      } catch {
+        this.debugLog('remote.update failed', id);
+      }
+    }
+
+    return localResult;
+  }
+
   async health(): Promise<BackendHealth> {
     const local = await this.local.health().catch(() => ({ local: false, maas: false, pendingSync: 0 } as BackendHealth));
     let remoteMaas = false;

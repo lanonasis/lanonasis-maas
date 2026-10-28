@@ -552,6 +552,47 @@ export class LocalMemoryBackend implements MemoryBackend {
     } catch { /* best effort */ }
   }
 
+  async update(id: string, updates: Partial<MemoryRecord>): Promise<MemoryRecord | null> {
+    if (!this.initialized) await this.init();
+    const db = this.requireDb();
+
+    // Fetch existing record to get unchanged fields.
+    const existing = db.prepare('SELECT * FROM memory_entries WHERE id = ?').get(id) as RawRow | undefined;
+    if (!existing) return null;
+
+    // Build a partial UPDATE: only set fields that were supplied.
+    const sets: string[] = [];
+    const params: unknown[] = [];
+
+    if (updates.title !== undefined) { sets.push('title = ?'); params.push(updates.title); }
+    if (updates.content !== undefined) { sets.push('content = ?'); params.push(updates.content); }
+    if (updates.memory_type !== undefined) { sets.push('memory_type = ?'); params.push(updates.memory_type); }
+    if (updates.status !== undefined) { sets.push('status = ?'); params.push(updates.status); }
+    if (updates.tags !== undefined) { sets.push('tags = ?'); params.push(JSON.stringify(updates.tags)); }
+    if (updates.subject_id !== undefined) { sets.push('subject_id = ?'); params.push(updates.subject_id); }
+    if (updates.maas_synced_at !== undefined) { sets.push('maas_synced_at = ?'); params.push(updates.maas_synced_at); }
+    if (updates.maas_id !== undefined) { sets.push('maas_id = ?'); params.push(updates.maas_id); }
+    if (updates.metadata !== undefined) { sets.push('metadata = ?'); params.push(JSON.stringify(updates.metadata)); }
+
+    // Always update the timestamp.
+    const now = new Date().toISOString();
+    sets.push('updated_at = ?');
+    params.push(now);
+    params.push(id);
+
+    if (sets.length === 1) {
+      // Only updated_at was set — nothing meaningful changed; still update the
+      // timestamp to record that the record was touched.
+      db.prepare('UPDATE memory_entries SET updated_at = ? WHERE id = ?').run(now, id);
+    } else {
+      db.prepare(`UPDATE memory_entries SET ${sets.join(', ')} WHERE id = ?`).run(...params);
+    }
+
+    // Re-read and return the updated record.
+    const updatedRow = db.prepare('SELECT * FROM memory_entries WHERE id = ?').get(id) as RawRow | undefined;
+    return updatedRow ? rowToRecord(updatedRow) : null;
+  }
+
   async health(): Promise<BackendHealth> {
     if (!this.initialized) {
       try {

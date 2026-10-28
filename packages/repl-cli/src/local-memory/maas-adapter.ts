@@ -191,6 +191,68 @@ export class MaaSClientAdapter implements MemoryBackend {
     }
   }
 
+  async update(id: string, updates: Partial<MemoryRecord>): Promise<MemoryRecord | null> {
+    // Try updateMemory first if the client supports it.
+    if ('updateMemory' in this.client && typeof (this.client as any).updateMemory === 'function') {
+      const res = await (this.client as any).updateMemory(id, {
+        title: updates.title,
+        content: updates.content,
+        type: updates.memory_type,
+        tags: updates.tags,
+        metadata: updates.metadata,
+      });
+      if (res.error && !/not found|404/i.test(res.error)) {
+        throw new MemoryBackendError(res.error, 'transport');
+      }
+      if (!res.data) {
+        // update returned no data — fall back to getMemory.
+        const fetched = await this.get(id);
+        return fetched;
+      }
+      // Return the partial record.
+      return {
+        id: res.data.id ?? id,
+        title: updates.title ?? '',
+        content: updates.content ?? '',
+        memory_type: (updates.memory_type ?? 'context') as MemoryType,
+        status: (updates.status ?? 'active') as MemoryStatus,
+        tags: updates.tags ?? [],
+        source: 'maas-sync',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+    }
+
+    // Fallback for v1 contracts that don't have updateMemory: use createMemory
+    // (upsert by idempotency_key) for the fields that were provided.
+    // createMemory requires title and content even if not being updated.
+    const payload = {
+      title: updates.title ?? '',
+      content: updates.content ?? '',
+      type: updates.memory_type,
+      tags: updates.tags,
+      metadata: updates.metadata,
+    };
+
+    const res = await this.client.createMemory(payload);
+    if (res.error && !/not found|404/i.test(res.error)) {
+      throw new MemoryBackendError(res.error, 'transport');
+    }
+    // Best-effort: if we can't fetch back, return the partial record.
+    const fetched = await this.get(id);
+    return fetched || {
+      id,
+      title: updates.title ?? '',
+      content: updates.content ?? '',
+      memory_type: (updates.memory_type ?? 'context') as MemoryType,
+      status: (updates.status ?? 'active') as MemoryStatus,
+      tags: updates.tags ?? [],
+      source: 'maas-sync',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+  }
+
   async health(): Promise<BackendHealth> {
     try {
       const res = await this.client.listMemories({ limit: 1 });

@@ -1,4 +1,5 @@
 import type { Interface as ReadLine } from 'readline';
+import type { MemoryBackendRouter } from '../local-memory/router.js';
 
 export interface UserProfile {
   name?: string;
@@ -70,4 +71,6 @@ export interface CommandContext {
   aliases: Map<string, string>;
   readline?: ReadLine | null; // For spinner coordination
   config: ReplConfig;
+  /** Local-first memory router (provided by the orchestrator). */
+  memoryRouter?: MemoryBackendRouter | null;
 }

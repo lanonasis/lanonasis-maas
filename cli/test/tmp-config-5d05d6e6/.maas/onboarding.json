@@ -1,0 +1,19 @@
+{
+  "isFirstRun": false,
+  "currentStep": 5,
+  "totalSteps": 5,
+  "completedSteps": [
+    "configure-defaults",
+    "configure-mcp",
+    "test-connectivity",
+    "gather-preferences",
+    "welcome-demo"
+  ],
+  "skippedSteps": [],
+  "userPreferences": {
+    "inputMode": "inline",
+    "autoStartMCP": true,
+    "showOnboardingTips": true,
+    "verboseErrors": false
+  }
+}
