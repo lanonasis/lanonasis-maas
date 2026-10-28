@@ -1,3 +1,20 @@
+import { mkdtempSync } from 'fs';
+import { tmpdir } from 'os';
+import { join } from 'path';
+
+// CLIConfig writes to os.homedir()/.maas, and several suites build a CLIConfig
+// without a temp dir, so running the suite on a real machine replaced the
+// developer's CLI login (2026-10-28). This file runs in the parent process
+// before the workers start, so they inherit a throwaway HOME (a setup file is
+// too late: jest sandboxes process.env per test file, and os.homedir() reads
+// the real environment). LANONASIS_TEST_REAL_HOME=1 opts back in for the
+// credential-based e2e suite.
+if (process.env.LANONASIS_TEST_REAL_HOME !== '1') {
+  const home = mkdtempSync(join(tmpdir(), 'lanonasis-cli-test-home-'));
+  process.env.HOME = home;
+  process.env.USERPROFILE = home;
+}
+
 export default {
   preset: 'ts-jest/presets/default-esm',
   extensionsToTreatAsEsm: ['.ts'],
