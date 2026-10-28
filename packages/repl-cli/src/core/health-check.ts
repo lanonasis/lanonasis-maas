@@ -33,6 +33,8 @@ export interface EndpointConfig {
   timeout?: number;
   /** router-chat only: the credential the REPL would use for chat. */
   authToken?: string;
+  /** router-chat only: lower-ranked credentials, tried after a 401. */
+  fallbackAuthTokens?: string[];
 }
 
 export class AIEndpointHealthCheck {
@@ -189,6 +191,7 @@ export class AIEndpointHealthCheck {
       const client = new AIRouterClient({
         baseUrl: endpoint.url,
         authToken: endpoint.authToken,
+        fallbackAuthTokens: endpoint.fallbackAuthTokens,
         timeoutMs: endpoint.timeout || 45000,
       });
       await client.chat({
@@ -197,12 +200,18 @@ export class AIEndpointHealthCheck {
         max_tokens: 5,
       });
       const latency = Date.now() - startTime;
+      const refused = client.refusedCredentialHint;
       return {
         ...base,
         // repl-nlp is a local-first lane (15-60s is normal per the router docs).
-        status: latency < 20000 ? 'healthy' : 'degraded',
+        // Working only through a fallback credential is degraded: the stored
+        // key is dead and costs a refused round-trip every session.
+        status: latency < 20000 && !refused ? 'healthy' : 'degraded',
         latency,
-        message: `Chat OK (${latency}ms)`,
+        message: refused
+          ? `Chat OK (${latency}ms), but the stored aiRouterApiKey (${refused}) was refused and your login session was used. ` +
+            'Remove aiRouterApiKey from ~/.lanonasis/repl-config.json or replace it with a live key.'
+          : `Chat OK (${latency}ms)`,
         lastChecked: new Date(),
       };
     } catch (error) {
@@ -360,6 +369,8 @@ export async function quickHealthCheck(config: {
   aiRouterUrl?: string;
   /** Credential the REPL uses for chat (aiRouterApiKey > aiRouterAuthToken > authToken). */
   aiRouterAuthToken?: string;
+  /** All router credentials in rank order (see routerCredentials); overrides aiRouterAuthToken. */
+  aiRouterAuthTokens?: string[];
   openaiApiKey?: string;
   apiUrl?: string;
 }): Promise<HealthCheckResult[]> {
@@ -379,7 +390,8 @@ export async function quickHealthCheck(config: {
       type: 'router-chat',
       priority: 2,
       timeout: 45000,
-      authToken: config.aiRouterAuthToken,
+      authToken: config.aiRouterAuthTokens?.[0] ?? config.aiRouterAuthToken,
+      fallbackAuthTokens: config.aiRouterAuthTokens?.slice(1),
     });
   }
 

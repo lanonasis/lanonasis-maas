@@ -2,7 +2,7 @@
 
 import { Command } from 'commander';
 import { ReplEngine } from './core/repl-engine.js';
-import { loadConfig } from './config/loader.js';
+import { loadConfig, routerCredentials } from './config/loader.js';
 import { AIEndpointHealthCheck, quickHealthCheck } from './core/health-check.js';
 import chalk from 'chalk';
 
@@ -91,8 +91,8 @@ program
     const config = await loadConfig({ authToken: storedToken || undefined }, { configPath: options.config });
     const results = await quickHealthCheck({
       aiRouterUrl: config.aiRouterUrl,
-      // Same credential priority the REPL uses for chat.
-      aiRouterAuthToken: config.aiRouterApiKey || config.aiRouterAuthToken || config.authToken,
+      // Same ranked credentials the REPL uses for chat.
+      aiRouterAuthTokens: routerCredentials(config),
       openaiApiKey: config.openaiApiKey,
       apiUrl: config.apiUrl
     });

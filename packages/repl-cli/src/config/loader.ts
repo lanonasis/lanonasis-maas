@@ -69,6 +69,22 @@ const DEFAULT_CONFIG: ReplConfig = {
   } : undefined
 };
 
+/**
+ * Router credentials in rank order: aiRouterApiKey > aiRouterAuthToken > the
+ * login session (authToken), trimmed and without duplicates. Chat tries them in
+ * this order and moves on after a 401, so a stale stored key cannot shadow a
+ * fresh `lrepl login`.
+ */
+export function routerCredentials(config: {
+  aiRouterApiKey?: string;
+  aiRouterAuthToken?: string;
+  authToken?: string;
+}): string[] {
+  return [config.aiRouterApiKey, config.aiRouterAuthToken, config.authToken]
+    .map((t) => t?.trim() ?? '')
+    .filter((t, i, all) => t.length > 0 && all.indexOf(t) === i);
+}
+
 export async function loadConfig(
   overrides: Partial<ReplConfig>,
   options?: { configPath?: string }
