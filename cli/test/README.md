@@ -94,6 +94,37 @@ bun run test -- test/load.test.ts --testTimeout=300000
 - **Load tests**: Concurrent command execution with < 5% error rate
 - **Manual tests**: Common workflows documented for debugging
 
+## Live service behaviour tests
+
+The suites above are offline: they mock the API and assert command contracts. The
+**live behaviour suite** is different — it calls the deployed services with a real
+test key and asserts what a user actually observes.
+
+```bash
+export LANO_TEST_API_KEY=lano_...
+npm run test:live
+```
+
+Covered surfaces:
+
+| Suite | File | Endpoint |
+|-------|------|----------|
+| REST behaviour | `test/live/service-behavior.test.ts` | `https://api.lanonasis.com` |
+| MCP tool behaviour | `test/live/service-behavior.test.ts` | `https://mcp.lanonasis.com/mcp` |
+
+It verifies auth boundaries, memory CRUD/search/update/delete round-trips,
+pagination and filters, soft-delete/restore, API-key lifecycle, projects,
+behavior memory, intelligence tools, MCP resources/prompts, JSON-RPC errors, and
+cross-route consistency (write on MCP → read on REST and vice versa).
+
+Tests prefixed `[known-gap]` assert the correct behaviour and are expected to
+fail while the corresponding service defects remain open. They are the
+regression spec, not flaky tests. Override the targets with
+`LANO_TEST_REST_BASE` / `LANO_TEST_MCP_URL` (for example, a staging deployment).
+
+> The MCP host rate-limits aggressively (HTTP 429 with `retryAfter`). If the MCP
+> block fails fast with a rate-limit message, wait for the cool-down and rerun.
+
 ## Notes
 
 - Live API tests are skipped by default to keep local and CI runs deterministic.

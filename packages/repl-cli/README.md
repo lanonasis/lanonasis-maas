@@ -386,6 +386,22 @@ Local Pattern Matching ← Final fallback
 npm test
 ```
 
+### Live service tests
+
+The default suite mocks `@lanonasis/memory-client`. The live suite builds the
+real client the REPL uses and talks to the deployed REST API:
+
+```bash
+export LANO_TEST_API_KEY=lano_...
+npm run test:live
+```
+
+`tests/live/maas-service.test.ts` covers `createMemoryClient` list/create/get/
+delete round-trips, `MaaSClientAdapter` save/search/health mapping, and a control
+that proves the key itself works over plain `fetch`. Tests prefixed
+`[known-gap]` assert correct behaviour and fail while the corresponding client
+defect is open. Override the target with `LANO_TEST_REST_BASE`.
+
 ## 🤝 Contributing
 
 1. Fork the repository
