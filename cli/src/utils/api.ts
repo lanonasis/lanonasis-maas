@@ -570,6 +570,24 @@ export class APIClient {
     return mapped;
   }
 
+  /** PUT/PATCH/DELETE /api/v1/memories/{id} -> the update/delete action routes nginx maps to the write functions. */
+  private mapMemoryIdWriteToActionRoute(config: AxiosRequestConfig): void {
+    const idMatch = (config.url || '').match(/^\/api\/v1\/memories\/([^/?#]+)$/);
+    if (!idMatch) return;
+    const id = decodeURIComponent(idMatch[1] || '');
+    if (['search', 'stats', 'list', 'update', 'delete', 'get', 'health'].includes(id)) return;
+    const method = (config.method || 'get').toLowerCase();
+    if (method === 'put' || method === 'patch') {
+      const body = (config.data && typeof config.data === 'object') ? (config.data as Record<string, unknown>) : {};
+      config.method = 'post';
+      config.url = '/api/v1/memory/update';
+      config.data = { id, ...body };
+    } else if (method === 'delete') {
+      config.url = '/api/v1/memory/delete';
+      config.params = { ...(config.params || {}), id };
+    }
+  }
+
   private normalizeMcpPathToApi(url: string): string {
     // MCP HTTP compatibility path -> API gateway REST paths
     if (url === '/memory') {
@@ -679,6 +697,14 @@ export class APIClient {
       // MCP uses /memory (singular) while main API uses /memories (plural)
       if (useMcpServer && config.url) {
         config.url = config.url.replace(/\/api\/v1\/memories/g, '/memory');
+      }
+
+      // Direct API transport: nginx sends every method on /api/v1/memories/{id}
+      // to memory-get, which answers PUT/DELETE with the unchanged row (a
+      // silent no-op that looked like success). Only the action routes reach
+      // the write functions.
+      if (!useMcpServer && apiBaseUrl === this.config.getApiUrl() && typeof config.url === 'string') {
+        this.mapMemoryIdWriteToActionRoute(config);
       }
 
       // Add project scope header for auth endpoints
