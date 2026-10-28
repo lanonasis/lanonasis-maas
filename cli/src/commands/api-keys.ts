@@ -4,6 +4,7 @@ import chalk from 'chalk';
 import Table from 'cli-table3';
 import { apiClient } from '../utils/api.js';
 import { formatDate, truncateText } from '../utils/formatting.js';
+import { resolveIdPrefix } from '../utils/id-resolution.js';
 import {
   displayConsumer,
   parseConsumer,
@@ -57,6 +58,23 @@ function unwrapApiResponse<T>(response: T | { data?: T }): T {
     return (response as { data?: T }).data ?? (response as T);
   }
   return response as T;
+}
+
+/**
+ * Resolve a full API-key UUID or a unique prefix (>=8 chars).
+ * The API-key routes require the full UUID, so prefixes are resolved locally
+ * against the caller's key list (including revoked/expired keys).
+ */
+async function resolveApiKeyId(keyIdOrPrefix: string): Promise<string> {
+  return resolveIdPrefix(keyIdOrPrefix, {
+    kind: 'API key',
+    listIds: async () => {
+      const keys = unwrapApiResponse<PlatformApiKey[]>(
+        await apiClient.get(`${AUTH_API_KEYS_BASE}?active_only=false`),
+      );
+      return (keys || []).map((key) => key.id);
+    },
+  });
 }
 
 function parseScopes(scopes?: string): string[] | undefined {
@@ -194,7 +212,7 @@ projectsCommand
 
       projects.forEach((project: any) => {
         table.push([
-          truncateText(project.id, 20),
+          project.id,
           project.name,
           truncateText(project.description || '-', 30),
           truncateText(project.ownerId, 20),
@@ -384,7 +402,7 @@ apiKeysCommand
         const statusColor = key.is_active ? colors.success : colors.error;
         
         table.push([
-          truncateText(key.id, 20),
+          key.id,
           key.name,
           displayConsumer(key),
           key.access_level,
@@ -399,6 +417,7 @@ apiKeysCommand
       console.log(table.toString());
       console.log(colors.info('═'.repeat(80)));
       console.log(colors.muted(`🔢 Total: ${colors.highlight(apiKeys.length)} API keys`));
+      console.log(colors.muted('Tip: IDs are shown in full; an 8+ character prefix works with api-keys get/update/delete.'));
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       console.error(colors.error('✖ Failed to list API keys:'), colors.muted(errorMessage));
@@ -413,7 +432,8 @@ apiKeysCommand
   .option('--json', 'Output as JSON')
   .action(async (keyId, options) => {
     try {
-      const apiKey = unwrapApiResponse<PlatformApiKey>(await apiClient.get(`${AUTH_API_KEYS_BASE}/${keyId}`));
+      const resolvedKeyId = await resolveApiKeyId(keyId);
+      const apiKey = unwrapApiResponse<PlatformApiKey>(await apiClient.get(`${AUTH_API_KEYS_BASE}/${resolvedKeyId}`));
 
       if (options.json) {
         console.log(JSON.stringify(apiKey, null, 2));
@@ -465,6 +485,7 @@ apiKeysCommand
   .option('--interactive', 'Interactive mode')
   .action(async (keyId, options) => {
     try {
+      const resolvedKeyId = await resolveApiKeyId(keyId);
       let updateData: any = {};
 
       if (options.name) updateData.name = options.name;
@@ -487,7 +508,7 @@ apiKeysCommand
       if (options.scopes) updateData.scopes = parseScopes(options.scopes);
 
       if (options.interactive || Object.keys(updateData).length === 0) {
-        const current = unwrapApiResponse<PlatformApiKey>(await apiClient.get(`${AUTH_API_KEYS_BASE}/${keyId}`));
+        const current = unwrapApiResponse<PlatformApiKey>(await apiClient.get(`${AUTH_API_KEYS_BASE}/${resolvedKeyId}`));
         
         const answers = await inquirer.prompt([
           {
@@ -560,7 +581,7 @@ apiKeysCommand
         return;
       }
 
-      const updatedKey = unwrapApiResponse<PlatformApiKey>(await apiClient.put(`${AUTH_API_KEYS_BASE}/${keyId}`, updateData));
+      const updatedKey = unwrapApiResponse<PlatformApiKey>(await apiClient.put(`${AUTH_API_KEYS_BASE}/${resolvedKeyId}`, updateData));
       
       console.log(colors.success('🔄 API key updated successfully!'));
       console.log(colors.info('━'.repeat(40)));
@@ -587,8 +608,9 @@ apiKeysCommand
   .option('-f, --force', 'Skip confirmation')
   .action(async (keyId, options) => {
     try {
+      const resolvedKeyId = await resolveApiKeyId(keyId);
       if (!options.force) {
-        const apiKey = unwrapApiResponse<PlatformApiKey>(await apiClient.get(`${AUTH_API_KEYS_BASE}/${keyId}`));
+        const apiKey = unwrapApiResponse<PlatformApiKey>(await apiClient.get(`${AUTH_API_KEYS_BASE}/${resolvedKeyId}`));
         
         const { confirm } = await inquirer.prompt([
           {
@@ -605,7 +627,7 @@ apiKeysCommand
         }
       }
 
-      await apiClient.delete(`${AUTH_API_KEYS_BASE}/${keyId}`);
+      await apiClient.delete(`${AUTH_API_KEYS_BASE}/${resolvedKeyId}`);
       
       console.log(colors.success('🗑️  API key deleted successfully!'));
     } catch (error) {

@@ -9,6 +9,26 @@ All notable changes to @lanonasis/repl-cli will be documented in this file.
   `tree/main/packages/repl-cli#readme` URL (was `docs.lanonasis.com/cli/repl`).
   Repository, bugs, engines, keywords, and files allowlist already canonical.
 
+## [1.2.0] - 2026-10-28
+
+Adds a gated live behaviour suite that drives the real MaaS client against
+api.lanonasis.com, and lands the router credential-ranking fix already on main.
+
+### Added
+- **Gated live MaaS behaviour suite** (`tests/live/maas-service.test.ts`).
+  Exercises the real `createMemoryClient` (X-API-Key auth) and
+  `MaaSClientAdapter` against api.lanonasis.com. Run it with
+  `npm run test:live`; it requires both `LANO_TEST_API_KEY` and
+  `RUN_LIVE_SERVICE_TESTS=1` (the script sets the latter) so an exported key
+  cannot make the offline suite hit production.
+
+### Fixed
+- **A stale credential can no longer shadow a fresh login.** Router credential
+  ranking now prefers the newest credential instead of the first one found.
+
+### Tests
+- 255 passed / 8 skipped; typecheck clean.
+
 ## [1.1.2] - 2026-10-20
 
 Persists the in-memory command history to `~/.lanonasis/repl-history.txt`

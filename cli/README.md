@@ -1,11 +1,11 @@
-# @lanonasis/cli v3.11.6 - Advanced CLI Suite
+# @lanonasis/cli v3.12.0 - Advanced CLI Suite
 
 [![NPM Version](https://img.shields.io/npm/v/@lanonasis/cli)](https://www.npmjs.com/package/@lanonasis/cli)
 [![Downloads](https://img.shields.io/npm/dt/@lanonasis/cli)](https://www.npmjs.com/package/@lanonasis/cli)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Golden Contract](https://img.shields.io/badge/Onasis--Core-v0.1%20Compliant-gold)](https://api.lanonasis.com/.well-known/onasis.json)
 
-🎉 **NEW IN v3.11.0**: Expanded command suite with REPL session management (`onasis repl`), service/deployment orchestration commands (`service`, `deploy`, `dashboard`, `api`), and enhanced MCP auto-connect.
+🎉 **NEW IN v3.12.0**: Full resource IDs and 8+ character ID prefixes in list commands, plus gated live REST/MCP behaviour suites (`npm run test:live`).
 
 ## 🚀 Quick Start
 
@@ -689,7 +689,13 @@ onasis health
 
 ## 📝 Version History
 
-### v3.11.6 (Current)
+### v3.12.0 (Current)
+
+- 🆔 **Full IDs and prefixes**: `memory list`/`list-sessions` show the full memory ID; `api-keys list` and `api-keys projects list` show full IDs. `api-keys get|update|delete` accept a unique 8+ character prefix, and memory prefix resolution is now discoverable from the table
+- 🧪 **Live service suites**: gated REST/MCP behaviour tests via `npm run test:live` (`LANO_TEST_API_KEY` plus `RUN_LIVE_SERVICE_TESTS=1`)
+- 🐛 **Direct-API writes**: `--no-mcp memory update/delete` now use the working `/memory/update` and `/memory/delete` action routes instead of the silent no-op `/memories/{id}` verbs
+
+### v3.11.6
 
 - ⚡ **Lazy `@lanonasis/oauth-client` loading**: Defers loading auth/secure storage dependencies until needed, eliminating Node's `DEP0040` punycode deprecation warning on standard CLI invocations (`whoami`, `health`, etc.)
 - 📦 **Dependency override**: Enforces `whatwg-url@^13.0.0` in dev/CI to use modern userland `punycode`

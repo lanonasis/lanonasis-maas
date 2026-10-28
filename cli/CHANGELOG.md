@@ -1,5 +1,24 @@
 # Changelog - @lanonasis/cli
 
+## [3.12.0] - 2026-10-28
+
+### ✨ New Features
+
+- **List output shows full IDs.** `memory list` and `memory list-sessions` now print the complete memory ID, and `api-keys list` / `api-keys projects list` print the complete key and project IDs, so an ID can be copied straight out of the table.
+- **`api-keys` commands accept unique ID prefixes.** `api-keys get`, `api-keys update`, and `api-keys delete` now take a unique 8+ character ID prefix, resolved locally, with distinct too-short, ambiguous, and not-found errors. Memory prefix resolution already existed; it is now discoverable from the table because the displayed ID is no longer truncated.
+- **Shared ID resolver.** Added `src/utils/id-resolution.ts` as the single prefix-matching implementation behind memory and API-key resolution, covered by 11 new unit tests.
+- **Gated live behaviour suites.** New suites exercise REST (`api.lanonasis.com`) and MCP (`mcp.lanonasis.com/mcp`) through `npm run test:live`. They run only when both `LANO_TEST_API_KEY` and `RUN_LIVE_SERVICE_TESTS=1` are set (the script sets the latter), so an exported key cannot make the offline suite hit production. `LANO_TEST_REST_BASE` and `LANO_TEST_MCP_URL` are documented for operators.
+
+### 🐛 Fixed
+
+- **`--no-mcp memory update` / `memory delete` no longer silently no-op.** They now use the working `/api/v1/memory/update` and `/api/v1/memory/delete` action routes instead of the `/api/v1/memories/{id}` verbs, which returned success without changing anything.
+- **Jest runs with a throwaway HOME**, so the suite no longer reads or writes the developer's real `~/.maas` state.
+
+### 🧪 Testing
+
+- CLI offline suite: 472 passed / 82 skipped.
+- Live suite covers auth boundaries, memory CRUD/pagination/search/soft-delete/restore/chunking, API-key lifecycle, projects/config/org, behaviour/intelligence tools, resources/prompts, JSON-RPC errors, and cross-route consistency.
+
 ## [3.11.6] - 2026-10-26
 
 ### 🐛 Fixed
