@@ -63,13 +63,13 @@ describe('router credential fallback', () => {
     expect(calls).toHaveLength(1);
   });
 
-  it('lrepl health reports chat working but names the refused stored key', async () => {
+  it('repl health reports chat working with a refused stored credential', async () => {
     stubRouter(onlySession);
     const results = await quickHealthCheck({ aiRouterUrl: BASE, aiRouterAuthTokens: ['lano_dead', 'session-token'] });
     const chat = results.find((r) => r.endpoint === ROUTER_CHAT)!;
     expect(chat.status).toBe('degraded');
     expect(chat.message).toMatch(/Chat OK/);
-    expect(chat.message).toMatch(/aiRouterApiKey \(lano_…dead\) was refused/);
+    expect(chat.message).toMatch(/a stored router credential \(lano_…dead\) was refused/);
   });
 });
 
