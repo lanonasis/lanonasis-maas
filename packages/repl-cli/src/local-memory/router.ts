@@ -323,29 +323,33 @@ export class MemoryBackendRouter implements MemoryBackend {
         // sync_queue carries stale content. Merge the redacted fields into
         // that save payload first — if merge succeeds the update row is
         // not enqueued. This prevents the sync runner from draining the
-        // stale save first and leaving MaaS with outdated content.
-        const q = this.local as unknown as {
-          mergeIntoQueuedSave?(id: string, fields: Partial<MemoryRecord>): boolean;
-          enqueueUpdate?(id: string, updates: Partial<MemoryRecord>): void;
-        };
-        try {
-          const merged = !localResult?.maas_id && q.mergeIntoQueuedSave?.(id, remotePayload);
-          if (!merged) q.enqueueUpdate?.(remoteId, remotePayload);
-        } catch { /* best effort */ }
-      }
-    }
-
-    // When no local record exists, return the remote result (or null if the
-    // remote also had nothing to return).
-    if (!localResult) {
-      if (this.remote) {
-        try {
-          return await withTimeout(this.remote.get(remoteId ?? id), this.options.remoteTimeoutMs);
-        } catch {
-          return null;
-        }
-      }
+    const localResult = await this.local.update(id, updates).catch((err) => {
+      this.debugLog('local.update failed', err);
       return null;
+    });
+    this.invalidateCache();
+
+    // Best-effort: also push to remote so MaaS stays in sync. Use the
+    // MaaS-assigned id when present (delete() maps the same way), and send
+    // the redacted values from localResult (local.update() runs the
+    // redaction pipeline) so a secret never reaches MaaS via update().
+    if (this.remote) {
+      try {
+        const remoteResult = await withTimeout(
+          this.remote.update(localResult?.maas_id ?? id, {
+            title: updates.title === undefined ? undefined : (localResult?.title ?? redactSecrets(updates.title).text),
+            content: updates.content === undefined ? undefined : (localResult?.content ?? redactSecrets(updates.content).text),
+            memory_type: updates.memory_type,
+            status: updates.status,
+            tags: updates.tags === undefined ? undefined : (localResult?.tags ?? updates.tags.map((t) => redactSecrets(t).text)),
+            metadata: updates.metadata === undefined ? undefined : (localResult?.metadata ?? updates.metadata),
+          }),
+          this.options.remoteTimeoutMs,
+        );
+        if (!localResult) return remoteResult;
+      } catch {
+        this.debugLog('remote.update failed', id);
+      }
     }
 
     return localResult;
