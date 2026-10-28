@@ -1,5 +1,6 @@
 import { MemoryClient, createMemoryClient } from '@lanonasis/memory-client';
 import { join } from 'path';
+import { randomUUID } from 'node:crypto';
 import { homedir } from 'os';
 import chalk from 'chalk';
 import ora from 'ora';
@@ -1173,7 +1174,7 @@ Remember: You are LZero - be helpful, conversational, and make the experience fe
             if (router) {
               // Wrap in the response envelope repl-engine.ts expects: result.data.
               return { data: await router.save({
-                id: action.params.id || undefined,
+                id: action.params.id || randomUUID(),
                 title: action.params.title || '',
                 content: action.params.content || '',
                 memory_type: (action.params.memory_type || 'context') as 'context' | 'project' | 'knowledge' | 'reference' | 'personal' | 'workflow',

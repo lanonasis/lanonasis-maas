@@ -6,6 +6,7 @@ import {
   type InferredConclusion,
   createMemoryClient
 } from '@lanonasis/memory-client';
+import { randomUUID } from 'node:crypto';
 import chalk from 'chalk';
 import ora from 'ora';
 import { CommandContext } from '../config/types.js';
@@ -176,13 +177,14 @@ export class MemoryCommands {
       const router = this.getRouter(context);
       if (router) {
         const result = await router.save({
+          id: randomUUID(),
           title,
           content,
           memory_type,
           status: 'active',
           tags,
           source: 'local',
-        } as Parameters<MemoryBackendRouter['save']>[0]);
+        });
         spinner.succeed(chalk.green(`Memory created: ${result.id}`));
         context.lastResult = result;
       } else {
