@@ -22,6 +22,13 @@ export class AIRouterError extends Error {
 }
 
 /** Roles the router rejects with 400 system_role_not_permitted (core/message-policy.js). */
+/** `lano_…abcd`: enough to recognise a stored key, never enough to use it. */
+export function maskCredential(token: string): string {
+  const t = token.trim();
+  const prefix = /^[a-z]+_/i.exec(t)?.[0] ?? '';
+  return `${prefix}…${t.slice(-4)}`;
+}
+
 const ROUTER_FORBIDDEN_ROLES = new Set(['system', 'developer']);
 
 /** Client timeout stays under nginx's 60s proxy cap (INTEGRATION-GUIDE §2, 504 row). */
@@ -30,6 +37,12 @@ const DEFAULT_TIMEOUT_MS = 45_000;
 export interface AIRouterClientConfig {
   baseUrl: string;
   authToken?: string;
+  /**
+   * Further credentials, in rank order, tried only when the router answers
+   * 401 to the previous one (e.g. a stale aiRouterApiKey ahead of a fresh
+   * `lrepl login` session). The one that works is kept for later calls.
+   */
+  fallbackAuthTokens?: string[];
   defaultUseCase?: string;
   timeoutMs?: number;
 }
@@ -79,6 +92,8 @@ export interface AIRouterChatResponse {
  */
 export class AIRouterClient {
   private config: AIRouterClientConfig;
+  /** Masked form of a credential the router refused before a fallback worked. */
+  refusedCredentialHint?: string;
 
   constructor(config: AIRouterClientConfig) {
     this.config = config;
@@ -111,36 +126,6 @@ export class AIRouterClient {
       }
     });
 
-    if (this.config.authToken) {
-      const token = this.config.authToken.trim();
-      // Exactly one auth header, chosen by credential type (never both):
-      //   lano_*        -> X-API-Key   (auth-gateway API key)
-      //   lms_* / vx_*  -> refused     (MaaS-scoped; the router cannot use them)
-      //   anything else -> Authorization: Bearer
-      // "Anything else" includes JWTs AND opaque OAuth access tokens: the
-      // auth-gateway issues 64-char base64url tokens with no dots
-      // (generateOpaqueToken) and /v1/auth/resolve introspects them. The
-      // gateway, not this client, decides whether a bearer token is valid.
-      if (token.startsWith('lano_')) {
-        headers['X-API-Key'] = token;
-      } else if (token.startsWith('lms_') || token.startsWith('vx_')) {
-        // MaaS-scoped credentials. api.lanonasis.com accepts these; the router
-        // and auth-gateway do not (verified 2026-09-01: lms_ -> 401 on
-        // /v1/auth/resolve, lano_ -> 200). Sending one produces a 401 that
-        // looks like a router fault rather than a wrong credential.
-        const prefix = token.slice(0, token.indexOf('_') + 1);
-        throw new AIRouterError(
-          `AI Router: '${prefix}' keys are MaaS-scoped and cannot authenticate to the router. ` +
-          `Use a 'lano_' API key or an OAuth access token.`,
-          { status: 0, code: 'credential_not_supported' }
-        );
-      } else if (token.toLowerCase().startsWith('bearer ')) {
-        headers['Authorization'] = token;
-      } else if (token.length > 0) {
-        headers['Authorization'] = `Bearer ${token}`;
-      }
-    }
-
     if (request.use_case) {
       headers['X-Use-Case'] = request.use_case;
     }
@@ -170,34 +155,39 @@ export class AIRouterClient {
       body.use_case = request.use_case;
     }
 
-    const timeoutMs = this.config.timeoutMs ?? DEFAULT_TIMEOUT_MS;
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), timeoutMs);
-    let response: Response;
-    try {
-      response = await fetch(url, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify(body),
-        signal: controller.signal,
-      });
-    } catch (err) {
-      const aborted = (err as { name?: string })?.name === 'AbortError';
-      throw new AIRouterError(
-        aborted
-          ? `AI Router did not answer within ${Math.round(timeoutMs / 1000)}s`
-          : `AI Router unreachable: ${(err as Error)?.message ?? String(err)}`,
-        { status: 0, code: aborted ? 'TIMEOUT' : 'NETWORK_ERROR' }
-      );
-    } finally {
-      clearTimeout(timer);
+    const credentials = [this.config.authToken, ...(this.config.fallbackAuthTokens ?? [])]
+      .map((t) => t?.trim() ?? '')
+      .filter((t, i, all) => t.length > 0 && all.indexOf(t) === i);
+    if (credentials.length === 0) credentials.push('');
+
+    let response: Response | undefined;
+    for (let i = 0; i < credentials.length; i += 1) {
+      const attemptHeaders = { ...headers };
+      try {
+        if (credentials[i]) AIRouterClient.applyAuth(attemptHeaders, credentials[i]);
+      } catch (error) {
+        // An unusable credential (lms_/vx_) is skipped when another remains.
+        if (i < credentials.length - 1) continue;
+        throw error;
+      }
+      response = await this.send(url, attemptHeaders, body);
+      if (response.status === 401 && i < credentials.length - 1) {
+        this.refusedCredentialHint ??= maskCredential(credentials[i]);
+        continue;
+      }
+      if (response.ok && i > 0) {
+        // Keep the credential that worked; later calls go straight to it.
+        this.config.authToken = credentials[i];
+        this.config.fallbackAuthTokens = credentials.slice(i + 1);
+      }
+      break;
     }
 
-    if (!response.ok) {
-      throw await AIRouterClient.errorFromResponse(response);
+    if (!response!.ok) {
+      throw await AIRouterClient.errorFromResponse(response!);
     }
 
-    const data = await response.json();
+    const data = await response!.json();
 
     // The router contract is `data.response` (see the service's
     // INTEGRATION-GUIDE §2). There is deliberately no `data.message.content`
@@ -231,6 +221,61 @@ export class AIRouterClient {
     };
 
     return mapped;
+  }
+
+  /** Exactly one auth header for one credential, or a local refusal. */
+  private static applyAuth(headers: Record<string, string>, rawToken: string): void {
+    const token = rawToken.trim();
+    // Exactly one auth header, chosen by credential type (never both):
+    //   lano_*        -> X-API-Key   (auth-gateway API key)
+    //   lms_* / vx_*  -> refused     (MaaS-scoped; the router cannot use them)
+    //   anything else -> Authorization: Bearer
+    // "Anything else" includes JWTs AND opaque OAuth access tokens: the
+    // auth-gateway issues 64-char base64url tokens with no dots
+    // (generateOpaqueToken) and /v1/auth/resolve introspects them. The
+    // gateway, not this client, decides whether a bearer token is valid.
+    if (token.startsWith('lano_')) {
+      headers['X-API-Key'] = token;
+    } else if (token.startsWith('lms_') || token.startsWith('vx_')) {
+      // MaaS-scoped credentials. api.lanonasis.com accepts these; the router
+      // and auth-gateway do not (verified 2026-09-01: lms_ -> 401 on
+      // /v1/auth/resolve, lano_ -> 200). Sending one produces a 401 that
+      // looks like a router fault rather than a wrong credential.
+      const prefix = token.slice(0, token.indexOf('_') + 1);
+      throw new AIRouterError(
+        `AI Router: '${prefix}' keys are MaaS-scoped and cannot authenticate to the router. ` +
+        `Use a 'lano_' API key or an OAuth access token.`,
+        { status: 0, code: 'credential_not_supported' }
+      );
+    } else if (token.toLowerCase().startsWith('bearer ')) {
+      headers['Authorization'] = token;
+    } else if (token.length > 0) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+  }
+
+  private async send(url: string, headers: Record<string, string>, body: unknown): Promise<Response> {
+    const timeoutMs = this.config.timeoutMs ?? DEFAULT_TIMEOUT_MS;
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      return await fetch(url, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(body),
+        signal: controller.signal,
+      });
+    } catch (err) {
+      const aborted = (err as { name?: string })?.name === 'AbortError';
+      throw new AIRouterError(
+        aborted
+          ? `AI Router did not answer within ${Math.round(timeoutMs / 1000)}s`
+          : `AI Router unreachable: ${(err as Error)?.message ?? String(err)}`,
+        { status: 0, code: aborted ? 'TIMEOUT' : 'NETWORK_ERROR' }
+      );
+    } finally {
+      clearTimeout(timer);
+    }
   }
 
   /**

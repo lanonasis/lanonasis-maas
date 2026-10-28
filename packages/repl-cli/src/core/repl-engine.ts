@@ -10,7 +10,7 @@ import { EventCommands } from '../commands/event-commands.js';
 import { NaturalLanguageOrchestrator } from './orchestrator.js';
 import { pauseReadline, resumeReadline } from '../utils/spinner-utils.js';
 import { AIEndpointHealthCheck, quickHealthCheck } from './health-check.js';
-import { saveConfig } from '../config/loader.js';
+import { routerCredentials, saveConfig } from '../config/loader.js';
 import { loadCredentials } from '../auth/credentials.js';
 import {
   appendHistory,
@@ -461,8 +461,8 @@ export class ReplEngine {
   private async runHealthCheck() {
     const results = await quickHealthCheck({
       aiRouterUrl: this.config.aiRouterUrl,
-      // Same credential priority the REPL uses for chat.
-      aiRouterAuthToken: this.config.aiRouterApiKey || this.config.aiRouterAuthToken || this.config.authToken,
+      // Same ranked credentials the REPL uses for chat.
+      aiRouterAuthTokens: routerCredentials(this.config),
       openaiApiKey: this.config.openaiApiKey,
       apiUrl: this.config.apiUrl
     });
