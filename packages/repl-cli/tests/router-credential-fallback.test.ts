@@ -81,7 +81,6 @@ describe('routerCredentials', () => {
   });
 });
 
-
 describe('router use case resolution', () => {
   function stubCapturing() {
     const seen: Array<{ headers: Record<string, string>; body: any }> = [];

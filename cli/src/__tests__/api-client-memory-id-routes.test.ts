@@ -8,14 +8,16 @@ import { describe, it, expect, jest, beforeEach } from '@jest/globals';
 // the write functions, so the direct-API transport must use those.
 
 const requestHandlers: Array<(config: any) => any> = [];
+const responseErrorHandlers: Array<(error: any) => any> = [];
 const mockAxiosInstance = {
   interceptors: {
     request: { use: jest.fn((fulfilled) => { requestHandlers.push(fulfilled as any); }) },
-    response: { use: jest.fn() },
+    response: { use: jest.fn((_fulfilled, rejected) => { responseErrorHandlers.push(rejected as any); }) },
   },
   defaults: {},
   get: jest.fn(),
   post: jest.fn(),
+  request: jest.fn(async (config: any) => config),
 };
 jest.unstable_mockModule('axios', () => ({
   default: { create: jest.fn(() => mockAxiosInstance) },
@@ -27,6 +29,7 @@ const ID = '49f43d34-5a4a-48a5-a97c-83aee9528a61';
 
 function directApiClient(forceApi: boolean) {
   requestHandlers.length = 0;
+  responseErrorHandlers.length = 0;
   const client = new APIClient();
   const config = (client as any).config;
   config.init = jest.fn(async () => undefined);
@@ -40,6 +43,7 @@ function directApiClient(forceApi: boolean) {
   config.getApiUrl = jest.fn(() => 'https://api.example.com');
   config.getToken = jest.fn(() => 'jwt-token');
   config.getVendorKeyAsync = jest.fn(async () => undefined);
+  config.hasVendorKey = jest.fn(() => true);
   return requestHandlers[0];
 }
 
@@ -53,6 +57,32 @@ describe('memory id routes on the direct API transport', () => {
     expect(out.method).toBe('post');
     expect(out.url).toBe('/api/v1/memory/update');
     expect(out.data).toEqual({ id: ID, content: 'new' });
+  });
+
+  it('keeps a serialized update payload when rewriting the route', async () => {
+    const handler = directApiClient(true);
+    const out = await handler({
+      headers: {},
+      url: `/api/v1/memories/${ID}`,
+      method: 'patch',
+      data: JSON.stringify({ content: 'serialized' }),
+    });
+    expect(out.data).toEqual({ id: ID, content: 'serialized' });
+  });
+
+  it('restores the original write route before the Supabase fallback', async () => {
+    const handler = directApiClient(true);
+    const written = await handler({ headers: {}, url: `/api/v1/memories/${ID}`, method: 'put', data: { content: 'new' } });
+    expect(written.__originalMemoryWriteMethod).toBe('put');
+
+    const retried = await responseErrorHandlers[0]({
+      response: { status: 401, data: { message: 'Authentication required' } },
+      config: written,
+    });
+
+    expect(retried.url).toBe(`/api/v1/memories/${ID}`);
+    expect(retried.method).toBe('put');
+    expect(retried.__useSupabaseMemoryFunctions).toBe(true);
   });
 
   it('sends delete to /api/v1/memory/delete?id=', async () => {

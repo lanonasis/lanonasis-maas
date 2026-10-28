@@ -3,6 +3,12 @@ import chalk from 'chalk';
 import { randomUUID } from 'crypto';
 import { CLIConfig } from './config.js';
 
+/** Metadata kept when a memory write is rewritten to an action route. */
+type MemoryWriteRouteMetadata = {
+  __originalMemoryWriteUrl?: string;
+  __originalMemoryWriteMethod?: string;
+};
+
 // Type definitions for API responses and requests
 export interface AuthResponse {
   user: {
@@ -355,7 +361,7 @@ export class APIClient {
     const status = Number(error?.response?.status || 0);
     if (status !== 401 && status !== 404) return false;
 
-    const cfg = (error?.config || {}) as AxiosRequestConfig & {
+    const cfg = (error?.config || {}) as AxiosRequestConfig & MemoryWriteRouteMetadata & {
       __retriedViaSupabaseMemoryFunctions?: boolean;
       __useSupabaseMemoryFunctions?: boolean;
     };
@@ -364,7 +370,9 @@ export class APIClient {
     const baseURL = String(cfg.baseURL || '');
     if (baseURL.includes('supabase.co')) return false;
 
-    const requestUrl = String(cfg.url || '');
+    // Writes are rewritten to /api/v1/memory/{update,delete} before they are
+    // sent, so judge fallback eligibility against the original memories route.
+    const requestUrl = String(cfg.__originalMemoryWriteUrl || cfg.url || '');
     const normalizedRequestUrl = requestUrl.startsWith('/memory')
       ? this.normalizeMcpPathToApi(requestUrl)
       : requestUrl;
@@ -554,10 +562,7 @@ export class APIClient {
       if (method === 'put' || method === 'patch') {
         mapped.method = 'post';
         mapped.url = '/functions/v1/memory-update';
-        const body = (config.data && typeof config.data === 'object')
-          ? (config.data as Record<string, unknown>)
-          : {};
-        mapped.data = { id, ...body };
+        mapped.data = { id, ...this.asRequestDataObject(config.data) };
         return mapped;
       }
       if (method === 'delete') {
@@ -570,6 +575,24 @@ export class APIClient {
     return mapped;
   }
 
+  /**
+   * Normalise update data to a plain object. Callers may pass an already
+   * serialized JSON body, which must be parsed rather than replaced with {}.
+   */
+  private asRequestDataObject(data: unknown): Record<string, unknown> {
+    let value = data;
+    if (typeof value === 'string') {
+      try {
+        value = JSON.parse(value);
+      } catch {
+        return {};
+      }
+    }
+    return value && typeof value === 'object' && !Array.isArray(value)
+      ? (value as Record<string, unknown>)
+      : {};
+  }
+
   /** PUT/PATCH/DELETE /api/v1/memories/{id} -> the update/delete action routes nginx maps to the write functions. */
   private mapMemoryIdWriteToActionRoute(config: AxiosRequestConfig): void {
     const idMatch = (config.url || '').match(/^\/api\/v1\/memories\/([^/?#]+)$/);
@@ -577,14 +600,19 @@ export class APIClient {
     const id = decodeURIComponent(idMatch[1] || '');
     if (['search', 'stats', 'list', 'update', 'delete', 'get', 'health'].includes(id)) return;
     const method = (config.method || 'get').toLowerCase();
+    const originalUrl = config.url;
     if (method === 'put' || method === 'patch') {
-      const body = (config.data && typeof config.data === 'object') ? (config.data as Record<string, unknown>) : {};
+      const body = this.asRequestDataObject(config.data);
       config.method = 'post';
       config.url = '/api/v1/memory/update';
       config.data = { id, ...body };
+      (config as AxiosRequestConfig & MemoryWriteRouteMetadata).__originalMemoryWriteUrl = originalUrl;
+      (config as AxiosRequestConfig & MemoryWriteRouteMetadata).__originalMemoryWriteMethod = method;
     } else if (method === 'delete') {
       config.url = '/api/v1/memory/delete';
       config.params = { ...(config.params || {}), id };
+      (config as AxiosRequestConfig & MemoryWriteRouteMetadata).__originalMemoryWriteUrl = originalUrl;
+      (config as AxiosRequestConfig & MemoryWriteRouteMetadata).__originalMemoryWriteMethod = method;
     }
   }
 
@@ -766,10 +794,21 @@ export class APIClient {
             ...error.config,
             __retriedViaSupabaseMemoryFunctions: true,
             __useSupabaseMemoryFunctions: true
-          } as AxiosRequestConfig & {
+          } as AxiosRequestConfig & MemoryWriteRouteMetadata & {
             __retriedViaSupabaseMemoryFunctions?: boolean;
             __useSupabaseMemoryFunctions?: boolean;
           };
+
+          // Restore the memories route so the fallback mapper produces the
+          // update/delete function with the original method and memory id.
+          if (retryConfig.__originalMemoryWriteUrl) {
+            retryConfig.url = retryConfig.__originalMemoryWriteUrl;
+            if (retryConfig.__originalMemoryWriteMethod) {
+              retryConfig.method = retryConfig.__originalMemoryWriteMethod;
+            }
+            delete retryConfig.__originalMemoryWriteUrl;
+            delete retryConfig.__originalMemoryWriteMethod;
+          }
 
           return this.client.request(retryConfig);
         }
