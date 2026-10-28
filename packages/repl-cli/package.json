@@ -52,7 +52,7 @@
     "start": "node dist/index.js",
     "test": "[ -d node_modules/chalk ] || bun install --no-save; vitest run && bun run test:smoke",
     "test:unit": "[ -d node_modules/chalk ] || bun install --no-save; vitest run",
-    "test:live": "vitest run tests/live",
+    "test:live": "RUN_LIVE_SERVICE_TESTS=1 vitest run tests/live",
     "test:smoke": "bunx tsx tests/smoke/events.mjs && bunx tsx tests/smoke/persona.mjs",
     "type-check": "tsc --noEmit",
     "prepublishOnly": "npm run build"

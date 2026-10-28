@@ -16,9 +16,11 @@ api.lanonasis.com, and lands the router credential-ranking fix already on main.
 
 ### Added
 - **Gated live MaaS behaviour suite** (`tests/live/maas-service.test.ts`).
-  Exercises the real `createMemoryClient` and `MaaSClientAdapter` against
-  api.lanonasis.com. Run it with `npm run test:live`; the README documents
-  the credentials and environment it needs.
+  Exercises the real `createMemoryClient` (X-API-Key auth) and
+  `MaaSClientAdapter` against api.lanonasis.com. Run it with
+  `npm run test:live`; it requires both `LANO_TEST_API_KEY` and
+  `RUN_LIVE_SERVICE_TESTS=1` (the script sets the latter) so an exported key
+  cannot make the offline suite hit production.
 
 ### Fixed
 - **A stale credential can no longer shadow a fresh login.** Router credential

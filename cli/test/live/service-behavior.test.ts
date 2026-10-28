@@ -11,7 +11,9 @@
  *   - cross-route consistency (write on MCP, read on REST, and vice versa)
  *   - JSON-RPC error behaviour
  *
- * Gated on LANO_TEST_API_KEY so normal CI stays offline/deterministic:
+ * Double-gated so a developer or CI box that happens to export
+ * LANO_TEST_API_KEY cannot make the normal offline suite hit production:
+ * both LANO_TEST_API_KEY and RUN_LIVE_SERVICE_TESTS=1 are required.
  *
  *   LANO_TEST_API_KEY=lano_... npm run test:live
  *
@@ -23,8 +25,9 @@
 const REST_BASE = process.env.LANO_TEST_REST_BASE ?? 'https://api.lanonasis.com';
 const MCP_URL = process.env.LANO_TEST_MCP_URL ?? 'https://mcp.lanonasis.com/mcp';
 const API_KEY = process.env.LANO_TEST_API_KEY;
+const RUN_LIVE = process.env.RUN_LIVE_SERVICE_TESTS === '1';
 
-const describeLive = API_KEY ? describe : describe.skip;
+const describeLive = API_KEY && RUN_LIVE ? describe : describe.skip;
 
 type Json = any;
 
@@ -77,6 +80,11 @@ async function callTool(name: string, args: Json = {}, key: Key = API_KEY) {
     .map((c: Json) => c.text)
     .filter((t: unknown) => typeof t === 'string')
     .join('\n');
+  // Some tools report failure with result.isError instead of a JSON-RPC error.
+  // Treat that as a failure so a test cannot "pass" on an error payload.
+  if (res.body?.result?.isError) {
+    throw new Error(`Tool ${name} returned isError: ${text.slice(0, 300)}`);
+  }
   let data: Json;
   try {
     data = JSON.parse(text);
@@ -285,7 +293,7 @@ describeLive('REST api.lanonasis.com', () => {
     expect(JSON.stringify(read.data)).not.toContain('indigo walrus');
   }, 60_000);
 
-  test('[known-gap] POST /api/v1/memory/update is the working update route and persists', async () => {
+  test('POST /api/v1/memory/update is the working update route and persists', async () => {
     // Baseline: proves the defect above is specific to /memories/:id, not to updates in general.
     const created = await rest('POST', '/api/v1/memories', {
       title: `${tag} rpc-update-before`,
@@ -796,6 +804,8 @@ describeLive('cross-route consistency (REST ↔ MCP)', () => {
       tags: ['live-behaviour'],
     });
     const id = idOf(created.data);
+    // Register before the delete so afterAll can clean up if this test fails.
+    createdMemoryIds.push(id!);
 
     await callTool('delete_memory', { id });
 

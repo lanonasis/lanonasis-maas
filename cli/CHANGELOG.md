@@ -7,7 +7,7 @@
 - **List output shows full IDs.** `memory list` and `memory list-sessions` now print the complete memory ID, and `api-keys list` / `api-keys projects list` print the complete key and project IDs, so an ID can be copied straight out of the table.
 - **`api-keys` commands accept unique ID prefixes.** `api-keys get`, `api-keys update`, and `api-keys delete` now take a unique 8+ character ID prefix, resolved locally, with distinct too-short, ambiguous, and not-found errors. Memory prefix resolution already existed; it is now discoverable from the table because the displayed ID is no longer truncated.
 - **Shared ID resolver.** Added `src/utils/id-resolution.ts` as the single prefix-matching implementation behind memory and API-key resolution, covered by 11 new unit tests.
-- **Gated live behaviour suites.** New suites exercise REST (`api.lanonasis.com`) and MCP (`mcp.lanonasis.com/mcp`) through `npm run test:live`, with `LANO_TEST_API_KEY`, `LANO_TEST_REST_BASE`, and `LANO_TEST_MCP_URL` documented for operators.
+- **Gated live behaviour suites.** New suites exercise REST (`api.lanonasis.com`) and MCP (`mcp.lanonasis.com/mcp`) through `npm run test:live`. They run only when both `LANO_TEST_API_KEY` and `RUN_LIVE_SERVICE_TESTS=1` are set (the script sets the latter), so an exported key cannot make the offline suite hit production. `LANO_TEST_REST_BASE` and `LANO_TEST_MCP_URL` are documented for operators.
 
 ### 🐛 Fixed
 

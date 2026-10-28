@@ -6,7 +6,8 @@
  * deployed REST service. They answer the question the mocked suites cannot:
  * "does the REPL's remote memory path actually work against api.lanonasis.com?"
  *
- * Gated on LANO_TEST_API_KEY:
+ * Double-gated so exporting LANO_TEST_API_KEY cannot make the normal offline
+ * suite hit production; both the key and RUN_LIVE_SERVICE_TESTS=1 are required:
  *
  *   LANO_TEST_API_KEY=lano_... npm run test:live
  *
@@ -19,17 +20,21 @@ import { createMemoryClient } from '@lanonasis/memory-client';
 import { MaaSClientAdapter } from '../../src/local-memory/maas-adapter';
 
 const API_KEY = process.env.LANO_TEST_API_KEY;
+const RUN_LIVE = process.env.RUN_LIVE_SERVICE_TESTS === '1';
 const REST_BASE = process.env.LANO_TEST_REST_BASE ?? 'https://api.lanonasis.com';
 const TAG = `[repl-live ${new Date().toISOString()}]`;
 
-const describeLive = API_KEY ? describe : describe.skip;
+const describeLive = API_KEY && RUN_LIVE ? describe : describe.skip;
 
 const createdIds: string[] = [];
 
 function makeClient() {
   return createMemoryClient({
     apiUrl: REST_BASE,
-    authToken: API_KEY as string,
+    // Vendor keys use the X-API-Key scheme. `authToken` would send
+    // `Authorization: Bearer`, which works today but is not the documented
+    // contract for a lano_ key.
+    apiKey: API_KEY as string,
     timeout: 20_000,
   });
 }

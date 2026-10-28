@@ -396,6 +396,9 @@ export LANO_TEST_API_KEY=lano_...
 npm run test:live
 ```
 
+`test:live` also sets `RUN_LIVE_SERVICE_TESTS=1`; both that flag and the key are
+required, so exporting the key alone cannot make `npm test` hit production.
+
 `tests/live/maas-service.test.ts` covers `createMemoryClient` list/create/get/
 delete round-trips, `MaaSClientAdapter` save/search/health mapping, and a control
 that proves the key itself works over plain `fetch`. Tests prefixed

@@ -105,6 +105,10 @@ export LANO_TEST_API_KEY=lano_...
 npm run test:live
 ```
 
+The `test:live` script also sets `RUN_LIVE_SERVICE_TESTS=1`. Both that flag and
+the key are required, so exporting the key alone cannot make the normal
+offline `npm test` run hit production.
+
 Covered surfaces:
 
 | Suite | File | Endpoint |
