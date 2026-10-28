@@ -74,6 +74,12 @@ function contentHash(content: string, title: string): string {
   return createHash('sha256').update(`${title}::${content}`).digest('hex').slice(0, 16);
 }
 
+/** Cap a result set to the requested limit (no limit → unchanged). */
+function applyLimit<T>(items: T[], limit: number | undefined): T[] {
+  if (typeof limit !== 'number' || !Number.isFinite(limit) || limit < 0) return items;
+  return items.length > limit ? items.slice(0, limit) : items;
+}
+
 export class MemoryBackendRouter implements MemoryBackend {
   private readonly local: MemoryBackend;
   private readonly remote: MemoryBackend | null;
@@ -155,8 +161,9 @@ export class MemoryBackendRouter implements MemoryBackend {
 
     if (!this.remote || !remoteHealthy || !withinGrace) {
       this.debugLog('skip remote', { remoteHealthy, consecutiveProbeFailures: this.consecutiveProbeFailures });
-      this.cache.set(key, { expiresAt: Date.now() + this.options.cacheTtlMs, hits: 0, value: localHits });
-      return localHits;
+      const localOnly = applyLimit(localHits, opts.limit);
+      this.cache.set(key, { expiresAt: Date.now() + this.options.cacheTtlMs, hits: 0, value: localOnly });
+      return localOnly;
     }
 
     let remoteHits: MemoryHit[] = [];
@@ -170,8 +177,12 @@ export class MemoryBackendRouter implements MemoryBackend {
     }
 
     const merged = mergeHits(localHits, remoteHits, this.options.preferRemote);
-    this.cache.set(key, { expiresAt: Date.now() + this.options.cacheTtlMs, hits: 0, value: merged });
-    return merged;
+    // Apply the requested limit ONCE to the combined result set. Both
+    // backends were queried with the same limit, so the merged list can be
+    // up to twice as long as the caller asked for.
+    const limited = applyLimit(merged, opts.limit);
+    this.cache.set(key, { expiresAt: Date.now() + this.options.cacheTtlMs, hits: 0, value: limited });
+    return limited;
   }
 
   async get(id: string): Promise<MemoryRecord | null> {
@@ -180,11 +191,21 @@ export class MemoryBackendRouter implements MemoryBackend {
     if (!this.remote) return null;
     try {
       const remote = await withTimeout(this.remote.get(id), this.options.remoteTimeoutMs);
-      // Best-effort backfill into local so future reads are fast.
+      // Best-effort backfill into local so future reads are fast. The record
+      // already exists on MaaS, so it must be imported through the
+      // non-syncing path: local.save() would enqueue a 'save' op and the
+      // sync runner would create a DUPLICATE memory on MaaS.
       if (remote) {
-        // Use 'maas-sync' source — it represents a remote-pulled record.
+        // SAFETY: `importSyncedRecord` is an optional extension of the
+        // MemoryBackend contract implemented by LocalMemoryBackend. The
+        // optional call keeps the router working with backends that do not
+        // provide it (no local cache, but no duplicate MaaS create either).
+        const importer = this.local as unknown as {
+          importSyncedRecord?(record: MemoryRecord): Promise<MemoryRecord | null> | void;
+        };
         try {
-          await this.local.save({ ...remote, source: 'maas-sync' });
+          // Use 'maas-sync' source — it represents a remote-pulled record.
+          await importer.importSyncedRecord?.({ ...remote, source: 'maas-sync' });
         } catch { /* best effort */ }
       }
       return remote;
@@ -202,8 +223,14 @@ export class MemoryBackendRouter implements MemoryBackend {
     } catch {
       return local;
     }
-    // Merge by id; local wins.
-    const seen = new Set(local.map((r) => r.id));
+    // Merge by id; local wins. A synced local record is stored under its own
+    // UUID while MaaS knows it by `maas_id` — treat the maas_id as an alias
+    // of the local id so the same memory is not listed twice.
+    const seen = new Set<string>();
+    for (const r of local) {
+      seen.add(r.id);
+      if (r.maas_id) seen.add(r.maas_id);
+    }
     return [...local, ...remote.filter((r) => !seen.has(r.id))];
   }
 
@@ -323,33 +350,44 @@ export class MemoryBackendRouter implements MemoryBackend {
         // sync_queue carries stale content. Merge the redacted fields into
         // that save payload first — if merge succeeds the update row is
         // not enqueued. This prevents the sync runner from draining the
-    const localResult = await this.local.update(id, updates).catch((err) => {
-      this.debugLog('local.update failed', err);
-      return null;
-    });
-    this.invalidateCache();
-
-    // Best-effort: also push to remote so MaaS stays in sync. Use the
-    // MaaS-assigned id when present (delete() maps the same way), and send
-    // the redacted values from localResult (local.update() runs the
-    // redaction pipeline) so a secret never reaches MaaS via update().
-    if (this.remote) {
-      try {
-        const remoteResult = await withTimeout(
-          this.remote.update(localResult?.maas_id ?? id, {
-            title: updates.title === undefined ? undefined : (localResult?.title ?? redactSecrets(updates.title).text),
-            content: updates.content === undefined ? undefined : (localResult?.content ?? redactSecrets(updates.content).text),
-            memory_type: updates.memory_type,
-            status: updates.status,
-            tags: updates.tags === undefined ? undefined : (localResult?.tags ?? updates.tags.map((t) => redactSecrets(t).text)),
-            metadata: updates.metadata === undefined ? undefined : (localResult?.metadata ?? updates.metadata),
-          }),
-          this.options.remoteTimeoutMs,
-        );
-        if (!localResult) return remoteResult;
-      } catch {
-        this.debugLog('remote.update failed', id);
+        // stale save first and leaving MaaS with outdated content.
+        const q = this.local as unknown as {
+          mergeIntoQueuedSave?(id: string, fields: Partial<MemoryRecord>): boolean;
+          enqueueUpdate?(id: string, updates: Partial<MemoryRecord>): void;
+        };
+        try {
+          // Merge the record's CURRENT local values — not the payload that
+          // was captured for the remote call. A failed remote attempt must
+          // not overwrite fields that were updated locally afterwards.
+          const localFields: Partial<MemoryRecord> = localResult
+            ? {
+                title: localResult.title,
+                content: localResult.content,
+                memory_type: localResult.memory_type,
+                status: localResult.status,
+                tags: localResult.tags,
+                metadata: localResult.metadata,
+              }
+            : {};
+          const merged = !localResult?.maas_id && localResult
+            ? q.mergeIntoQueuedSave?.(id, localFields) === true
+            : false;
+          if (!merged) q.enqueueUpdate?.(remoteId, remotePayload);
+        } catch { /* best effort */ }
       }
+    }
+
+    // When no local record exists, return the remote result (or null if the
+    // remote also had nothing to return).
+    if (!localResult) {
+      if (this.remote) {
+        try {
+          return await withTimeout(this.remote.get(remoteId ?? id), this.options.remoteTimeoutMs);
+        } catch {
+          return null;
+        }
+      }
+      return null;
     }
 
     return localResult;

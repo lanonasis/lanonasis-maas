@@ -214,12 +214,22 @@ export class MaaSClientAdapter implements MemoryBackend {
           tags: updates.tags,
           metadata: updates.metadata,
         });
-      if (res.error && !/not found|404/i.test(res.error)) {
-        throw new MemoryBackendError(res.error, 'transport');
+      if (res.error) {
+        // A 404 means MaaS does not know this record. It must NOT be
+        // swallowed: the router treats a rejected update as a failed sync
+        // and enqueues it for retry. Suppressing it here made the update
+        // look applied while MaaS never received it.
+        throw new MemoryBackendError(
+          res.error,
+          /not found|404/i.test(res.error) ? 'not_found' : 'transport',
+        );
       }
       if (!res.data) {
         // update returned no data — fall back to getMemory.
         const fetched = await this.get(id);
+        if (!fetched) {
+          throw new MemoryBackendError(`Memory not found: ${id}`, 'not_found');
+        }
         return fetched;
       }
       // Return the partial record.

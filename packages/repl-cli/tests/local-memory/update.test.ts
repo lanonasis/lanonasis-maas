@@ -222,15 +222,16 @@ describe('MaaSClientAdapter.update', () => {
     expect(fallbackCreate).not.toHaveBeenCalled();
   });
 
-  it('returns null when both updateMemory and getMemory fail with 404', async () => {
+  it('rejects when the record is not found on MaaS (404)', async () => {
     const client = createClient();
     (client.getMemory as ReturnType<typeof vi.fn>).mockResolvedValue({ error: 'not found' });
     (client.updateMemory as ReturnType<typeof vi.fn>).mockResolvedValue({ error: 'not found' });
 
     const adapter = new MaaSClientAdapter(client);
-    const result = await adapter.update('gone', { title: 'x' });
-
-    expect(result).toBeNull();
+    // A 404 must reject (not return null) so the router can enqueue the
+    // failed update instead of treating it as applied.
+    await expect(adapter.update('gone', { title: 'x' }))
+      .rejects.toBeInstanceOf(MemoryBackendError);
   });
 });
 
