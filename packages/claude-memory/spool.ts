@@ -7,6 +7,8 @@ export type SpoolMemory = {
   type: string;
   tags?: string[];
   metadata?: Record<string, unknown>;
+  /** Preserved so a replay cannot create a duplicate of an already-written memory. */
+  idempotency_key?: string;
 };
 
 export type SpoolEntry = {
@@ -32,6 +34,14 @@ export class SpoolQueue {
     };
     const filename = `${sessionId}.json`;
     await fs.writeFile(join(this.dir, filename), JSON.stringify(entry, null, 2), "utf-8");
+  }
+
+  async remove(sessionId: string): Promise<void> {
+    try {
+      await fs.unlink(join(this.dir, `${sessionId}.json`));
+    } catch (err) {
+      if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
+    }
   }
 
   async list(): Promise<SpoolEntry[]> {

@@ -49,21 +49,57 @@ function readSettings(settingsPath: string): ClaudeSettings {
   return {};
 }
 
-/** Replace any existing claude-memory entry for an event, preserve others. */
-function withoutClaudeMemory(existing: HookMatcher[] | undefined): HookMatcher[] {
+/**
+ * True when a command is this package's wrapper for `script` under either the
+ * configured hooks directory or the legacy default location.
+ */
+function isClaudeMemoryCommand(
+  command: string | undefined,
+  script: string,
+  hookDirs: string[],
+): boolean {
+  if (!command) return false;
+  const commandPath = command.trim().replace(/^["']|["']$/g, "");
+  return hookDirs.some((dir) => resolve(dir, script) === resolve(commandPath));
+}
+
+/**
+ * Remove only this package's command for `script`, preserving unrelated
+ * handlers in the same matcher and other commands in the same directory.
+ */
+function withoutClaudeMemory(
+  existing: HookMatcher[] | undefined,
+  script: string,
+  hookDirs: string[],
+): HookMatcher[] {
   if (!existing || !Array.isArray(existing)) return [];
-  return existing.filter(
-    (m) => !m.hooks?.some((h) => h.command?.includes("lanonasis/hooks/")),
-  );
+  const kept: HookMatcher[] = [];
+  for (const matcher of existing) {
+    if (!Array.isArray(matcher.hooks)) {
+      kept.push(matcher);
+      continue;
+    }
+    const hooks = matcher.hooks.filter(
+      (hook) => !isClaudeMemoryCommand(hook.command, script, hookDirs),
+    );
+    if (hooks.length === matcher.hooks.length) {
+      kept.push(matcher);
+    } else if (hooks.length > 0) {
+      kept.push({ ...matcher, hooks });
+    }
+  }
+  return kept;
 }
 
 function mergeHookEntry(
   existing: HookMatcher[] | undefined,
   command: string,
   timeout: number,
+  script: string,
+  hookDirs: string[],
 ): HookMatcher[] {
   const entry: HookMatcher = { hooks: [{ type: "command", command, timeout }] };
-  return [...withoutClaudeMemory(existing), entry];
+  return [...withoutClaudeMemory(existing, script, hookDirs), entry];
 }
 
 function writeShell(scriptPath: string, content: string): void {
@@ -112,14 +148,18 @@ export function installHooks(opts: InstallOptions): void {
       ? { ...(settings.hooks as Record<string, HookMatcher[]>) }
       : {};
 
+  // Match both the configured hooks dir and the legacy default so an install
+  // that moved the directory still replaces its old entries.
+  const hookDirs = [opts.hooksDir, join(homedir(), ".lanonasis", "hooks")];
+
   // Timeouts match hooks/hooks.json. Recall runs before every prompt, so it is the tightest.
-  hooks.Stop = mergeHookEntry(hooks.Stop, join(opts.hooksDir, "stop.sh"), 10);
-  hooks.SubagentStop = mergeHookEntry(hooks.SubagentStop, join(opts.hooksDir, "subagent-stop.sh"), 10);
-  hooks.PreCompact = mergeHookEntry(hooks.PreCompact, join(opts.hooksDir, "precompact.sh"), 15);
+  hooks.Stop = mergeHookEntry(hooks.Stop, join(opts.hooksDir, "stop.sh"), 10, "stop.sh", hookDirs);
+  hooks.SubagentStop = mergeHookEntry(hooks.SubagentStop, join(opts.hooksDir, "subagent-stop.sh"), 10, "subagent-stop.sh", hookDirs);
+  hooks.PreCompact = mergeHookEntry(hooks.PreCompact, join(opts.hooksDir, "precompact.sh"), 15, "precompact.sh", hookDirs);
   // Recall searches with the user's prompt, so it belongs on UserPromptSubmit.
   // Older installs registered it on PreToolUse; drop that copy.
-  hooks.UserPromptSubmit = mergeHookEntry(hooks.UserPromptSubmit, join(opts.hooksDir, "recall.sh"), 5);
-  const preToolUse = withoutClaudeMemory(hooks.PreToolUse);
+  hooks.UserPromptSubmit = mergeHookEntry(hooks.UserPromptSubmit, join(opts.hooksDir, "recall.sh"), 5, "recall.sh", hookDirs);
+  const preToolUse = withoutClaudeMemory(hooks.PreToolUse, "recall.sh", hookDirs);
   if (preToolUse.length > 0) hooks.PreToolUse = preToolUse;
   else delete hooks.PreToolUse;
 

@@ -17,7 +17,7 @@ export type PreCompactOptions = {
 };
 
 type PreCompactClient = Pick<LanonasisClient, "createMemory">;
-type PreCompactSpool = Pick<SpoolQueue, "write">;
+type PreCompactSpool = Pick<SpoolQueue, "write" | "remove">;
 type TranscriptMessage = {
   role: string;
   content: string | Array<{ type: string; text?: string }>;
@@ -170,13 +170,33 @@ export async function handlePreCompact(
 
     const memories = buildMemories(input, resolvedOptions);
 
+    // Spool before the network: a hook deadline can kill the process while
+    // createMemory retries. Successful writes are removed from the spool below.
+    try {
+      await resolvedSpool.write(input.session_id, memories);
+    } catch (spoolErr) {
+      process.stderr.write(`[claude-memory] spool write error: ${spoolErr}\n`);
+    }
+
+    const failed: LanCreateParams[] = [];
     for (const memory of memories) {
       try {
         await resolvedClient.createMemory(memory);
       } catch {
-        await resolvedSpool.write(input.session_id, memories);
-        break;
+        failed.push(memory);
       }
+    }
+
+    try {
+      if (failed.length === 0) {
+        await resolvedSpool.remove(input.session_id);
+      } else {
+        // Keep only captures that still need a write, so a later drain cannot
+        // replay ones that already succeeded in this run.
+        await resolvedSpool.write(input.session_id, failed);
+      }
+    } catch (spoolErr) {
+      process.stderr.write(`[claude-memory] spool update error: ${spoolErr}\n`);
     }
   } catch (err) {
     process.stderr.write(`[claude-memory] precompact hook error: ${err}\n`);

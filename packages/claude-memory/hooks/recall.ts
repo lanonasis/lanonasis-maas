@@ -1,6 +1,6 @@
 import { LanonasisClient } from "../client.js";
 import type { PreToolInput, HookResult } from "../index.js";
-import { looksLikePromptInjection, formatRecalledMemories } from "../enrichment/prompt-safety.js";
+import { looksLikePromptInjection, formatRecalledMemories, redactSecrets } from "../enrichment/prompt-safety.js";
 import { parseConfig } from "../config.js";
 import { basename } from "path";
 import { execSync } from "child_process";
@@ -18,7 +18,7 @@ const PROMPT_QUERY_CHARS = 200;
 
 function buildRecallQuery(input: PreToolInput, opts: RecallOptions): string {
   const prompt = input.prompt?.trim();
-  if (prompt) return prompt.slice(0, PROMPT_QUERY_CHARS);
+  if (prompt) return redactSecrets(prompt).slice(0, PROMPT_QUERY_CHARS);
 
   const parts: string[] = [];
   const projectName = basename(opts.cwd);

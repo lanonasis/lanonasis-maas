@@ -21,7 +21,7 @@ export type StopOptions = {
 };
 
 type StopClient = Pick<LanonasisClient, "createMemory">;
-type StopSpool = Pick<SpoolQueue, "write" | "drain">;
+type StopSpool = Pick<SpoolQueue, "write" | "drain" | "remove">;
 type TranscriptMessage = {
   role: string;
   content: string | Array<{ type: string; text?: string }>;
@@ -125,6 +125,7 @@ async function drainSpool(client: StopClient, spool: StopSpool): Promise<void> {
         type: memory.type as LanCreateParams["type"],
         tags: memory.tags,
         metadata: memory.metadata,
+        idempotency_key: memory.idempotency_key,
       });
     }
   });
@@ -176,24 +177,34 @@ export async function handleStop(
     }
 
     const memories = buildMemories(input, resolvedOptions);
-    let directWriteFailed = false;
 
+    // Spool before the network: a hook deadline can kill the process while
+    // createMemory retries. Successful writes are removed from the spool below.
+    try {
+      await resolvedSpool.write(input.session_id, memories);
+    } catch (spoolErr) {
+      process.stderr.write(`[claude-memory] spool write error: ${spoolErr}\n`);
+    }
+
+    const failed: LanCreateParams[] = [];
     for (const memory of memories) {
       try {
         await resolvedClient.createMemory(memory);
       } catch {
-        directWriteFailed = true;
-        break;
+        failed.push(memory);
       }
     }
 
-    if (directWriteFailed) {
-      try {
-        await resolvedSpool.write(input.session_id, memories);
-      } catch (spoolErr) {
-        process.stderr.write(`[claude-memory] spool write error: ${spoolErr}\n`);
-        return;
+    try {
+      if (failed.length === 0) {
+        await resolvedSpool.remove(input.session_id);
+      } else {
+        // Keep only captures that still need a write, so draining cannot
+        // replay ones that already succeeded in this run.
+        await resolvedSpool.write(input.session_id, failed);
       }
+    } catch (spoolErr) {
+      process.stderr.write(`[claude-memory] spool update error: ${spoolErr}\n`);
     }
 
     try {

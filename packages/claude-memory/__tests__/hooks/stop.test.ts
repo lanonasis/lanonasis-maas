@@ -100,6 +100,7 @@ describe("handleStop", () => {
     const spool = {
       write: vi.fn().mockResolvedValue(undefined),
       drain: vi.fn().mockResolvedValue({ processed: 0, failed: 0 }),
+      remove: vi.fn().mockResolvedValue(undefined),
     };
 
     await handleStop(buildInput(transcriptPath), client as any, spool as any, {
@@ -123,6 +124,7 @@ describe("handleStop", () => {
     const spool = {
       write: vi.fn().mockResolvedValue(undefined),
       drain: vi.fn().mockResolvedValue({ processed: 0, failed: 0 }),
+      remove: vi.fn().mockResolvedValue(undefined),
     };
 
     await handleStop(buildInput(transcriptPath), client as any, spool as any, {
@@ -141,6 +143,7 @@ describe("handleStop", () => {
     const spool = {
       write: vi.fn().mockResolvedValue(undefined),
       drain: vi.fn().mockResolvedValue({ processed: 0, failed: 0 }),
+      remove: vi.fn().mockResolvedValue(undefined),
     };
 
     await handleStop(buildInput(transcriptPath), client as any, spool as any, {
@@ -171,6 +174,7 @@ describe("handleStop", () => {
     const spool = {
       write: vi.fn().mockResolvedValue(undefined),
       drain: vi.fn().mockResolvedValue({ processed: 0, failed: 0 }),
+      remove: vi.fn().mockResolvedValue(undefined),
     };
 
     await handleStop(buildInput(transcriptPath), client as any, spool as any, {
@@ -178,7 +182,8 @@ describe("handleStop", () => {
       projectId: "proj-1",
     });
 
-    expect(spool.write).toHaveBeenCalledTimes(1);
+    // Spooled up front, then rewritten with just the failed captures.
+    expect(spool.write).toHaveBeenCalledTimes(2);
     expect(spool.write).toHaveBeenCalledWith(
       "session-123",
       expect.arrayContaining([
@@ -192,6 +197,51 @@ describe("handleStop", () => {
     );
   });
 
+  it("keeps only failed captures in the spool so successful writes are not replayed", async () => {
+    const transcriptPath = writeTranscript(sampleTranscript());
+    const client = {
+      createMemory: vi.fn()
+        .mockResolvedValueOnce({ id: "memory-1" })
+        .mockRejectedValueOnce(new Error("LanOnasis down"))
+        .mockResolvedValue({ id: "memory-2" }),
+    };
+    const spool = {
+      write: vi.fn().mockResolvedValue(undefined),
+      drain: vi.fn().mockResolvedValue({ processed: 0, failed: 0 }),
+      remove: vi.fn().mockResolvedValue(undefined),
+    };
+
+    await handleStop(buildInput(transcriptPath), client as any, spool as any, {
+      maxMemoriesPerSession: 4,
+      projectId: "proj-1",
+    });
+
+    const failedWrite = spool.write.mock.calls[1];
+    expect(failedWrite[0]).toBe("session-123");
+    expect(failedWrite[1]).toHaveLength(1);
+    expect(failedWrite[1][0]).toBe(client.createMemory.mock.calls[1][0]);
+    expect(spool.remove).not.toHaveBeenCalled();
+  });
+
+  it("removes the spool entry once every capture is written", async () => {
+    const transcriptPath = writeTranscript(sampleTranscript());
+    const client = {
+      createMemory: vi.fn().mockResolvedValue({ id: "memory-1" }),
+    };
+    const spool = {
+      write: vi.fn().mockResolvedValue(undefined),
+      drain: vi.fn().mockResolvedValue({ processed: 0, failed: 0 }),
+      remove: vi.fn().mockResolvedValue(undefined),
+    };
+
+    await handleStop(buildInput(transcriptPath), client as any, spool as any, {
+      maxMemoriesPerSession: 3,
+      projectId: "proj-1",
+    });
+
+    expect(spool.remove).toHaveBeenCalledWith("session-123");
+  });
+
   it("never throws even when both client and spool fail", async () => {
     const transcriptPath = writeTranscript(sampleTranscript());
     const client = {
@@ -201,6 +251,7 @@ describe("handleStop", () => {
       // Use mockImplementation to avoid Bun's eager Promise.reject unhandled rejection bug
       write: vi.fn().mockImplementation(() => Promise.reject(new Error("disk full"))),
       drain: vi.fn().mockImplementation(() => Promise.reject(new Error("still broken"))),
+      remove: vi.fn().mockResolvedValue(undefined),
     };
 
     // Primary assertion: the hook must never surface errors to Claude Code
@@ -211,8 +262,9 @@ describe("handleStop", () => {
       }),
     ).resolves.toBeUndefined();
 
-    // Behavioural assertions: write was attempted (client failed → spool fallback triggered)
-    expect(spool.write).toHaveBeenCalledTimes(1);
+    // Behavioural assertions: the initial enqueue and the failed-only rewrite
+    // were both attempted, and the hook still swallowed the errors.
+    expect(spool.write).toHaveBeenCalledTimes(2);
     expect(spool.write).toHaveBeenCalledWith(
       "session-123",
       expect.any(Array),
@@ -236,6 +288,7 @@ describe("handleStop", () => {
     const spool = {
       write: vi.fn().mockResolvedValue(undefined),
       drain: vi.fn().mockResolvedValue({ processed: 0, failed: 0 }),
+      remove: vi.fn().mockResolvedValue(undefined),
     };
 
     await handleStop(input, client as any, spool as any, {

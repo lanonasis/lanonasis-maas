@@ -9,7 +9,7 @@ import {
   writeFileSync,
 } from "fs";
 import { join } from "path";
-import { tmpdir } from "os";
+import { homedir, tmpdir } from "os";
 import { installHooks } from "../../scripts/install-hooks.js";
 
 const tempRoots: string[] = [];
@@ -163,6 +163,39 @@ describe("installHooks", () => {
       expect(settings.hooks[event][0].hooks[0].timeout).toBeGreaterThan(0);
     }
     expect(settings.hooks.UserPromptSubmit[0].hooks[0].timeout).toBeLessThanOrEqual(5);
+  });
+
+  it("removes legacy-path recall hooks and preserves sibling handlers", () => {
+    const paths = createPaths();
+    mkdirSync(join(paths.root, ".claude"), { recursive: true });
+    const legacyRecall = join(homedir(), ".lanonasis", "hooks", "recall.sh");
+    const sibling = join(paths.hooksDir, "other-memory.sh");
+    writeFileSync(
+      paths.settingsPath,
+      JSON.stringify({
+        hooks: {
+          PreToolUse: [
+            { hooks: [{ type: "command", command: legacyRecall }] },
+            {
+              matcher: "Bash",
+              hooks: [
+                { type: "command", command: join(paths.hooksDir, "recall.sh") },
+                { type: "command", command: sibling },
+              ],
+            },
+          ],
+        },
+      }),
+      "utf-8",
+    );
+
+    installHooks(paths);
+
+    const settings = JSON.parse(readFileSync(paths.settingsPath, "utf-8"));
+    expect(settings.hooks.PreToolUse).toEqual([
+      { matcher: "Bash", hooks: [{ type: "command", command: sibling }] },
+    ]);
+    expect(settings.hooks.UserPromptSubmit[0].hooks[0].command).toBe(join(paths.hooksDir, "recall.sh"));
   });
 
   it("moves a recall hook left under PreToolUse by an older install", () => {
