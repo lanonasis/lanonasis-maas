@@ -86,7 +86,7 @@ describe('executeAction — create', () => {
 // ── update ──────────────────────────────────────────────────────────────────
 
 describe('executeAction — update', () => {
-  it('reads existing then calls router.save with merged data', async () => {
+  it('delegates to router.update with the partial updates', async () => {
     process.env.LANONASIS_LOCAL_MEMORY = '1';
     const root = await freshDir();
     const savedDir = process.env.LANONASIS_LOCAL_MEMORY_DIR;
@@ -97,21 +97,18 @@ describe('executeAction — update', () => {
       const router = o.getMemoryRouter();
       expect(router).toBeDefined();
 
-      const getSpy = vi.spyOn(router!, 'get');
-      getSpy.mockResolvedValue({
+      const updateSpy = vi.spyOn(router!, 'update');
+      updateSpy.mockResolvedValue({
         id: 'existing-1',
-        title: 'Old Title',
+        title: 'New Title',
         content: 'Old content',
         memory_type: 'project',
         status: 'active',
-        tags: ['old'],
+        tags: ['new', 'tag'],
         source: 'local',
         created_at: '2025-01-01T00:00:00Z',
         updated_at: '2025-01-01T00:00:00Z',
       });
-
-      const saveSpy = vi.spyOn(router!, 'save');
-      saveSpy.mockResolvedValue({ id: 'existing-1', syncedToMaaS: true, pendingSync: 0 });
 
       const result = await o.executeAction({
         type: 'update',
@@ -122,17 +119,16 @@ describe('executeAction — update', () => {
         },
       });
 
-      expect(getSpy).toHaveBeenCalledWith('existing-1');
-      expect(saveSpy).toHaveBeenCalledTimes(1);
-      const savedArg = saveSpy.mock.calls[0][0];
-      expect(savedArg.id).toBe('existing-1');
-      expect(savedArg.title).toBe('New Title');
-      expect(savedArg.tags).toEqual(['new', 'tag']);
-      // content should be merged from the existing record
-      expect(savedArg.content).toBe('Old content');
+      expect(updateSpy).toHaveBeenCalledWith('existing-1', {
+        title: 'New Title',
+        tags: ['new', 'tag'],
+      });
+      // The updated record is wrapped in the response envelope.
+      expect(result).toHaveProperty('data');
+      expect(result.data.id).toBe('existing-1');
+      expect(result.data.title).toBe('New Title');
 
-      saveSpy.mockRestore();
-      getSpy.mockRestore();
+      updateSpy.mockRestore();
       await o.closeMemory();
     } finally {
       if (savedDir !== undefined) {
@@ -178,7 +174,7 @@ describe('executeAction — update', () => {
     try {
       const o = buildOrchestrator(root);
       const router = o.getMemoryRouter();
-      vi.spyOn(router!, 'get').mockResolvedValue(null);
+      vi.spyOn(router!, 'update').mockResolvedValue(null);
 
       const result = await o.executeAction({
         type: 'update',
@@ -236,7 +232,7 @@ describe('executeAction — search', () => {
         },
       });
 
-      expect(searchSpy).toHaveBeenCalledWith('test query', { limit: 5, status: 'active' });
+      expect(searchSpy).toHaveBeenCalledWith('test query', { limit: 5, status: 'active', type: undefined });
       expect(result).toHaveProperty('data');
       expect(result.data.results).toHaveLength(1);
       expect(result.data.results[0].id).toBe('hit-1');
@@ -291,7 +287,10 @@ describe('executeAction — list', () => {
       });
 
       expect(listSpy).toHaveBeenCalledWith({ limit: 3 });
-      expect(result).toBeDefined();
+      // repl-engine.ts reads result.data.data for list.
+      expect(result).toHaveProperty('data.data');
+      expect(result.data.data).toHaveLength(1);
+      expect(result.data.data[0].id).toBe('l-1');
 
       listSpy.mockRestore();
       await o.closeMemory();
@@ -339,8 +338,10 @@ describe('executeAction — get', () => {
       });
 
       expect(getSpy).toHaveBeenCalledWith('get-1');
-      expect(result).toHaveProperty('id', 'get-1');
-      expect(result).toHaveProperty('title', 'Get Me');
+      // The record is wrapped in the response envelope.
+      expect(result).toHaveProperty('data');
+      expect(result.data).toHaveProperty('id', 'get-1');
+      expect(result.data).toHaveProperty('title', 'Get Me');
 
       getSpy.mockRestore();
       await o.closeMemory();
@@ -378,7 +379,10 @@ describe('executeAction — delete', () => {
       });
 
       expect(deleteSpy).toHaveBeenCalledWith('del-1');
-      expect(result).toBeUndefined();
+      // A truthy envelope so repl-engine.ts shows the success message.
+      expect(result).toHaveProperty('data');
+      expect(result.data).toHaveProperty('id', 'del-1');
+      expect(result.data).toHaveProperty('deleted', true);
 
       deleteSpy.mockRestore();
       await o.closeMemory();
@@ -405,6 +409,11 @@ describe('executeAction — optimize_prompt', () => {
     try {
       const o = buildOrchestrator(root);
 
+      // Stub the direct OpenAI call so the test doesn't hit api.openai.com.
+      vi.spyOn(o as any, 'directOpenAIChat').mockResolvedValue({
+        choices: [{ message: { content: '{"optimized_prompt":"x","improvements":[]}' } }],
+      });
+
       const result = await o.executeAction({
         type: 'optimize_prompt',
         params: {
@@ -413,9 +422,8 @@ describe('executeAction — optimize_prompt', () => {
         },
       });
 
-      // This should not throw; optimizePrompt uses OpenAI which may fail,
-      // but it shouldn't crash the orchestrator.
-      expect(result).toBeDefined();
+      expect(result).toHaveProperty('data');
+      expect(result.data.optimized_prompt).toBe('x');
 
       await o.closeMemory();
     } finally {

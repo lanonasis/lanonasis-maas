@@ -76,13 +76,12 @@ export class MemoryCommands {
 
   /**
    * Get the local-first memory router from context, or null if not available.
-   * Used by create/update/search/list/get/delete.
+   * Used by create/update/search/list/get/delete. Always reads the current
+   * context so a router that becomes available later (or is disabled) is
+   * reflected immediately — we do not cache the first context's value.
    */
   private getRouter(context: CommandContext): MemoryBackendRouter | null {
-    if (!this.router) {
-      this.router = context.memoryRouter ?? null;
-    }
-    return this.router;
+    return context.memoryRouter ?? null;
   }
 
   /**
@@ -349,13 +348,17 @@ export class MemoryCommands {
       } else {
         const client = this.getClient(context);
         const searchResult = await client.searchMemories({
-          query,
-          status: 'active',
-          limit: 20,
-          threshold: 0.7,
-          memory_types: memoryTypeFilter ? [memoryTypeFilter] : undefined,
-        });
-        const results = searchResult.data?.results ?? [];
+                  query,
+                  status: 'active',
+                  limit: 20,
+                  threshold: 0.7,
+                  memory_types: memoryTypeFilter ? [memoryTypeFilter] : undefined,
+                });
+                if (searchResult.error) {
+                  spinner.fail(chalk.red(`Search failed: ${searchResult.error}`));
+                  return;
+                }
+                const results = searchResult.data?.results ?? [];
         if (results.length === 0) {
           spinner.succeed(chalk.gray('No results found'));
         } else {
@@ -396,6 +399,10 @@ export class MemoryCommands {
       } else {
         const client = this.getClient(context);
         const listResult = await client.listMemories({ limit });
+        if (listResult.error) {
+          spinner.fail(chalk.red(`List failed: ${listResult.error}`));
+          return;
+        }
         const items = listResult.data?.data ?? [];
         if (items.length > 0) {
           spinner.succeed(chalk.green(`Showing ${items.length} memories`));
@@ -441,7 +448,7 @@ export class MemoryCommands {
         const client = this.getClient(context);
         const result = await client.getMemory(id);
         if (result.error) {
-          spinner.fail(chalk.red(`Memory not found: ${id}`));
+          spinner.fail(chalk.red(`Get failed: ${result.error}`));
         } else {
           const record = result.data;
           if (record) {

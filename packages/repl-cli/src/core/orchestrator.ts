@@ -1139,97 +1139,149 @@ Remember: You are LZero - be helpful, conversational, and make the experience fe
   }
 
   async executeAction(action: OrchestratorResponse['action']): Promise<any> {
-    if (!action) return null;
+      if (!action) return null;
 
-    const router = this.memoryRouter;
-    if (!router) {
-      return { error: 'Memory router not available. Check LANONASIS_LOCAL_MEMORY env var.' };
-    }
+      const router = this.memoryRouter;
 
-    try {
-      switch (action.type) {
-        case 'create':
-          return await router.save({
-            id: action.params.id || undefined,
-            title: action.params.title || '',
-            content: action.params.content || '',
-            memory_type: (action.params.memory_type || 'context') as 'context' | 'project' | 'knowledge' | 'reference' | 'personal' | 'workflow',
-            tags: action.params.tags || [],
-            status: 'active',
-          });
-
-        case 'update': {
-          const { id, ...updates } = action.params;
-          if (!id) {
-            return { error: 'Missing memory id for update action.' };
-          }
-          // Read current record, merge updates, save
-          const existing = await router.get(id);
-          if (!existing) {
-            return { error: `Memory not found: ${id}` };
-          }
-          return await router.save({
-            ...existing,
-            ...updates,
-            id: existing.id, // preserve ID
-          });
-        }
-
-        case 'search': {
-          const hits = await router.search(action.params.query || '', {
-            limit: action.params.limit || 10,
-            status: 'active',
-          });
-          // Convert MemoryHit[] to response shape expected by caller
-          return {
-            data: {
-              results: hits.map(h => ({
-                id: h.id,
-                title: h.title,
-                content: h.content,
-                memory_type: h.memory_type,
+      try {
+        switch (action.type) {
+          case 'create': {
+            if (router) {
+              // Wrap in the response envelope repl-engine.ts expects: result.data.
+              return { data: await router.save({
+                id: action.params.id || undefined,
+                title: action.params.title || '',
+                content: action.params.content || '',
+                memory_type: (action.params.memory_type || 'context') as 'context' | 'project' | 'knowledge' | 'reference' | 'personal' | 'workflow',
+                tags: action.params.tags || [],
                 status: 'active',
-                tags: h.tags,
-                similarity: h.score,
-                similarity_score: h.score,
-                created_at: h.created_at,
-              })),
-            },
-          };
+              }) };
+            }
+            return await this.client.createMemory({
+              title: action.params.title || '',
+              content: action.params.content || '',
+              memory_type: (action.params.memory_type || 'context') as 'context' | 'project' | 'knowledge' | 'reference' | 'personal' | 'workflow',
+              tags: action.params.tags || [],
+            });
+          }
+
+          case 'update': {
+            const { id, ...updates } = action.params;
+            if (!id) {
+              return { error: 'Missing memory id for update action.' };
+            }
+            if (router) {
+              const updated = await router.update(id, updates);
+              if (!updated) {
+                return { error: `Memory not found: ${id}` };
+              }
+              return { data: updated };
+            }
+            return await this.client.updateMemory(id, updates);
+          }
+
+          case 'search': {
+            if (router) {
+              const hits = await router.search(action.params.query || '', {
+                limit: action.params.limit || 10,
+                status: 'active',
+                type: action.params.memory_type,
+              });
+              // Convert MemoryHit[] to response shape expected by caller
+              return {
+                data: {
+                  results: hits.map(h => ({
+                    id: h.id,
+                    title: h.title,
+                    content: h.content,
+                    memory_type: h.memory_type,
+                    status: 'active',
+                    tags: h.tags,
+                    similarity: h.score,
+                    similarity_score: h.score,
+                    created_at: h.created_at,
+                  })),
+                },
+              };
+            }
+            const searchResult = await this.client.searchMemories({
+              query: action.params.query || '',
+              status: 'active',
+              limit: action.params.limit || 10,
+              threshold: action.params.threshold || 0.7,
+              memory_types: action.params.memory_type ? [action.params.memory_type] : undefined,
+            });
+
+            // Enhance search results with structured response
+            if (searchResult.data?.results && searchResult.data.results.length > 0) {
+              const results = searchResult.data.results;
+              const mainResult = results[0]; // Most relevant result
+              const additionalResults = results.slice(1); // Other relevant results
+
+              return {
+                ...searchResult,
+                enhanced: {
+                  mainResult,
+                  additionalResults: additionalResults.map((r: any) => ({
+                    title: r.title,
+                    content: r.content.substring(0, 200),
+                    relevance: r.similarity ? r.similarity * 100 : undefined,
+                  })),
+                },
+              };
+            }
+            return searchResult;
+          }
+
+          case 'list': {
+            if (router) {
+              // repl-engine.ts reads result.data.data for list.
+              return { data: { data: await router.list({ limit: action.params.limit || 10 }) } };
+            }
+            return await this.client.listMemories({
+              limit: action.params.limit || 10,
+            });
+          }
+
+          case 'get': {
+            if (router) {
+              return { data: await router.get(action.params.id) };
+            }
+            return await this.client.getMemory(action.params.id);
+          }
+
+          case 'delete': {
+            if (router) {
+              await router.delete(action.params.id);
+              // Return a truthy envelope so repl-engine.ts shows the success message.
+              return { data: { id: action.params.id, deleted: true } };
+            }
+            return await this.client.deleteMemory(action.params.id);
+          }
+
+          case 'optimize_prompt':
+            // Optimize prompt using OpenAI
+            return await this.optimizePrompt(action.params.original_prompt, action.params.context);
+
+          default:
+            return { error: `Unknown action type: ${action.type}` };
+        }
+      } catch (error) {
+        // Return error object instead of throwing - keeps REPL alive
+        const errorMessage = this.formatError(error);
+
+        // Provide helpful context based on error type
+        if (errorMessage.includes('401') || errorMessage.includes('Unauthorized')) {
+          return { error: 'Authentication failed. Try running: onasis-repl login' };
+        } else if (errorMessage.includes('404') || errorMessage.includes('not found')) {
+          return { error: 'Memory not found. It may have been deleted.' };
+        } else if (errorMessage.includes('timeout') || errorMessage.includes('ECONNREFUSED')) {
+          return { error: 'Could not connect to the memory service. Check your network or API URL.' };
         }
 
-        case 'list':
-          return await router.list({ limit: action.params.limit || 10 });
-
-        case 'get':
-          return await router.get(action.params.id);
-
-        case 'delete':
-          return await router.delete(action.params.id);
-
-        case 'optimize_prompt':
-          // Optimize prompt using OpenAI
-          return await this.optimizePrompt(action.params.original_prompt, action.params.context);
-
-        default:
-          return { error: `Unknown action type: ${action.type}` };
+        return { error: errorMessage };
       }
-    } catch (error) {
-      // Return error object instead of throwing - keeps REPL alive
-      const errorMessage = this.formatError(error);
-
-      // Provide helpful context based on error type
-      if (errorMessage.includes('401') || errorMessage.includes('Unauthorized')) {
-        return { error: 'Authentication failed. Try running: onasis-repl login' };
-      } else if (errorMessage.includes('404') || errorMessage.includes('not found')) {
-        return { error: 'Memory not found. It may have been deleted.' };
-      } else if (errorMessage.includes('timeout')) {
-        return { error: 'Request timed out. Please try again.' };
-      }
-
-      return { error: errorMessage };
     }
-  }
 
   private async optimizePrompt(originalPrompt: string, context?: string): Promise<any> {
     // If neither AI Router nor OpenAI is configured, return error

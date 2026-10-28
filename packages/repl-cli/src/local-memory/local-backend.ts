@@ -564,15 +564,20 @@ export class LocalMemoryBackend implements MemoryBackend {
     const sets: string[] = [];
     const params: unknown[] = [];
 
-    if (updates.title !== undefined) { sets.push('title = ?'); params.push(updates.title); }
-    if (updates.content !== undefined) { sets.push('content = ?'); params.push(updates.content); }
+    // Run supplied fields through the same redaction pipeline as save() so a
+    // secret pattern never reaches SQLite or the FTS index via update().
+    if (updates.title !== undefined) { sets.push('title = ?'); params.push(redactSecrets(updates.title).text); }
+    if (updates.content !== undefined) { sets.push('content = ?'); params.push(redactSecrets(updates.content).text); }
     if (updates.memory_type !== undefined) { sets.push('memory_type = ?'); params.push(updates.memory_type); }
     if (updates.status !== undefined) { sets.push('status = ?'); params.push(updates.status); }
-    if (updates.tags !== undefined) { sets.push('tags = ?'); params.push(JSON.stringify(updates.tags)); }
+    if (updates.tags !== undefined) { sets.push('tags = ?'); params.push(JSON.stringify(updates.tags.map((t) => redactSecrets(t).text))); }
     if (updates.subject_id !== undefined) { sets.push('subject_id = ?'); params.push(updates.subject_id); }
     if (updates.maas_synced_at !== undefined) { sets.push('maas_synced_at = ?'); params.push(updates.maas_synced_at); }
     if (updates.maas_id !== undefined) { sets.push('maas_id = ?'); params.push(updates.maas_id); }
-    if (updates.metadata !== undefined) { sets.push('metadata = ?'); params.push(JSON.stringify(updates.metadata)); }
+    if (updates.metadata !== undefined) {
+      sets.push('metadata = ?');
+      params.push(JSON.stringify(JSON.parse(redactSecrets(JSON.stringify(updates.metadata)).text)));
+    }
 
     // Always update the timestamp.
     const now = new Date().toISOString();

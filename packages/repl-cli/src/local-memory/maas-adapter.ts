@@ -85,14 +85,26 @@ interface MemoryClientLike {
     error?: string;
   }>;
   createMemory(args: {
-    title: string;
-    content: string;
-    type?: string;
-    tags?: string[];
-    metadata?: Record<string, unknown>;
-  }): Promise<{ data?: { id: string }; error?: string }>;
-  deleteMemory(id: string): Promise<{ error?: string }>;
-}
+      title: string;
+      content: string;
+      type?: string;
+      tags?: string[];
+      metadata?: Record<string, unknown>;
+    }): Promise<{ data?: { id: string }; error?: string }>;
+    deleteMemory(id: string): Promise<{ error?: string }>;
+    /** Optional — only present on clients that support the updateMemory contract. */
+    updateMemory?(
+      id: string,
+      updates: {
+        title?: string;
+        content?: string;
+        memory_type?: string;
+        status?: string;
+        tags?: string[];
+        metadata?: Record<string, unknown>;
+      },
+    ): Promise<{ data?: { id: string }; error?: string }>;
+  }
 
 export class MaaSClientAdapter implements MemoryBackend {
   constructor(private readonly client: MemoryClientLike) {}
@@ -192,15 +204,16 @@ export class MaaSClientAdapter implements MemoryBackend {
   }
 
   async update(id: string, updates: Partial<MemoryRecord>): Promise<MemoryRecord | null> {
-    // Try updateMemory first if the client supports it.
-    if ('updateMemory' in this.client && typeof (this.client as any).updateMemory === 'function') {
-      const res = await (this.client as any).updateMemory(id, {
-        title: updates.title,
-        content: updates.content,
-        type: updates.memory_type,
-        tags: updates.tags,
-        metadata: updates.metadata,
-      });
+      // Try updateMemory first if the client supports it.
+      if (this.client.updateMemory) {
+        const res = await this.client.updateMemory(id, {
+          title: updates.title,
+          content: updates.content,
+          memory_type: updates.memory_type,
+          status: updates.status,
+          tags: updates.tags,
+          metadata: updates.metadata,
+        });
       if (res.error && !/not found|404/i.test(res.error)) {
         throw new MemoryBackendError(res.error, 'transport');
       }

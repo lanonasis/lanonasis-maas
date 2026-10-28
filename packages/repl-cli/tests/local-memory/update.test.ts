@@ -15,7 +15,7 @@ import { join } from 'node:path';
 import { LocalMemoryBackend } from '../../src/local-memory/local-backend.js';
 import { MemoryBackendRouter } from '../../src/local-memory/router.js';
 import { MaaSClientAdapter } from '../../src/local-memory/maas-adapter.js';
-import type { MemoryBackend, MemoryRecord, SaveResult, BackendHealth } from '../../src/local-memory/types.js';
+import type { MemoryBackend, MemoryHit, MemoryRecord, SaveResult, BackendHealth } from '../../src/local-memory/types.js';
 import { MemoryBackendError } from '../../src/local-memory/types.js';
 
 const tempDirs: string[] = [];
@@ -321,7 +321,9 @@ describe('MemoryBackendRouter.update', () => {
     // Update should invalidate.
     await router.update('cache-inv', { title: 'fresh' });
 
-    // Search should hit local again (cache invalid).
+    // Same query must not return the stale cached hit.
+    const stale = await router.search('cached');
+    expect(stale.length).toBe(0);
     const hits = await router.search('fresh');
     expect(hits.length).toBeGreaterThan(0);
   });

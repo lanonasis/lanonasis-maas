@@ -285,17 +285,20 @@ export class MemoryBackendRouter implements MemoryBackend {
     const localResult = await this.local.update(id, updates).catch(() => null);
     this.invalidateCache();
 
-    // Best-effort: also push to remote so MaaS stays in sync.
+    // Best-effort: also push to remote so MaaS stays in sync. Use the
+    // MaaS-assigned id when present (delete() maps the same way), and send
+    // the redacted values from localResult (local.update() runs the
+    // redaction pipeline) so a secret never reaches MaaS via update().
     if (this.remote && localResult) {
       try {
         await withTimeout(
-          this.remote.update(id, {
-            title: updates.title,
-            content: updates.content,
+          this.remote.update(localResult.maas_id ?? id, {
+            title: updates.title === undefined ? undefined : localResult.title,
+            content: updates.content === undefined ? undefined : localResult.content,
             memory_type: updates.memory_type,
             status: updates.status,
-            tags: updates.tags,
-            metadata: updates.metadata,
+            tags: updates.tags === undefined ? undefined : localResult.tags,
+            metadata: updates.metadata === undefined ? undefined : localResult.metadata,
           }),
           this.options.remoteTimeoutMs,
         );

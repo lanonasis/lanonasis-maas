@@ -110,6 +110,13 @@ export class ReplEngine {
 
     this.personaCommands = new PersonaCommands(this.orchestrator);
 
+        // Hand the orchestrator's local-first memory router to the command
+        // context so MemoryCommands can route through it (create/update/search/
+        // list/get/delete) instead of always falling back to the direct MaaS
+        // client. Nullable — when LANONASIS_LOCAL_MEMORY=0 this stays undefined
+        // and commands use the direct client.
+        this.context.memoryRouter = this.orchestrator.getMemoryRouter();
+
     // Apply defaultPersona from config (if set and known) before any input.
     // Silent on success; warn if the configured slug is unknown.
     if (config.defaultPersona) {

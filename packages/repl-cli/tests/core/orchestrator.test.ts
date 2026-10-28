@@ -142,14 +142,26 @@ describe('fetchRelevantContext', () => {
       const router = orchestrator.getMemoryRouter();
       expect(router).toBeUndefined();
 
+      // Stub the direct client so the fallback path is exercised without
+      // real network I/O (localhost:3000 has nothing listening, and the
+      // client retries with backoff — which previously timed the test out).
+      const searchMemories = vi
+        .spyOn((orchestrator as any).client, 'searchMemories')
+        .mockResolvedValue({ data: { results: [] } });
+
       const result = await orchestrator.fetchRelevantContext('some query', 5);
+      expect(searchMemories).toHaveBeenCalledTimes(1);
       expect(result).toEqual([]);
 
       await orchestrator.closeMemory();
     } finally {
-      process.env.LANONASIS_LOCAL_MEMORY = saved;
+      if (saved !== undefined) {
+        process.env.LANONASIS_LOCAL_MEMORY = saved;
+      } else {
+        delete process.env.LANONASIS_LOCAL_MEMORY;
+      }
     }
-  });
+    });
 });
 
 describe('initializeContext', () => {
