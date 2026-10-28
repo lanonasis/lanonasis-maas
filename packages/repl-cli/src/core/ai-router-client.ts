@@ -126,8 +126,13 @@ export class AIRouterClient {
       }
     });
 
-    if (request.use_case) {
-      headers['X-Use-Case'] = request.use_case;
+    // Resolve the lane once: an explicit request wins, otherwise the client's
+    // configured default. Without this the configured default never shipped and
+    // the router fell back to its own DEFAULT_USE_CASE ('ask-ai'), selecting the
+    // wrong vendor chain for REPL turns that omit use_case.
+    const useCase = request.use_case ?? this.config.defaultUseCase;
+    if (useCase) {
+      headers['X-Use-Case'] = useCase;
     }
 
     const body: any = {
@@ -147,12 +152,11 @@ export class AIRouterClient {
     if (request.tool_choice) {
       body.tool_choice = request.tool_choice;
     }
-    // Sent in the body as well as the X-Use-Case header. The router reads
-    // body.use_case first (resolveUseCaseFromRequest); the previous guard was
-    // unreachable because the header is set from the same value above, so the
-    // body field never shipped.
-    if (request.use_case) {
-      body.use_case = request.use_case;
+    // Sent in the body as well as the X-Use-Case header: the router reads
+    // body.use_case first (resolveUseCaseFromRequest), then the header, then
+    // its own DEFAULT_USE_CASE.
+    if (useCase) {
+      body.use_case = useCase;
     }
 
     const credentials = [this.config.authToken, ...(this.config.fallbackAuthTokens ?? [])]
