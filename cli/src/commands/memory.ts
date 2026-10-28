@@ -910,6 +910,7 @@ export function memoryCommands(program: Command): void {
         }
 
         const tableData = memories.map((memory: MemoryEntry) => [
+          memory.id,
           truncateText(memory.title, 30),
           memory.memory_type,
           memory.tags.slice(0, 3).join(', '),
@@ -918,12 +919,13 @@ export function memoryCommands(program: Command): void {
         ]);
 
         const tableConfig = {
-          header: ['Title', 'Type', 'Tags', 'Created', 'Access'],
+          header: ['ID', 'Title', 'Type', 'Tags', 'Created', 'Access'],
           columnDefault: {
             width: 20,
             wrapWord: true
           },
           columns: [
+            { width: 36 },
             { width: 30 },
             { width: 12 },
             { width: 20 },
@@ -1055,6 +1057,7 @@ export function memoryCommands(program: Command): void {
         } else {
           // Table format
           const tableData = memories.map((memory: MemoryEntry) => [
+            memory.id,
             truncateText(memory.title, 30),
             memory.memory_type,
             memory.tags.slice(0, 3).join(', '),
@@ -1063,12 +1066,13 @@ export function memoryCommands(program: Command): void {
           ]);
 
           const tableConfig = {
-            header: ['Title', 'Type', 'Tags', 'Created', 'Access'],
+            header: ['ID', 'Title', 'Type', 'Tags', 'Created', 'Access'],
             columnDefault: {
               width: 20,
               wrapWord: true
             },
             columns: [
+              { width: 36 },
               { width: 30 },
               { width: 12 },
               { width: 20 },
@@ -1081,6 +1085,7 @@ export function memoryCommands(program: Command): void {
             columnDefault: tableConfig.columnDefault,
             columns: tableConfig.columns 
           }));
+          console.log(chalk.gray('Tip: IDs are shown in full; an 8+ character prefix works with memory get/update/delete.'));
 
           // Pagination info
           if (result.pagination.pages > 1) {
