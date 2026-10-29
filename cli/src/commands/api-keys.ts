@@ -705,29 +705,103 @@ const analyticsCommand = new Command('analytics')
 
 analyticsCommand
   .command('usage')
-  .description('View usage analytics')
-  .option('--key-id <id>', 'Filter by specific API key')
-  .option('--days <days>', 'Number of days to look back', '30')
+  .description('View API key usage analytics')
+  .option('--key-id <id>', 'Filter by API key ID or unique prefix')
+  .option('--days <days>', 'Number of days to look back (1-365)', '30')
   .option('--json', 'Output as JSON')
   .action(async (options) => {
-    void options;
-    exitUnsupported('API key usage analytics', [
-      'No /api/v1/auth/api-keys/analytics/* routes exist on the current auth-gateway.',
-      'Use dashboard reporting or direct platform logs until analytics endpoints are exposed.',
-    ]);
+    try {
+      const days = Number.parseInt(options.days, 10);
+      if (!Number.isInteger(days) || days < 1 || days > 365) {
+        throw new Error('--days must be an integer between 1 and 365');
+      }
+
+      const keyId = options.keyId ? await resolveApiKeyId(options.keyId) : undefined;
+      const query = new URLSearchParams({ days: String(days) });
+      if (keyId) query.set('keyId', keyId);
+
+      const rows = unwrapApiResponse<Array<Record<string, unknown>>>(
+        await apiClient.get(`${AUTH_API_KEYS_BASE}/analytics/usage?${query.toString()}`),
+      );
+
+      if (options.json) {
+        console.log(JSON.stringify(rows, null, 2));
+        return;
+      }
+
+      if (!Array.isArray(rows) || rows.length === 0) {
+        console.log(colors.warning('No usage analytics found for the selected period.'));
+        return;
+      }
+
+      const table = new Table({
+        head: ['Timestamp', 'Key ID', 'Operation', 'Success'].map((heading) => colors.info(heading)),
+        style: { head: [], border: [] },
+      });
+      rows.forEach((row) => {
+        table.push([
+          typeof row.timestamp === 'string' ? formatDate(row.timestamp) : '-',
+          typeof row.key_id === 'string' ? row.key_id : '-',
+          typeof row.operation === 'string' ? row.operation : '-',
+          typeof row.success === 'boolean' ? String(row.success) : '-',
+        ]);
+      });
+      console.log(table.toString());
+      console.log(colors.muted(`Total: ${rows.length} usage records (last ${days} days)`));
+    } catch (error) {
+      console.error(colors.error('Failed to retrieve API key usage analytics:'), error instanceof Error ? error.message : error);
+      process.exit(1);
+    }
   });
 
 analyticsCommand
   .command('security-events')
-  .description('View security events')
+  .description('View API key security events')
   .option('--severity <level>', 'Filter by severity (low, medium, high, critical)')
   .option('--json', 'Output as JSON')
   .action(async (options) => {
-    void options;
-    exitUnsupported('API key security event analytics', [
-      'No /api/v1/auth/api-keys/analytics/* routes exist on the current auth-gateway.',
-      'Use dashboard security reporting until gateway analytics endpoints are exposed.',
-    ]);
+    try {
+      const allowedSeverities = ['low', 'medium', 'high', 'critical'];
+      const severity = options.severity?.toLowerCase();
+      if (severity && !allowedSeverities.includes(severity)) {
+        throw new Error('--severity must be one of: low, medium, high, critical');
+      }
+
+      const query = new URLSearchParams();
+      if (severity) query.set('severity', severity);
+      const suffix = query.size > 0 ? `?${query.toString()}` : '';
+      const rows = unwrapApiResponse<Array<Record<string, unknown>>>(
+        await apiClient.get(`${AUTH_API_KEYS_BASE}/analytics/security-events${suffix}`),
+      );
+
+      if (options.json) {
+        console.log(JSON.stringify(rows, null, 2));
+        return;
+      }
+
+      if (!Array.isArray(rows) || rows.length === 0) {
+        console.log(colors.warning('No security events found.'));
+        return;
+      }
+
+      const table = new Table({
+        head: ['Timestamp', 'Severity', 'Event', 'Description'].map((heading) => colors.info(heading)),
+        style: { head: [], border: [] },
+      });
+      rows.forEach((row) => {
+        table.push([
+          typeof row.timestamp === 'string' ? formatDate(row.timestamp) : '-',
+          typeof row.severity === 'string' ? row.severity : '-',
+          typeof row.event_type === 'string' ? row.event_type : '-',
+          typeof row.description === 'string' ? truncateText(row.description, 60) : '-',
+        ]);
+      });
+      console.log(table.toString());
+      console.log(colors.muted(`Total: ${rows.length} security events`));
+    } catch (error) {
+      console.error(colors.error('Failed to retrieve API key security events:'), error instanceof Error ? error.message : error);
+      process.exit(1);
+    }
   });
 
 // Add subcommands

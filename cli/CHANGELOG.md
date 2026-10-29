@@ -1,5 +1,15 @@
 # Changelog - @lanonasis/cli
 
+## [3.12.1] - 2026-10-29
+
+### ✨ New Features
+- **API-key usage analytics.** `api-keys analytics usage` now calls the organization-scoped auth-gateway endpoint, supports optional API-key ID/prefix and a 1–365 day window, and provides JSON/table output.
+- **API-key security events.** `api-keys analytics security-events` now calls the organization-scoped auth-gateway endpoint with optional severity filtering and JSON/table output.
+
+### 🧪 Testing
+- `npm run build` passed.
+- Offline Jest suite passed: 474 tests passed, 82 skipped (35 suites total).
+
 ## [3.12.0] - 2026-10-28
 
 ### ✨ New Features

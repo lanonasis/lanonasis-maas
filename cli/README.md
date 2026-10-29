@@ -1,9 +1,11 @@
-# @lanonasis/cli v3.12.0 - Advanced CLI Suite
+# @lanonasis/cli v3.12.1 - Advanced CLI Suite
 
 [![NPM Version](https://img.shields.io/npm/v/@lanonasis/cli)](https://www.npmjs.com/package/@lanonasis/cli)
 [![Downloads](https://img.shields.io/npm/dt/@lanonasis/cli)](https://www.npmjs.com/package/@lanonasis/cli)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Golden Contract](https://img.shields.io/badge/Onasis--Core-v0.1%20Compliant-gold)](https://api.lanonasis.com/.well-known/onasis.json)
+
+🎉 **NEW IN v3.12.1**: API-key usage analytics and security-events commands now call the auth-gateway analytics endpoints.
 
 🎉 **NEW IN v3.12.0**: Full resource IDs and 8+ character ID prefixes in list commands, plus gated live REST/MCP behaviour suites (`npm run test:live`).
 
@@ -72,7 +74,7 @@ This section is the agent-facing usage guide for `@lanonasis/cli`. The command t
 | `topic` | `topics` | topic management: `create`, `list`, `get`, `update`, `delete` |
 | `config` | | config management: `set`, `get`, `show`, `list`, `set-api-url`, `test`, `discover`, `endpoints`, `set-override`, `clear-overrides`, `validate`, `backup`, `restore`, `reset` |
 | `org` | `organization` | organization management |
-| `api-keys` | `keys` | API keys: `create`, `list|ls`, `get`, `update`, `delete|rm`, `projects` (`create/list|ls`), `mcp` (`register-tool`, `list-tools`, `request-access`) |
+| `api-keys` | `keys` | API keys: `create`, `list|ls`, `get`, `update`, `delete|rm`, `projects` (`create/list|ls`), `analytics` (`usage`, `security-events`), `mcp` (`register-tool`, `list-tools`, `request-access`) |
 | `prescan` | | secret/PII scan: `run <path>` (`--save`, `--ci`, `--fail-on`), `status`, `audit <file>`, `safe <file>` |
 | `completion` | | shell completions |
 | `dashboard` | `dash` | interactive dashboard |
@@ -689,7 +691,11 @@ onasis health
 
 ## 📝 Version History
 
-### v3.12.0 (Current)
+### v3.12.1 (Current)
+
+- 📊 **API-key analytics**: `api-keys analytics usage` and `api-keys analytics security-events` now call the auth-gateway endpoints, support JSON output, and render readable tables. Usage supports a 1–365 day window and optional full key ID or unique prefix; security events support severity filtering.
+
+### v3.12.0
 
 - 🆔 **Full IDs and prefixes**: `memory list`/`list-sessions` show the full memory ID; `api-keys list` and `api-keys projects list` show full IDs. `api-keys get|update|delete` accept a unique 8+ character prefix, and memory prefix resolution is now discoverable from the table
 - 🧪 **Live service suites**: gated REST/MCP behaviour tests via `npm run test:live` (`LANO_TEST_API_KEY` plus `RUN_LIVE_SERVICE_TESTS=1`)
