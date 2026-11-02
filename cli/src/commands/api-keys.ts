@@ -703,6 +703,44 @@ mcpCommand
 const analyticsCommand = new Command('analytics')
   .description('View API key usage analytics and security events');
 
+interface UsageEvent {
+  key_id?: string;
+  operation?: string;
+  success?: boolean;
+  timestamp?: string;
+}
+
+interface KeyUsageSummary {
+  key_id: string;
+  events: number;
+  failed: number;
+  operations: Record<string, number>;
+  last_seen: string | null;
+}
+
+/** The gateway returns one row per event; summarise per key instead of printing thousands of rows. */
+export function summarizeUsage(rows: UsageEvent[], days: number) {
+  const byKey = new Map<string, KeyUsageSummary>();
+  for (const row of rows) {
+    const keyId = row.key_id || 'unknown';
+    const entry = byKey.get(keyId) ?? { key_id: keyId, events: 0, failed: 0, operations: {}, last_seen: null };
+    entry.events += 1;
+    if (row.success === false) entry.failed += 1;
+    const operation = row.operation || 'unknown';
+    entry.operations[operation] = (entry.operations[operation] ?? 0) + 1;
+    if (row.timestamp && (!entry.last_seen || row.timestamp > entry.last_seen)) entry.last_seen = row.timestamp;
+    byKey.set(keyId, entry);
+  }
+  return {
+    days,
+    total_events: rows.length,
+    failed_events: rows.filter((row) => row.success === false).length,
+    keys: [...byKey.values()].sort((a, b) => b.events - a.events),
+  };
+}
+
+const VALID_SEVERITIES = ['low', 'medium', 'high', 'critical'] as const;
+
 analyticsCommand
   .command('usage')
   .description('View usage analytics')
@@ -710,11 +748,50 @@ analyticsCommand
   .option('--days <days>', 'Number of days to look back', '30')
   .option('--json', 'Output as JSON')
   .action(async (options) => {
-    void options;
-    exitUnsupported('API key usage analytics', [
-      'No /api/v1/auth/api-keys/analytics/* routes exist on the current auth-gateway.',
-      'Use dashboard reporting or direct platform logs until analytics endpoints are exposed.',
-    ]);
+    try {
+      // Whole input must be decimal digits: parseInt alone accepts "7abc" and "2.5".
+      const rawDays = String(options.days).trim();
+      const days = /^\d+$/.test(rawDays) ? Number(rawDays) : Number.NaN;
+      if (!Number.isInteger(days) || days < 1 || days > 365) {
+        throw new Error('--days must be a whole number from 1 to 365');
+      }
+      const params = new URLSearchParams({ days: String(days) });
+      if (options.keyId) params.set('keyId', await resolveApiKeyId(options.keyId));
+
+      const rows = unwrapApiResponse<UsageEvent[]>(
+        await apiClient.get(`${AUTH_API_KEYS_BASE}/analytics/usage?${params.toString()}`),
+      ) ?? [];
+      const summary = summarizeUsage(Array.isArray(rows) ? rows : [], days);
+
+      if (options.json) {
+        console.log(JSON.stringify(summary, null, 2));
+        return;
+      }
+
+      console.log(colors.primary(`\n📊 API key usage — last ${days} day${days === 1 ? '' : 's'}`));
+      console.log(colors.muted(`${summary.total_events} events, ${summary.failed_events} failed\n`));
+      if (summary.keys.length === 0) {
+        console.log(colors.muted('No usage recorded in this window.'));
+        return;
+      }
+      const table = new Table({
+        head: ['Key ID', 'Events', 'Failed', 'Operations', 'Last seen'].map((h) => colors.accent(h)),
+      });
+      for (const key of summary.keys) {
+        table.push([
+          truncateText(key.key_id, 36),
+          String(key.events),
+          key.failed ? colors.error(String(key.failed)) : '0',
+          Object.entries(key.operations).map(([op, n]) => `${op}: ${n}`).join(', '),
+          key.last_seen ? formatDate(key.last_seen) : '-',
+        ]);
+      }
+      console.log(table.toString());
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      console.error(colors.error('✖ Failed to get usage analytics:'), colors.muted(message));
+      process.exit(1);
+    }
   });
 
 analyticsCommand
@@ -723,11 +800,49 @@ analyticsCommand
   .option('--severity <level>', 'Filter by severity (low, medium, high, critical)')
   .option('--json', 'Output as JSON')
   .action(async (options) => {
-    void options;
-    exitUnsupported('API key security event analytics', [
-      'No /api/v1/auth/api-keys/analytics/* routes exist on the current auth-gateway.',
-      'Use dashboard security reporting until gateway analytics endpoints are exposed.',
-    ]);
+    try {
+      const params = new URLSearchParams();
+      if (options.severity) {
+        const severity = String(options.severity).toLowerCase();
+        if (!(VALID_SEVERITIES as readonly string[]).includes(severity)) {
+          throw new Error(`--severity must be one of: ${VALID_SEVERITIES.join(', ')}`);
+        }
+        params.set('severity', severity);
+      }
+      const query = params.toString();
+      const events = unwrapApiResponse<Array<Record<string, unknown>>>(
+        await apiClient.get(`${AUTH_API_KEYS_BASE}/analytics/security-events${query ? `?${query}` : ''}`),
+      ) ?? [];
+      const list = Array.isArray(events) ? events : [];
+
+      if (options.json) {
+        console.log(JSON.stringify(list, null, 2));
+        return;
+      }
+
+      console.log(colors.primary(`\n🛡️  API key security events (${list.length})\n`));
+      if (list.length === 0) {
+        console.log(colors.muted('No security events recorded.'));
+        return;
+      }
+      const table = new Table({
+        head: ['When', 'Severity', 'Event', 'Key ID', 'Detail'].map((h) => colors.accent(h)),
+      });
+      for (const event of list) {
+        table.push([
+          typeof event.timestamp === 'string' ? formatDate(event.timestamp) : '-',
+          String(event.severity ?? '-'),
+          String(event.event_type ?? '-'),
+          truncateText(String(event.key_id ?? '-'), 36),
+          truncateText(String(event.description ?? event.details ?? ''), 60),
+        ]);
+      }
+      console.log(table.toString());
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      console.error(colors.error('✖ Failed to get security events:'), colors.muted(message));
+      process.exit(1);
+    }
   });
 
 // Add subcommands
