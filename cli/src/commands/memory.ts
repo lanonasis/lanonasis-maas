@@ -477,7 +477,9 @@ const lexicalSimilarityScore = (query: string, memory: MemoryEntry): number => {
   const tokens = tokenizeSearchQuery(query);
   if (tokens.length === 0) return 0;
 
-  const haystack = `${memory.title || ''} ${memory.content || ''} ${(memory.tags || []).join(' ')}`.toLowerCase();
+  // List rows carry content_preview instead of content (summary projection).
+  const text = memory.content || memory.content_preview || '';
+  const haystack = `${memory.title || ''} ${text} ${(memory.tags || []).join(' ')}`.toLowerCase();
   const hits = tokens.filter((token) => haystack.includes(token)).length;
   if (hits === 0) return 0;
 
@@ -497,6 +499,7 @@ const lexicalFallbackSearch = async (
     limit: candidateLimit,
     memory_type: primaryType,
     tags: searchOptions.tags?.join(','),
+    include_preview: true,
   });
 
   let candidates = (memoriesResult.memories || memoriesResult.data || []) as MemoryEntry[];
@@ -550,7 +553,7 @@ const toSearchJsonResult = (memory: MemorySearchResult) => ({
   memory_type: memory.memory_type,
   tags: Array.isArray(memory.tags) ? memory.tags : [],
   similarity_score: memory.similarity_score,
-  content_preview: truncateText(memory.content, 160) || '',
+  content_preview: truncateText(memory.content || memory.content_preview || '', 160) || '',
 });
 
 const resolveCurrentUserId = async (): Promise<string> => {
@@ -1280,7 +1283,7 @@ export function memoryCommands(program: Command): void {
 
         results.forEach((memory: MemorySearchResult, index: number) => {
           const title = truncateText(memory.title, 120) || '(untitled memory)';
-          const contentPreview = truncateText(memory.content, 100) || '(no content preview)';
+          const contentPreview = truncateText(memory.content || memory.content_preview || '', 100) || '(no content preview)';
           const scoreValue = typeof memory.similarity_score === 'number' ? memory.similarity_score : 0;
           const score = (scoreValue * 100).toFixed(1);
           const memoryId = memory.id || '(missing id)';

@@ -56,6 +56,8 @@ export interface MemoryEntry {
   updated_at: string;
   last_accessed?: string;
   access_count: number;
+  /** Present on list rows when include_preview was requested; lists carry no full content. */
+  content_preview?: string | null;
 }
 
 export interface CreateMemoryRequest {
@@ -98,6 +100,8 @@ export interface GetMemoriesParams {
   order?: 'asc' | 'desc';
   sort_by?: 'created_at' | 'updated_at' | 'last_accessed' | 'access_count';
   sort_order?: 'asc' | 'desc';
+  /** Ask list endpoints for a bounded content_preview on each row. */
+  include_preview?: boolean;
 }
 
 export interface SearchMemoryRequest {
@@ -929,6 +933,9 @@ export class APIClient {
         }
         if (params.user_id) {
           listPayload.user_id = params.user_id;
+        }
+        if (params.include_preview) {
+          listPayload.include_preview = true;
         }
         if (params.sort || params.sort_by) {
           listPayload.sort_by = params.sort_by || params.sort;
