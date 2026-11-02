@@ -749,7 +749,9 @@ analyticsCommand
   .option('--json', 'Output as JSON')
   .action(async (options) => {
     try {
-      const days = Number.parseInt(String(options.days), 10);
+      // Whole input must be decimal digits: parseInt alone accepts "7abc" and "2.5".
+      const rawDays = String(options.days).trim();
+      const days = /^\d+$/.test(rawDays) ? Number(rawDays) : Number.NaN;
       if (!Number.isInteger(days) || days < 1 || days > 365) {
         throw new Error('--days must be a whole number from 1 to 365');
       }

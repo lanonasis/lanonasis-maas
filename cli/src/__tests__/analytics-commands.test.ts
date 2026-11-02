@@ -76,6 +76,13 @@ describe('api-keys analytics', () => {
     ]));
   });
 
+  it.each(['7abc', '2.5', '1e2', '', '0', '366'])('rejects --days %p before calling the gateway', async (days) => {
+    await run(['analytics', 'usage', '--days', days]);
+
+    expect(mockGet).not.toHaveBeenCalled();
+    expect(exit).toHaveBeenCalledWith(1);
+  });
+
   it('security-events calls the gateway route with severity', async () => {
     mockGet.mockResolvedValueOnce({ success: true, data: [] });
 
