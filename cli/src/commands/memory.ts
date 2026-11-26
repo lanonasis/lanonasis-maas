@@ -17,6 +17,7 @@ import {
   GetMemoriesParams as ApiGetMemoriesParams
 } from '../utils/api.js';
 import { formatBytes, truncateText } from '../utils/formatting.js';
+import { buildMemoryUpdateRequest } from '../utils/memory-update-options.js';
 import { CLIConfig } from '../utils/config.js';
 import { createTextInputHandler } from '../ux/index.js';
 import * as fs from 'fs/promises';
@@ -72,6 +73,8 @@ interface UpdateMemoryOptions {
   content?: string;
   type?: MemoryType;
   tags?: string;
+  append?: boolean;
+  forgetHistory?: boolean;
   interactive?: boolean;
 }
 
@@ -1368,10 +1371,12 @@ export function memoryCommands(program: Command): void {
     .option('-c, --content <content>', 'new content')
     .option('--type <type>', `new memory type (${MEMORY_TYPE_CHOICES.join(', ')})`)
     .option('--tags <tags>', 'new tags (comma-separated)')
+    .option('-a, --append', 'add --content under the existing text instead of replacing it')
+    .option('--forget-history', 'delete the saved versions of this memory (can be used alone)')
     .option('-i, --interactive', 'interactive mode')
     .action(async (id: string, options: UpdateMemoryOptions) => {
       try {
-        let updateData: UpdateMemoryRequest = {};
+        let updateData: UpdateMemoryRequest = buildMemoryUpdateRequest(options);
 
         if (options.interactive) {
           // First, get current memory data
@@ -1408,15 +1413,9 @@ export function memoryCommands(program: Command): void {
             title: answers.title,
             content,
             memory_type: answers.type,
-            tags: answers.tags.split(',').map((tag: string) => tag.trim()).filter(Boolean)
+            tags: answers.tags.split(',').map((tag: string) => tag.trim()).filter(Boolean),
+            ...(options.forgetHistory ? { forget_history: true } : {})
           };
-        } else {
-          if (options.title) updateData.title = options.title;
-          if (options.content) updateData.content = options.content;
-          if (options.type) updateData.memory_type = options.type;
-          if (options.tags) {
-            updateData.tags = options.tags.split(',').map((tag: string) => tag.trim()).filter(Boolean);
-          }
         }
 
         if (Object.keys(updateData).length === 0) {
@@ -1426,7 +1425,14 @@ export function memoryCommands(program: Command): void {
 
         const spinner = ora('Updating memory...').start();
         const memory = await apiClient.updateMemory(id, updateData);
-        spinner.succeed('Memory updated successfully');
+        spinner.succeed(
+          updateData.mode === 'append'
+            ? 'Text added to memory'
+            : 'Memory updated successfully'
+        );
+        if (updateData.forget_history) {
+          console.log(chalk.gray('  Saved versions deleted'));
+        }
 
         console.log();
         console.log(chalk.green('✓ Memory updated:'));
