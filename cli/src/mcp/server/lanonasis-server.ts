@@ -296,6 +296,15 @@ export class LanonasisMCPServer {
                 type: 'array',
                 items: { type: 'string' },
                 description: 'New tags (optional)'
+              },
+              mode: {
+                type: 'string',
+                enum: ['replace', 'append'],
+                description: 'replace (default) overwrites content; append adds content under the existing text and leaves the other fields as they are'
+              },
+              forget_history: {
+                type: 'boolean',
+                description: 'Delete every saved version of this memory after the update, for example after removing a leaked secret. Can be sent alone. Not allowed with mode append.'
               }
             },
             anyOf: [

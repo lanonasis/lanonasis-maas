@@ -84,6 +84,10 @@ export interface UpdateMemoryRequest {
   continuity_key?: string;
   idempotency_key?: string;
   write_intent?: WriteIntent;
+  /** 'replace' (default) overwrites content; 'append' adds it under the existing text. */
+  mode?: 'replace' | 'append';
+  /** Deletes every saved version of the memory after the update. Allowed alone. */
+  forget_history?: boolean;
 }
 
 export interface GetMemoriesParams {
