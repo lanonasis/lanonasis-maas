@@ -25,6 +25,7 @@ description = "Known fake test fixtures"
 condition = "AND"
 paths = [
   '''^IDE-EXTENSIONS/cursor-extension/src/services/memory-route-auth\.test\.ts$''',
+  '''^IDE-EXTENSIONS/vscode-extension/src/panels/__tests__/EnhancedSidebarProvider\.chat\.test\.ts$''',
   '''^cli/src/__tests__/hash-utils-sdk\.test\.ts$''',
   '''^cli/src/__tests__/hash-utils\.test\.ts$''',
   '''^cli/src/__tests__/mcp-connection-reliability\.test\.ts$''',
@@ -47,6 +48,9 @@ regexes = [
   '''^vx_test_abc123$''',
   '''^lano_test_key_abc123xyz$''',
   '''^lano_abcdefghijklmnopqrstuvwx$''',
+  '''^lano_testkey1234567890abcdef$''',
+  # jwt.io's public sample token (payload {"sub":"1234567890"})
+  '''^eyJhbGciOiJIUzI1NiJ9\.eyJzdWIiOiIxMjM0NTY3ODkwIn0\.dozjgNryP4J3jVmNHl0w5N_XgL0n3I9PlFUP0THsR8U$''',
   '''^pk_test123456789\.sk_test123456789012345$''',
   '''^pk_test_abc123$''',
   '''^test-vendor-key-abc123$''',
