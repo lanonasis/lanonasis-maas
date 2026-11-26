@@ -1,5 +1,23 @@
 # Changelog - @lanonasis/cli
 
+## [3.13.0] - 2026-11-26
+
+### ✨ New Features
+
+- **`memory update --append`** (`-a`). Adds the `--content` text under the existing content, separated by a blank line, and leaves the title, tags and metadata as they are. Nothing is lost, so no saved version is made. It needs `--content` and cannot be combined with `--interactive` or `--forget-history`; those mistakes are caught before any request is sent.
+- **`memory update --forget-history`**. Deletes the memory's saved versions after the update, for example after removing a leaked secret. It can be used on its own to clear history without changing the memory.
+- **Local MCP server `memory_update` tool** accepts `mode` (`replace` | `append`) and `forget_history`, matching the hosted `update_memory` tool. `UpdateMemoryRequest` in the API client carries both fields.
+
+### 📝 Behaviour notes
+
+- A plain `memory update` still replaces the content. The server now keeps the previous text as a saved version (the newest 3, for up to 30 days), so a replace can be undone. Saved versions are visible only to the memory's owner.
+- `--append` and `--forget-history` need the server side of this change. `api.lanonasis.com` has it. The CLI's default `mcp.lanonasis.com` route needs an mcp-core release with `mode` support; until then an append there is rejected and the memory is left unchanged.
+
+### 🧪 Testing
+
+- CLI offline suite: 492 passed / 82 skipped (5 new tests for the update flags).
+- Checked live against `api.lanonasis.com` with a test key: append, replace, history-only purge, and both rejected flag combinations.
+
 ## [3.12.0] - 2026-10-28
 
 ### ✨ New Features
