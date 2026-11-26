@@ -71,7 +71,9 @@ jobs:
 
       - name: Package VSIX
         working-directory: IDE-EXTENSIONS/${{ matrix.extension }}
-        run: bunx vsce package --no-dependencies --out ../${{ matrix.extension }}.vsix
+        # cursor/windsurf still list the deprecated `vsce` 2.x, which crashes on
+        # current Node ("The \"original\" argument must be of type function").
+        run: bunx @vscode/vsce@3.9.2 package --no-dependencies --out ../${{ matrix.extension }}.vsix
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4

@@ -131,6 +131,21 @@ export class ApiKeyService {
         return credentials;
     }
 
+    /**
+     * Returns the currently stored credential (lano_* API key or OAuth token)
+     * WITHOUT prompting the user. Used by non-interactive flows (e.g. the
+     * sidebar chat) that must degrade silently instead of raising a second
+     * credential prompt. Returns null when nothing is stored.
+     */
+    async getCredentials(): Promise<StoredCredential | null> {
+        try {
+            return await this.secureApiKeyService.getStoredCredentials();
+        } catch (error) {
+            console.warn('[ApiKeyService] Failed to read stored credentials:', error);
+            return null;
+        }
+    }
+
     private looksLikeJwt(token: string): boolean {
         const parts = token.split('.');
         if (parts.length !== 3) {
