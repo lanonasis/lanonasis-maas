@@ -83,6 +83,18 @@ describe('LanonasisMCPServer memory tool argument handling', () => {
     });
   });
 
+  it('forwards mode and forget_history to the API', async () => {
+    await server.handleToolCall('memory_update', {
+      id: '12345678',
+      content: 'added line',
+      mode: 'append',
+    });
+    await server.handleToolCall('memory_update', { id: '12345678', forget_history: true });
+
+    expect(apiClient.updateMemory).toHaveBeenCalledWith('12345678', { content: 'added line', mode: 'append' });
+    expect(apiClient.updateMemory).toHaveBeenCalledWith('12345678', { forget_history: true });
+  });
+
   it('accepts the canonical id field for memory_delete', async () => {
     await server.handleToolCall('memory_delete', { id: '12345678' });
 
