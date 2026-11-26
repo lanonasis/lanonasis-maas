@@ -288,7 +288,7 @@ No server-side revocation call is made. The deployed MCP server can revoke (`rev
 
 **Impact** — after `onasis auth logout` on a shared or imaged machine, the key **remains valid server-side**. A user reasonably reads "logout" as "this credential no longer works".
 
-**Fix** — add `onasis api-keys revoke|rotate` (matching the completion schema at `cli/src/commands/completion.ts:291,298`, which already promises them); make `logout` attempt server-side revocation and state clearly whether revocation succeeded; add a `lanonasis api-keys list --show-revoked` so users can audit.
+**Fix** — add `onasis api-keys revoke|rotate` (matching the completion schema at `cli/src/commands/completion.ts:291,298`, which already promises them). Keep `logout` **local by default**: one vendor key can be stored on several devices (the cross-device tests store one key on three device configs), so revoking it on logout from one machine would disconnect the others. Add an explicit opt-in, `onasis auth logout --revoke`, that revokes the key server-side and states clearly whether revocation succeeded, and make plain `logout` print that the key is still valid server-side and how to revoke it. Add `lanonasis api-keys list --show-revoked` so users can audit.
 
 ---
 
@@ -331,7 +331,18 @@ cli/src/utils/api.ts:1173   this.client.delete(`/api/v1/topics/${id}`);
 
 `id` is the raw argument from `onasis topic get|update|delete <id>` (`cli/src/commands/topics.ts:200,257,310,334,351`). A value containing `/` or `..` alters the request path on the same host. The memory routes already do this correctly (`encodeURIComponent`, §2.2).
 
-**Fix** — `encodeURIComponent(id)` on all three topic routes; consider a shared `encodeId()` helper so the rule cannot drift again (it already has).
+**Fix** — route all three topic calls through a shared `encodeId()` helper so the rule cannot drift again (it already has). Encoding alone is not enough: `encodeURIComponent` leaves `.` unchanged, so an ID of `.` or `..` survives, axios normalises the dot segment, and a `PUT`/`DELETE` lands on the parent route (for example `/api/v1/`) with the same credentials. The helper must reject dot-only IDs before encoding:
+
+```ts
+export function encodeId(id: string): string {
+  if (!id || /^\.+$/.test(id)) {
+    throw new Error(`Invalid ID: ${JSON.stringify(id)}`);
+  }
+  return encodeURIComponent(id);
+}
+```
+
+Cover `.`, `..`, `a/b` and an empty string in its unit tests.
 
 ---
 
@@ -375,7 +386,7 @@ Jest: "global" coverage threshold for functions (25%) not met: 22.39%
 | `src/commands/memory.ts` | 18.08% | |
 | `src/utils/config.ts` | 72.79% | The best-covered critical file — a good model |
 
-**Fix** — raise the floor to the current actual (≈23%) and add a **per-directory floor** so `src/mcp` cannot sit at 0%; then lift `src/mcp` and `src/commands/auth.ts` as part of the F-01/F-02 work. Pair this with the live suites from #194 rather than replacing them.
+**Fix** — set **per-metric** global floors at or just below the current actuals, so the gate passes today and cannot regress: statements 23%, branches 23%, functions 22%, lines 23% (a single 23% floor would still fail on functions at 22.39%). Add a **per-directory floor** so `src/mcp` cannot sit at 0%; then lift `src/mcp` and `src/commands/auth.ts` as part of the F-01/F-02 work. Pair this with the live suites from #194 rather than replacing them.
 
 ---
 
@@ -430,9 +441,9 @@ Each step is a separate PR to `lanonasis/lanonasis-maas`, small enough to review
 | 3 | `fix(cli): restore the VERA C-2 X-Auth-Method opt-in` | F-06 | One-line-per-path change; or amend the changelog if the server needs it |
 | 4 | `fix(cli): validate configured endpoints and cap redirects` | F-05, F-09 | https-only except loopback; `maxRedirects`; request timeout |
 | 5 | `fix(cli): read MCP request headers from requestInfo` | F-02 | Requires Q1 answered; includes the transport-accuracy error message and the `--allow-public-bind` warning text |
-| 6 | `fix(cli): encode topic ids in request paths` | F-10 | One-line-per-route |
+| 6 | `fix(cli): encode topic ids in request paths` | F-10 | Shared `encodeId()` that rejects dot-only IDs, plus tests |
 | 7 | `fix(cli): return errors instead of exiting inside the API client` | F-08 | Mechanical; improves testability of everything above |
-| 8 | `feat(cli): add api-keys revoke and rotate` | F-07 | Closes the completion-schema gap; wire `logout` to revocation |
+| 8 | `feat(cli): add api-keys revoke and rotate` | F-07 | Closes the completion-schema gap; add opt-in `logout --revoke` (plain `logout` stays local) |
 | 9 | `chore(cli): remove dead modules and reconcile entry points` | F-11 | Depends on Q4 |
 | 10 | `test(cli): raise coverage floors and cover the MCP auth path` | F-12 | Do this **with** steps 1, 5, 8 — not before, so the floors are meaningful |
 
@@ -442,9 +453,9 @@ Each step is a separate PR to `lanonasis/lanonasis-maas`, small enough to review
 
 ## 7. Appendix — reproducing the verification
 
-```bash
-cd apps/lanonasis-maas
+Run these from the root of the `lanonasis-maas` checkout (in the monorepo, `apps/lanonasis-maas`); every path below is relative to it.
 
+```bash
 # F-01 / F-02 — the MCP authorization path
 grep -n "isStdioConnection\|extractAuthInfo\|handleSystemConfig" cli/src/mcp/server/lanonasis-server.ts
 grep -n "requestInfo" cli/node_modules/@modelcontextprotocol/sdk/dist/esm/types.d.ts   # headers live here
