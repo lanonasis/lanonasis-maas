@@ -1,11 +1,11 @@
-# @lanonasis/cli v3.12.0 - Advanced CLI Suite
+# @lanonasis/cli v3.13.0 - Advanced CLI Suite
 
 [![NPM Version](https://img.shields.io/npm/v/@lanonasis/cli)](https://www.npmjs.com/package/@lanonasis/cli)
 [![Downloads](https://img.shields.io/npm/dt/@lanonasis/cli)](https://www.npmjs.com/package/@lanonasis/cli)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Golden Contract](https://img.shields.io/badge/Onasis--Core-v0.1%20Compliant-gold)](https://api.lanonasis.com/.well-known/onasis.json)
 
-🎉 **NEW IN v3.12.0**: Full resource IDs and 8+ character ID prefixes in list commands, plus gated live REST/MCP behaviour suites (`npm run test:live`).
+🎉 **NEW IN v3.13.0**: `memory update --append` adds text under a memory without replacing it, and `memory update --forget-history` clears its saved versions.
 
 ## 🚀 Quick Start
 
@@ -387,6 +387,8 @@ onasis memory search "gateway parity" --fail-on-fallback
 onasis memory get <id>                    # Get specific memory
 onasis memory update <id> -t "New Title"  # Update title
 onasis memory update <id> -i              # Interactive update
+onasis memory update <id> --append -c "More notes"  # Add text under the existing content
+onasis memory update <id> --forget-history          # Delete saved versions
 onasis memory delete <id>                 # Delete memory
 onasis memory stats                       # Memory statistics
 ```
@@ -689,7 +691,13 @@ onasis health
 
 ## 📝 Version History
 
-### v3.12.0 (Current)
+### v3.13.0 (Current)
+
+- ➕ **Append**: `memory update <id> --append -c "..."` adds text under the existing content; title, tags and metadata stay the same
+- 🧹 **Forget history**: `memory update <id> --forget-history` deletes the memory's saved versions; can be used alone
+- 🔌 **Local MCP**: `memory_update` accepts `mode` and `forget_history`
+
+### v3.12.0
 
 - 🆔 **Full IDs and prefixes**: `memory list`/`list-sessions` show the full memory ID; `api-keys list` and `api-keys projects list` show full IDs. `api-keys get|update|delete` accept a unique 8+ character prefix, and memory prefix resolution is now discoverable from the table
 - 🧪 **Live service suites**: gated REST/MCP behaviour tests via `npm run test:live` (`LANO_TEST_API_KEY` plus `RUN_LIVE_SERVICE_TESTS=1`)
