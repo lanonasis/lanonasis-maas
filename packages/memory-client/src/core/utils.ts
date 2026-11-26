@@ -141,8 +141,9 @@ export function calculateRetryDelay(
 export function isRetryableError(statusCode?: number): boolean {
   if (!statusCode) return true; // Network errors are retryable
 
-  // Retry on server errors and rate limits
-  return statusCode >= 500 || statusCode === 429 || statusCode === 408;
+  // Retry only common transient server errors; permanent responses such as 501
+  // should return immediately instead of consuming the full retry budget.
+  return [500, 502, 503, 504].includes(statusCode) || statusCode === 429 || statusCode === 408;
 }
 
 /**

@@ -179,6 +179,11 @@ describe('isRetryableError', () => {
     expect(isRetryableError(504)).toBe(true);
   });
 
+  it('returns false for permanent 5xx responses', () => {
+    expect(isRetryableError(501)).toBe(false);
+    expect(isRetryableError(505)).toBe(false);
+  });
+
   it('returns false for 4xx client errors (except 408, 429)', () => {
     expect(isRetryableError(400)).toBe(false);
     expect(isRetryableError(401)).toBe(false);

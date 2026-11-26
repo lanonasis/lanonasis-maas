@@ -35,6 +35,23 @@ describe('CoreMemoryClient route compatibility', () => {
     expect(headers['User-Agent']).toBe(USER_AGENT);
   });
 
+  it('does not retry permanent 501 responses', async () => {
+    const fetchMock = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValue(createJsonResponse(501, { error: 'Not Implemented' }));
+
+    const client = createMemoryClient({
+      apiUrl: 'https://example.invalid',
+      apiKey: 'test-key',
+      retry: { maxRetries: 3, retryDelay: 0 }
+    });
+
+    const result = await client.healthCheck();
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(result.error).toBeDefined();
+  });
+
   it('falls back from plural list route to singular compatibility route', async () => {
     const fetchMock = vi
       .spyOn(globalThis, 'fetch')
